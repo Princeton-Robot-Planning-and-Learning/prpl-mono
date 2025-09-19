@@ -14,12 +14,10 @@ jobs:
       uses: astral-sh/setup-uv@v3
     - name: Set up Python ${{ matrix.python-version }}
       run: uv venv --python=${{ matrix.python-version }}
-    - name: Source the venv
-      run: source .venv/bin/activate
     - name: Install the project
-      run: ./install_dependencies.sh
+      run: uv run ./install_dependencies.sh
     - name: Run autoformat
-      run: ./run_autoformat.sh
+      run: uv run ./run_autoformat.sh
   linting:
     runs-on: ubuntu-latest
     strategy:
@@ -31,13 +29,11 @@ jobs:
       uses: astral-sh/setup-uv@v3
     - name: Set up Python ${{ matrix.python-version }}
       run: uv venv --python=${{ matrix.python-version }}
-    - name: Source the venv
-      run: source .venv/bin/activate
     - name: Install the project
-      run: ./install_dependencies.sh
+      run: uv run ./install_dependencies.sh
     - name: Lint
       run: |
-        ./run_in_subdirs.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
+        uv run ./run_in_subdirs.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
   static-type-checking:
     runs-on: ubuntu-latest
     strategy:
@@ -49,13 +45,11 @@ jobs:
       uses: astral-sh/setup-uv@v3
     - name: Set up Python ${{ matrix.python-version }}
       run: uv venv --python=${{ matrix.python-version }}
-    - name: Source the venv
-      run: source .venv/bin/activate
     - name: Install the project
-      run: ./install_dependencies.sh
+      run: uv run ./install_dependencies.sh
     - name: Mypy
       run: |
-        ./run_in_subdirs.sh "mypy ."
+        uv run ./run_in_subdirs.sh "mypy ."
   unit-tests:
     runs-on: ubuntu-latest
     strategy:
@@ -71,10 +65,8 @@ jobs:
       uses: astral-sh/setup-uv@v3
     - name: Set up Python ${{ matrix.python-version }}
       run: uv venv --python=${{ matrix.python-version }}
-    - name: Source the venv
-      run: source .venv/bin/activate
     - name: Install the project
-      run: ./install_dependencies.sh
+      run: uv run ./install_dependencies.sh
     - name: Pytest
       run: |
-        ./run_in_subdirs.sh "pytest tests/"
+        uv run ./run_in_subdirs.sh "pytest tests/"
