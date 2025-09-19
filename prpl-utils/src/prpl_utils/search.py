@@ -7,7 +7,16 @@ import itertools
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Callable, Generic, Hashable, Iterator, Optional, TypeVar, cast
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Hashable,
+    Iterator,
+    Optional,
+    TypeVar,
+    cast,
+)
 
 _S = TypeVar("_S", bound=Hashable)  # state in heuristic search
 _A = TypeVar("_A")  # action in heuristic search
