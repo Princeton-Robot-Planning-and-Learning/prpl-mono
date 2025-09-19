@@ -1,0 +1,77 @@
+name: CI Checks
+
+on: [push]
+
+jobs:
+  autoformat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run black to test code linting
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          jupyter: true
+      - name: Run isort to organize imports
+        uses: isort/isort-action@master
+  linting:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}    
+    - name: Install the project
+      run: uv sync --all-extras --dev
+    - name: Lint
+      run: |
+        uv run pytest . --pylint -m pylint --pylint-rcfile=.pylintrc
+  static-type-checking:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}
+    - name: Install the project
+      run: uv sync --all-extras --dev
+    - name: Mypy
+      run: |
+        uv run mypy .
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+    steps:
+    - name: Install LAPACK and BLAS
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y liblapack-dev libblas-dev
+    - uses: actions/checkout@v4
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
+    - name: Set up Python ${{ matrix.python-version }}
+      run: uv python install ${{ matrix.python-version }}    
+    - name: Install the project
+      run: uv sync --all-extras --dev
+    - name: Pytest
+      run: |
+       uv run pytest tests/
