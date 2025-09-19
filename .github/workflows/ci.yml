@@ -33,7 +33,7 @@ jobs:
       run: ./install_dependencies.sh
     - name: Lint
       run: |
-        ./run_in_subdirs.sh "uv run pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
+        ./run_in_subdirs.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
   static-type-checking:
     runs-on: ubuntu-latest
     strategy:
@@ -69,4 +69,4 @@ jobs:
       run: ./install_dependencies.sh
     - name: Pytest
       run: |
-        ./run_in_subdirs.sh "uv run pytest tests/"
+        ./run_in_subdirs.sh "pytest tests/"
