@@ -21,13 +21,6 @@ def install_package(package_path: Path) -> bool:
             check=True,
             capture_output=True,
         )
-        # All install all extras
-        subprocess.run(
-            ["uv", "pip", "install", "-r", "pyproject.toml", "--all-extras"],
-            cwd=package_path,
-            check=True,
-            capture_output=True,
-        )
         return True
         
     except subprocess.CalledProcessError as e:

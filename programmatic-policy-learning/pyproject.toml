@@ -21,6 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 develop = [
+    "generalization_grid_games @ git+https://github.com/zahraabashir/generalization_grid_games.git@ee0a559"
     "black",
     "docformatter",
     "isort",
