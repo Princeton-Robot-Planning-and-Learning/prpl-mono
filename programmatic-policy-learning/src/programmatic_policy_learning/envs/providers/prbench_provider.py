@@ -3,8 +3,7 @@
 import prbench
 from gymnasium import Env, spaces
 from omegaconf import DictConfig
-
-from programmatic_policy_learning.envs.utils.wrappers import patch_box_float32
+from prpl_utils.gym_utils import patch_box_float32
 
 
 def create_prbench_env(env_config: DictConfig) -> Env:

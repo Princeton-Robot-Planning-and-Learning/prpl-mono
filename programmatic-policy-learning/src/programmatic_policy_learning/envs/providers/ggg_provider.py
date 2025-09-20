@@ -1,8 +1,7 @@
 """GGG environment provider."""
 
 from omegaconf import DictConfig
-
-from programmatic_policy_learning.envs.utils.gym_to_gymnasium import GymToGymnasium
+from prpl_utils.gym_utils import GymToGymnasium
 
 
 def create_ggg_env(env_config: DictConfig) -> GymToGymnasium:
