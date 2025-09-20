@@ -1,7 +1,5 @@
 # PRPL LLM Utils
 
-![workflow](https://github.com/Princeton-Robot-Planning-and-Learning/prpl-llm-utils/actions/workflows/ci.yml/badge.svg)
-
 LLM utilities from the Princeton Robot Planning and Learning group.
 
 The main feature is the ability to save and load previous responses. There are also some code synthesis utilities.
