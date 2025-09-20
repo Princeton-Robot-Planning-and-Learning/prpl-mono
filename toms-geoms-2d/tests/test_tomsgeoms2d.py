@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from tomsgeoms2d.structs import Circle, LineSegment, Rectangle, Triangle
+from tomsgeoms2d.structs import Circle, LineSegment, Lobject, Rectangle, Triangle
 from tomsgeoms2d.utils import geom2ds_intersect
 
 
@@ -246,6 +246,51 @@ def test_rectangle():
     # plt.savefig("/tmp/rectangle_unit_test2.png")
 
 
+def test_lobject():
+    """Tests for Lobject."""
+    _, ax = plt.subplots(1, 1, figsize=(10, 10))
+    ax.set_xlim((-5, 5))
+    ax.set_ylim((-5, 5))
+
+    lobject = Lobject(x=3, y=4, width=0.5, lengths=(2, 3), theta=0.0)
+
+    assert lobject.x == 3
+    assert lobject.y == 4
+    assert lobject.width == 0.5
+    assert lobject.lengths[0] == 2
+    assert lobject.lengths[1] == 3
+    assert lobject.theta == 0.0
+
+    lobject.plot(ax, color="purple", alpha=0.5)
+
+    expected_vertices = np.array(
+        [(3, 4), (1, 4), (1, 3.5), (2.5, 3.5), (2.5, 1), (3, 1), (3, 3.5), (2.5, 4)]
+    )
+    np.testing.assert_array_equal(lobject.vertices, expected_vertices)
+
+    # Test rotation about center
+    lobject = lobject.rotate_about_point(lobject.x, lobject.y, np.pi / 6)
+    lobject.plot(ax, color="orange", alpha=0.5)
+
+    # Test rotation about external point
+    lobject = lobject.rotate_about_point(0, 0, np.pi / 6)
+    lobject.plot(ax, color="red", alpha=0.5)
+
+    # Test scaling about center
+    lobject = lobject.scale_about_center(width_scale=0.5, length_scale=0.5)
+    lobject.plot(ax, color="blue", alpha=0.5)
+
+    # Test sample_random_point
+    rng = np.random.default_rng(0)
+    for _ in range(100):
+        p = lobject.sample_random_point(rng)
+        assert lobject.contains_point(p[0], p[1])
+        plt.plot(p[0], p[1], "bo")
+
+    # Uncomment for debugging.
+    # plt.savefig("/tmp/lobject_unit_test.png")
+
+
 def test_line_segment_circle_intersection():
     """Tests for line_segment_intersects_circle()."""
     seg1 = LineSegment(-3, 0, 0, 0)
@@ -310,6 +355,20 @@ def test_rectangle_circle_intersection():
     assert geom2ds_intersect(circ3, rect1)
     assert geom2ds_intersect(rect2, circ3)
     assert geom2ds_intersect(circ3, rect2)
+
+
+def test_lobject_rectangle_intersection():
+    """Tests for Lobject intersection."""
+    lobject = Lobject(x=0, y=0, width=1, lengths=[1, 1], theta=0)
+    assert geom2ds_intersect(lobject, Rectangle(x=0, y=0, width=1, height=1, theta=0))
+    assert geom2ds_intersect(Rectangle(x=0, y=0, width=1, height=1, theta=0), lobject)
+
+
+def test_lobject_circle_intersection():
+    """Tests for Lobject intersection."""
+    lobject = Lobject(x=0, y=0, width=1, lengths=[1, 1], theta=0)
+    assert geom2ds_intersect(lobject, Circle(x=0, y=0, radius=1))
+    assert geom2ds_intersect(Circle(x=0, y=0, radius=1), lobject)
 
 
 def test_geom2ds_intersect():

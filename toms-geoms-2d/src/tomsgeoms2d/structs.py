@@ -317,6 +317,185 @@ class Rectangle(Geom2D):
         ax.add_patch(patch)
 
 
+@dataclass(frozen=True)
+class Lobject(Geom2D):
+    """A helper class for representing a L-shaped object for visualizing and
+    collision checking.
+
+    The object is centered at (x,y) with the leg lengths defined as a
+    tuple (length_side1, length_side2).
+    """
+
+    x: float
+    y: float
+    width: float
+    lengths: tuple[float, float]
+    theta: float  # Rotation angle in radians with respect to (x,y)
+
+    def __post_init__(self):
+        # Ensure that the lengths are positive
+        if any(length <= 0 for length in self.lengths):
+            raise ValueError("Lengths must be positive.")
+        assert -np.pi <= self.theta <= np.pi, "Expecting angle in [-pi, pi]."
+
+    @functools.cached_property
+    def rotation_matrix(self) -> NDArray[np.float64]:
+        """Get the rotation matrix."""
+        return np.array(
+            [
+                [np.cos(self.theta), -np.sin(self.theta)],
+                [np.sin(self.theta), np.cos(self.theta)],
+            ]
+        )
+
+    @functools.cached_property
+    def inverse_rotation_matrix(self) -> NDArray[np.float64]:
+        """Get the inverse rotation matrix."""
+        return np.array(
+            [
+                [np.cos(self.theta), np.sin(self.theta)],
+                [-np.sin(self.theta), np.cos(self.theta)],
+            ]
+        )
+
+    @functools.cached_property
+    def vertices(self) -> List[Tuple[float, float]]:
+        """Get the eight vertices of the L-object.
+
+        The last two vertices are for plotting convenience.
+        """
+        w, l1, l2 = self.width, self.lengths[0], self.lengths[1]
+        translate_vector = np.array([self.x, self.y])
+        vertices = np.array(
+            [
+                (0, 0),
+                (-l1, 0),
+                (-l1, -w),
+                (-w, -w),
+                (-w, -l2),
+                (0, -l2),
+                (0, -w),
+                (-w, 0),
+            ]
+        )
+
+        vertices = vertices @ self.rotation_matrix.T
+        vertices = translate_vector + vertices
+        # Convert to a list of tuples. Slightly complicated to appease both
+        # type checking and linting.
+        return list(map(lambda p: (p[0], p[1]), vertices))
+
+    @functools.cached_property
+    def line_segments(self) -> List[LineSegment]:
+        """Get the six line segments of the L-object."""
+        v = self.vertices
+        return [
+            LineSegment(v[0][0], v[0][1], v[1][0], v[1][1]),
+            LineSegment(v[1][0], v[1][1], v[2][0], v[2][1]),
+            LineSegment(v[2][0], v[2][1], v[3][0], v[3][1]),
+            LineSegment(v[3][0], v[3][1], v[4][0], v[4][1]),
+            LineSegment(v[4][0], v[4][1], v[5][0], v[5][1]),
+            LineSegment(v[5][0], v[5][1], v[0][0], v[0][1]),
+        ]
+
+    def contains_point(self, x: float, y: float) -> bool:
+        # First invert translation, then invert rotation.
+        rx, ry = np.array([x - self.x, y - self.y]) @ self.inverse_rotation_matrix.T
+        # Check if the point is within the bounds of the L-object.
+        return (-self.lengths[0] <= rx <= 0 and -self.width <= ry <= 0) or (
+            -self.width <= rx <= 0 and -self.lengths[1] <= ry <= 0
+        )
+
+    def sample_random_point(self, rng: np.random.Generator) -> Tuple[float, float]:
+        # Sample a random point within the bounds of the L-object.
+
+        side_length = rng.choice([self.lengths[0], self.lengths[1]])
+        if side_length == self.lengths[0]:
+            rx = -rng.uniform(0, self.lengths[0])
+            ry = -rng.uniform(0, self.width)
+        else:
+            rx = -rng.uniform(0, self.width)
+            ry = -rng.uniform(0, self.lengths[1])
+
+        rx, ry = np.array([rx, ry]) @ self.rotation_matrix.T
+        x = rx + self.x
+        y = ry + self.y
+
+        return (x, y)
+
+    def rotate_about_point(self, x: float, y: float, rot: float) -> Lobject:
+        """Create a new L-object that is this L-object, but rotated CCW by the
+        given rotation (in radians), relative to the (x, y) origin.
+
+        Rotates the vertices first, then uses them to recompute the new
+        theta.
+        """
+        vertices = np.array(self.vertices)
+        origin = np.array([x, y])
+        # Translate the vertices so that they become the "origin".
+        vertices = vertices - origin
+        # Rotate.
+        rotate_matrix = np.array(
+            [[np.cos(rot), -np.sin(rot)], [np.sin(rot), np.cos(rot)]]
+        )
+        vertices = vertices @ rotate_matrix.T
+
+        # Translate the vertices back.
+        vertices = vertices + origin
+
+        center_x, center_y = vertices[0, 0], vertices[0, 1]
+        width = np.linalg.norm(vertices[1] - vertices[2]).item()
+
+        vector_side1 = vertices[1] - vertices[0]
+        vector_side2 = vertices[5] - vertices[0]
+        length_side1 = np.linalg.norm(vector_side1).item()
+        length_side2 = np.linalg.norm(vector_side2).item()
+
+        # Compute new_theta based on dot product of vector_side2 and x-axis
+        new_theta = np.arctan2(-vector_side1[1], -vector_side1[0])
+
+        return Lobject(
+            center_x, center_y, width, (length_side1, length_side2), new_theta
+        )
+
+    def scale_about_center(self, width_scale: float, length_scale: float) -> Lobject:
+        """Scale the L-object about its center."""
+        # Compute the new dimensions.
+        new_length_side1 = self.lengths[0] * width_scale
+        new_length_side2 = self.lengths[1] * length_scale
+        new_width = self.width * width_scale
+        # Create a new L-object with the new dimensions.
+        return Lobject(
+            self.x, self.y, new_width, (new_length_side1, new_length_side2), self.theta
+        )
+
+    def plot(self, ax: plt.Axes, **kwargs: Any) -> None:
+        vertices = self.vertices
+
+        rectangle1_vertices = np.array(
+            [
+                [vertices[0][0], vertices[0][1]],
+                [vertices[1][0], vertices[1][1]],
+                [vertices[2][0], vertices[2][1]],
+                [vertices[6][0], vertices[6][1]],
+            ]
+        )
+        rectangle2_vertices = np.array(
+            [
+                [vertices[4][0], vertices[4][1]],
+                [vertices[5][0], vertices[5][1]],
+                [vertices[0][0], vertices[0][1]],
+                [vertices[7][0], vertices[7][1]],
+            ]
+        )
+
+        # Create rectangle patches
+        rect1_patch = plt.Polygon(rectangle1_vertices, closed=True, fill=True, **kwargs)
+        rect2_patch = plt.Polygon(rectangle2_vertices, closed=True, fill=True, **kwargs)
+        ax.add_patch(rect1_patch)
+        ax.add_patch(rect2_patch)
+
+
 def line_segments_intersect(seg1: LineSegment, seg2: LineSegment) -> bool:
     """Checks if two line segments intersect.
 
