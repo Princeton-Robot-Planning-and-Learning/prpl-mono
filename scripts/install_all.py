@@ -16,7 +16,14 @@ def install_package(package_path: Path) -> bool:
     try:
         # Install the package in development mode
         subprocess.run(
-            ["uv", "pip", "install", "-e", ".[develop]", "--all-extras"],
+            ["uv", "pip", "install", "-e", ".[develop]"],
+            cwd=package_path,
+            check=True,
+            capture_output=True,
+        )
+        # All install all extras
+        subprocess.run(
+            ["uv", "pip", "install", "-r", "pyproject.toml", "--all-extras"],
             cwd=package_path,
             check=True,
             capture_output=True,
