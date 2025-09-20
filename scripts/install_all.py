@@ -16,7 +16,7 @@ def install_package(package_path: Path) -> bool:
     try:
         # Install the package in development mode
         subprocess.run(
-            ["uv", "pip", "install", "-e", ".[develop]"],
+            ["uv", "pip", "install", "-e", ".[develop]", "--all-extras"],
             cwd=package_path,
             check=True,
             capture_output=True,
