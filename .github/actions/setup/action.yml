@@ -1,0 +1,18 @@
+name: Setup Python with uv and install project
+description: Create venv with uv and install the project.
+inputs:
+  python-version:
+    description: Python version to use
+    required: false
+    default: "3.10"
+runs:
+  using: "composite"
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+    - name: Set up Python ${{ inputs.python-version }}
+      shell: bash
+      run: uv venv --python=${{ inputs.python-version }}
+    - name: Install the project
+      shell: bash
+      run: uv run ./install_all.sh
