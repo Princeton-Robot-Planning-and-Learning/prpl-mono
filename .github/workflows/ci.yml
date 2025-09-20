@@ -15,9 +15,9 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       run: uv venv --python=${{ matrix.python-version }}
     - name: Install the project
-      run: uv run ./install_dependencies.sh
+      run: uv run ./install_all.sh
     - name: Run autoformat
-      run: uv run ./run_autoformat.sh
+      run: uv run ./run_in_subdirs.sh ""./run_autoformat.sh"
   linting:
     runs-on: ubuntu-latest
     strategy:
@@ -30,7 +30,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       run: uv venv --python=${{ matrix.python-version }}
     - name: Install the project
-      run: uv run ./install_dependencies.sh
+      run: uv run ./install_all.sh
     - name: Lint
       run: |
         uv run ./run_in_subdirs.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
@@ -46,7 +46,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       run: uv venv --python=${{ matrix.python-version }}
     - name: Install the project
-      run: uv run ./install_dependencies.sh
+      run: uv run ./install_all.sh
     - name: Mypy
       run: |
         uv run ./run_in_subdirs.sh "mypy ."
@@ -66,7 +66,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       run: uv venv --python=${{ matrix.python-version }}
     - name: Install the project
-      run: uv run ./install_dependencies.sh
+      run: uv run ./install_all.sh
     - name: Pytest
       run: |
         uv run ./run_in_subdirs.sh "pytest tests/"
