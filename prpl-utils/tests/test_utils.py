@@ -1,17 +1,13 @@
 """Tests for utils.py."""
 
-import os
-import tempfile
 import time
 from dataclasses import dataclass
-from pathlib import Path
 
 import numpy as np
 
 from prpl_utils.utils import (
     _DISABLED_cached_property_until_field_change,
     consistent_hash,
-    draw_dag,
     get_signed_angle_distance,
     timer,
     wrap_angle,
@@ -80,15 +76,6 @@ def test_get_signed_angle_distance():
     assert np.isclose(get_signed_angle_distance(0, np.pi / 2), -np.pi / 2)
     assert np.isclose(get_signed_angle_distance(0, -np.pi / 2), np.pi / 2)
     assert np.isclose(get_signed_angle_distance(-np.pi / 2, 0), -np.pi / 2)
-
-
-def test_draw_dag():
-    """Tests for draw_dag()."""
-    filepath = Path(tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name)
-    edges = [("a", "b"), ("b", "c"), ("c", "d"), ("a", "d")]
-    draw_dag(edges, filepath)
-    assert filepath.exists()
-    os.remove(filepath)
 
 
 def test_timer():
