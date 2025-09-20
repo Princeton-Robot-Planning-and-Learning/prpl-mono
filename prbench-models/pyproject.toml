@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prbench_models"
+version = "0.1.0"
+description = "Models for PRBench baselines."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+   "matplotlib",
+   "numpy",
+]
+
+[project.optional-dependencies]
+develop = [
+    "black",
+    "docformatter",
+    "isort",
+    "mypy",
+    "pylint>=2.14.5",
+    "pytest-pylint>=0.18.0",
+    "pytest>=7.2.2",
+    "ruckig>=0.12.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+prbench_models = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.isort]
+py_version = 310
+profile = "black"
+multi_line_output = 2
+skip_glob = ["venv/*", ".venv/*", "third-party/*"]
+split_on_trailing_comma = true
+
+[tool.docformatter]
+line-length = 88
+wrap-summaries = 88
+wrap-descriptions = 88
+
+[tool.mypy]
+strict_equality = true
+disallow_untyped_calls = true
+warn_unreachable = true
+exclude = ["venv/*", ".venv/*", "third-party/*"]
+
+[[tool.mypy.overrides]]
+module = [
+    "matplotlib.*",
+    "pygame.*",
+    "dill.*",
+    "mujoco.*",
+    "pin.*",
+    "ruckig.*",
+    "flask.*",
+    "flask_socketio.*",
+    "zmq.*",
+    "redis.*",
+    "phoenix6.*",
+    "cv2.*",
+    "pybullet.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--ignore=third-party"]
