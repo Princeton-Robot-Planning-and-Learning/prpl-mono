@@ -1,7 +1,5 @@
 # PRPL Utils
 
-![workflow](https://github.com/Princeton-Robot-Planning-and-Learning/prpl-utils/actions/workflows/ci.yml/badge.svg)
-
 Miscellaneous Python utilities from the Princeton Robot Planning and Learning group.
 - **Motion planning**: RRT, BiRRT
 - **PDDL planning**: interfaces to pyperplan, Fast Downward

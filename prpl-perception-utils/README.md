@@ -1,7 +1,5 @@
 # PRPL Perception Utils
 
-![workflow](https://github.com/Princeton-Robot-Planning-and-Learning/prpl-perception-utils/actions/workflows/ci.yml/badge.svg)
-
 Perception utilities from the Princeton Robot Planning and Learning group.
 
 ## Requirements
