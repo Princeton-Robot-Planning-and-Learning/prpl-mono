@@ -43,7 +43,14 @@ jobs:
           brew update
           brew install glfw
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Set up Python
+        shell: bash
+        run: uv venv --python=3.10
+      - name: Install the project
+        shell: bash
+        run: uv run ./install_all.sh
       - name: Pytest
         run: |
           uv run ./run_in_all_packages.sh "pytest tests/"
