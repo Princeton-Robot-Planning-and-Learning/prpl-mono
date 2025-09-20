@@ -23,8 +23,14 @@ def install_package(package_path: Path) -> bool:
         )
         return True
         
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         print(f"❌ Failed to install {package_path.name}", file=sys.stderr)
+        print(f"   Command: {' '.join(e.cmd)}", file=sys.stderr)
+        print(f"   Return code: {e.returncode}", file=sys.stderr)
+        if e.stdout:
+            print(f"   Stdout:\n{e.stdout.decode()}", file=sys.stderr)
+        if e.stderr:
+            print(f"   Stderr:\n{e.stderr.decode()}", file=sys.stderr)
         return False
 
 
