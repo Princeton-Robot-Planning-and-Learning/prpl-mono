@@ -11,46 +11,43 @@ requires-python = ">=3.10,<3.13"
 dependencies = [
    "matplotlib",
    "numpy",
-   "relational_structs@git+https://github.com/tomsilver/relational-structs.git",
-   "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-Learning/prpl-utils.git",
 ]
 
 [project.optional-dependencies]
 all = [
    "pygame>=2.5.2",
    "pymunk==7.1.0",
-   "tomsgeoms2d@git+https://github.com/tomsilver/toms-geoms-2d.git",
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
-   "pybullet==3.2.5",
-   "pybullet-helpers@git+https://github.com/tomsilver/pybullet-helpers.git",
+   "pybullet>=3.2.5",
 ]
 dynamic2d = [
    "pygame>=2.5.2",
    "pymunk==7.1.0",
-   "tomsgeoms2d@git+https://github.com/tomsilver/toms-geoms-2d.git"
 ]
 geom2d = [
-   "tomsgeoms2d@git+https://github.com/tomsilver/toms-geoms-2d.git",
 ]
 tidybot = [
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
 ]
 geom3d = [
-   "pybullet==3.2.5",
-   "pybullet-helpers@git+https://github.com/tomsilver/pybullet-helpers.git",
+   "pybullet>=3.2.5",
 ]
 develop = [
-    "black",
-    "docformatter",
-    "isort",
-    "mypy",
-    "pylint>=2.14.5",
-    "pytest-pylint>=0.18.0",
-    "pytest>=7.2.2",
-    "pre-commit",
-    "coverage",
+   "pygame>=2.5.2",
+   "pymunk==7.1.0",
+   "mujoco==3.2.4",
+   "opencv-python>=4.9.0",
+   "pybullet>=3.2.5",
+   "black",
+   "docformatter",
+   "isort",
+   "mypy",
+   "pylint>=2.14.5",
+   "pytest-pylint>=0.18.0",
+   "pytest>=7.2.2",
+   "coverage",
 ]
 
 [tool.setuptools.packages.find]

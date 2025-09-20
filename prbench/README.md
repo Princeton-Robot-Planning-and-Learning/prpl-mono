@@ -102,16 +102,15 @@ PRBench does not provide any models for TAMP. Users are welcome to engineer thei
 ### :wrench: Installation
 We strongly recommend [uv](https://docs.astral.sh/uv/getting-started/installation/). The steps below assume that you have `uv` installed. If you do not, just remove `uv` from the commands and the installation should still work.
 
-1. Install PRPL dependencies: `uv pip install -r prpl_requirements.txt`
-2. Choose one of the following based on you need:
-    - `uv pip install -e .` - Installs only core dependencies (matplotlib, numpy, relational_structs, prpl_utils)
-    - `uv pip install -e .[all]` - Installs everything (excluding develop)
-    - `uv pip install -e .[geom2d]` - Installs only core + geom2d dependencies (no pybullet)
-    - `uv pip install -e .[dynamic2d]` - Installs only core + dynamic2d dependencies
-    - `uv pip install -e .[tidybot]` - Installs only core + tidybot dependencies
-    - `uv pip install -e .[geom3d]` - Installs only core + geom3d dependencies
-    - `uv pip install -e .[develop]` - Installs only core + development tools
-    - Compositionally install the dependencies like `[geom2d,develop]`
+Then, choose one of the following based on you need:
+- `uv pip install -r optional_prpl_requirements/core.txt && uv pip install -e .` - Installs only core dependencies (matplotlib, numpy, relational_structs, prpl_utils)
+- `uv pip install -r prpl_requirements.txt && uv pip install -e .uv pip install -e ".[all]"` - Installs everything (excluding develop)
+- `uv pip install -r optional_prpl_requirements/geom2d.txt && uv pip install -e ".[geom2d]"` - Installs only core + geom2d dependencies (no pybullet)
+- `uv pip install -r optional_prpl_requirements/dynamic2d.txt && uv pip install -e ".[dynamic2d]"` - Installs only core + dynamic2d dependencies
+- `uv pip install -e ".[tidybot]"` - Installs only core + tidybot dependencies
+- `uv pip install -r optional_prpl_requirements/geom3d.txt && uv pip install -e ".[geom3d]"` - Installs only core + geom3d dependencies
+- `uv pip install -r prpl_requirements.txt && uv pip install -e ".[develop]"` - Installs all + development tools
+- Compositionally install the dependencies like `[geom2d,geom3d]`
 
 ### :microscope: Check Installation
 Run `./run_ci_checks.sh`. It should complete with all green successes.

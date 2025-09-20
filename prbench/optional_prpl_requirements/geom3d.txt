@@ -1,0 +1,2 @@
+# PRPL mono requirements for just the core of prbench.
+../pybullet-helpers

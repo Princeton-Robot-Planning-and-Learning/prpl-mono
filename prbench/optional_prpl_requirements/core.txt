@@ -1,0 +1,3 @@
+# PRPL mono requirements for just the core of prbench.
+../relational-structs
+../prpl-utils

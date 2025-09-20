@@ -1,0 +1,5 @@
+# PRPL mono requirements for [all].
+../relational-structs
+../prpl-utils
+../toms-geoms-2d
+../pybullet-helpers
