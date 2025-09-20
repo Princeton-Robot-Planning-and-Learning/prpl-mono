@@ -5,68 +5,35 @@ on: [push]
 jobs:
   autoformat:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10"]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      run: uv venv --python=${{ matrix.python-version }}
-    - name: Install the project
-      run: uv run ./install_all.sh
-    - name: Run autoformat
-      run: uv run ./run_in_subdirs.sh "./run_autoformat.sh"
+      - uses: ./.github/actions/setup
+      - name: Run autoformat
+        run: uv run ./run_in_subdirs.sh "./run_autoformat.sh"
+
   linting:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10"]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      run: uv venv --python=${{ matrix.python-version }}
-    - name: Install the project
-      run: uv run ./install_all.sh
-    - name: Lint
-      run: |
-        uv run ./run_in_subdirs.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
+      - uses: ./.github/actions/setup
+      - name: Lint
+        run: |
+          uv run ./run_in_subdirs.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
+
   static-type-checking:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10"]
     steps:
-    - uses: actions/checkout@v4
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      run: uv venv --python=${{ matrix.python-version }}
-    - name: Install the project
-      run: uv run ./install_all.sh
-    - name: Mypy
-      run: |
-        uv run ./run_in_subdirs.sh "mypy ."
+      - uses: ./.github/actions/setup
+      - name: Mypy
+        run: |
+          uv run ./run_in_subdirs.sh "mypy ."
+
   unit-tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10"]
     steps:
-    - name: Install LAPACK and BLAS
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y liblapack-dev libblas-dev
-    - uses: actions/checkout@v4
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      run: uv venv --python=${{ matrix.python-version }}
-    - name: Install the project
-      run: uv run ./install_all.sh
-    - name: Pytest
-      run: |
-        uv run ./run_in_subdirs.sh "pytest tests/"
+      - name: Install LAPACK and BLAS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y liblapack-dev libblas-dev
+      - uses: ./.github/actions/setup
+      - name: Pytest
+        run: |
+          uv run ./run_in_subdirs.sh "pytest tests/"
