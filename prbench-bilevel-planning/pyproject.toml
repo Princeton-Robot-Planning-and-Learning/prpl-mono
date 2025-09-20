@@ -7,7 +7,7 @@ name = "prbench_bilevel_planning"
 version = "0.1.0"
 description = " Bilevel planning baselines for PRBench."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
    "matplotlib",
    "numpy",
@@ -36,10 +36,10 @@ prbench_bilevel_planning = ["py.typed"]
 
 [tool.black]
 line-length = 88
-target-version = ["py311"]
+target-version = ["py310"]
 
 [tool.isort]
-py_version = 311
+py_version = 310
 profile = "black"
 multi_line_output = 2
 skip_glob = ["venv/*", ".venv/*", "third-party/*"]
