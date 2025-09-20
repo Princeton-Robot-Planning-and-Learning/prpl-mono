@@ -5,6 +5,7 @@ MUJOCO_LOG.TXT
 uv.lock
 logs
 llm_cache.db
+unit_test_videos
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
