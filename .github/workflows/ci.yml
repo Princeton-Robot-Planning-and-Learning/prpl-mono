@@ -17,7 +17,7 @@ jobs:
     - name: Install the project
       run: uv run ./install_all.sh
     - name: Run autoformat
-      run: uv run ./run_in_subdirs.sh ""./run_autoformat.sh"
+      run: uv run ./run_in_subdirs.sh "./run_autoformat.sh"
   linting:
     runs-on: ubuntu-latest
     strategy:
