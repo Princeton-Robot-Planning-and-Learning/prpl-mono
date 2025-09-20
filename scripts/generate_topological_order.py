@@ -9,6 +9,7 @@ are ordered such that dependencies come before their dependents.
 """
 
 import sys
+import argparse
 from pathlib import Path
 from collections import defaultdict, deque
 
@@ -164,40 +165,95 @@ def print_dependency_info(graph: dict[str, list[str]]):
     print()
 
 
+def get_topological_order(repo_root: Path) -> list[str]:
+    """
+    Get the topological ordering of packages.
+    
+    Args:
+        repo_root: Path to the repository root
+        
+    Returns:
+        List of packages in topological order
+        
+    Raises:
+        ValueError: If there is a circular dependency
+    """
+    packages = find_packages(repo_root)
+    graph = build_dependency_graph(repo_root, packages)
+    return topological_sort(graph)
+
+
 def main():
     """Main function to generate topological ordering."""
+    parser = argparse.ArgumentParser(
+        description="Generate topological ordering of packages based on dependencies"
+    )
+    parser.add_argument(
+        "--list-only", 
+        action="store_true", 
+        help="Output only the package names in order, one per line"
+    )
+    
+    args = parser.parse_args()
+    
     # Get repository root (directory containing this script)
     repo_root = Path(__file__).parents[1]
     
-    print(f"Analyzing packages in: {repo_root}")
-    print()
-    
-    # Find all packages
-    packages = find_packages(repo_root)
-    print(f"Found {len(packages)} packages: {', '.join(packages)}")
-    print()
-    
-    # Build dependency graph
-    graph = build_dependency_graph(repo_root, packages)
-    
-    # Print dependency information
-    print_dependency_info(graph)
-
-    # Generate topological ordering
-    ordered_packages = topological_sort(graph)
-    
-    print("=== Topological Ordering ===")
-    print("Install packages in this order (dependencies first):")
-    print()
-    
-    for i, package in enumerate(ordered_packages, 1):
-        dependencies = graph[package]
-        if dependencies:
-            dep_str = f" (depends on: {', '.join(sorted(dependencies))})"
+    try:
+        if args.list_only:
+            # Just output the package names in order
+            ordered_packages = get_topological_order(repo_root)
+            for package in ordered_packages:
+                print(package)
         else:
-            dep_str = " (no dependencies)"
-        print(f"{i:2d}. {package}{dep_str}")
-    
+            # Full detailed output
+            print(f"Analyzing packages in: {repo_root}")
+            print()
+            
+            # Find all packages
+            packages = find_packages(repo_root)
+            print(f"Found {len(packages)} packages: {', '.join(packages)}")
+            print()
+            
+            # Build dependency graph
+            graph = build_dependency_graph(repo_root, packages)
+            
+            # Print dependency information
+            print_dependency_info(graph)
+
+            # Generate topological ordering
+            ordered_packages = topological_sort(graph)
+            
+            print("=== Topological Ordering ===")
+            print("Install packages in this order (dependencies first):")
+            print()
+            
+            for i, package in enumerate(ordered_packages, 1):
+                dependencies = graph[package]
+                if dependencies:
+                    dep_str = f" (depends on: {', '.join(sorted(dependencies))})"
+                else:
+                    dep_str = " (no dependencies)"
+                print(f"{i:2d}. {package}{dep_str}")
+            
+            print()
+            print("=== Installation Commands ===")
+            print("You can install packages in this order using:")
+            print()
+            
+            for package in ordered_packages:
+                package_path = repo_root / package
+                
+                # Check if package has prpl_requirements.txt
+                if (package_path / "prpl_requirements.txt").exists():
+                    print(f"cd {package} && uv pip install -r prpl_requirements.txt && uv pip install -e .")
+                else:
+                    print(f"cd {package} && uv pip install -e .")
+                    
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
