@@ -2,7 +2,7 @@
 
 This repository contains code under active development by the Princeton Robot Planning and Learning group.
 
-There are multiple Python packages that can be installed and developed separately. They are included in a monorepo because some are interdependent and we want to make sure that changes in one repository does not break code in another.
+There are multiple Python packages that can be installed and developed separately. They are included in a monorepo because some are interdependent and we want to make sure that changes in one repository do not break code in another.
 
 The basic structure is:
 ```
