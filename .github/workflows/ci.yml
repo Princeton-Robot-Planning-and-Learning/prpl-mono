@@ -6,34 +6,38 @@ jobs:
   autoformat:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - name: Run autoformat
+              - name: Run autoformat
         run: uv run ./run_in_subdirs.sh "./run_autoformat.sh"
 
   linting:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - name: Lint
+              - name: Lint
         run: |
           uv run ./run_in_subdirs.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
 
   static-type-checking:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
-      - name: Mypy
+              - name: Mypy
         run: |
           uv run ./run_in_subdirs.sh "mypy ."
 
   unit-tests:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Install LAPACK and BLAS
         run: |
           sudo apt-get update
           sudo apt-get install -y liblapack-dev libblas-dev
       - uses: ./.github/actions/setup
-      - name: Pytest
+              - name: Pytest
         run: |
           uv run ./run_in_subdirs.sh "pytest tests/"
