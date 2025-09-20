@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:macro name="load_forque" params="parent prefix">
+
+    <joint name="${prefix}forque_tip_joint" type="fixed">
+          <parent link="${parent}"/>
+          <child link="${prefix}forque_tip"/>
+          <!-- <origin rpy="0.0 0.0 0" xyz="0.0 0.0 0.35"/> -->
+          <origin rpy="0.0 0.0 0" xyz="0.0 0.0 0.315"/>
+    </joint>
+
+    <link name="${prefix}forque_tip">
+      <inertial>
+          <origin xyz="0 0 0.091" rpy="0 0 0" />
+          <mass value="0.113" />
+          <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://kortex_description/tools/forque/forque_tip.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="carbon_fiber">
+          <color rgba="0.792156862745098 0.819607843137255 0.933333333333333 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://kortex_description/tools/forque/forque_tip.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+      </collision>
+    </link>
+
+  </xacro:macro>
+
+</robot>

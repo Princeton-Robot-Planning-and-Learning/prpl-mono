@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pybullet_helpers"
+version = "0.1.0"
+description = "Some utility functions for PyBullet."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+   "numpy>=1.23.5,<2.0",
+   "pybullet>=3.2.5",
+   "gymnasium>=0.29.1",
+   "tomsutils@git+https://github.com/tomsilver/toms-utils.git",
+   "scipy==1.14.0",
+   "hello-robot-stretch-urdf",
+]
+
+[project.optional-dependencies]
+develop = [
+    "black",
+    "docformatter",
+    "isort",
+    "mypy",
+    "pylint>=2.14.5",
+    "pytest-pylint>=0.18.0",
+    "pytest>=7.2.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pybullet_helpers = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+extend-exclude = "third_party/*"
+
+[tool.isort]
+py_version = 310
+profile = "black"
+multi_line_output = 2
+skip_glob = ["venv/*", "third_party/*"]
+split_on_trailing_comma = true
+
+[tool.mypy]
+strict_equality = true
+disallow_untyped_calls = true
+warn_unreachable = true
+exclude = ["venv/*", "third_party/*"]
+
+[[tool.mypy.overrides]]
+module = [
+    "pybullet.*",
+    "pybullet_utils.*",
+    "scipy.*",
+]
+ignore_missing_imports = true

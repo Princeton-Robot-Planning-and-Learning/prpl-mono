@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+
+<robot name="gen3_robotiq_2f_85" xmlns:xacro="http://ros.org/wiki/xacro">
+    
+    <!-- Arguments -->
+    <xacro:arg name="arm" default="gen3" />
+    <xacro:arg name="dof" default="6" />
+    <xacro:arg name="vision" default="true" />
+
+    <xacro:arg name="gripper" default="robotiq_2f_85" />
+
+    <xacro:arg name="forque" default="false" />
+
+    <xacro:arg name="sim" default="false" />
+    <xacro:arg name="prefix" default="" />
+
+    <xacro:arg name="feeding_utensil" default="true" />
+
+    <xacro:include filename="$(find kortex_description)/robots/kortex_robot.xacro" />
+    <xacro:load_robot arm="$(arg arm)" gripper="$(arg gripper)" forque="$(arg forque)" feeding_utensil="$(arg feeding_utensil)"  dof="$(arg dof)" vision="$(arg vision)" sim="$(arg sim)" prefix="$(arg prefix)" />
+
+</robot>
