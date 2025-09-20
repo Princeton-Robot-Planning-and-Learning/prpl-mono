@@ -3,6 +3,8 @@
 MUJOCO_LOG.TXT
 **/auto_*.xml
 uv.lock
+logs
+llm_cache.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

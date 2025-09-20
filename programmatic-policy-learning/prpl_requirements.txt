@@ -1,0 +1,4 @@
+# PRPL mono requirements.
+../prpl-utils
+../prpl-llm-utils
+../prbench
