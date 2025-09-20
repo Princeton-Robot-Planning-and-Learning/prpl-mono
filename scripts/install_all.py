@@ -1,26 +1,11 @@
 #!/usr/bin/env python3
-"""
-Simplified install script for the PRPL monorepo.
-Optimized for speed, especially in CI environments.
-"""
+"""Install all dependencies."""
 
 import subprocess
 import sys
 from pathlib import Path
 
-# Fixed installation order based on dependencies
-# This avoids the overhead of dynamic dependency resolution
-INSTALL_ORDER = [
-    "prpl-utils",
-    "toms-geoms-2d", 
-    "pybullet-helpers",
-    "relational-structs",
-    "prpl-llm-utils",
-    "prpl-perception-utils",
-    "bilevel-planning",
-    "prbench",
-    "prbench-models",
-]
+from generate_topological_order import get_topological_order
 
 
 def install_package(package_path: Path) -> bool:
@@ -29,16 +14,6 @@ def install_package(package_path: Path) -> bool:
         return True  # Skip missing packages silently
     
     try:
-        # Install prpl requirements if they exist
-        prpl_requirements = package_path / "prpl_requirements.txt"
-        if prpl_requirements.exists():
-            subprocess.run(
-                ["uv", "pip", "install", "-r", "prpl_requirements.txt"],
-                cwd=package_path,
-                check=True,
-                capture_output=True,
-            )
-        
         # Install the package in development mode
         subprocess.run(
             ["uv", "pip", "install", "-e", ".[develop]"],
@@ -56,10 +31,11 @@ def install_package(package_path: Path) -> bool:
 def main():
     """Install all packages in the correct order."""
     repo_root = Path(__file__).parents[1]
+    install_order = get_topological_order(repo_root)
     
-    print(f"Installing {len(INSTALL_ORDER)} packages...")
+    print(f"Installing {len(install_order)} packages...")
     
-    for package_name in INSTALL_ORDER:
+    for package_name in install_order:
         package_path = repo_root / package_name
         print(f"Installing {package_name}...", end=" ", flush=True)
         
