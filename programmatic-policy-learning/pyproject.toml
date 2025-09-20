@@ -7,7 +7,7 @@ name = "programmatic_policy_learning"
 version = "0.1.0"
 description = " Common code for learning programmatic policies."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
    "matplotlib",
    "numpy",
