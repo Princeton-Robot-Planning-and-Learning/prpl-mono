@@ -1,0 +1,84 @@
+<mujoco model="cupboard_scene">
+    <include file="tidybot.xml"/>
+
+    <statistic center="0.25 0 0.6" extent="1.0" meansize="0.05"/>
+
+    <visual>
+        <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0 0 0"/>
+        <rgba haze="0.15 0.25 0.35 1"/>
+        <global azimuth="120" elevation="-20"/>
+    </visual>
+
+    <asset>
+        <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+        <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
+        markrgb="0.8 0.8 0.8" width="300" height="300"/>
+        <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5"/>
+        <texture type="2d" name="wood" builtin="flat" rgb1="0.6 0.4 0.2" width="256" height="256"/>
+        <material name="table_material" texture="wood" rgba="0.8 0.6 0.4 1"/>
+    </asset>
+    
+    <worldbody>
+        <light pos="0 0 1.5" directional="true"/>
+        <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+    
+        <!-- Wall -->
+        <geom name="wall" type="box" size="0.1 2 1" pos="1.3 0 1" rgba="0.85 0.8 0.6 1"/>
+
+        <!-- Cupboard (open box attached to wall) -->
+        <body name="cupboard" pos="1.0 0 0.2">
+            <!-- Bottom -->
+            <geom type="box" size="0.2 0.15 0.02" pos="0 0 0" rgba="0.95 0.92 0.8 1"/>
+            <!-- Top -->
+            <geom type="box" size="0.2 0.15 0.02" pos="0 0 0.46" rgba="0.95 0.92 0.8 1"/>
+            <!-- Left Side -->
+            <geom type="box" size="0.2 0.02 0.23" pos="0 -0.16 0.23" rgba="0.95 0.92 0.8 1"/>
+            <!-- Right Side -->
+            <geom type="box" size="0.2 0.02 0.23" pos="0 0.16 0.23" rgba="0.95 0.92 0.8 1"/>
+            <!-- Back -->
+            <geom type="box" size="0.02 0.15 0.23" pos="0.38 0 0.23" rgba="0.95 0.92 0.8 1"/>
+        </body>
+
+        <body name="cupboard_1" pos="1.0 -0.6 0.2">
+            <!-- Bottom -->
+            <geom type="box" size="0.2 0.3 0.02" pos="0 0 0" rgba="0.95 0.92 0.8 1"/>
+        </body>
+
+        <!-- Three cubes on the ground in front of the cabinet -->
+        <body name="cube1" pos="1.0 -0.4 0.33">
+            <freejoint/>
+            <geom type="box" size="0.02 0.02 0.06" rgba=".5 .7 .5 1" mass="0.1"/>
+        </body>
+        <body name="cube2" pos="1.0 -0.5 0.33">
+            <freejoint/>
+            <geom type="box" size="0.02 0.02 0.06" rgba=".7 .5 .5 1" mass="0.1"/>
+        </body>
+        <body name="cube3" pos="1.0 -0.6 0.33">
+            <freejoint/>
+            <geom type="box" size="0.02 0.02 0.06" rgba=".5 .5 .7 1" mass="0.1"/>
+        </body>
+        <body name="cube4" pos="1.0 -0.7 0.33">
+            <freejoint/>
+            <geom type="box" size="0.02 0.02 0.06" rgba="0 0 1 1" mass="0.1"/>
+        </body>
+        <body name="cube5" pos="1.1 -0.4 0.33">
+            <freejoint/>
+            <geom type="box" size="0.02 0.02 0.06" rgba="1 0 0 1" mass="0.1"/>
+        </body>
+        <body name="cube6" pos="1.1 -0.5 0.33">
+            <freejoint/>
+            <geom type="box" size="0.02 0.02 0.06" rgba="1 1 0 1" mass="0.1"/>
+        </body>
+        <body name="cube7" pos="1.1 -0.6 0.33">
+            <freejoint/>
+            <geom type="box" size="0.02 0.02 0.06" rgba="0 0 0 1" mass="0.1"/>
+        </body>
+        <body name="cube8" pos="1.1 -0.7 0.33">
+            <freejoint/>
+            <geom type="box" size="0.02 0.02 0.06" rgba="1 1 1 1" mass="0.2"/>
+        </body>
+
+        <!-- Overview camera -->
+        <camera name="overview" pos="0.8 -2.0 1.7" euler="1.0 0.0 0" fovy="42" resolution="640 480"/>
+    </worldbody>
+</mujoco>

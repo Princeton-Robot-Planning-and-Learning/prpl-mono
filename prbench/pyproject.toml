@@ -1,0 +1,97 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prbench"
+version = "0.1.0"
+description = "A robotics benchmark for physical reasoning."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+   "matplotlib",
+   "numpy",
+   "relational_structs@git+https://github.com/tomsilver/relational-structs.git",
+   "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-Learning/prpl-utils.git",
+]
+
+[project.optional-dependencies]
+all = [
+   "pygame>=2.5.2",
+   "pymunk==7.1.0",
+   "tomsgeoms2d@git+https://github.com/tomsilver/toms-geoms-2d.git",
+   "mujoco==3.2.4",
+   "opencv-python>=4.9.0",
+   "pybullet==3.2.5",
+   "pybullet-helpers@git+https://github.com/tomsilver/pybullet-helpers.git",
+]
+dynamic2d = [
+   "pygame>=2.5.2",
+   "pymunk==7.1.0",
+   "tomsgeoms2d@git+https://github.com/tomsilver/toms-geoms-2d.git"
+]
+geom2d = [
+   "tomsgeoms2d@git+https://github.com/tomsilver/toms-geoms-2d.git",
+]
+tidybot = [
+   "mujoco==3.2.4",
+   "opencv-python>=4.9.0",
+]
+geom3d = [
+   "pybullet==3.2.5",
+   "pybullet-helpers@git+https://github.com/tomsilver/pybullet-helpers.git",
+]
+develop = [
+    "black",
+    "docformatter",
+    "isort",
+    "mypy",
+    "pylint>=2.14.5",
+    "pytest-pylint>=0.18.0",
+    "pytest>=7.2.2",
+    "pre-commit",
+    "coverage",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+prbench = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.isort]
+py_version = 310
+profile = "black"
+multi_line_output = 2
+skip_glob = ["venv/*", ".venv/*"]
+split_on_trailing_comma = true
+
+[tool.docformatter]
+line-length = 88
+wrap-summaries = 88
+wrap-descriptions = 88
+
+[tool.mypy]
+strict_equality = true
+disallow_untyped_calls = true
+warn_unreachable = true
+exclude = ["venv/*", ".venv/*"]
+
+[[tool.mypy.overrides]]
+module = [
+    "matplotlib.*",
+    "pygame.*",
+    "dill.*",
+    "mujoco.*",
+    "cv2.*",
+    "pybullet.*",
+]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+relative_files = true
+source = ["src", "tests"]
