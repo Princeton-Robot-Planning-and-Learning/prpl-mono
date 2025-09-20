@@ -38,12 +38,12 @@ target-version = ["py310"]
 py_version = 310
 profile = "black"
 multi_line_output = 2
-skip_glob = ["venv/*", ".venv/*", "build", "dist", "third-party", "**/__pycache__"]
+skip_glob = ["venv/*", ".venv/*", "build", "dist", "third-party", "__pycache__/"]
 split_on_trailing_comma = true
 
 [tool.mypy]
 strict_equality = true
 disallow_untyped_calls = true
 warn_unreachable = true
-exclude = ["venv/*", ".venv/*", "build", "dist", "third-party", "**/__pycache__"]
+exclude = ["venv/*", ".venv/*", "build", "dist", "third-party", "__pycache__/"]
 
