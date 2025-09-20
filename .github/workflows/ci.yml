@@ -33,10 +33,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install LAPACK and BLAS
+      - name: Install LAPACK, BLAS, OSMesa (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y liblapack-dev libblas-dev
+          sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
+      - name: Install GLFW (Macos)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install glfw
       - uses: ./.github/actions/setup
       - name: Pytest
         run: |
