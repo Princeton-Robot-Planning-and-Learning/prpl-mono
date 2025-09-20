@@ -2,4 +2,4 @@
 ../bilevel_planning
 ../prbench_models
 ../prbench_bilevel_planning
-../prbench[geom2d]
+../prbench
