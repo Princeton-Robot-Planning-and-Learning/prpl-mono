@@ -45,7 +45,7 @@ def capture_image(
     )
 
     rgb_array = np.array(px).reshape((image_height, image_width, 4))
-    rgb_array = rgb_array[:, :, :3]
+    rgb_array = rgb_array[:, :, :3]  # type: ignore
     return rgb_array.astype(np.uint8)
 
 
