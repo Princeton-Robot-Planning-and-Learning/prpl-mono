@@ -1,0 +1,3 @@
+# PRPL mono requirements.
+../prbench
+../prbench-bilevel-planning
