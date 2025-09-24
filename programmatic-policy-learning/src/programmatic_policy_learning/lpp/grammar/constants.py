@@ -1,0 +1,3 @@
+"""Grammar symbol constants."""
+
+START, CONDITION, LOCAL_PROGRAM, DIRECTION, POSITIVE_NUM, NEGATIVE_NUM, VALUE = range(7)
