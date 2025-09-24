@@ -119,7 +119,6 @@ You can add environments in two ways:
 1. **Plain Gymnasium env** (already registered via `gymnasium.make`)  
 2. **Provider-based env** (env lives in a separate repo and needs a small adapter)
 
----
 
 ## 1. Plain Gymnasium Env (no provider)
 
@@ -258,9 +257,7 @@ env = registry.load(cfg.env)  # uses provider if present, else gymnasium.make
 	-   Implement `create_<provider>_env(cfg)` in `env/providers/<provider>_provider.py`
 	    
 -   Instantiate with `EnvRegistry().load(cfg.env)`
-    
-
-That’s it!
+That's it!
 ---
 
 ## Contributing
