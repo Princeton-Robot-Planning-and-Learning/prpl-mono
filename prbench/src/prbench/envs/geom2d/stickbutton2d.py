@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
-from prbench.core import ConstantObjectPRBenchEnv
+from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta
 from prbench.envs.geom2d.base_env import (
     Geom2DRobotEnvConfig,
     ObjectCentricGeom2DRobotEnv,
@@ -23,11 +23,11 @@ from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     create_walls_from_world_boundaries,
 )
-from prbench.envs.utils import BLACK, sample_se2_pose, state_2d_has_collision
+from prbench.envs.utils import BLACK, BROWN, sample_se2_pose, state_2d_has_collision
 
 
 @dataclass(frozen=True)
-class StickButton2DEnvConfig(Geom2DRobotEnvConfig):
+class StickButton2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Config for StickButton2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
@@ -80,7 +80,7 @@ class StickButton2DEnvConfig(Geom2DRobotEnvConfig):
     )
 
     # Stick hyperparameters.
-    stick_rgb: tuple[float, float, float] = (0.4, 0.2, 0.1)
+    stick_rgb: tuple[float, float, float] = BROWN
     stick_shape: tuple[float, float] = (robot_base_radius / 2, table_shape[1])
     stick_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
         SE2Pose(world_min_x, table_pose.y - stick_shape[1] / 2, 0),

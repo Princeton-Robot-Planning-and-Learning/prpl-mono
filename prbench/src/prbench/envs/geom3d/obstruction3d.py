@@ -13,7 +13,7 @@ from pybullet_helpers.utils import create_pybullet_block
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
-from prbench.core import ConstantObjectPRBenchEnv
+from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta
 from prbench.envs.geom3d.base_env import (
     Geom3DEnvConfig,
     ObjectCentricGeom3DRobotEnv,
@@ -28,7 +28,7 @@ from prbench.envs.utils import PURPLE
 
 
 @dataclass(frozen=True)
-class Obstruction3DEnvConfig(Geom3DEnvConfig):
+class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Obstruction3DEnv()."""
 
     # Table.

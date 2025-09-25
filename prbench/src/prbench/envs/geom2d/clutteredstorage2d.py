@@ -7,7 +7,7 @@ from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 from tomsgeoms2d.structs import Rectangle
 
-from prbench.core import ConstantObjectPRBenchEnv
+from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta
 from prbench.envs.geom2d.base_env import (
     Geom2DRobotEnvConfig,
     ObjectCentricGeom2DRobotEnv,
@@ -37,7 +37,7 @@ Geom2DRobotEnvTypeFeatures[ShelfType] = list(Geom2DRobotEnvTypeFeatures[DoubleRe
 
 
 @dataclass(frozen=True)
-class ClutteredStorage2DEnvConfig(Geom2DRobotEnvConfig):
+class ClutteredStorage2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Config for ClutteredStorage2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.

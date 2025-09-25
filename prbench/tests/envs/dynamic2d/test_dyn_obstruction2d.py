@@ -5,6 +5,22 @@ import numpy as np
 from gymnasium.spaces import Box
 
 import prbench
+from prbench.envs.dynamic2d.dyn_obstruction2d import DynObstruction2DEnvConfig
+
+
+def test_config_cant_subclass():
+    """Tests that DynObstruction2DEnvConfig cannot be subclassed but can be
+    instantiated."""
+    # Test that the class can be instantiated
+    config = DynObstruction2DEnvConfig()
+    assert config is not None
+
+    # Test that subclassing raises TypeError
+    with np.testing.assert_raises(TypeError):
+
+        class SubConfig(DynObstruction2DEnvConfig):  # pylint: disable=unused-variable
+            """This should raise a TypeError because DynObstruction2DEnvConfig is
+            final."""
 
 
 def test_dyn_obstruction2d_observation_space():

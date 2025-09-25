@@ -29,8 +29,9 @@ Packages that depend on other packages in this repo should include a `prpl_requi
 
 ### Contributing to an Existing Package
 1. Clone this repository.
-2. Follow the README instructions in the package or packages that you want to edit.
-3. Open a pull request on this repository.
+2. Installing all packages in this repository, `uv run python scripts/install_all.py`.
+3. Follow the README instructions in the package or packages that you want to edit.
+4. Open a pull request on this repository.
 
 ### Adding a New Package
 Instructions coming later. In the meantime, use one of the existing packages as a reference.

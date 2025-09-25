@@ -15,7 +15,7 @@ from pybullet_helpers.inverse_kinematics import (
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
-from prbench.core import ConstantObjectPRBenchEnv
+from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta
 from prbench.envs.geom3d.base_env import (
     Geom3DEnvConfig,
     ObjectCentricGeom3DRobotEnv,
@@ -29,7 +29,7 @@ from prbench.envs.geom3d.utils import Geom3DObjectCentricState
 
 
 @dataclass(frozen=True)
-class Motion3DEnvConfig(Geom3DEnvConfig):
+class Motion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Motion3DEnv()."""
 
     # Target.

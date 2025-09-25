@@ -8,7 +8,7 @@ import pymunk
 from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
-from prbench.core import ConstantObjectPRBenchEnv
+from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta
 from prbench.envs.dynamic2d.base_env import (
     Dynamic2DRobotEnvConfig,
     ObjectCentricDynamic2DRobotEnv,
@@ -41,7 +41,7 @@ Dynamic2DRobotEnvTypeFeatures[TargetSurfaceType] = list(
 
 
 @dataclass(frozen=True)
-class DynObstruction2DEnvConfig(Dynamic2DRobotEnvConfig):
+class DynObstruction2DEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Scene config for DynObstruction2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
@@ -171,10 +171,10 @@ class ObjectCentricDynObstruction2DEnv(
     def __init__(
         self,
         num_obstructions: int = 2,
-        config: DynObstruction2DEnvConfig = DynObstruction2DEnvConfig(),
+        config: DynObstruction2DEnvConfig | None = None,
         **kwargs,
     ) -> None:
-        super().__init__(config, **kwargs)
+        super().__init__(config or DynObstruction2DEnvConfig(), **kwargs)
         self._num_obstructions = num_obstructions
 
         # Store object references for tracking

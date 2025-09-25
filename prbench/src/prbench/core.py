@@ -18,6 +18,27 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench.envs.utils import RobotActionSpace
 
 
+class FinalConfigMeta(type):
+    """Metaclass that prevents subclassing of configuration classes.
+
+    Usage:
+        @dataclass(frozen=True)
+        class MyConfig(BaseConfig, metaclass=FinalConfigMeta):
+            pass
+    """
+
+    def __new__(mcs, name, bases, namespace):
+        # Check if any base class is marked as final
+        for base in bases:
+            if hasattr(base, "_is_final_config") and base._is_final_config:
+                raise TypeError(f"Cannot subclass {base.__name__}")
+
+        # Create the class normally and mark it as final
+        cls = super().__new__(mcs, name, bases, namespace)
+        cls._is_final_config = True
+        return cls
+
+
 @dataclass(frozen=True)
 class PRBenchEnvConfig:
     """Scene configuration for a PRBench environment."""

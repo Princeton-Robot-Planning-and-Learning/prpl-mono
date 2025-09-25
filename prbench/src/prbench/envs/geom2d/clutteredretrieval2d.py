@@ -6,7 +6,7 @@ import numpy as np
 from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
-from prbench.core import ConstantObjectPRBenchEnv
+from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta
 from prbench.envs.geom2d.base_env import (
     Geom2DRobotEnvConfig,
     ObjectCentricGeom2DRobotEnv,
@@ -21,18 +21,22 @@ from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     SE2Pose,
     create_walls_from_world_boundaries,
-    get_suctioned_objects,
+    is_inside,
 )
-from prbench.envs.utils import PURPLE, sample_se2_pose, state_2d_has_collision
+from prbench.envs.utils import BROWN, PURPLE, sample_se2_pose, state_2d_has_collision
 
 TargetBlockType = Type("target_block", parent=RectangleType)
+TargetRegionType = Type("target_region", parent=RectangleType)
 Geom2DRobotEnvTypeFeatures[TargetBlockType] = list(
+    Geom2DRobotEnvTypeFeatures[RectangleType]
+)
+Geom2DRobotEnvTypeFeatures[TargetRegionType] = list(
     Geom2DRobotEnvTypeFeatures[RectangleType]
 )
 
 
 @dataclass(frozen=True)
-class ClutteredRetrieval2DEnvConfig(Geom2DRobotEnvConfig):
+class ClutteredRetrieval2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Config for ClutteredRetrieval2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
@@ -90,6 +94,25 @@ class ClutteredRetrieval2DEnvConfig(Geom2DRobotEnvConfig):
         2 * robot_gripper_height,
     )
 
+    # Target region hyperparameters.
+    target_region_rgb: tuple[float, float, float] = BROWN
+    target_region_init_bounds: tuple[SE2Pose, SE2Pose] = (
+        SE2Pose(
+            world_min_x + robot_base_radius,
+            world_min_y + robot_base_radius,
+            -np.pi,
+        ),
+        SE2Pose(
+            world_max_x - robot_base_radius,
+            world_max_y - robot_base_radius,
+            np.pi,
+        ),
+    )
+    target_region_shape: tuple[float, float] = (
+        3 * robot_gripper_height,
+        3 * robot_gripper_height,
+    )
+
     # Obstruction hyperparameters.
     obstruction_rgb: tuple[float, float, float] = (0.75, 0.1, 0.1)
 
@@ -145,15 +168,20 @@ class ObjectCentricClutteredRetrieval2DEnv(
             target_pose = sample_se2_pose(
                 self.config.target_block_init_bounds, self.np_random
             )
+            target_region_pose = sample_se2_pose(
+                self.config.target_region_init_bounds, self.np_random
+            )
             state = self._create_initial_state(
                 robot_pose,
                 target_pose=target_pose,
+                target_region_pose=target_region_pose,
             )
             target_block = state.get_objects(TargetBlockType)[0]
+            target_region = state.get_objects(TargetRegionType)[0]
             full_state = state.copy()
             full_state.data.update(self.initial_constant_state.data)
             if not state_2d_has_collision(
-                full_state, {target_block}, {robot} | static_objects, {}
+                full_state, {target_block}, {robot, target_region} | static_objects, {}
             ):
                 break
         else:
@@ -190,6 +218,7 @@ class ObjectCentricClutteredRetrieval2DEnv(
                 state = self._create_initial_state(
                     robot_pose,
                     target_pose=target_pose,
+                    target_region_pose=target_region_pose,
                     obstructions=possible_obstructions,
                 )
                 obj_name_to_obj = {o.name: o for o in state}
@@ -233,6 +262,7 @@ class ObjectCentricClutteredRetrieval2DEnv(
         self,
         robot_pose: SE2Pose,
         target_pose: SE2Pose | None = None,
+        target_region_pose: SE2Pose | None = None,
         obstructions: list[tuple[SE2Pose, tuple[float, float]]] | None = None,
     ) -> ObjectCentricState:
         # Shallow copy should be okay because the constant objects should not
@@ -270,6 +300,22 @@ class ObjectCentricClutteredRetrieval2DEnv(
                 "z_order": ZOrder.ALL.value,
             }
 
+        # Create the target region.
+        if target_region_pose is not None:
+            target_region = Object("target_region", TargetRegionType)
+            init_state_dict[target_region] = {
+                "x": target_region_pose.x,
+                "y": target_region_pose.y,
+                "theta": target_region_pose.theta,
+                "width": self.config.target_region_shape[0],
+                "height": self.config.target_region_shape[1],
+                "static": True,
+                "color_r": self.config.target_region_rgb[0],
+                "color_g": self.config.target_region_rgb[1],
+                "color_b": self.config.target_region_rgb[2],
+                "z_order": ZOrder.NONE.value,
+            }
+
         # Create the obstructions.
         if obstructions:
             for i, (obstruction_pose, obstruction_shape) in enumerate(obstructions):
@@ -293,12 +339,14 @@ class ObjectCentricClutteredRetrieval2DEnv(
     def _get_reward_and_done(self) -> tuple[float, bool]:
         # Terminate when the target object is suctioned.
         assert self._current_state is not None
-        robot = self._current_state.get_objects(CRVRobotType)[0]
         target_object = self._current_state.get_objects(TargetBlockType)[0]
-        suctioned_objs = {
-            o for o, _ in get_suctioned_objects(self._current_state, robot)
-        }
-        terminated = target_object in suctioned_objs
+        target_region = self._current_state.get_objects(TargetRegionType)[0]
+        terminated = is_inside(
+            self._current_state,
+            target_object,
+            target_region,
+            self._static_object_body_cache,
+        )
         return -1.0, terminated
 
 
