@@ -134,8 +134,9 @@ def create_bilevel_planning_models(
         "PlaceTgt",
         [robot, target_block, target_region],
         preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
-        add_effects={LiftedAtom(InSide, [target_block, target_region])},
-        delete_effects=set(),
+        add_effects={LiftedAtom(InSide, [target_block, target_region]),
+                    LiftedAtom(HandEmpty, [robot])},
+        delete_effects={LiftedAtom(HoldingTgt, [robot, target_block])},
     )
 
     PickObstructionOperator = LiftedOperator(

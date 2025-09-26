@@ -67,6 +67,12 @@ class Geom2dRobotController(GroundParameterizedController, abc.ABC):
             total_dx = end[0].x - start[0].x
             total_dy = end[0].y - start[0].y
             total_dtheta = end[0].theta - start[0].theta
+            # NOTE: Handle angle wrapping for shortest path
+            if abs(total_dtheta) > np.pi:
+                if total_dtheta > 0:
+                    total_dtheta -= 2 * np.pi
+                else:
+                    total_dtheta += 2 * np.pi
             total_darm = end[1] - start[1]
             num_steps = int(
                 max(

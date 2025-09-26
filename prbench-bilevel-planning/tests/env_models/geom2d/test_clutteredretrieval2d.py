@@ -114,8 +114,10 @@ def test_clutteredretrieval2d_state_abstractor():
     state2 = state.copy()
     target_x = state.get(target_region, "x")
     target_y = state.get(target_region, "y")
+    target_theta = state.get(target_region, "theta")
     state2.set(target_block, "x", target_x)
     state2.set(target_block, "y", target_y)
+    state2.set(target_block, "theta", target_theta)
     abstract_state2 = state_abstractor(state2)
     assert InSide([target_block, target_region]) in abstract_state2.atoms
 
@@ -160,6 +162,7 @@ def test_clutteredretrieval2d_skills():
     PickTgt = skill_name_to_skill["PickTgt"]
     PickObstruction = skill_name_to_skill["PickObstruction"]
     PlaceObstruction = skill_name_to_skill["PlaceObstruction"]
+    PlaceTgt = skill_name_to_skill["PlaceTgt"]
     obs0, _ = env.reset(seed=123)
     state0 = env_models.observation_to_state(obs0)
     abstract_state = env_models.state_abstractor(state0)
@@ -214,13 +217,22 @@ def test_clutteredretrieval2d_skills():
         in abstract_state2.atoms
     )
 
-    # TODO: Test the place operator
+    # Place the target block inside the target region.
+    place_target_block = PlaceTgt.ground((robot, target_block, obj_name_to_obj["target_region"]))
+    obs3 = _skill_test_helper(place_target_block, env_models, env, obs2)
+    state3 = env_models.observation_to_state(obs3)
+    abstract_state3 = env_models.state_abstractor(state3)
+    assert predicate_name_to_pred["HandEmpty"]([robot]) in abstract_state3.atoms
+    assert (
+        predicate_name_to_pred["Inside"]([target_block, obj_name_to_obj["target_region"]])
+        in abstract_state3.atoms
+    )
 
 
 @pytest.mark.parametrize(
     "num_obstructions, max_abstract_plans, samples_per_step",
     [
-        (1, 10, 1),
+        (1, 2, 10),
     ],
 )
 def test_clutteredretrieval2d_bilevel_planning(
@@ -256,7 +268,7 @@ def test_clutteredretrieval2d_bilevel_planning(
         samples_per_step=samples_per_step,
     )
 
-    obs, info = env.reset(seed=1)
+    obs, info = env.reset(seed=0)
 
     total_reward = 0
     agent.reset(obs, info)

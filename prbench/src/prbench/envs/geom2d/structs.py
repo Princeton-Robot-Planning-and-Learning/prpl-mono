@@ -19,7 +19,7 @@ class ZOrder(Enum):
     FLOOR = 1  # collides with things on the floor
     SURFACE = 2  # collides with things at the table surface level
     ALL = 100  # collides with everyone (except NONE)
-    NONE = 101  # collides with nothing
+    NONE = 0  # collides with nothing, draw it first.
 
 
 def z_orders_may_collide(z0: ZOrder, z1: ZOrder) -> bool:

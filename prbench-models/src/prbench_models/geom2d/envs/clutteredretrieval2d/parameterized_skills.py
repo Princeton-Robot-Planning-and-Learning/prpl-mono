@@ -12,7 +12,8 @@ from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
     run_motion_planning_for_crv_robot,
-    snap_suctioned_objects
+    snap_suctioned_objects,
+    is_inside
 )
 from prbench.envs.utils import state_2d_has_collision
 from relational_structs import (
@@ -203,8 +204,10 @@ class GroundPlaceController(Geom2dRobotController):
             # Check collision
             moving_objects = {self._robot} | {o for o, _ in suctioned_objects}
             static_objects = set(full_state) - moving_objects
+            # Need to make sure no collision with target region
             if not state_2d_has_collision(
-                full_state, moving_objects, static_objects, {}
+                full_state, moving_objects, static_objects, {},
+                ignore_z_orders=True
             ):
                 break
         rel_x = (abs_x - self.world_x_min) / (self.world_x_max - self.world_x_min)
@@ -283,6 +286,16 @@ class GroundMoveToController(Geom2dRobotController):
         # (assuming the target block has overlapping x, y with target region)
         target_x = x.get(self._tgt_region, "x")
         target_y = x.get(self._tgt_region, "y")
+        target_theta = x.get(self._tgt_region, "theta")
+        target_width = x.get(self._tgt_region, "width")
+        target_height = x.get(self._tgt_region, "height")
+        target_pose = SE2Pose(target_x, target_y, target_theta) * SE2Pose(
+            target_width / 2,
+            target_height / 2,
+            0.0
+        )
+        block_width = x.get(self._tgt_block, "width")
+        block_height = x.get(self._tgt_block, "height")
         full_state = x.copy()
         if self._init_constant_state is not None:
             full_state.data.update(self._init_constant_state.data)
@@ -290,16 +303,24 @@ class GroundMoveToController(Geom2dRobotController):
         while True:
             # Sample random orientation
             abs_theta = rng.uniform(-np.pi, np.pi)
-            tgt_pose = SE2Pose(
-                target_x, target_y, abs_theta
+            tgt_pose_center = SE2Pose(
+                target_pose.x, 
+                target_pose.y,
+                abs_theta
             )
+            bottom2center = SE2Pose(
+                block_width / 2,
+                block_height / 2,
+                0.0
+            )
+            tgt_pose_bottom = tgt_pose_center * bottom2center.inverse
             # Convert to absolute coordinates within target bounds
-            full_state.set(self._tgt_block, "x", target_x)
-            full_state.set(self._tgt_block, "y", target_y)
+            full_state.set(self._tgt_block, "x", tgt_pose_bottom.x)
+            full_state.set(self._tgt_block, "y", tgt_pose_bottom.y)
             full_state.set(self._tgt_block, "theta", abs_theta)
             # Calculate robot pose
             _, rel_se2_pose = get_suctioned_objects(x, self._robot)[0]
-            world_to_gripper = tgt_pose * rel_se2_pose.inverse
+            world_to_gripper = tgt_pose_bottom * rel_se2_pose.inverse
             robot_arm_joint = x.get(self._robot, "arm_joint")
             gripper_width = x.get(self._robot, "gripper_width")
             robot2gripper = SE2Pose(
@@ -316,8 +337,8 @@ class GroundMoveToController(Geom2dRobotController):
             moving_objects = {self._robot, self._tgt_block, self._tgt_region}
             static_objects = set(full_state) - moving_objects
             not_collision = not state_2d_has_collision(full_state, moving_objects, static_objects, {})
-            is_inside = is_inside(full_state, self._tgt_block, self._tgt_region)
-            if not_collision and is_inside:
+            inside = is_inside(full_state, self._tgt_block, self._tgt_region, {})
+            if not_collision and inside:
                 break
         # Relative orientation
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
@@ -334,17 +355,34 @@ class GroundMoveToController(Geom2dRobotController):
         gripper_width = state.get(self._robot, "gripper_width")
         tgt_x = state.get(self._tgt_region, "x")
         tgt_y = state.get(self._tgt_region, "y")
+        tgt_theta = state.get(self._tgt_region, "theta")
+        tgt_width = state.get(self._tgt_region, "width")
+        tgt_height = state.get(self._tgt_region, "height")
+        block_width = state.get(self._tgt_block, "width")
+        block_height = state.get(self._tgt_block, "height")
+
+        target_region_pose = SE2Pose(tgt_x, tgt_y, tgt_theta) * SE2Pose(
+            tgt_width / 2,
+            tgt_height / 2,
+            0.0
+        )
 
         # Calculate target position from parameters
         params = cast(float, self._current_params)
         target_theta = params * 2 * np.pi - np.pi
-        target_block_pose = SE2Pose(
-            tgt_x,
-            tgt_y,
+        tgt_pose_center = SE2Pose(
+            target_region_pose.x, 
+            target_region_pose.y,
             target_theta
         )
+        bottom2center = SE2Pose(
+            block_width / 2,
+            block_height / 2,
+            0.0
+        )
+        tgt_pose_bottom = tgt_pose_center * bottom2center.inverse
         _, rel_se2_pose = get_suctioned_objects(state, self._robot)[0]
-        world_to_gripper = target_block_pose * rel_se2_pose.inverse
+        world_to_gripper = tgt_pose_bottom * rel_se2_pose.inverse
         robot2gripper = SE2Pose(
             x=robot_arm_joint + gripper_width,
             y=0.0,
@@ -353,9 +391,14 @@ class GroundMoveToController(Geom2dRobotController):
         robot_pose = world_to_gripper * robot2gripper.inverse
 
         # Use motion planning to find collision-free path
+        mp_state = state.copy()
+        init_constant_state = self._init_constant_state
+        if init_constant_state is not None:
+            mp_state.data.update(init_constant_state.data)
         assert isinstance(self._action_space, CRVRobotActionSpace)
         collision_free_waypoints = run_motion_planning_for_crv_robot(
-            state, self._robot, robot_pose, self._action_space
+            mp_state, self._robot, robot_pose, self._action_space,
+            num_iters=100
         )
 
         final_waypoints: list[tuple[SE2Pose, float]] = []
