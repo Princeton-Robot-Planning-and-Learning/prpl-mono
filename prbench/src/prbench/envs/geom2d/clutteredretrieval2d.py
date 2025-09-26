@@ -361,7 +361,7 @@ class ClutteredRetrieval2DEnv(ConstantObjectPRBenchEnv):
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
     ) -> list[str]:
-        constant_objects = ["robot", "target_block"]
+        constant_objects = ["robot", "target_block", "target_region"]
         for obj in sorted(exemplar_state):
             if obj.name.startswith("obstruction"):
                 constant_objects.append(obj.name)

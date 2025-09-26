@@ -71,7 +71,7 @@ def test_clutteredretrieval2d_goal_deriver():
     goal = goal_deriver(state)
     assert len(goal.atoms) == 1
     goal_atom = next(iter(goal.atoms))
-    assert str(goal_atom) == "(HoldingTgt robot target_block)"
+    assert str(goal_atom) == "(Inside target_block target_region)"
 
 
 def test_clutteredretrieval2d_state_abstractor():
@@ -87,6 +87,7 @@ def test_clutteredretrieval2d_state_abstractor():
     pred_name_to_pred = {p.name: p for p in env_models.predicates}
     HoldingTgt = pred_name_to_pred["HoldingTgt"]
     HandEmpty = pred_name_to_pred["HandEmpty"]
+    InSide = pred_name_to_pred["Inside"]
     env.reset(seed=123)
     obs, _, _, _, _ = env.step((0, 0, 0, 0.1, 0.0))  # extend the arm
     state = env_models.observation_to_state(obs)
@@ -94,6 +95,7 @@ def test_clutteredretrieval2d_state_abstractor():
     obj_name_to_obj = {o.name: o for o in abstract_state.objects}
     robot = obj_name_to_obj["robot"]
     target_block = obj_name_to_obj["target_block"]
+    target_region = obj_name_to_obj["target_region"]
     assert len(abstract_state.atoms) == 1
     assert HandEmpty([robot]) in abstract_state.atoms
 
@@ -107,6 +109,15 @@ def test_clutteredretrieval2d_state_abstractor():
     state1.set(robot, "y", target_y + 0.2)  # position above target
     abstract_state1 = state_abstractor(state1)
     assert HoldingTgt([robot, target_block]) in abstract_state1.atoms
+
+    # Create state where the target block is inside the target region
+    state2 = state.copy()
+    target_x = state.get(target_region, "x")
+    target_y = state.get(target_region, "y")
+    state2.set(target_block, "x", target_x)
+    state2.set(target_block, "y", target_y)
+    abstract_state2 = state_abstractor(state2)
+    assert InSide([target_block, target_region]) in abstract_state2.atoms
 
 
 def _skill_test_helper(ground_skill, env_models, env, obs, params=None, debug=False):
@@ -202,6 +213,8 @@ def test_clutteredretrieval2d_skills():
         predicate_name_to_pred["HoldingTgt"]([robot, target_block])
         in abstract_state2.atoms
     )
+
+    # TODO: Test the place operator
 
 
 @pytest.mark.parametrize(
