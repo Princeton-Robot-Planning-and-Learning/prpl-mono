@@ -13,18 +13,18 @@ from numpy.typing import NDArray
 from prbench.envs.geom2d.clutteredretrieval2d import (
     ObjectCentricClutteredRetrieval2DEnv,
     TargetBlockType,
-    TargetRegionType
+    TargetRegionType,
 )
 from prbench.envs.geom2d.object_types import CRVRobotType, RectangleType
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
-    is_inside
+    is_inside,
 )
 from prbench_models.geom2d.envs.clutteredretrieval2d.parameterized_skills import (
+    GroundMoveToController,
     GroundPickController,
     GroundPlaceController,
-    GroundMoveToController
 )
 from relational_structs import (
     GroundAtom,
@@ -134,8 +134,10 @@ def create_bilevel_planning_models(
         "PlaceTgt",
         [robot, target_block, target_region],
         preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
-        add_effects={LiftedAtom(InSide, [target_block, target_region]),
-                    LiftedAtom(HandEmpty, [robot])},
+        add_effects={
+            LiftedAtom(InSide, [target_block, target_region]),
+            LiftedAtom(HandEmpty, [robot]),
+        },
         delete_effects={LiftedAtom(HoldingTgt, [robot, target_block])},
     )
 
@@ -206,7 +208,7 @@ def create_bilevel_planning_models(
         LiftedSkill(PickTgtOperator, PickTgtController),
         LiftedSkill(PickObstructionOperator, PickObstructionController),
         LiftedSkill(PlaceObstructionOperator, PlaceObstructionController),
-        LiftedSkill(PlaceTgtOperator, PlaceTgtRegionController)
+        LiftedSkill(PlaceTgtOperator, PlaceTgtRegionController),
     }
 
     # Finalize the models.
