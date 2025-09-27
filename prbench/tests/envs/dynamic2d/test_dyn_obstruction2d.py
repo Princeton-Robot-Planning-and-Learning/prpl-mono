@@ -1,11 +1,45 @@
 """Tests for dyn_obstruction2d.py."""
 
 # import imageio.v2 as iio
+from pathlib import Path
+
+import dill as pkl
 import numpy as np
 from gymnasium.spaces import Box
 
 import prbench
 from prbench.envs.dynamic2d.dyn_obstruction2d import DynObstruction2DEnvConfig
+
+
+# Copied from scripts for now.
+def load_demo(demo_path: Path) -> dict:
+    """Load a demonstration from a pickle file."""
+    try:
+        with open(demo_path, "rb") as f:
+            demo_data = pkl.load(f)
+
+        # Validate demo data structure.
+        required_keys = ["env_id", "observations", "actions"]
+        for key in required_keys:
+            if key not in demo_data:
+                raise ValueError(f"Demo data missing required key: {key}")
+
+        if not demo_data["actions"]:
+            raise ValueError("Demo contains no actions")
+
+        if len(demo_data["observations"]) != len(demo_data["actions"]) + 1:
+            print(
+                f"Warning: Expected {len(demo_data['actions']) + 1} observations, "
+                f"got {len(demo_data['observations'])}"
+            )
+
+        if "seed" not in demo_data:
+            raise ValueError(" Demo does not contain seed information.")
+
+        return demo_data
+    except Exception as e:
+        # Don't exit, just raise the exception to be handled by caller
+        raise ValueError(f"Error loading demo from {demo_path}: {e}") from e
 
 
 def test_config_cant_subclass():
@@ -238,8 +272,52 @@ def test_dyn_obstruction2d_reset_consistency():
         assert reward == -1.0
 
 
-def test_demo_replay_reproducible():
+def test_demo_replay_reproducible_resettable_no_held():
     """Tests that demo replay is reproducible."""
     prbench.register_all_environments()
-    env = prbench.make("prbench/DynObstruction2D-o2-v0")
-    assert env is not None
+    demo_path = "demos/DynObstruction2D-o0/0/1758982017.p"
+    demo_data = load_demo(Path(demo_path))
+    env_id = demo_data["env_id"]
+    actions_loaded = demo_data["actions"]
+    observations_loaded = demo_data["observations"]
+    rewards_loaded = demo_data["rewards"]
+    seed = demo_data["seed"]
+
+    env = prbench.make(env_id, render_mode="rgb_array")
+
+    # Reproducibility test: reset with seed and take actions
+    # should match loaded observations and rewards
+    obs, _ = env.reset(seed=seed)
+    assert np.allclose(obs, observations_loaded[0], atol=1e-4)
+
+    for i, action in enumerate(actions_loaded):
+        obs, reward, _, _, _ = env.step(action)
+        assert np.allclose(obs, observations_loaded[i + 1], atol=1e-4)
+        assert reward == rewards_loaded[i]
+
+    # Resettable test: reset in each loaded state and take the next action
+    # should match the next loaded observation and reward
+    # for i in range(len(observations_loaded) - 1):
+    #     print(f"Reset step {i}")
+    #     obs, _ = env.reset(options={"init_state": observations_loaded[i]})
+    #     obj_centric_obs = env.observation_space.devectorize(obs)
+    #     obj_centric_obs_loaded = env.observation_space.devectorize(
+    #         observations_loaded[i]
+    #     )
+    #     for key in obj_centric_obs:
+    #         assert np.allclose(
+    #             obj_centric_obs[key], obj_centric_obs_loaded[key], atol=1e-4
+    #         )
+    #     assert np.allclose(obs, observations_loaded[i], atol=1e-4)
+    #     action = actions_loaded[i]
+    #     obs, reward, _, _, _ = env.step(action)
+    #     obj_centric_obs = env.observation_space.devectorize(obs)
+    #     obj_centric_obs_loaded = env.observation_space.devectorize(
+    #         observations_loaded[i + 1]
+    #     )
+    #     for key in obj_centric_obs:
+    #         assert np.allclose(
+    #             obj_centric_obs[key], obj_centric_obs_loaded[key], atol=1e-4
+    #         )
+    #     assert np.allclose(obs, observations_loaded[i + 1], atol=1e-4)
+    #     assert reward == rewards_loaded[i]

@@ -277,9 +277,13 @@ class ObjectCentricDynamic2DRobotEnv(
         self._static_object_body_cache = {}
         self._state_obj_to_pymunk_body = {}
 
+        # NOTE: If reset from options, we don't step the simulation
+        # to let things settle.
+        stablize_sim = True
         # For testing purposes only, the options may specify an initial scene.
         if options is not None and "init_state" in options:
             self._current_state = options["init_state"].copy()
+            stablize_sim = False
         # Otherwise, set up the initial scene here.
         else:
             self._current_state = self._sample_initial_state()
@@ -288,11 +292,12 @@ class ObjectCentricDynamic2DRobotEnv(
         self._add_state_to_space(self.full_state)
 
         # Calculate simulation parameters
-        dt = 1.0 / self.config.sim_hz
-        # Stepping physics to let things settle
-        assert self.pymunk_space is not None, "Space not initialized"
-        for _ in range(self.config.sim_hz):
-            self.pymunk_space.step(dt)
+        if stablize_sim:
+            dt = 1.0 / self.config.sim_hz
+            # Stepping physics to let things settle
+            assert self.pymunk_space is not None, "Space not initialized"
+            for _ in range(self.config.sim_hz):
+                self.pymunk_space.step(dt)
 
         observation = self._get_obs()
         info = self._get_info()

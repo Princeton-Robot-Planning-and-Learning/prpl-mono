@@ -297,7 +297,7 @@ class ObjectCentricClutteredRetrieval2DEnv(
                 "color_r": self.config.target_block_rgb[0],
                 "color_g": self.config.target_block_rgb[1],
                 "color_b": self.config.target_block_rgb[2],
-                "z_order": ZOrder.ALL.value,
+                "z_order": ZOrder.SURFACE.value,
             }
 
         # Create the target region.
