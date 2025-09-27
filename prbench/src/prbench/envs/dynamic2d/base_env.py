@@ -7,8 +7,8 @@ from typing import Any, Generic, TypeVar
 import gymnasium
 import numpy as np
 import pymunk
-from pymunk.vec2d import Vec2d
 from numpy.typing import NDArray
+from pymunk.vec2d import Vec2d
 from relational_structs import (
     Array,
     Object,
@@ -182,19 +182,22 @@ class ObjectCentricDynamic2DRobotEnv(
         robot_base_vx = state.get(obj, "vx_base")
         robot_base_vy = state.get(obj, "vy_base")
         robot_base_omega = state.get(obj, "omega_base")
-        robot_base_vel = tuple(Vec2d(robot_base_vx, robot_base_vy), robot_base_omega)
+        robot_base_vel = (Vec2d(robot_base_vx, robot_base_vy), robot_base_omega)
 
         robot_arm = state.get(obj, "arm_joint")
         robot_arm_vx = state.get(obj, "vx_arm")
         robot_arm_vy = state.get(obj, "vy_arm")
         robot_arm_omega = state.get(obj, "omega_arm")
-        robot_arm_vel = tuple(Vec2d(robot_arm_vx, robot_arm_vy), robot_arm_omega)
+        robot_arm_vel = (Vec2d(robot_arm_vx, robot_arm_vy), robot_arm_omega)
 
         robot_gripper = state.get(obj, "finger_gap")
         robot_gripper_vx = state.get(obj, "vx_gripper")
         robot_gripper_vy = state.get(obj, "vy_gripper")
         robot_gripper_omega = state.get(obj, "omega_gripper")
-        robot_gripper_vel = tuple(Vec2d(robot_gripper_vx, robot_gripper_vy), robot_gripper_omega)
+        robot_gripper_vel = (
+            Vec2d(robot_gripper_vx, robot_gripper_vy),
+            robot_gripper_omega,
+        )
         assert self.robot is not None, "Robot not initialized"
         self.robot.reset_positions(
             base_x=robot_base_x,

@@ -237,9 +237,9 @@ def test_dyn_obstruction2d_reset_consistency():
         # First step should give -1 reward (goal not satisfied immediately)
         assert reward == -1.0
 
+
 def test_demo_replay_reproducible():
     """Tests that demo replay is reproducible."""
     prbench.register_all_environments()
     env = prbench.make("prbench/DynObstruction2D-o2-v0")
-
-    
+    assert env is not None

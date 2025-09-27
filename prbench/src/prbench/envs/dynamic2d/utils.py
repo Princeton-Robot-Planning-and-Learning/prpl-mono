@@ -309,7 +309,7 @@ class KinRobot:
         arm_vel: tuple[Vec2d, float],
         gripper_gap: float,
         gripper_vel: tuple[Vec2d, float],
-        helder_object_vels: list[Vec2d]=[]
+        helder_object_vels: list[Vec2d] | None = None,
     ) -> None:
         """Reset robot to specified positions with zero velocity."""
         self._base_body.position = (base_x, base_y)
@@ -336,10 +336,10 @@ class KinRobot:
         self._left_finger_body.angular_velocity = gripper_vel[1]
 
         # Reset held objects - they have the same velocity as gripper base
-        if len(helder_object_vels):
-            assert len(helder_object_vels) == len(self.held_objects), (
-                "Length of helder_object_vels must match the number of held objects."
-            )
+        if helder_object_vels is not None and len(helder_object_vels):
+            assert len(helder_object_vels) == len(
+                self.held_objects
+            ), "Length of helder_object_vels must match the number of held objects."
             for i, (obj, _, relative_pose) in enumerate(self.held_objects):
                 obj_body, _ = obj
                 new_obj_pose = gripper_pose * relative_pose
@@ -471,6 +471,13 @@ class KinRobot:
         )
         relative_obj_pose = gripper_base_pose.inverse * obj_pose
         self.held_objects.append((obj, mass, relative_obj_pose))
+
+    def body_in_hand(self, body_id: int) -> bool:
+        """Check if a body is in the robot's hand."""
+        for (obj_body, _), _, _ in self.held_objects:
+            if obj_body.id == body_id:
+                return True
+        return False
 
 
 class PDController:
@@ -669,6 +676,7 @@ def create_walls_from_world_boundaries(
         "theta": 0.0,
         "omega": 0.0,
         "static": True,
+        "held": False,
         "color_r": BLACK[0],
         "color_g": BLACK[1],
         "color_b": BLACK[2],
@@ -686,6 +694,7 @@ def create_walls_from_world_boundaries(
         "theta": 0.0,
         "omega": 0.0,
         "static": True,
+        "held": False,
         "color_r": BLACK[0],
         "color_g": BLACK[1],
         "color_b": BLACK[2],
@@ -704,6 +713,7 @@ def create_walls_from_world_boundaries(
         "theta": 0.0,
         "omega": 0.0,
         "static": True,
+        "held": False,
         "color_r": BLACK[0],
         "color_g": BLACK[1],
         "color_b": BLACK[2],
@@ -721,6 +731,7 @@ def create_walls_from_world_boundaries(
         "theta": 0.0,
         "omega": 0.0,
         "static": True,
+        "held": False,
         "color_r": BLACK[0],
         "color_g": BLACK[1],
         "color_b": BLACK[2],
