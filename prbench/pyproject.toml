@@ -20,6 +20,7 @@ all = [
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
    "pybullet>=3.2.5",
+   "gymnasium"
 ]
 dynamic2d = [
    "pygame>=2.5.2",

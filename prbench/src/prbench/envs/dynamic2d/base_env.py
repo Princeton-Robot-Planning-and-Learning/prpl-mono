@@ -7,6 +7,7 @@ from typing import Any, Generic, TypeVar
 import gymnasium
 import numpy as np
 import pymunk
+from pymunk.vec2d import Vec2d
 from numpy.typing import NDArray
 from relational_structs import (
     Array,
@@ -178,15 +179,32 @@ class ObjectCentricDynamic2DRobotEnv(
         robot_base_x = state.get(obj, "x")
         robot_base_y = state.get(obj, "y")
         robot_theta = state.get(obj, "theta")
+        robot_base_vx = state.get(obj, "vx_base")
+        robot_base_vy = state.get(obj, "vy_base")
+        robot_base_omega = state.get(obj, "omega_base")
+        robot_base_vel = tuple(Vec2d(robot_base_vx, robot_base_vy), robot_base_omega)
+
         robot_arm = state.get(obj, "arm_joint")
+        robot_arm_vx = state.get(obj, "vx_arm")
+        robot_arm_vy = state.get(obj, "vy_arm")
+        robot_arm_omega = state.get(obj, "omega_arm")
+        robot_arm_vel = tuple(Vec2d(robot_arm_vx, robot_arm_vy), robot_arm_omega)
+
         robot_gripper = state.get(obj, "finger_gap")
+        robot_gripper_vx = state.get(obj, "vx_gripper")
+        robot_gripper_vy = state.get(obj, "vy_gripper")
+        robot_gripper_omega = state.get(obj, "omega_gripper")
+        robot_gripper_vel = tuple(Vec2d(robot_gripper_vx, robot_gripper_vy), robot_gripper_omega)
         assert self.robot is not None, "Robot not initialized"
         self.robot.reset_positions(
             base_x=robot_base_x,
             base_y=robot_base_y,
             base_theta=robot_theta,
+            base_vel=robot_base_vel,
             arm_length=robot_arm,
+            arm_vel=robot_arm_vel,
             gripper_gap=robot_gripper,
+            gripper_vel=robot_gripper_vel,
         )
 
     @abc.abstractmethod
