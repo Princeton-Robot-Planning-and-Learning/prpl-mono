@@ -29,7 +29,7 @@ from prbench.envs.geom3d.utils import Geom3DObjectCentricState
 
 
 @dataclass(frozen=True)
-class Motion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
+class Motion3DEnvConfig(Geom3DEnvConfig):
     """Config for Motion3DEnv()."""
 
     # Target.
@@ -39,7 +39,7 @@ class Motion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     target_upper_bound: tuple[float, float, float] = (0.5, 0.8, 0.5)
 
 
-class Motion3DObjectCentricState(Geom3DObjectCentricState):
+class Motion3DObjectCentricState(Geom3DObjectCentricState, metaclass=FinalConfigMeta):
     """A state in the Motion3DEnv().
 
     Adds convenience methods on top of Geom3DObjectCentricState().

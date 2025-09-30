@@ -162,6 +162,28 @@ class MujocoEnv(gymnasium.Env[MjObs, MjAct]):
 
         return obs, reward, terminated, truncated, info
 
+    def set_joint_pos_quat(
+        self, name: str, pos: NDArray[np.float32], quat: NDArray[np.float32]
+    ) -> None:
+        """Set joint position and orientation in the environment."""
+
+        assert self.sim is not None, "Simulation not initialized"
+        joint_id = self.sim.model.get_joint_qpos_addr(name)
+        self.sim.data.qpos[joint_id : joint_id + 7] = np.array(
+            [float(x) for x in pos] + [float(q) for q in quat]
+        )
+
+    def get_joint_pos_quat(
+        self, name: str
+    ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+        """Get joint position and orientation in the environment."""
+
+        assert self.sim is not None, "Simulation not initialized"
+        joint_id = self.sim.model.get_joint_qpos_addr(name)
+        pos = self.sim.data.qpos[joint_id : joint_id + 3]
+        quat = self.sim.data.qpos[joint_id + 3 : joint_id + 7]
+        return pos, quat
+
     def get_obs(self) -> MjObs:
         """Get the current observation."""
         assert self.sim is not None, "Simulation must be initialized."

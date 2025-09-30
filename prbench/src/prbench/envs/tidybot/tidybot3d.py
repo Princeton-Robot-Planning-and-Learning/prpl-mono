@@ -10,8 +10,12 @@ import numpy as np
 from gymnasium.spaces import Space
 from numpy.typing import NDArray
 from prpl_utils.spaces import FunctionalSpace
+from relational_structs import ObjectCentricState
+from relational_structs.utils import create_state_from_dict
 
 from prbench.envs.tidybot.mujoco_utils import MjAct, MjObs
+from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
+from prbench.envs.tidybot.objects import Cube, MujocoObject
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
 
@@ -61,7 +65,7 @@ class TidyBot3DEnv(TidyBotRobotEnv):
                 raise ValueError("Cannot show images if render_images is False")
 
         # Initialize empty object list
-        self._object_names: list[str] = []
+        self._objects: list[MujocoObject] = []
 
         self._reward_calculator = create_reward_calculator(
             self.scene_type, self.num_objects
@@ -147,18 +151,15 @@ class TidyBot3DEnv(TidyBotRobotEnv):
                 # Insert new cubes
                 for i in range(self.num_objects):
                     name = f"cube{i+1}"
-                    body = ET.Element("body")
-                    ET.SubElement(body, "freejoint", name=f"{name}_joint")
-                    ET.SubElement(
-                        body,
-                        "geom",
-                        type="box",
-                        size="0.02 0.02 0.02",
-                        rgba=".5 .7 .5 1",
-                        mass="0.1",
+                    # Create cube using the Cube class
+                    obj = Cube(
+                        name=name, size=0.02, rgba=".5 .7 .5 1", mass=0.1, env=self
                     )
+                    # Get the XML element from the cube
+                    body = obj.xml_element
+
                     worldbody.append(body)
-                    self._object_names.append(name)
+                    self._objects.append(obj)
 
                 # Get XML string from tree
                 xml_string = ET.tostring(root, encoding="unicode")
@@ -171,32 +172,12 @@ class TidyBot3DEnv(TidyBotRobotEnv):
 
         return xml_string
 
-    def _set_object_pos_quat(
-        self, name: str, pos: NDArray[np.float32], quat: NDArray[np.float32]
-    ) -> None:
-        """Set object position and orientation in the environment."""
-
-        assert self.sim is not None, "Simulation not initialized"
-        joint_id = self.sim.model.get_joint_qpos_addr(f"{name}_joint")
-        self.sim.data.qpos[joint_id : joint_id + 7] = np.array(
-            [float(x) for x in pos] + [float(q) for q in quat]
-        )
-
-    def get_object_pos_quat(self, name: str) -> tuple[float, float]:
-        """Set object position and orientation in the environment."""
-
-        assert self.sim is not None, "Simulation not initialized"
-        joint_id = self.sim.model.get_joint_qpos_addr(f"{name}_joint")
-        pos = self.sim.data.qpos[joint_id : joint_id + 3]
-        quat = self.sim.data.qpos[joint_id + 3 : joint_id + 7]
-        return pos, quat
-
     def _initialize_object_poses(self) -> None:
         """Initialize object poses in the environment."""
 
         assert self.sim is not None, "Simulation not initialized"
 
-        for name in self._object_names:
+        for obj in self._objects:
             pos = np.array([0.0, 0.0, 0.0])
             if self.scene_type == "cupboard":
                 pass  # no position randomization for cupboard scene
@@ -219,7 +200,7 @@ class TidyBot3DEnv(TidyBotRobotEnv):
             quat = np.array([math.cos(theta / 2), 0, 0, math.sin(theta / 2)])
 
             # Set object pose in the environment
-            self._set_object_pos_quat(name, pos, quat)
+            obj.set_pose(pos, quat)
 
         self.sim.forward()
 
@@ -228,9 +209,9 @@ class TidyBot3DEnv(TidyBotRobotEnv):
         *,
         seed: int | None = None,
         options: dict[str, Any] | None = None,
-    ) -> tuple[MjObs, dict[str, Any]]:
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         # Create scene XML
-        self._object_names = []
+        self._objects = []
         xml_string = self._create_scene_xml()
 
         # Reset the underlying TidyBot robot environment
@@ -242,14 +223,9 @@ class TidyBot3DEnv(TidyBotRobotEnv):
         self._initialize_object_poses()
 
         # Get observation and vectorize
-        obs = super().get_obs()
+        obs = self.get_obs()
 
-        vec_obs = self._vectorize_observation(obs)
-
-        # NOTE: this will be refactored soon after we introduce object-centric structs.
-        final_obs = {"vec": vec_obs}
-
-        return final_obs, {}
+        return obs, {}
 
     def _visualize_image_in_window(
         self, image: NDArray[np.uint8], window_name: str
@@ -263,13 +239,27 @@ class TidyBot3DEnv(TidyBotRobotEnv):
             cv.imshow(window_name, display_image)  # pylint: disable=no-member
             cv.waitKey(1)  # pylint: disable=no-member
 
+    def get_obs(self) -> dict[str, Any]:
+        """Get the current observation."""
+        obs = super().get_obs()
+        vec_obs = self._vectorize_observation(obs)
+        object_centric_state = self._get_object_centric_state()
+        return {"vec": vec_obs, "object_centric_state": object_centric_state}
+
+    def _get_object_centric_state(self) -> ObjectCentricState:
+        """Get the current object-centric state of the environment."""
+        state_dict = {}
+        for obj in self._objects:
+            obj_data = obj.get_object_centric_data()
+            state_dict[obj.object_state_type] = obj_data
+        return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
+
     def step(self, action: MjAct) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         # Run the action.
         super().step(action)
 
         # Get observation
         obs = self.get_obs()
-        vec_obs = self._vectorize_observation(obs)
 
         # Visualization loop for rendered image
         if self.show_images:
@@ -284,16 +274,13 @@ class TidyBot3DEnv(TidyBotRobotEnv):
         terminated = self._is_terminated(obs)
         truncated = False
 
-        # NOTE: this will be refactored soon after we introduce object-centric structs.
-        final_obs = {"vec": vec_obs}
+        return obs, reward, terminated, truncated, {}
 
-        return final_obs, reward, terminated, truncated, {}
-
-    def reward(self, obs: MjObs) -> float:
+    def reward(self, obs: dict[str, Any]) -> float:
         """Calculate reward based on task completion."""
         return self._reward_calculator.calculate_reward(obs)
 
-    def _is_terminated(self, obs: MjObs) -> bool:
+    def _is_terminated(self, obs: dict[str, Any]) -> bool:
         """Check if episode should terminate."""
         return self._reward_calculator.is_terminated(obs)
 

@@ -25,7 +25,7 @@ from prbench.envs.geom2d.utils import (
     create_walls_from_world_boundaries,
     move_objects_in_contact,
 )
-from prbench.envs.utils import BLACK, BROWN, sample_se2_pose, state_2d_has_collision
+from prbench.envs.utils import BLACK, sample_se2_pose, state_2d_has_collision
 
 
 @dataclass(frozen=True)
@@ -88,7 +88,7 @@ class PushPullHook2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
     )
 
     # Hook hyperparameters.
-    hook_rgb: tuple[float, float, float] = BROWN
+    hook_rgb: tuple[float, float, float] = (0.4, 0.2, 0.1)
     hook_shape: tuple[float, float, float] = (
         robot_base_radius / 2,
         table_shape[1],
