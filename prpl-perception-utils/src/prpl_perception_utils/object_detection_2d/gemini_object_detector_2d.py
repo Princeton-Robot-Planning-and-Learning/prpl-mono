@@ -25,13 +25,22 @@ from prpl_perception_utils.structs import (
 
 _PROMPT = Template(
     """
-Give the segmentation masks for the following objects if they are in the image:
+Give the segmentation masks for the following objects if they appear to be
+present in the image:
 
-$joined_object_descriptions                   
+$joined_object_descriptions
 
-Output a JSON list of segmentation masks where each entry contains the 2D
-bounding box in the key "box_2d", the segmentation mask in key "mask", and
-the text label in the key "label". Use the same labels as listed above.
+Output a JSON list where each entry contains:
+{
+    "box_2d": the 2D bounding box of the object.
+    "mask": a complete pixel-level segmentation tightly following the
+        visible boundaries of the object (take note of figure-ground effects
+        to keep track of the boundaries of the figure), ensuring the entire
+        object is included, even if elongated or partially occluded.
+    "label": the object label (use the same labels as listed above).
+    "confidence": a calibrated confidence score between 0 and 1 indicating how
+        likely it is that the object is correctly detected in that location.
+}
 """
 )
 
@@ -153,8 +162,16 @@ class GeminiObjectDetector2D(ObjectDetector2D):
                 # Convert mask to numpy array.
                 mask_array = np.array(mask) > self._min_mask_value
 
+                # Extract the confidence
+                confidence_score = item["confidence"]
+
                 # Finish the object detection.
-                detection = DetectedObject2D(object_id, bounding_box, mask_array)
+                detection = DetectedObject2D(
+                    object_id,
+                    bounding_box,
+                    mask_array,
+                    confidence_score
+                )
                 rgb_detections.append(detection)
 
             detections.append(rgb_detections)
