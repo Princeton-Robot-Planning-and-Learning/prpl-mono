@@ -73,8 +73,7 @@ def test_deterministic_demo_replay(demo_path: Path):
 
         # Check observation matches
         expected_obs = expected_observations[i + 1]
-        # NOTE: Github has 3e-4 error, local runs has 1e-6 error
-        assert np.allclose(obs, expected_obs, atol=1e-3), \
+        assert np.allclose(obs, expected_obs, atol=1e-4), \
             f"Observation mismatch at step {i} in {demo_path}"
 
         # Check reward matches (if available)
