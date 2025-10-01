@@ -1,2 +1,0 @@
-_target_: "programmatic_policy_learning.approaches.ppl_approach.ProgrammaticPolicyLearningApproach"
-llm: ${llm}
