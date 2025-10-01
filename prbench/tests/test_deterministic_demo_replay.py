@@ -73,9 +73,17 @@ def test_deterministic_demo_replay(demo_path: Path):
 
         # Check observation matches
         expected_obs = expected_observations[i + 1]
-        assert np.allclose(
+        if (not np.allclose(
             obs, expected_obs, atol=1e-4
-        ), f"Observation mismatch at step {i} in {demo_path}"
+        )) or i ==295:
+            max_diff = np.max(np.abs(obs - expected_obs))
+            print(
+                f"Step {i}: max observation difference = {max_diff}"
+            )
+            if not np.allclose(
+                obs, expected_obs, atol=1e-4
+            ):
+                assert False, f"Observation mismatch at step {i} in {demo_path}"
 
         # Check reward matches (if available)
         if expected_rewards is not None and i < len(expected_rewards):
