@@ -102,8 +102,10 @@ def _run_single_episode_evaluation(
     success = False
     seed = sample_seed_from_rng(rng)
     obs, info = env.reset(seed=seed)
-    assert env.metadata['description'] is not None, "Environment must have a description."
-    info.update({"description": env.metadata['description']})
+    assert (
+        env.metadata["description"] is not None
+    ), "Environment must have a description."
+    info.update({"description": env.metadata["description"]})
     planning_time = 0.0  # measure the time taken by the approach only
     planning_failed = False
 
