@@ -481,7 +481,7 @@ class ObjectCentricDynObstruction2DEnv(
                         # Add to robot hand
                         self._state_obj_to_pymunk_body[obj] = body
                         assert self.robot is not None, "Robot not initialized"
-                        self.robot.add_to_hand((body, shape), mass)
+                        self.robot.add_to_hand((body, [shape]), mass)
 
     def _read_state_from_space(self) -> None:
         """Read the current state from the PyMunk space."""

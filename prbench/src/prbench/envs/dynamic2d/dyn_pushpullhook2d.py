@@ -148,6 +148,10 @@ class DynPushPullHook2DEnvConfig(Dynamic2DRobotEnvConfig):
     # For sampling initial states.
     max_initial_state_sampling_attempts: int = 10_000
 
+    # We don't have gravity here, but we have damping.
+    gravity_y: float = 0.0
+    damping: float = 0.7  # Damping applied to all dynamic bodies
+
     # For rendering.
     render_dpi: int = 250
 
@@ -155,7 +159,7 @@ class DynPushPullHook2DEnvConfig(Dynamic2DRobotEnvConfig):
 class ObjectCentricDynPushPullHook2DEnv(
     ObjectCentricDynamic2DRobotEnv[DynPushPullHook2DEnvConfig]
 ):
-    """"""
+    """Object-centric dynamic 2D push-pull-hook environment."""
 
     def __init__(
         self,
@@ -356,7 +360,8 @@ class ObjectCentricDynPushPullHook2DEnv(
                 "color_r": self.config.target_block_rgb[0],
                 "color_g": self.config.target_block_rgb[1],
                 "color_b": self.config.target_block_rgb[2],
-                "z_order": ZOrder.SURFACE.value,  # Hook does not collide with middle wall
+                # Hook does not collide with middle wall
+                "z_order": ZOrder.SURFACE.value,
             }
 
         # Create the hook.
@@ -378,7 +383,8 @@ class ObjectCentricDynPushPullHook2DEnv(
                 "color_r": self.config.target_block_rgb[0],
                 "color_g": self.config.target_block_rgb[1],
                 "color_b": self.config.target_block_rgb[2],
-                "z_order": ZOrder.SURFACE.value,  # Hook does not collide with middle wall
+                # Hook does not collide with middle wall
+                "z_order": ZOrder.SURFACE.value,
             }
 
         # Create obstructions.
@@ -685,7 +691,7 @@ Each object includes physics properties like mass, moment of inertia (for dynami
 
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return f"""A penalty of -1.0 is given at every time step until termination, which occurs when the target block reaches the middle wall (goal surface).
+        return """A penalty of -1.0 is given at every time step until termination, which occurs when the target block reaches the middle wall (goal surface).
 
 **Termination Condition**: The episode terminates when the target block geometrically intersects with the middle wall. This is detected using collision checking between the target block and middle wall.
 

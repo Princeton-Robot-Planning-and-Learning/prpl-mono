@@ -79,6 +79,7 @@ class Dynamic2DRobotEnvConfig(PRBenchEnvConfig):
 
     # Physics parameters
     gravity_y: float = -9.8
+    damping: float = 1.0  # Damping applied to all dynamic bodies
     collision_slop: float = 0.001  # Allow small interpenetration, depends on env scale
     control_hz: int = 10  # Control frequency (fps in rendering)
     sim_hz: int = 100  # Simulation frequency (dt in simulation)
@@ -146,6 +147,7 @@ class ObjectCentricDynamic2DRobotEnv(
         """Set up the PyMunk physics space."""
         self.pymunk_space = pymunk.Space()
         self.pymunk_space.gravity = 0, self.config.gravity_y
+        self.pymunk_space.damping = self.config.damping
         self.pymunk_space.collision_slop = self.config.collision_slop
 
         # Create robot
