@@ -6,8 +6,8 @@ from typing import Any
 import numpy as np
 import pymunk
 from numpy.typing import NDArray
+from pymunk import Body, Shape
 from pymunk.vec2d import Vec2d
-from pymunk import Shape, Body
 from relational_structs import Object
 
 from prbench.envs.dynamic2d.object_types import (
@@ -118,9 +118,7 @@ class KinRobot:
         self._base_angle = 0.0
         self._arm_length = base_radius
         self._gripper_gap = gripper_base_height
-        self.held_objects: list[
-            tuple[tuple[Body, list[Shape]], float, SE2Pose]
-        ] = []
+        self.held_objects: list[tuple[tuple[Body, list[Shape]], float, SE2Pose]] = []
 
         # Updated by env.step()
         self.is_opening_finger = False

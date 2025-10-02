@@ -44,7 +44,9 @@ Dynamic2DRobotEnvTypeFeatures[DynRectangleType] = Dynamic2DRobotEnvTypeFeatures[
     "mass",
 ]
 LObjectType = Type("lobject", parent=Dynamic2DType)
-Dynamic2DRobotEnvTypeFeatures[LObjectType] = Dynamic2DRobotEnvTypeFeatures[Dynamic2DType] + [
+Dynamic2DRobotEnvTypeFeatures[LObjectType] = Dynamic2DRobotEnvTypeFeatures[
+    Dynamic2DType
+] + [
     "width",
     "length_side1",
     "length_side2",

@@ -1,6 +1,5 @@
 """Dynamic HookBlock 2D env using PyMunk physics."""
 
-import inspect
 from dataclasses import dataclass
 
 import numpy as np
@@ -17,27 +16,34 @@ from prbench.envs.dynamic2d.object_types import (
     Dynamic2DRobotEnvTypeFeatures,
     DynRectangleType,
     KinRectangleType,
-    LObjectType,
     KinRobotType,
+    LObjectType,
 )
 from prbench.envs.dynamic2d.utils import (
     DYNAMIC_COLLISION_TYPE,
-    STATIC_COLLISION_TYPE,
     ROBOT_COLLISION_TYPE,
+    STATIC_COLLISION_TYPE,
     KinRobotActionSpace,
     create_walls_from_world_boundaries,
 )
 from prbench.envs.geom2d.structs import MultiBody2D, SE2Pose, ZOrder
-from prbench.envs.utils import PURPLE, BROWN, sample_se2_pose, state_2d_has_collision
+from prbench.envs.utils import (
+    BLACK,
+    BROWN,
+    PURPLE,
+    sample_se2_pose,
+    state_2d_has_collision,
+)
 
 TargetBlockType = Type("target_block", parent=DynRectangleType)
-HookType = Type("Hook", parent=LObjectType)
+HookType = Type("hook", parent=LObjectType)
 Dynamic2DRobotEnvTypeFeatures[TargetBlockType] = list(
     Dynamic2DRobotEnvTypeFeatures[DynRectangleType]
 )
 Dynamic2DRobotEnvTypeFeatures[HookType] = list(
     Dynamic2DRobotEnvTypeFeatures[LObjectType]
 )
+
 
 @dataclass(frozen=True)
 class DynPushPullHook2DEnvConfig(Dynamic2DRobotEnvConfig):
@@ -50,7 +56,6 @@ class DynPushPullHook2DEnvConfig(Dynamic2DRobotEnvConfig):
     world_max_y: float = 3.5
 
     # Robot parameters
-    init_robot_pos: tuple[float, float] = (0.5, 0.5)
     robot_base_radius: float = 0.24
     robot_arm_length_max: float = 2 * robot_base_radius
     gripper_base_width: float = 0.06
@@ -78,37 +83,33 @@ class DynPushPullHook2DEnvConfig(Dynamic2DRobotEnvConfig):
 
     # Robot hyperparameters.
     robot_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
-        SE2Pose(0.5, 0.5, -np.pi / 2),
-        SE2Pose(3.0, 1.0, np.pi / 2),
+        SE2Pose(0.3, 0.3, 0.0),
+        SE2Pose(0.4, 0.4, np.pi / 2),
     )
 
     # Middle wall hyperparameters.
-    middle_wall_rgb: tuple[float, float, float] = PURPLE
+    middle_wall_rgb: tuple[float, float, float] = BLACK
     middle_wall_pose: tuple[float, float, float] = (
         (world_min_x + world_max_x) / 2,
         (world_min_y + world_max_y) / 2,
         0.0,
     )
     middle_wall_width: float = world_max_x - world_min_x
-    middle_wall_height: float = 0.1
+    middle_wall_height: float = 0.05
 
     # Hook hyperparameters.
     hook_rgb: tuple[float, float, float] = BROWN
     hook_shape: tuple[float, float, float] = (
         gripper_base_height / 3,
-        (world_min_x + world_min_x) * 2 / 3,
+        (world_min_x + world_max_x) * 7 / 12,
         (world_min_y + world_max_y) / 6,
     )
     hook_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
+        SE2Pose(world_min_x + hook_shape[1], hook_shape[2] * 1.5, -np.pi / 12),
         SE2Pose(
-            world_min_x + hook_shape[0] / 2,
-            hook_shape[1] * 2,
-            -np.pi / 6
-        ),
-        SE2Pose(
-            world_max_x - hook_shape[0] / 2,
-            (world_min_y + world_max_y) / 2,
-            np.pi / 6
+            world_max_x - hook_shape[0],
+            (world_min_y + world_max_y) / 2 - hook_shape[2],
+            np.pi / 12,
         ),
     )
 
@@ -116,28 +117,20 @@ class DynPushPullHook2DEnvConfig(Dynamic2DRobotEnvConfig):
     target_block_rgb: tuple[float, float, float] = PURPLE
     target_block_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
         SE2Pose(
-            world_min_x, (world_min_y + world_max_y) / 2 + robot_base_radius, -np.pi
+            world_min_x + hook_shape[2],
+            (world_min_y + world_max_y) / 2 + hook_shape[2],
+            -np.pi,
         ),
-        SE2Pose(
-            world_max_x, world_max_y, np.pi
-        ),
+        SE2Pose(world_max_x - hook_shape[2], world_max_y - hook_shape[2], np.pi),
     )
     target_block_size_bounds: tuple[float, float] = (
         gripper_base_height / 2,
-        hook_shape[2]
+        hook_shape[2] - hook_shape[0],
     )
     target_block_mass: float = 1.0
 
     # Obstruction hyperparameters (DYNAMIC).
     obstruction_rgb: tuple[float, float, float] = BROWN
-    obstruction_init_pose_bounds = (
-        SE2Pose(
-            world_min_x, (world_min_y + world_max_y) / 2 + robot_base_radius, -np.pi
-        ),
-        SE2Pose(
-            world_max_x, world_max_y, np.pi
-        ),
-    )
     obstruction_height_bounds: tuple[float, float] = (
         robot_base_radius / 2,
         hook_shape[2],
@@ -162,8 +155,7 @@ class DynPushPullHook2DEnvConfig(Dynamic2DRobotEnvConfig):
 class ObjectCentricDynPushPullHook2DEnv(
     ObjectCentricDynamic2DRobotEnv[DynPushPullHook2DEnvConfig]
 ):
-    """
-    """
+    """"""
 
     def __init__(
         self,
@@ -189,7 +181,7 @@ class ObjectCentricDynPushPullHook2DEnv(
             "vx": 0.0,
             "y": self.config.middle_wall_pose[0],
             "vy": 0.0,
-            "theta": self.config.middle_wall_pose[0],
+            "theta": 0.0,
             "omega": 0.0,
             "width": self.config.middle_wall_width,
             "height": self.config.middle_wall_height,
@@ -198,7 +190,7 @@ class ObjectCentricDynPushPullHook2DEnv(
             "color_r": self.config.middle_wall_rgb[0],
             "color_g": self.config.middle_wall_rgb[1],
             "color_b": self.config.middle_wall_rgb[2],
-            "z_order": ZOrder.FLOOR.value, # Middle wall does not collide with hook
+            "z_order": ZOrder.FLOOR.value,  # Middle wall does not collide with hook
         }
 
         # Create room walls.
@@ -223,9 +215,7 @@ class ObjectCentricDynPushPullHook2DEnv(
         """Sample an initial state for the environment."""
         static_objects = set(self.initial_constant_state)
         n = self.config.max_initial_state_sampling_attempts
-        robot_pose = sample_se2_pose(
-            self.config.robot_init_pose_bounds, self.np_random
-        )
+        robot_pose = sample_se2_pose(self.config.robot_init_pose_bounds, self.np_random)
         state = self._create_initial_state(robot_pose)
         robot = state.get_objects(KinRobotType)[0]
         # Check for collisions with the robot and static objects.
@@ -236,9 +226,7 @@ class ObjectCentricDynPushPullHook2DEnv(
             target_pose = sample_se2_pose(
                 self.config.target_block_init_pose_bounds, self.np_random
             )
-            target_size = self.np_random.uniform(
-                *self.config.target_block_size_bounds
-            )
+            target_size = self.np_random.uniform(*self.config.target_block_size_bounds)
             hook_pose = sample_se2_pose(
                 self.config.hook_init_pose_bounds, self.np_random
             )
@@ -368,12 +356,12 @@ class ObjectCentricDynPushPullHook2DEnv(
                 "color_r": self.config.target_block_rgb[0],
                 "color_g": self.config.target_block_rgb[1],
                 "color_b": self.config.target_block_rgb[2],
-                "z_order": ZOrder.SURFACE.value, # Hook does not collide with middle wall
+                "z_order": ZOrder.SURFACE.value,  # Hook does not collide with middle wall
             }
 
         # Create the hook.
         if hook_pose is not None:
-            target_block = Object("Hook", HookType)
+            target_block = Object("hook", HookType)
             init_state_dict[target_block] = {
                 "x": hook_pose.x,
                 "vx": 0.0,
@@ -390,7 +378,7 @@ class ObjectCentricDynPushPullHook2DEnv(
                 "color_r": self.config.target_block_rgb[0],
                 "color_g": self.config.target_block_rgb[1],
                 "color_b": self.config.target_block_rgb[2],
-                "z_order": ZOrder.SURFACE.value, # Hook does not collide with middle wall
+                "z_order": ZOrder.SURFACE.value,  # Hook does not collide with middle wall
             }
 
         # Create obstructions.
@@ -429,7 +417,6 @@ class ObjectCentricDynPushPullHook2DEnv(
                 x = state.get(obj, "x")
                 y = state.get(obj, "y")
                 width = state.get(obj, "width")
-                height = state.get(obj, "height")
                 theta = state.get(obj, "theta")
                 vx = state.get(obj, "vx")
                 vy = state.get(obj, "vy")
@@ -439,6 +426,7 @@ class ObjectCentricDynPushPullHook2DEnv(
                 if "wall" in obj.name:
                     # Static objects
                     # We use Pymunk kinematic bodies for static objects
+                    height = state.get(obj, "height")
                     b2 = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
                     vs = [
                         (-width / 2, -height / 2),
@@ -459,6 +447,7 @@ class ObjectCentricDynPushPullHook2DEnv(
                 elif obj.is_instance(DynRectangleType):
                     # Target block and obstructions
                     assert not held, "Blocks cannot be held in this env"
+                    height = state.get(obj, "height")
                     mass = state.get(obj, "mass")
                     vs = [
                         (-width / 2, -height / 2),
@@ -484,8 +473,9 @@ class ObjectCentricDynPushPullHook2DEnv(
                     body.angular_velocity = omega
                     self._state_obj_to_pymunk_body[obj] = body
                 else:
-                    assert obj.is_instance(LObjectType), \
-                        f"Unknown object type {obj.type.name}"
+                    assert obj.is_instance(
+                        LObjectType
+                    ), f"Unknown object type {obj.type.name}"
                     mass = state.get(obj, "mass")
                     x, y = state.get(obj, "x"), state.get(obj, "y")
                     theta = state.get(obj, "theta")
@@ -493,21 +483,16 @@ class ObjectCentricDynPushPullHook2DEnv(
                     l2 = state.get(obj, "length_side2")
                     w = state.get(obj, "width")
                     # Approximate moment of inertia for L-shape as two rectangles
-                    moment1 = pymunk.moment_for_box(mass / 2, (w, l1))
-                    moment2 = pymunk.moment_for_box(mass / 2, (w, l2))
-                    moment = moment1 + moment2
-                    vertices = np.array(
-                        [
-                            (0, 0),
-                            (-l1, 0),
-                            (-l1, -w),
-                            (-w, -w),
-                            (-w, -l2),
-                            (0, -l2),
-                            (0, -w),
-                            (-w, 0),
-                        ]
-                    )
+                    vertices = [
+                        (0, 0),  # The right top vertex described in L101.
+                        (-l1, 0),
+                        (-l1, -w),
+                        (-w, -w),
+                        (-w, -l2),
+                        (0, -l2),
+                        (0, -w),
+                        (-w, 0),
+                    ]
                     vs_l1 = (
                         vertices[0],
                         vertices[1],
@@ -520,10 +505,12 @@ class ObjectCentricDynPushPullHook2DEnv(
                         vertices[0],
                         vertices[7],
                     )
+                    moment1 = pymunk.moment_for_poly(mass / 2, vs_l1)
+                    moment2 = pymunk.moment_for_poly(mass / 2, vs_l2)
+                    moment = moment1 + moment2
                     if not held:
                         # Dynamic objects
-                        moment = pymunk.moment_for_box(mass, (width, height))
-                        body = pymunk.Body()
+                        body = pymunk.Body(mass=mass, moment=moment)
                         shape1 = pymunk.Poly(body, vs_l1)
                         shape2 = pymunk.Poly(body, vs_l2)
                         shape1.friction = 1.0
@@ -536,11 +523,11 @@ class ObjectCentricDynPushPullHook2DEnv(
                         shape2.mass = mass / 2
                         assert shape1.body is not None
                         assert shape2.body is not None
-                        shape1.body.moment = moment
+                        shape1.body.moment = moment1
                         shape1.body.mass = mass
-                        shape2.body.moment = moment
+                        shape2.body.moment = moment2
                         shape2.body.mass = mass
-                        self.pymunk_space.add(body, shape)
+                        self.pymunk_space.add(body, shape1, shape2)
                         body.position = x, y
                         body.angle = theta
                         body.velocity = vx, vy
@@ -558,7 +545,7 @@ class ObjectCentricDynPushPullHook2DEnv(
                         shape2.friction = 1.0
                         shape2.density = 1.0
                         shape2.collision_type = ROBOT_COLLISION_TYPE
-                        self.pymunk_space.add(body, shape)
+                        self.pymunk_space.add(body, shape1, shape2)
                         body.position = x, y
                         body.angle = theta
                         body.velocity = vx, vy
@@ -566,7 +553,7 @@ class ObjectCentricDynPushPullHook2DEnv(
                         # Add to robot hand
                         self._state_obj_to_pymunk_body[obj] = body
                         assert self.robot is not None, "Robot not initialized"
-                        self.robot.add_to_hand((body, shape), mass)
+                        self.robot.add_to_hand((body, [shape1, shape2]), mass)
 
     def _read_state_from_space(self) -> None:
         """Read the current state from the PyMunk space."""
@@ -624,19 +611,22 @@ class ObjectCentricDynPushPullHook2DEnv(
         state: ObjectCentricState,
         static_object_body_cache: dict[Object, MultiBody2D],
     ) -> bool:
-        """Check if the target condition is satisfied.
-        """
+        """Check if the target condition is satisfied."""
         # If middle wall and target block geometrically intersect
         target_block = state.get_objects(TargetBlockType)[0]
-        middle_wall = [o for o in state if o.name == "middle_wall"][0]
+        middle_wall = [
+            o for o in self.initial_constant_state if o.name == "middle_wall"
+        ][0]
+        full_state = state.copy()
+        full_state.data.update(self.initial_constant_state.data)
         if state_2d_has_collision(
-            state,
+            full_state,
             {target_block},
             {middle_wall},
             static_object_body_cache,
         ):
             return True
-        
+
         return False
 
     def _get_reward_and_done(self) -> tuple[float, bool]:
@@ -660,7 +650,7 @@ class DynPushPullHook2DEnv(ConstantObjectPRBenchEnv):
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
     ) -> list[str]:
-        constant_objects = ["robot", "Hook"]
+        constant_objects = ["robot", "hook"]
         for obj in sorted(exemplar_state):
             if obj.name.startswith("target_block"):
                 constant_objects.append(obj.name)

@@ -19,11 +19,14 @@ from prbench.envs.dynamic2d.object_types import (
     KinRectangleType,
     KinRobotType,
 )
+from prbench.envs.dynamic2d.object_types import LObjectType as LObjectTypeDyn
 from prbench.envs.geom2d.object_types import (
     CircleType,
     CRVRobotType,
     DoubleRectType,
-    LObjectType,
+)
+from prbench.envs.geom2d.object_types import LObjectType as LObjectTypeGeom
+from prbench.envs.geom2d.object_types import (
     RectangleType,
 )
 from prbench.envs.geom2d.structs import (
@@ -358,7 +361,7 @@ def geom2d_lobject_to_multibody2d(
     obj: Object, state: ObjectCentricState
 ) -> MultiBody2D:
     """Helper to create a MultiBody2D for an LObjectType object."""
-    assert obj.is_instance(LObjectType)
+    assert obj.is_instance(LObjectTypeGeom) or obj.is_instance(LObjectTypeDyn)
     # Get parameters
     x = state.get(obj, "x")
     y = state.get(obj, "y")
@@ -551,7 +554,7 @@ def object_to_multibody2d(
         }
         body = Body2D(geom, z_order, rendering_kwargs)
         multibody = MultiBody2D(obj.name, [body])
-    elif obj.is_instance(LObjectType):
+    elif obj.is_instance(LObjectTypeDyn) or obj.is_instance(LObjectTypeGeom):
         multibody = geom2d_lobject_to_multibody2d(obj, state)
     elif obj.is_instance(DoubleRectType):
         multibody = geom2d_double_rectangle_to_multibody2d(obj, state)

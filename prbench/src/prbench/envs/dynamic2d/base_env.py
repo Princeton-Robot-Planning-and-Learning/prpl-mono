@@ -418,12 +418,14 @@ class ObjectCentricDynamic2DRobotEnv(
                     total_moment = 0.0
                     new_shapes: list[pymunk.Shape] = []
                     for shape in shapes:
-                        assert isinstance(shape, pymunk.Poly), \
-                            "Only support polygon shapes for now"
+                        assert isinstance(
+                            shape, pymunk.Poly
+                        ), "Only support polygon shapes for now"
                         copied_shape = shape.copy()
                         shape.mass = mass / len(shapes)
-                        total_moment += pymunk.moment_for_poly(shape.mass, \
-                                                               shape.get_vertices())
+                        total_moment += pymunk.moment_for_poly(
+                            shape.mass, shape.get_vertices()
+                        )
                         new_shapes.append(copied_shape)
                     dynamic_body = pymunk.Body(mass, total_moment)
                     dynamic_body.position = kinematic_body.position
@@ -436,9 +438,7 @@ class ObjectCentricDynamic2DRobotEnv(
                         shape.density = 1.0
                         shape.collision_type = DYNAMIC_COLLISION_TYPE
                     self.pymunk_space.add(dynamic_body, *new_shapes)
-                    self.pymunk_space.remove(
-                        kinematic_body, *shapes
-                    )
+                    self.pymunk_space.remove(kinematic_body, *shapes)
                     self._state_obj_to_pymunk_body[state_obj] = dynamic_body
                     held_body_ids_shape.pop(body.id)
             # Then, for any remaining held objects not matched to state objects,

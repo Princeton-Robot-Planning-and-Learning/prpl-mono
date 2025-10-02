@@ -87,8 +87,8 @@ def register_all_environments() -> None:
     num_obstructions = [0, 1, 5, 10, 15]
     for num_obstruction in num_obstructions:
         _register(
-            id=f"prbench/DynPushPullStick2D-o{num_obstruction}-v0",
-            entry_point="prbench.envs.dynamic2d.dyn_pushpullstick2d:DynPushPullStick2DEnv",
+            id=f"prbench/DynPushPullHook2D-o{num_obstruction}-v0",
+            entry_point="prbench.envs.dynamic2d.dyn_pushpullhook2d:DynPushPullHook2DEnv",
             kwargs={"num_obstructions": num_obstruction},
         )
 

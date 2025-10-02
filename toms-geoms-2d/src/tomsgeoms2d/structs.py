@@ -322,8 +322,16 @@ class Lobject(Geom2D):
     """A helper class for representing a L-shaped object for visualizing and
     collision checking.
 
-    The object is centered at (x,y) with the leg lengths defined as a
-    tuple (length_side1, length_side2).
+    The hook body pose is defined as follows:
+    --------|
+            |
+    The hook looks like above when theta = 0.0, 
+    right is x positive, up is y positive.
+    The pose refers to the very right top vertex of the hook.
+    The geometry is defined by two (non-overlapping) rectanges
+    The "horizonal" one has width=hook_shape[1]-hook_shape[0], 
+    and height=hook_shape[0]
+    The "vertical" one has width=hook_shape[0 and height=hook_shape[2]
     """
 
     x: float
