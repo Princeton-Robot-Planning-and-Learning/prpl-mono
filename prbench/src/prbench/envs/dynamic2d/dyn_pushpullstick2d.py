@@ -22,6 +22,7 @@ from prbench.envs.dynamic2d.object_types import (
 from prbench.envs.dynamic2d.utils import (
     DYNAMIC_COLLISION_TYPE,
     STATIC_COLLISION_TYPE,
+    ROBOT_COLLISION_TYPE,
     KinRobotActionSpace,
     create_walls_from_world_boundaries,
 )
@@ -83,7 +84,7 @@ class DynPushPullStick2DEnvConfig(Dynamic2DRobotEnvConfig):
 
     # Middle wall hyperparameters.
     middle_wall_rgb: tuple[float, float, float] = PURPLE
-    middle_wall_pose: SE2Pose = (
+    middle_wall_pose: tuple[float, float, float] = (
         (world_min_x + world_max_x) / 2,
         (world_min_y + world_max_y) / 2,
         0.0,
@@ -94,19 +95,19 @@ class DynPushPullStick2DEnvConfig(Dynamic2DRobotEnvConfig):
     # Stick hyperparameters.
     stick_rgb: tuple[float, float, float] = BROWN
     stick_shape: tuple[float, float] = (
-        gripper_base_height / 2,
         (world_min_y + world_max_y) * 2 / 3,
+        gripper_base_height / 2,
     )
     stick_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
         SE2Pose(
-            world_min_x, 
-            (world_min_y + world_max_y) / 2 - stick_shape[1] / 4,
-            np.pi / 4
+            world_min_x + stick_shape[0] / 2,
+            stick_shape[1] * 2,
+            -np.pi / 6
         ),
         SE2Pose(
-            world_max_x - stick_shape[0], 
-            (world_min_y + world_max_y) / 2 + stick_shape[1] / 4, 
-            3 * np.pi / 4
+            world_max_x - stick_shape[0] / 2,
+            (world_min_y + world_max_y) / 2,
+            np.pi / 6
         ),
     )
 
@@ -183,15 +184,16 @@ class ObjectCentricDynPushPullStick2DEnv(
         # Create the middle wall.
         middle_wall = Object("middle_wall", KinRectangleType)
         init_state_dict[middle_wall] = {
-            "x": self.config.middle_wall_pose.x,
+            "x": self.config.middle_wall_pose[0],
             "vx": 0.0,
-            "y": self.config.middle_wall_pose.y,
+            "y": self.config.middle_wall_pose[0],
             "vy": 0.0,
-            "theta": self.config.middle_wall_pose.theta,
+            "theta": self.config.middle_wall_pose[0],
             "omega": 0.0,
             "width": self.config.middle_wall_width,
             "height": self.config.middle_wall_height,
             "static": True,
+            "held": False,
             "color_r": self.config.middle_wall_rgb[0],
             "color_g": self.config.middle_wall_rgb[1],
             "color_b": self.config.middle_wall_rgb[2],
@@ -333,6 +335,12 @@ class ObjectCentricDynPushPullStick2DEnv(
             "base_radius": self.config.robot_base_radius,
             "arm_joint": self.config.robot_base_radius,
             "arm_length": self.config.robot_arm_length_max,
+            "vx_arm": 0.0,
+            "vy_arm": 0.0,
+            "omega_arm": 0.0,
+            "vx_gripper": 0.0,
+            "vy_gripper": 0.0,
+            "omega_gripper": 0.0,
             "gripper_base_width": self.config.gripper_base_width,
             "gripper_base_height": self.config.gripper_base_height,
             "finger_gap": self.config.gripper_base_height,
@@ -372,6 +380,7 @@ class ObjectCentricDynPushPullStick2DEnv(
                 "vy": 0.0,
                 "theta": stick_pose.theta,
                 "omega": 0.0,
+                "mass": self.config.obstruction_block_mass,
                 "width": self.config.stick_shape[0],
                 "height": self.config.stick_shape[1],
                 "static": False,
@@ -397,6 +406,7 @@ class ObjectCentricDynPushPullStick2DEnv(
                     "width": obstruction_shape[0],
                     "height": obstruction_shape[1],
                     "static": False,
+                    "held": False,
                     "color_r": self.config.obstruction_rgb[0],
                     "color_g": self.config.obstruction_rgb[1],
                     "color_b": self.config.obstruction_rgb[2],
@@ -408,11 +418,136 @@ class ObjectCentricDynPushPullStick2DEnv(
 
     def _add_state_to_space(self, state: ObjectCentricState) -> None:
         """Add objects from the state to the PyMunk space."""
-        raise NotImplementedError("TODO")
+        assert self.pymunk_space is not None, "Space not initialized"
+        for obj in state:
+            if obj.is_instance(KinRobotType):
+                self._reset_robot_in_space(obj, state)
+            else:
+                # Everything else are rectangles in this environment.
+                x = state.get(obj, "x")
+                y = state.get(obj, "y")
+                width = state.get(obj, "width")
+                height = state.get(obj, "height")
+                theta = state.get(obj, "theta")
+                vx = state.get(obj, "vx")
+                vy = state.get(obj, "vy")
+                omega = state.get(obj, "omega")
+                held = state.get(obj, "held")
+                # Add static objects (table, walls)
+                if "wall" in obj.name:
+                    # Static objects
+                    # We use Pymunk kinematic bodies for static objects
+                    b2 = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+                    vs = [
+                        (-width / 2, -height / 2),
+                        (-width / 2, height / 2),
+                        (width / 2, height / 2),
+                        (width / 2, -height / 2),
+                    ]
+                    shape = pymunk.Poly(b2, vs)
+                    shape.friction = 1.0
+                    shape.density = 1.0
+                    shape.mass = 1.0
+                    shape.elasticity = 0.99
+                    shape.collision_type = STATIC_COLLISION_TYPE
+                    self.pymunk_space.add(b2, shape)
+                    b2.position = x, y
+                    b2.angle = theta
+                    self._state_obj_to_pymunk_body[obj] = b2
+                else:
+                    # Target block and obstructions
+                    mass = state.get(obj, "mass")
+                    vs = [
+                        (-width / 2, -height / 2),
+                        (-width / 2, height / 2),
+                        (width / 2, height / 2),
+                        (width / 2, -height / 2),
+                    ]
+                    if not held:
+                        # Dynamic objects
+                        moment = pymunk.moment_for_box(mass, (width, height))
+                        body = pymunk.Body()
+                        shape = pymunk.Poly(body, vs)
+                        shape.friction = 1.0
+                        shape.density = 1.0
+                        shape.collision_type = DYNAMIC_COLLISION_TYPE
+                        shape.mass = mass
+                        assert shape.body is not None
+                        shape.body.moment = moment
+                        shape.body.mass = mass
+                        self.pymunk_space.add(body, shape)
+                        body.position = x, y
+                        body.angle = theta
+                        body.velocity = vx, vy
+                        body.angular_velocity = omega
+                        self._state_obj_to_pymunk_body[obj] = body
+                    else:
+                        # Held dynamic objects are treated as kinematic
+                        body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+                        shape = pymunk.Poly(body, vs)
+                        shape.friction = 1.0
+                        shape.density = 1.0
+                        shape.collision_type = ROBOT_COLLISION_TYPE
+                        self.pymunk_space.add(body, shape)
+                        body.position = x, y
+                        body.angle = theta
+                        body.velocity = vx, vy
+                        body.angular_velocity = omega
+                        # Add to robot hand
+                        self._state_obj_to_pymunk_body[obj] = body
+                        assert self.robot is not None, "Robot not initialized"
+                        self.robot.add_to_hand((body, shape), mass)
 
     def _read_state_from_space(self) -> None:
         """Read the current state from the PyMunk space."""
-        raise NotImplementedError("TODO")
+        assert self.pymunk_space is not None, "Space not initialized"
+        assert self._current_state is not None, "Current state not initialized"
+
+        state = self._current_state.copy()
+
+        # Update dynamic object positions from PyMunk simulation
+        for obj in state:
+            if state.get(obj, "static"):
+                continue
+            if obj.is_instance(KinRobotType):
+                # Update robot state from its body
+                assert self.robot is not None, "Robot not initialized"
+                robot_obj = state.get_objects(KinRobotType)[0]
+                state.set(robot_obj, "x", self.robot.base_pose.x)
+                state.set(robot_obj, "y", self.robot.base_pose.y)
+                state.set(robot_obj, "theta", self.robot.base_pose.theta)
+                state.set(robot_obj, "vx_base", self.robot.base_vel[0].x)
+                state.set(robot_obj, "vy_base", self.robot.base_vel[0].y)
+                state.set(robot_obj, "omega_base", self.robot.base_vel[1])
+                state.set(robot_obj, "arm_joint", self.robot.curr_arm_length)
+                state.set(robot_obj, "vx_arm", self.robot.gripper_base_vel[0].x)
+                state.set(robot_obj, "vy_arm", self.robot.gripper_base_vel[0].y)
+                state.set(robot_obj, "omega_arm", self.robot.gripper_base_vel[1])
+                state.set(robot_obj, "finger_gap", self.robot.curr_gripper)
+                state.set(robot_obj, "vx_gripper", self.robot.finger_vel[0].x)
+                state.set(robot_obj, "vy_gripper", self.robot.finger_vel[0].y)
+                state.set(robot_obj, "omega_gripper", self.robot.finger_vel[1])
+            else:
+                assert (
+                    obj in self._state_obj_to_pymunk_body
+                ), f"Object {obj.name} not found in pymunk body cache"
+                pymunk_body = self._state_obj_to_pymunk_body[obj]
+                # Update object state from body
+                state.set(obj, "x", pymunk_body.position.x)
+                state.set(obj, "y", pymunk_body.position.y)
+                state.set(obj, "theta", pymunk_body.angle)
+                state.set(obj, "vx", pymunk_body.velocity.x)
+                state.set(obj, "vy", pymunk_body.velocity.y)
+                state.set(obj, "omega", pymunk_body.angular_velocity)
+                # Update held status
+                assert self.robot is not None, "Robot not initialized"
+                if self.robot.body_in_hand(pymunk_body.id):
+                    state.set(obj, "held", True)
+                else:
+                    state.set(obj, "held", False)
+
+        # Update the current state
+        self._current_state = state
 
     def _target_satisfied(
         self,
@@ -421,7 +556,18 @@ class ObjectCentricDynPushPullStick2DEnv(
     ) -> bool:
         """Check if the target condition is satisfied.
         """
-        raise NotImplementedError("TODO")
+        # If middle wall and target block geometrically intersect
+        target_block = state.get_objects(TargetBlockType)[0]
+        middle_wall = [o for o in state if o.name == "middle_wall"][0]
+        if state_2d_has_collision(
+            state,
+            {target_block},
+            {middle_wall},
+            static_object_body_cache,
+        ):
+            return True
+        
+        return False
 
     def _get_reward_and_done(self) -> tuple[float, bool]:
         """Calculate reward and termination."""
@@ -459,57 +605,61 @@ class DynPushPullStick2DEnv(ConstantObjectPRBenchEnv):
         )
         # pylint: disable=line-too-long
         if num_obstructions > 0:
-            obstruction_sentence = f"\nThe target surface may be initially obstructed. In this environment, there are always {num_obstructions} obstacle blocks.\n"
+            obstruction_sentence = f"\nThe target block is initially surrounded by {num_obstructions} obstacle blocks that form a barrier around it.\n"
         else:
             obstruction_sentence = ""
 
-        return f"""A 2D physics-based environment where the goal is to place a target block onto a target surface using a fingered robot with PyMunk physics simulation. The block must be completely on the surface.
+        return f"""A 2D physics-based tool-use environment where a robot must use a stick to push/pull a target block onto a middle wall (goal surface). The target block is positioned in the upper region of the world, while the middle wall is located at the center. The robot must manipulate the stick to navigate the target block downward through obstacles.
 {obstruction_sentence}
-The robot has a movable circular base and an extendable arm with gripper fingers. Objects can be grasped and released through gripper actions. All objects follow realistic physics including gravity, friction, and collisions.
+The robot has a movable circular base and an extendable arm with gripper fingers. The stick is a kinematic object that can be grasped and used as a tool to indirectly manipulate the target block. All dynamic objects follow realistic PyMunk physics including gravity, friction, and collisions.
 
 **Observation Space**: The observation is a fixed-size vector containing the state of all objects:
 - **Robot**: position (x,y), orientation (θ), velocities (vx,vy,ω), arm extension, gripper gap
+- **Stick**: position, orientation, dimensions (kinematic tool object, can be grasped)
 - **Target Block**: position, orientation, velocities, dimensions (dynamic physics object)
-- **Target Surface**: position, orientation, dimensions (kinematic physics object)
-{f"- **Obstruction Blocks** ({num_obstructions}): position, orientation, velocities, dimensions (dynamic physics objects)" if num_obstructions > 0 else ""}
+- **Middle Wall**: position, orientation, dimensions (kinematic goal surface at world center)
+{f"- **Obstruction Blocks** ({num_obstructions}): position, orientation, velocities, dimensions (dynamic objects sampled around target)" if num_obstructions > 0 else ""}
 
 Each object includes physics properties like mass, moment of inertia (for dynamic objects), and color information for rendering.
 """
 
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return f"""A penalty of -1.0 is given at every time step until termination, which occurs when the target block is completely "on" the target surface.
+        return f"""A penalty of -1.0 is given at every time step until termination, which occurs when the target block reaches the middle wall (goal surface).
 
-**Termination Condition**: The episode terminates when the target block is successfully placed on the target surface. The "on" condition requires that the bottom vertices of the target block are within the bounds of the target surface, accounting for physics-based positioning.
+**Termination Condition**: The episode terminates when the target block geometrically intersects with the middle wall. This is detected using collision checking between the target block and middle wall.
 
-The definition of "on" is implemented using geometric collision detection:
-```python
-{inspect.getsource(is_on)}```
+**Goal Achievement Strategy**: The robot must:
+1. Grasp the stick tool with its gripper
+2. Use the stick to push or pull the target block downward
+3. Navigate around or through the obstruction blocks
+4. Successfully move the target block until it contacts the middle wall
 
 **Physics Integration**: Since this environment uses PyMunk physics simulation, objects have realistic dynamics including:
 - Gravity (objects fall if not supported)
 - Friction between surfaces
 - Collision response and momentum transfer
-- Realistic grasping and manipulation dynamics
+- Realistic grasping and tool manipulation dynamics
+- Indirect manipulation through tool-object interactions
 """
 
     def _create_references_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return """This is a physics-based version of manipulation environments commonly used in robotics research. It extends the geometric obstruction environment to include realistic physics simulation using PyMunk.
+        return """This environment implements a tool-use manipulation task with physics-based dynamics. It is inspired by cognitive science research on tool use and indirect manipulation, where an agent must use an intermediary object (stick) to achieve goals that cannot be reached directly.
 
 **Key Features**:
-- **PyMunk Physics Engine**: Provides realistic 2D rigid body dynamics
-- **Dynamic Objects**: Target and obstruction blocks have mass, inertia, and respond to forces
-- **Kinematic Robot**: Multi-DOF robot with base movement, arm extension, and gripper control
-- **Collision Detection**: Physics-based collision handling for grasping and object interactions
-- **Gravity Simulation**: Objects fall and settle naturally under gravitational forces
+- **Tool-Use Paradigm**: Robot must grasp and manipulate a stick to indirectly move the target block
+- **Spatial Reasoning**: Target block starts in upper region, must be moved downward to center goal
+- **Obstacle Navigation**: Obstructions are sampled via Gaussian distribution around the target, creating clustered barriers
+- **PyMunk Physics Engine**: Provides realistic 2D rigid body dynamics for tool-object interactions
+- **Z-Order Collision Control**: Stick and target have surface z-order to avoid collision with floor-level middle wall
 
 **Research Applications**:
-- Robot manipulation learning with realistic physics
-- Grasping and placement strategy development  
-- Multi-object interaction scenarios
-- Physics-aware motion planning validation
-- Comparative studies between geometric and physics-based environments
+- Tool-use learning and reasoning
+- Indirect manipulation strategies
+- Multi-step planning with intermediate tool grasping
+- Physics-aware motion planning through obstacles
+- Comparative studies of direct vs. tool-mediated manipulation
 
-This environment enables more realistic evaluation of manipulation policies compared to purely geometric versions, as agents must account for momentum, friction, and gravitational effects.
+This environment enables evaluation of manipulation policies that require tool use, spatial reasoning, and multi-object interaction planning under realistic physics constraints.
 """
