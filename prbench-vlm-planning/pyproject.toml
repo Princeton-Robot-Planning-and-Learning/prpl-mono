@@ -15,9 +15,6 @@ dependencies = [
    "pandas-stubs",
    "hydra-core",
    "omegaconf",
-   "prbench @ git+https://github.com/Princeton-Robot-Planning-and-Learning/prbench.git",
-   "prpl-llm-utils @ git+https://github.com/Princeton-Robot-Planning-and-Learning/prpl-llm-utils.git",
-   "prbench_models @ git+https://github.com/Princeton-Robot-Planning-and-Learning/prbench-models.git",
 ]
 
 [project.optional-dependencies]
