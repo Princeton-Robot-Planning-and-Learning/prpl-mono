@@ -413,21 +413,31 @@ class ObjectCentricDynamic2DRobotEnv(
                 if body.id in held_body_ids_shape.keys():
                     # Change to dynamic body
                     kinematic_body = body
-                    points = held_body_ids_shape[body.id].get_vertices()
-                    mass = 1.0  # Assume uniform mass for now
-                    moment = pymunk.moment_for_poly(mass, points, (0, 0))
-                    dynamic_body = pymunk.Body(mass, moment)
+                    mass = self._current_state.get(state_obj, "mass")
+                    shapes = held_body_ids_shape[body.id]
+                    total_moment = 0.0
+                    new_shapes: list[pymunk.Shape] = []
+                    for shape in shapes:
+                        assert isinstance(shape, pymunk.Poly), \
+                            "Only support polygon shapes for now"
+                        copied_shape = shape.copy()
+                        shape.mass = mass / len(shapes)
+                        total_moment += pymunk.moment_for_poly(shape.mass, \
+                                                               shape.get_vertices())
+                        new_shapes.append(copied_shape)
+                    dynamic_body = pymunk.Body(mass, total_moment)
                     dynamic_body.position = kinematic_body.position
                     dynamic_body.velocity = kinematic_body.velocity  # Preserve velocity
                     dynamic_body.angular_velocity = kinematic_body.angular_velocity
                     dynamic_body.angle = kinematic_body.angle
-                    shape = pymunk.Poly(dynamic_body, points)
-                    shape.friction = 1.0
-                    shape.density = 1.0
-                    shape.collision_type = DYNAMIC_COLLISION_TYPE
-                    self.pymunk_space.add(dynamic_body, shape)
+                    for shape in new_shapes:
+                        shape.body = dynamic_body
+                        shape.friction = 1.0
+                        shape.density = 1.0
+                        shape.collision_type = DYNAMIC_COLLISION_TYPE
+                    self.pymunk_space.add(dynamic_body, *new_shapes)
                     self.pymunk_space.remove(
-                        kinematic_body, held_body_ids_shape[body.id]
+                        kinematic_body, *shapes
                     )
                     self._state_obj_to_pymunk_body[state_obj] = dynamic_body
                     held_body_ids_shape.pop(body.id)
@@ -436,7 +446,7 @@ class ObjectCentricDynamic2DRobotEnv(
             for kin_obj, _, _ in self.robot.held_objects:
                 if kin_obj[0].id in held_body_ids_shape.keys():
                     # Remove any extra objects in hand
-                    self.pymunk_space.remove(kin_obj[0], kin_obj[1])
+                    self.pymunk_space.remove(kin_obj[0], *kin_obj[1])
                     continue
             self.robot.held_objects = []
 

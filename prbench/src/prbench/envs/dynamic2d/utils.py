@@ -7,6 +7,7 @@ import numpy as np
 import pymunk
 from numpy.typing import NDArray
 from pymunk.vec2d import Vec2d
+from pymunk import Shape, Body
 from relational_structs import Object
 
 from prbench.envs.dynamic2d.object_types import (
@@ -118,7 +119,7 @@ class KinRobot:
         self._arm_length = base_radius
         self._gripper_gap = gripper_base_height
         self.held_objects: list[
-            tuple[tuple[pymunk.Body, pymunk.Shape], float, SE2Pose]
+            tuple[tuple[Body, list[Shape]], float, SE2Pose]
         ] = []
 
         # Updated by env.step()
@@ -458,7 +459,7 @@ class KinRobot:
                 return True
         return False
 
-    def add_to_hand(self, obj: tuple[pymunk.Body, pymunk.Shape], mass: float) -> None:
+    def add_to_hand(self, obj: tuple[Body, list[Shape]], mass: float) -> None:
         """Add an object to the robot's hand."""
         obj_body, _ = obj
         obj_pose = SE2Pose(
@@ -622,16 +623,16 @@ def on_gripper_grasp(
         kinematic_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
         kinematic_body.position = dynamic_body.position
         kinematic_body.angle = dynamic_body.angle
-        points = arbiter.shapes[0].get_vertices()
-        shape = pymunk.Poly(kinematic_body, points)
-        shape.friction = 1
-        shape.density = 1.0
-        # Held object becomes part of the robot.
-        shape.collision_type = ROBOT_COLLISION_TYPE
-        space.add(kinematic_body, shape)
-        robot.add_to_hand((kinematic_body, shape), dynamic_body.mass)
-        # Remove the dynamic body from the space
-        space.remove(dynamic_body, arbiter.shapes[0])
+        shapes = dynamic_body.shapes
+        new_shapes: list[Shape] = []
+        for shape in shapes:
+            copied_shape = shape.copy()
+            copied_shape.body = kinematic_body
+            new_shapes.append(copied_shape)
+        space.add(kinematic_body, *new_shapes)
+        robot.add_to_hand((kinematic_body, new_shapes), dynamic_body.mass)
+        # Remove the dynamic body and attached shapes from the space
+        space.remove(dynamic_body, *shapes)
 
 
 def on_collision_w_static(
