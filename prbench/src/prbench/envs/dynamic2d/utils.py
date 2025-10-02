@@ -74,6 +74,174 @@ class KinRobotActionSpace(RobotActionSpace):
         )
 
 
+class DotRobotActionSpace(RobotActionSpace):
+    """An action space for a simple dot robot (kinematic circle).
+
+    Actions are bounded absolute positions in 2D space.
+    """
+
+    def __init__(
+        self,
+        min_x: float = 0.0,
+        max_x: float = 10.0,
+        min_y: float = 0.0,
+        max_y: float = 10.0,
+    ) -> None:
+        low = np.array([min_x, min_y])
+        high = np.array([max_x, max_y])
+        super().__init__(low, high)
+
+    def create_markdown_description(self) -> str:
+        """Create a human-readable markdown description of this space."""
+        features = [
+            ("x", "Target x position for robot (positive is right)"),
+            ("y", "Target y position for robot (positive is up)"),
+        ]
+        md_table_str = (
+            "| **Index** | **Feature** | **Description** | **Min** | **Max** |"
+        )
+        md_table_str += "\n| --- | --- | --- | --- | --- |"
+        for idx, (feature, description) in enumerate(features):
+            lb = self.low[idx]
+            ub = self.high[idx]
+            md_table_str += (
+                f"\n| {idx} | {feature} | {description} | {lb:.3f} | {ub:.3f} |"
+            )
+        return (
+            f"The entries of an array in this Box space correspond to the "
+            f"following action features:\n{md_table_str}\n"
+        )
+
+
+class DotRobot:
+    """Simple dot robot implementation using PyMunk physics engine.
+
+    The robot is a kinematic circle that can move to target positions using PD control.
+    This is similar to the agent in the original PushT environment.
+    """
+
+    def __init__(
+        self,
+        init_pos: Vec2d = Vec2d(256.0, 256.0),
+        radius: float = 15.0,
+    ) -> None:
+        # Robot parameters
+        self.radius = radius
+
+        # Track last robot state
+        self._position = init_pos
+
+        # Body and shape references
+        self._body: pymunk.Body | None = None
+        self._shape: pymunk.Shape | None = None
+        self.create_body()
+
+    def add_to_space(self, space: pymunk.Space) -> None:
+        """Add robot to the PyMunk space."""
+        assert self._body is not None and self._shape is not None
+        space.add(self._body, self._shape)
+
+    def create_body(self) -> None:
+        """Create the robot body (kinematic circle)."""
+        self._body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+        self._shape = pymunk.Circle(self._body, self.radius)
+        self._shape.color = (50, 50, 255, 255)  # Blue circle
+        self._shape.friction = 1
+        self._shape.collision_type = ROBOT_COLLISION_TYPE
+        self._shape.density = 1.0
+        self._body.position = self._position
+
+    @property
+    def pose(self) -> SE2Pose:
+        """Get the robot pose as SE2Pose."""
+        assert self._body is not None
+        return SE2Pose(
+            x=self._body.position.x,
+            y=self._body.position.y,
+            theta=0.0,  # Dot robot has no orientation
+        )
+
+    @property
+    def vel(self) -> Vec2d:
+        """Get the robot velocity."""
+        assert self._body is not None
+        return self._body.velocity
+
+    @property
+    def body_id(self) -> int:
+        """Get the body id in pymunk space."""
+        assert self._body is not None
+        return self._body.id
+
+    def reset_position(
+        self,
+        x: float,
+        y: float,
+        vel: Vec2d | None = None,
+    ) -> None:
+        """Reset robot to specified position with optional velocity."""
+        assert self._body is not None
+        self._body.position = (x, y)
+        if vel is not None:
+            self._body.velocity = vel
+        else:
+            self._body.velocity = Vec2d(0.0, 0.0)
+
+        # Update last state
+        self.update_last_state()
+
+    def revert_to_last_state(self) -> None:
+        """Reset to last state and stay static when collide with static objects."""
+        assert self._body is not None
+        self._body.position = self._position
+        self._body.velocity = Vec2d(0.0, 0.0)
+
+    def update_last_state(self) -> None:
+        """Update the last state tracking variables."""
+        assert self._body is not None
+        self._position = Vec2d(self._body.position.x, self._body.position.y)
+
+    def update(self, velocity: Vec2d) -> None:
+        """Update the robot velocity."""
+        assert self._body is not None
+        # Update robot last state
+        self.update_last_state()
+        # Update velocity
+        self._body.velocity = velocity
+
+
+class DotRobotPDController:
+    """A simple PD controller for the DotRobot."""
+
+    def __init__(
+        self,
+        kp: float = 100.0,
+        kv: float = 20.0,
+    ) -> None:
+        self.kp = kp
+        self.kv = kv
+
+    def compute_control(
+        self,
+        robot: DotRobot,
+        tgt_x: float,
+        tgt_y: float,
+        dt: float,
+    ) -> Vec2d:
+        """Compute velocity using PD control."""
+        # Read current state
+        curr_pos = Vec2d(robot.pose.x, robot.pose.y)
+        curr_vel = robot.vel
+
+        # PD control
+        tgt_pos = Vec2d(tgt_x, tgt_y)
+        zero_vel = Vec2d(0, 0)
+        acceleration = self.kp * (tgt_pos - curr_pos) + self.kv * (zero_vel - curr_vel)
+        new_vel = curr_vel + acceleration * dt
+
+        return new_vel
+
+
 class KinRobot:
     """Robot implementation using PyMunk physics engine with four bodies.
 
@@ -637,6 +805,15 @@ def on_collision_w_static(
     arbiter: pymunk.Arbiter, space: pymunk.Space, robot: KinRobot
 ) -> None:
     """Collision callback for robot colliding with static objects."""
+    del arbiter
+    del space
+    robot.revert_to_last_state()
+
+
+def on_dot_robot_collision_w_static(
+    arbiter: pymunk.Arbiter, space: pymunk.Space, robot: DotRobot
+) -> None:
+    """Collision callback for DotRobot colliding with static objects."""
     del arbiter
     del space
     robot.revert_to_last_state()

@@ -92,6 +92,12 @@ def register_all_environments() -> None:
             kwargs={"num_obstructions": num_obstruction},
         )
 
+    # DynPushT environment
+    _register(
+        id="prbench/DynPushT-v0",
+        entry_point="prbench.envs.dynamic2d.dyn_pushtee:DynPushTEnv",
+    )
+
     # ******* Geom3D Environments *******
 
     # Motion3D environment.
