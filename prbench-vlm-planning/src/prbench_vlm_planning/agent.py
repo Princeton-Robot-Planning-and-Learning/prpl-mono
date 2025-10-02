@@ -187,7 +187,9 @@ class VLMPlanningAgent(Agent[_O, _U]):
         self, info: dict[str, Any]  # pylint: disable=unused-argument
     ) -> str:
         """Get string description of the goal."""
-        return info.get("description")
+        goal_description = info.get("description")
+        assert isinstance(goal_description, str)
+        return goal_description
 
     def _parse_plan_from_text(
         self,
