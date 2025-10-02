@@ -7,7 +7,7 @@ name = "prbench_vlm_planning"
 version = "0.1.0"
 description = "VLM planning baselines for prbench."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
    "matplotlib",
    "numpy",
