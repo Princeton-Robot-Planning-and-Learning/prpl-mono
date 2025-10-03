@@ -768,11 +768,11 @@ Each object includes physics properties like mass, moment of inertia (for dynami
 4. Successfully move the target block until it contacts the middle wall
 
 **Physics Integration**: Since this environment uses PyMunk physics simulation, objects have realistic dynamics including:
-- Gravity (objects fall if not supported)
 - Friction between surfaces
 - Collision response and momentum transfer
 - Realistic grasping and tool manipulation dynamics
 - Indirect manipulation through tool-object interactions
+- NOTE: all objects are on a 2D plane with no gravity, but damping is applied to simulate frictional losses
 """
 
     def _create_references_markdown_description(self) -> str:
