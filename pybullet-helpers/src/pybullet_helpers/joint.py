@@ -5,7 +5,7 @@ from typing import Iterator, NamedTuple, Sequence
 
 import numpy as np
 import pybullet as p
-from tomsutils.utils import get_signed_angle_distance, wrap_angle
+from prpl_utils.utils import get_signed_angle_distance, wrap_angle
 
 from pybullet_helpers.geometry import Pose3D, Quaternion
 

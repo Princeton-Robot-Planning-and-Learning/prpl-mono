@@ -8,7 +8,7 @@ from functools import partial
 from typing import Callable, Collection, Iterable, Iterator, Optional
 
 import numpy as np
-from tomsutils.motion_planning import RRT, BiRRT
+from prpl_utils.motion_planning import RRT, BiRRT
 
 from pybullet_helpers.geometry import (
     Pose,

@@ -12,7 +12,7 @@ def test_dyn_obstruction2d_observation_random_actions():
     Also tests env creation and random actions.
     """
     prbench.register_all_environments()
-    env = prbench.make("prbench/DynPushPullHook2D-o10-v0")
+    env = prbench.make("prbench/DynPushPullHook2D-o5-v0")
     assert isinstance(env.observation_space, Box)
     for _ in range(5):
         obs, _ = env.reset()
