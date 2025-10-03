@@ -24,6 +24,8 @@ from prbench.envs.dynamic2d.object_types import Dynamic2DRobotEnvTypeFeatures
 from prbench.envs.dynamic2d.utils import (
     DYNAMIC_COLLISION_TYPE,
     ROBOT_COLLISION_TYPE,
+    FINGER_COLLISION_TYPE,
+    ARM_COLLISION_TYPE,
     STATIC_COLLISION_TYPE,
     KinRobot,
     KinRobotActionSpace,
@@ -163,15 +165,29 @@ class ObjectCentricDynamic2DRobotEnv(
         self.robot.add_to_space(self.pymunk_space)
 
         # Set up collision handlers
+        # Finger grasping handler
         self.pymunk_space.on_collision(
             DYNAMIC_COLLISION_TYPE,
-            ROBOT_COLLISION_TYPE,
+            FINGER_COLLISION_TYPE,
             post_solve=on_gripper_grasp,
+            data=self.robot,
+        )
+        # Static collisions
+        self.pymunk_space.on_collision(
+            STATIC_COLLISION_TYPE,
+            ROBOT_COLLISION_TYPE,
+            pre_solve=on_collision_w_static,
             data=self.robot,
         )
         self.pymunk_space.on_collision(
             STATIC_COLLISION_TYPE,
-            ROBOT_COLLISION_TYPE,
+            FINGER_COLLISION_TYPE,
+            pre_solve=on_collision_w_static,
+            data=self.robot,
+        )
+        self.pymunk_space.on_collision(
+            STATIC_COLLISION_TYPE,
+            ARM_COLLISION_TYPE,
             pre_solve=on_collision_w_static,
             data=self.robot,
         )

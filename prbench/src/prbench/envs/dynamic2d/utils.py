@@ -23,6 +23,8 @@ from prbench.envs.utils import BLACK, RobotActionSpace
 STATIC_COLLISION_TYPE = 0
 DYNAMIC_COLLISION_TYPE = 1
 ROBOT_COLLISION_TYPE = 2
+FINGER_COLLISION_TYPE = 3
+ARM_COLLISION_TYPE = 4
 
 
 class KinRobotActionSpace(RobotActionSpace):
@@ -101,6 +103,9 @@ class KinRobot:
         gripper_finger_height: float = 0.01,
         finger_move_thresh: float = 0.001,
         grasping_theta_thresh: float = 0.1,
+        base_collision_type: int = ROBOT_COLLISION_TYPE,
+        arm_collision_type: int = ARM_COLLISION_TYPE,
+        finger_collision_type: int = FINGER_COLLISION_TYPE,
     ) -> None:
         # Robot parameters
         self.base_radius = base_radius
@@ -112,6 +117,9 @@ class KinRobot:
         self.gripper_gap_max = gripper_base_height
         self.finger_move_thresh = finger_move_thresh
         self.grasping_theta_thresh = grasping_theta_thresh
+        self.base_collision_type = base_collision_type
+        self.arm_collision_type = arm_collision_type
+        self.finger_collision_type = finger_collision_type
 
         # Track last robot state
         self._base_position = init_pos
@@ -146,7 +154,7 @@ class KinRobot:
         self._base_shape = pymunk.Circle(self._base_body, self.base_radius)
         self._base_shape.color = (255, 50, 50, 255)
         self._base_shape.friction = 1
-        self._base_shape.collision_type = ROBOT_COLLISION_TYPE
+        self._base_shape.collision_type = self.base_collision_type
         self._base_shape.density = 1.0
         self._base_body.position = self._base_position
         self._base_body.angle = self._base_angle
@@ -178,7 +186,7 @@ class KinRobot:
         self._gripper_base_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
         self._gripper_base_shape = pymunk.Poly(self._gripper_base_body, vs)
         self._gripper_base_shape.friction = 1
-        self._gripper_base_shape.collision_type = ROBOT_COLLISION_TYPE
+        self._gripper_base_shape.collision_type = self.arm_collision_type
         self._gripper_base_shape.density = 1.0
 
         vs_arm = [
@@ -190,7 +198,7 @@ class KinRobot:
         ts_arm = pymunk.Transform(tx=-self.arm_length_max / 2 - half_w, ty=0)
         self._arm_shape = pymunk.Poly(self._gripper_base_body, vs_arm, transform=ts_arm)
         self._arm_shape.friction = 1
-        self._arm_shape.collision_type = ROBOT_COLLISION_TYPE
+        self._arm_shape.collision_type = self.arm_collision_type
         self._arm_shape.density = 1.0
 
         vs_right_finger = [
@@ -206,7 +214,7 @@ class KinRobot:
             self._gripper_base_body, vs_right_finger, transform=ts_finger
         )
         self._right_finger_shape.friction = 1
-        self._right_finger_shape.collision_type = ROBOT_COLLISION_TYPE
+        self._right_finger_shape.collision_type = self.finger_collision_type
         self._right_finger_shape.density = 1.0
 
         init_rel_pos = SE2Pose(x=self._arm_length, y=0.0, theta=0.0)
@@ -245,7 +253,7 @@ class KinRobot:
         finger_shape = pymunk.Poly(finger_body, vs)
         finger_shape.friction = 1
         finger_shape.density = 1.0
-        finger_shape.collision_type = ROBOT_COLLISION_TYPE
+        finger_shape.collision_type = self.finger_collision_type
 
         init_rel_pos = SE2Pose(
             x=half_w, y=self._gripper_gap - self.gripper_base_height / 2, theta=0.0
