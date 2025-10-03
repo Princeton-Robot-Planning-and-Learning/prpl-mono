@@ -22,10 +22,10 @@ from relational_structs.utils import create_state_from_dict
 from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionSpace
 from prbench.envs.dynamic2d.object_types import Dynamic2DRobotEnvTypeFeatures
 from prbench.envs.dynamic2d.utils import (
-    DYNAMIC_COLLISION_TYPE,
-    ROBOT_COLLISION_TYPE,
-    FINGER_COLLISION_TYPE,
     ARM_COLLISION_TYPE,
+    DYNAMIC_COLLISION_TYPE,
+    FINGER_COLLISION_TYPE,
+    ROBOT_COLLISION_TYPE,
     STATIC_COLLISION_TYPE,
     KinRobot,
     KinRobotActionSpace,

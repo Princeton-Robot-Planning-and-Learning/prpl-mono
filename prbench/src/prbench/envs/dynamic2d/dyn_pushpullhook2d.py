@@ -21,14 +21,14 @@ from prbench.envs.dynamic2d.object_types import (
 )
 from prbench.envs.dynamic2d.utils import (
     DYNAMIC_COLLISION_TYPE,
-    ROBOT_COLLISION_TYPE,
     FINGER_COLLISION_TYPE,
+    ROBOT_COLLISION_TYPE,
     STATIC_COLLISION_TYPE,
-    KinRobotActionSpace,
     KinRobot,
+    KinRobotActionSpace,
+    create_walls_from_world_boundaries,
     on_collision_w_static,
     on_gripper_grasp,
-    create_walls_from_world_boundaries,
 )
 from prbench.envs.geom2d.structs import MultiBody2D, SE2Pose, ZOrder
 from prbench.envs.utils import (
@@ -266,7 +266,6 @@ class ObjectCentricDynPushPullHook2DEnv(
             gripper_base_height=self.config.gripper_base_height,
             gripper_finger_width=self.config.gripper_finger_width,
             gripper_finger_height=self.config.gripper_finger_height,
-            arm_collision_type=DYNAMIC_COLLISION_TYPE # Arm can go through walls in this env
         )
         self.robot.add_to_space(self.pymunk_space)
 
