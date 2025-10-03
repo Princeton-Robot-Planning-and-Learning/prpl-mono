@@ -193,7 +193,7 @@ class ObjectCentricDynPushPullHook2DEnv(
             "color_r": self.config.middle_wall_rgb[0],
             "color_g": self.config.middle_wall_rgb[1],
             "color_b": self.config.middle_wall_rgb[2],
-            "z_order": ZOrder.SURFACE.value,  # Middle wall does not collide with hook
+            "z_order": ZOrder.FLOOR.value,  # Middle wall does not collide with hook
         }
 
         # Create up-floor and down-floor, just for visualization.
