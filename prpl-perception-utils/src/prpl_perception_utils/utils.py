@@ -1,36 +1,36 @@
 """Utility functions."""
 
+import colorsys
 from typing import List
 
-import colorsys
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from prpl_perception_utils.structs import DetectedObject2D
 
+
 def hsl_to_rgba(hue: float) -> tuple[int, int, int, int]:
     """Convert an HSL color to RGBA.
-    Hue is in degrees, saturation and lightness are 50%."""
+
+    Hue is in degrees, saturation and lightness are 50%.
+    """
 
     # Convert HSL to RGB using colorsys.
-    r, g, b = colorsys.hls_to_rgb(
-        h = hue / 360.0,
-        l = 0.5,
-        s = 1.0
-    )
+    r, g, b = colorsys.hls_to_rgb(h=hue / 360.0, l=0.5, s=1.0)
 
     # Convert to RGBA.
     return (int(r * 255), int(g * 255), int(b * 255), 100)
 
+
 def get_luminance(r: int, g: int, b: int) -> float:
-    """Calculate the luminance of an RGB shape fill color,
-    to help determine text color."""
+    """Calculate the luminance of an RGB shape fill color, to help determine text
+    color."""
 
     return 0.299 * r + 0.587 * g + 0.114 * b
 
+
 def visualize_detections_2d(
-    img: np.ndarray,
-    detections: List[DetectedObject2D]
+    img: np.ndarray, detections: List[DetectedObject2D]
 ) -> np.ndarray:
     """Create a new image with detections overlaid on the input image."""
 

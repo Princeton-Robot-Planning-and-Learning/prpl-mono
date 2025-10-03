@@ -12,7 +12,6 @@ dependencies = [
    "numpy>=1.23.5,<2.0",
    "pybullet>=3.2.5",
    "gymnasium>=0.29.1",
-   "tomsutils@git+https://github.com/tomsilver/toms-utils.git",
    "scipy==1.14.0",
    "hello-robot-stretch-urdf",
 ]
