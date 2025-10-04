@@ -84,7 +84,7 @@ def register_all_environments() -> None:
         )
 
     # DynPushPullStick2D environment with different numbers of obstructions.
-    num_obstructions = [0, 1, 5, 10, 15]
+    num_obstructions = [0, 1, 5]
     for num_obstruction in num_obstructions:
         _register(
             id=f"prbench/DynPushPullHook2D-o{num_obstruction}-v0",
