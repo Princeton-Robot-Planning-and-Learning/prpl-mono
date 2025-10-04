@@ -35,6 +35,7 @@ from prbench.envs.utils import (
     BLACK,
     BROWN,
     ORANGE,
+    object_to_multibody2d,
     sample_se2_pose,
     state_2d_has_collision,
 )
@@ -99,7 +100,7 @@ class DynPushPullHook2DEnvConfig(Dynamic2DRobotEnvConfig):
         0.0,
     )
     middle_wall_width: float = world_max_x - world_min_x
-    middle_wall_height: float = 0.02
+    middle_wall_height: float = 0.05
 
     # Hook hyperparameters.
     hook_rgb: tuple[float, float, float] = BROWN
@@ -693,12 +694,13 @@ class ObjectCentricDynPushPullHook2DEnv(
         ][0]
         full_state = state.copy()
         full_state.data.update(self.initial_constant_state.data)
-        if state_2d_has_collision(
-            full_state,
-            {target_block},
-            {middle_wall},
-            static_object_body_cache,
-        ):
+        target_block_body = object_to_multibody2d(
+            target_block, full_state, static_object_body_cache
+        )
+        middle_wall_body = object_to_multibody2d(
+            middle_wall, full_state, static_object_body_cache
+        )
+        if target_block_body.bodies[0].geom.intersects(middle_wall_body.bodies[0].geom):
             return True
 
         return False

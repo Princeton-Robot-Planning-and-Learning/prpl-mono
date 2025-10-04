@@ -19,9 +19,11 @@ from prbench.envs.dynamic2d.object_types import (
     DynRectangleType,
     KinRectangleType,
     KinRobotType,
-    TObjectType,
 )
 from prbench.envs.dynamic2d.object_types import LObjectType as LObjectTypeDyn
+from prbench.envs.dynamic2d.object_types import (
+    TObjectType,
+)
 from prbench.envs.geom2d.object_types import (
     CircleType,
     CRVRobotType,
@@ -501,7 +503,10 @@ def dot_robot_to_multibody2d(obj: Object, state: ObjectCentricState) -> MultiBod
     radius = state.get(obj, "radius")
     circ = Circle(x=x, y=y, radius=radius)
     z_order = ZOrder.ALL
-    rendering_kwargs = {"facecolor": (50 / 255, 50 / 255, 255 / 255), "edgecolor": BLACK}
+    rendering_kwargs = {
+        "facecolor": (50 / 255, 50 / 255, 255 / 255),
+        "edgecolor": BLACK,
+    }
     base_body = Body2D(
         geom=circ,
         z_order=z_order,

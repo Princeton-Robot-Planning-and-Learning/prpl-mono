@@ -62,6 +62,7 @@ def test_dyn_pusht_random_actions():
                 break
     env.close()
 
+
 def test_dyn_pusht_goal_achievement():
     """Tests that the goal can be achieved by moving the robot to the goal."""
     prbench.register_all_environments()
@@ -81,11 +82,6 @@ def test_dyn_pusht_goal_achievement():
     new_state.set(tblock_object, "x", state.get(goal_tblock_object, "x"))
     new_state.set(tblock_object, "y", state.get(goal_tblock_object, "y"))
     new_state.set(tblock_object, "theta", state.get(goal_tblock_object, "theta"))
-    obs, _ = env.reset(
-        options={
-            'init_state': new_state
-        }
-    )
+    obs, _ = env.reset(options={"init_state": new_state})
     _, _, terminated, _, _ = env.step(zero_action)
     assert terminated
-

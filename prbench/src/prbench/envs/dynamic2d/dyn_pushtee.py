@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from numpy.typing import NDArray
 import pymunk
+from numpy.typing import NDArray
 from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
@@ -15,8 +15,8 @@ from prbench.envs.dynamic2d.base_env import (
     ObjectCentricDynamic2DRobotEnv,
 )
 from prbench.envs.dynamic2d.object_types import (
-    Dynamic2DRobotEnvTypeFeatures,
     DotRobotType,
+    Dynamic2DRobotEnvTypeFeatures,
     TObjectType,
 )
 from prbench.envs.dynamic2d.utils import (
@@ -27,18 +27,18 @@ from prbench.envs.dynamic2d.utils import (
     DotRobotActionSpace,
     DotRobotPDController,
     create_walls_from_world_boundaries,
+    get_dot_robot_action_from_gui_input,
     on_dot_robot_collision_w_static,
-    get_dot_robot_action_from_gui_input
 )
 from prbench.envs.geom2d.structs import SE2Pose, ZOrder
 from prbench.envs.utils import sample_se2_pose, state_2d_has_collision
-
 
 # Define custom object types for the PushT environment
 GoalTBlockType = Type("goal_tblock", parent=TObjectType)
 Dynamic2DRobotEnvTypeFeatures[GoalTBlockType] = list(
     Dynamic2DRobotEnvTypeFeatures[TObjectType]
 )
+
 
 @dataclass(frozen=True)
 class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
@@ -110,8 +110,8 @@ class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
 
 
 class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]):
-    """Dynamic PushT environment where a dot robot must push a T-shaped block to match
-    a goal pose. Uses PyMunk physics simulation.
+    """Dynamic PushT environment where a dot robot must push a T-shaped block to match a
+    goal pose. Uses PyMunk physics simulation.
 
     This is a port of the original PushT environment to the ObjectCentric framework.
     """
@@ -496,6 +496,9 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
 
     def _get_reward_and_done(self) -> tuple[float, bool]:
         """Calculate reward and termination based on coverage."""
+        assert self._current_state is not None
+        assert self._tblock is not None
+        assert self._goal_tblock is not None
         tblock_x = self._current_state.get(self._tblock, "x")
         tblock_y = self._current_state.get(self._tblock, "y")
         tblock_theta = self._current_state.get(self._tblock, "theta")
@@ -506,7 +509,9 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
 
         dx_abs_ok = abs(tblock_x - tblock_goal_x) < self.config.success_dx_threshold
         dy_abs_ok = abs(tblock_y - tblock_goal_y) < self.config.success_dy_threshold
-        dtheta_abs_ok = abs(tblock_theta - tblock_goal_theta) < self.config.success_dtheta_threshold
+        dtheta_abs_ok = (
+            abs(tblock_theta - tblock_goal_theta) < self.config.success_dtheta_threshold
+        )
         terminated = dx_abs_ok and dy_abs_ok and dtheta_abs_ok
 
         return -1.0, terminated
@@ -518,6 +523,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         # This will be implemented later
         assert isinstance(self.action_space, DotRobotActionSpace)
         return get_dot_robot_action_from_gui_input(self.action_space, gui_input)
+
 
 class DynPushTEnv(ConstantObjectPRBenchEnv):
     """Dynamic PushT env with a constant number of objects."""

@@ -966,8 +966,9 @@ def get_fingered_robot_action_from_gui_input(
 
     return action
 
+
 def get_dot_robot_action_from_gui_input(
-    action_space: KinRobotActionSpace, gui_input: dict[str, Any]
+    action_space: DotRobotActionSpace, gui_input: dict[str, Any]
 ) -> NDArray[np.float32]:
     """Get the mapping from human inputs to actions, derived from action space."""
     # This will be implemented later - placeholder for now
