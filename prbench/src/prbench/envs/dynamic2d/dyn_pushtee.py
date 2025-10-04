@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
+import shapely.geometry as sg
 import numpy as np
 import pymunk
 from relational_structs import Object, ObjectCentricState, Type
@@ -38,147 +39,17 @@ Dynamic2DRobotEnvTypeFeatures[GoalTBlockType] = list(
     Dynamic2DRobotEnvTypeFeatures[TObjectType]
 )
 
-
-def compute_polygon_area(vertices: list[tuple[float, float]]) -> float:
-    """Compute area of a polygon using the shoelace formula."""
-    n = len(vertices)
-    area = 0.0
-    for i in range(n):
-        j = (i + 1) % n
-        area += vertices[i][0] * vertices[j][1]
-        area -= vertices[j][0] * vertices[i][1]
-    return abs(area) / 2.0
-
-
-def point_in_polygon(
-    point: tuple[float, float], vertices: list[tuple[float, float]]
-) -> bool:
-    """Check if a point is inside a polygon using ray casting algorithm."""
-    x, y = point
-    n = len(vertices)
-    inside = False
-
-    p1x, p1y = vertices[0]
-    for i in range(1, n + 1):
-        p2x, p2y = vertices[i % n]
-        if y > min(p1y, p2y):
-            if y <= max(p1y, p2y):
-                if x <= max(p1x, p2x):
-                    xinters = float("inf")
-                    if p1y != p2y:
-                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xinters:
-                        inside = not inside
-        p1x, p1y = p2x, p2y
-
-    return inside
-
-
-def polygon_intersection_area(
-    poly1_vertices: list[tuple[float, float]],
-    poly2_vertices: list[tuple[float, float]],
-) -> float:
-    """Approximate intersection area using grid sampling.
-
-    This is a simplified approach that samples points in a grid and counts
-    how many are in both polygons.
-    """
-    # Get bounding box of both polygons
-    all_x = [v[0] for v in poly1_vertices] + [v[0] for v in poly2_vertices]
-    all_y = [v[1] for v in poly1_vertices] + [v[1] for v in poly2_vertices]
-    min_x, max_x = min(all_x), max(all_x)
-    min_y, max_y = min(all_y), max(all_y)
-
-    # Sample grid (use fine grid for better accuracy)
-    grid_size = 100
-    dx = (max_x - min_x) / grid_size
-    dy = (max_y - min_y) / grid_size
-
-    intersection_count = 0
-    total_samples = 0
-
-    for i in range(grid_size):
-        for j in range(grid_size):
-            x = min_x + (i + 0.5) * dx
-            y = min_y + (j + 0.5) * dy
-            total_samples += 1
-
-            in_poly1 = point_in_polygon((x, y), poly1_vertices)
-            in_poly2 = point_in_polygon((x, y), poly2_vertices)
-
-            if in_poly1 and in_poly2:
-                intersection_count += 1
-
-    # Estimate intersection area
-    bbox_area = (max_x - min_x) * (max_y - min_y)
-    intersection_area = bbox_area * (intersection_count / total_samples)
-
-    return intersection_area
-
-
-def compute_tshape_coverage(
-    current_pose: tuple[float, float, float],
-    goal_pose: tuple[float, float, float],
-    width: float,
-    length_horizontal: float,
-    length_vertical: float,
-) -> float:
-    """Compute coverage of T-shape at current pose vs goal pose.
-
-    Args:
-        current_pose: (x, y, theta) of current T-block
-        goal_pose: (x, y, theta) of goal T-block
-        width: Width of the T-block
-        length_horizontal: Horizontal bar length
-        length_vertical: Vertical bar length
-
-    Returns:
-        Coverage ratio (0 to 1)
-    """
-    # Get vertices for both poses
-    def get_tshape_vertices(
-        pose: tuple[float, float, float],
-    ) -> list[tuple[float, float]]:
-        x, y, theta = pose
-        w = width
-        lh = length_horizontal
-        lv = length_vertical
-
-        # Local vertices (same as in _add_state_to_space)
-        local_verts = [
-            (-lh / 2, 0),
-            (-lh / 2, -w),
-            (-w / 2, -w),
-            (-w / 2, -w - lv),
-            (w / 2, -w - lv),
-            (w / 2, -w),
-            (lh / 2, -w),
-            (lh / 2, 0),
-        ]
-
-        # Transform to world coordinates
-        cos_theta = np.cos(theta)
-        sin_theta = np.sin(theta)
-        world_verts: list[tuple[float, float]] = []
-        for lx, ly in local_verts:
-            wx = x + lx * cos_theta - ly * sin_theta
-            wy = y + lx * sin_theta + ly * cos_theta
-            world_verts.append((wx, wy))
-
-        return world_verts
-
-    current_verts = get_tshape_vertices(current_pose)
-    goal_verts = get_tshape_vertices(goal_pose)
-
-    # Compute areas
-    goal_area = compute_polygon_area(goal_verts)
-    intersection_area = polygon_intersection_area(current_verts, goal_verts)
-
-    # Compute coverage
-    coverage = intersection_area / goal_area if goal_area > 0 else 0.0
-
-    return coverage
-
+def pymunk_to_shapely(body, shapes):
+    geoms = list()
+    for shape in shapes:
+        if isinstance(shape, pymunk.shapes.Poly):
+            verts = [body.local_to_world(v) for v in shape.get_vertices()]
+            verts += [verts[0]]
+            geoms.append(sg.Polygon(verts))
+        else:
+            raise RuntimeError(f'Unsupported shape type {type(shape)}')
+    geom = sg.MultiPolygon(geoms)
+    return geom
 
 @dataclass(frozen=True)
 class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
@@ -271,6 +142,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         # Store object references for tracking
         self._tblock: Object | None = None
         self._goal_tblock: Object | None = None
+        self._goal_body: pymunk.Body | None = None
 
     def _create_action_space(self, config: DynPushTEnvConfig) -> DotRobotActionSpace:
         """Override to use DotRobotActionSpace."""
@@ -356,9 +228,6 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
                 goal_tblock_pose,
             )
 
-            # Check initial state validity: goal not satisfied and no collisions
-            if self._goal_satisfied(state, {}):
-                continue
             full_state = state.copy()
             full_state.data.update(self.initial_constant_state.data)
             all_objects = set(full_state)
@@ -422,6 +291,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
 
         # Create the goal T-block (for visualization only, not in physics)
         goal_tblock = Object("goal_tblock", GoalTBlockType)
+        self._goal_tblock = goal_tblock  # store reference
         init_state_dict[goal_tblock] = {
             "x": goal_tblock_pose.x,
             "y": goal_tblock_pose.y,
@@ -452,8 +322,12 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
             if obj.is_instance(DotRobotType):
                 self._reset_robot_in_space(obj, state)
             elif obj.is_instance(GoalTBlockType):
-                # Skip goal_tblock - it's only for visualization
-                continue
+                # just create a body for goal_tblock for coverage computation
+                x = state.get(obj, "x")
+                y = state.get(obj, "y")
+                theta = state.get(obj, "theta")
+                self._goal_body = self._get_goal_pose_body(x, y, theta)
+                self._state_obj_to_pymunk_body[obj] = self._goal_body
             elif obj.is_instance(TObjectType):
                 # Add T-block
                 x = state.get(obj, "x")
@@ -512,6 +386,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
                 body.velocity = vx, vy
                 body.angular_velocity = omega
                 self._state_obj_to_pymunk_body[obj] = body
+                self._tblock = obj  # store reference
             else:
                 # Static objects (walls)
                 x = state.get(obj, "x")
@@ -624,112 +499,55 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         info = self._get_info()
         return observation, reward, terminated, truncated, info
 
+    def _get_goal_pose_body(self, x, y, theta) -> pymunk.Body:
+        """Create a body at the given pose with the same shape as the T-block."""
+        # These does not matter, as it is not added to the space
+        mass = 1.0
+        inertia = pymunk.moment_for_box(mass, (0.5, 1.5))
+        body = pymunk.Body(mass, inertia)
+        # preserving the legacy assignment order for compatibility
+        # the order here doesn't matter somehow, maybe because CoM is aligned with body origin
+        body.position = (x, y)
+        body.angle = theta
+        return body
+    
     def _goal_satisfied(
         self,
         state: ObjectCentricState,
         static_object_body_cache: dict[Object, Any],  # pylint: disable=unused-argument
     ) -> bool:
         """Check if the goal condition is satisfied using polygon intersection."""
+        del state # unused
+        del static_object_body_cache # unused
         # Get the T-block (exclude goal_tblock)
-        tblock_objects = [
-            obj
-            for obj in state.get_objects(TObjectType)
-            if not obj.is_instance(GoalTBlockType)
-        ]
-        assert len(tblock_objects) == 1
-        tblock_obj = tblock_objects[0]
+        assert self._tblock is not None
+        assert self._goal_body is not None
+        assert self._tblock in self._state_obj_to_pymunk_body
+        tblock_body = self._state_obj_to_pymunk_body[self._tblock]
+        goal_body = self._goal_body
 
-        # Get the T-block body from pymunk
-        if tblock_obj not in self._state_obj_to_pymunk_body:
-            # During initial state sampling, the body may not be added yet
-            return False
-
-        # Get the goal T-block
-        goal_tblock_objects = state.get_objects(GoalTBlockType)
-        assert len(goal_tblock_objects) == 1
-        goal_tblock_obj = goal_tblock_objects[0]
-
-        # Get current and goal poses
-        current_x = state.get(tblock_obj, "x")
-        current_y = state.get(tblock_obj, "y")
-        current_theta = state.get(tblock_obj, "theta")
-        current_pose = (current_x, current_y, current_theta)
-
-        goal_x = state.get(goal_tblock_obj, "x")
-        goal_y = state.get(goal_tblock_obj, "y")
-        goal_theta = state.get(goal_tblock_obj, "theta")
-        goal_pose = (goal_x, goal_y, goal_theta)
-
-        # Get T-block dimensions
-        width = state.get(tblock_obj, "width")
-        length_horizontal = state.get(tblock_obj, "length_horizontal")
-        length_vertical = state.get(tblock_obj, "length_vertical")
+        goal_geom = pymunk_to_shapely(goal_body, tblock_body.shapes)
+        block_geom = pymunk_to_shapely(tblock_body, tblock_body.shapes)
 
         # Compute coverage
-        coverage = compute_tshape_coverage(
-            current_pose, goal_pose, width, length_horizontal, length_vertical
-        )
+        intersection_area = goal_geom.intersection(block_geom).area
+        goal_area = goal_geom.area
+        coverage = intersection_area / goal_area
 
         return coverage > self.config.success_threshold
 
-    def _get_goal_pose_body(
-        self, state: ObjectCentricState, tblock_obj: Object
-    ) -> pymunk.Body:
-        """Create a body at the goal pose with the same shape as the T-block."""
-        width = state.get(tblock_obj, "width")
-        length_horizontal = state.get(tblock_obj, "length_horizontal")
-        length_vertical = state.get(tblock_obj, "length_vertical")
-        mass = state.get(tblock_obj, "mass")
-
-        moment = pymunk.moment_for_box(
-            mass, (length_horizontal, width)
-        ) + pymunk.moment_for_box(mass, (width, length_vertical))
-        body = pymunk.Body(mass, moment)
-
-        # Set pose
-        body.position = (self.config.goal_pose.x, self.config.goal_pose.y)
-        body.angle = self.config.goal_pose.theta
-
-        return body
-
     def _get_reward_and_done(self) -> tuple[float, bool]:
         """Calculate reward and termination based on coverage."""
-        assert self._current_state is not None
+        tblock_body = self._state_obj_to_pymunk_body[self._tblock]
+        goal_body = self._goal_body
 
-        # Get the T-block (exclude goal_tblock)
-        tblock_objects = [
-            obj
-            for obj in self._current_state.get_objects(TObjectType)
-            if not obj.is_instance(GoalTBlockType)
-        ]
-        assert len(tblock_objects) == 1
-        tblock_obj = tblock_objects[0]
-
-        # Get the goal T-block
-        goal_tblock_objects = self._current_state.get_objects(GoalTBlockType)
-        assert len(goal_tblock_objects) == 1
-        goal_tblock_obj = goal_tblock_objects[0]
-
-        # Get current and goal poses
-        current_x = self._current_state.get(tblock_obj, "x")
-        current_y = self._current_state.get(tblock_obj, "y")
-        current_theta = self._current_state.get(tblock_obj, "theta")
-        current_pose = (current_x, current_y, current_theta)
-
-        goal_x = self._current_state.get(goal_tblock_obj, "x")
-        goal_y = self._current_state.get(goal_tblock_obj, "y")
-        goal_theta = self._current_state.get(goal_tblock_obj, "theta")
-        goal_pose = (goal_x, goal_y, goal_theta)
-
-        # Get T-block dimensions
-        width = self._current_state.get(tblock_obj, "width")
-        length_horizontal = self._current_state.get(tblock_obj, "length_horizontal")
-        length_vertical = self._current_state.get(tblock_obj, "length_vertical")
+        goal_geom = pymunk_to_shapely(goal_body, tblock_body.shapes)
+        block_geom = pymunk_to_shapely(tblock_body, tblock_body.shapes)
 
         # Compute coverage
-        coverage = compute_tshape_coverage(
-            current_pose, goal_pose, width, length_horizontal, length_vertical
-        )
+        intersection_area = goal_geom.intersection(block_geom).area
+        goal_area = goal_geom.area
+        coverage = intersection_area / goal_area
 
         # Reward is clipped coverage / threshold (same as original PushT)
         reward = np.clip(coverage / self.config.success_threshold, 0, 1)
