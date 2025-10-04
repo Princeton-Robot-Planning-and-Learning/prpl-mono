@@ -957,3 +957,25 @@ def get_fingered_robot_action_from_gui_input(
         action[4] = high[4]
 
     return action
+
+def get_dot_robot_action_from_gui_input(
+    action_space: KinRobotActionSpace, gui_input: dict[str, Any]
+) -> NDArray[np.float32]:
+    """Get the mapping from human inputs to actions, derived from action space."""
+    # This will be implemented later - placeholder for now
+    right_x, right_y = gui_input["right_stick"]
+
+    # Initialize the action.
+    low = action_space.low
+    high = action_space.high
+    action = np.zeros(action_space.shape, action_space.dtype)
+
+    def _rescale(x: float, lb: float, ub: float) -> float:
+        """Rescale from [-1, 1] to [lb, ub]."""
+        return lb + (x + 1) * (ub - lb) / 2
+
+    # The right stick controls the x, y movement of the base.
+    action[0] = _rescale(right_x, low[0], high[0])
+    action[1] = _rescale(right_y, low[1], high[1])
+
+    return action

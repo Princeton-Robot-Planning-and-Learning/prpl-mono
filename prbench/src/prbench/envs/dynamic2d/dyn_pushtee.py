@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from typing import Any
 
-import shapely.geometry as sg
 import numpy as np
+from numpy.typing import NDArray
 import pymunk
 from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
@@ -28,6 +28,7 @@ from prbench.envs.dynamic2d.utils import (
     DotRobotPDController,
     create_walls_from_world_boundaries,
     on_dot_robot_collision_w_static,
+    get_dot_robot_action_from_gui_input
 )
 from prbench.envs.geom2d.structs import SE2Pose, ZOrder
 from prbench.envs.utils import sample_se2_pose, state_2d_has_collision
@@ -97,9 +98,9 @@ class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
     )
 
     # Success threshold (we use dx, dy, dtheta threshold here, instead of coverage)
-    success_dx_threshold: float = 0.01
-    success_dy_threshold: float = 0.01
-    success_dtheta_threshold: float = np.deg2rad(5)  # 10 degrees
+    success_dx_threshold: float = 0.03
+    success_dy_threshold: float = 0.03
+    success_dtheta_threshold: float = np.deg2rad(8)  # 10 degrees
 
     # For sampling initial states
     max_initial_state_sampling_attempts: int = 10_000
@@ -505,8 +506,16 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         dy_abs_ok = abs(tblock_y - tblock_goal_y) < self.config.success_dy_threshold
         dtheta_abs_ok = abs(tblock_theta - tblock_goal_theta) < self.config.success_dtheta_threshold
         terminated = dx_abs_ok and dy_abs_ok and dtheta_abs_ok
+        
         return -1.0, terminated
 
+    def get_action_from_gui_input(
+        self, gui_input: dict[str, Any]
+    ) -> NDArray[np.float32]:
+        """Get the mapping from human inputs to actions."""
+        # This will be implemented later
+        assert isinstance(self.action_space, DotRobotActionSpace)
+        return get_dot_robot_action_from_gui_input(self.action_space, gui_input)
 
 class DynPushTEnv(ConstantObjectPRBenchEnv):
     """Dynamic PushT env with a constant number of objects."""

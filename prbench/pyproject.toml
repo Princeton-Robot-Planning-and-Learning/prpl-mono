@@ -25,7 +25,6 @@ all = [
 dynamic2d = [
    "pygame>=2.5.2",
    "pymunk==7.1.0",
-   "shapely"
 ]
 geom2d = [
 ]

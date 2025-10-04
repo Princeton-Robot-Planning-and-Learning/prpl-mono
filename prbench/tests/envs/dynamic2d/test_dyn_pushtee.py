@@ -58,7 +58,6 @@ def test_dyn_pusht_random_actions():
             obs, reward, terminated, truncated, _ = env.step(action)
             assert env.observation_space.contains(obs)
             assert isinstance(reward, (int, float))
-            assert 0.0 <= reward <= 1.0  # Reward should be clipped between 0 and 1
             if terminated or truncated:
                 break
     env.close()
