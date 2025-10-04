@@ -675,7 +675,8 @@ class Tobject(Geom2D):
         new_length_horizontal = self.length_horizontal * length_scale
         new_length_vertical = self.length_vertical * length_scale
         return Tobject(
-            self.x, self.y, new_width, new_length_horizontal, new_length_vertical, self.theta
+            self.x, self.y, new_width, new_length_horizontal, 
+            new_length_vertical, self.theta
         )
 
     def plot(self, ax: plt.Axes, **kwargs: Any) -> None:
@@ -702,8 +703,10 @@ class Tobject(Geom2D):
         )
 
         # Create rectangle patches
-        horizontal_patch = plt.Polygon(horizontal_vertices, closed=True, fill=True, **kwargs)
-        vertical_patch = plt.Polygon(vertical_vertices, closed=True, fill=True, **kwargs)
+        horizontal_patch = plt.Polygon(horizontal_vertices, 
+                                       closed=True, fill=True, **kwargs)
+        vertical_patch = plt.Polygon(vertical_vertices, 
+                                     closed=True, fill=True, **kwargs)
         ax.add_patch(horizontal_patch)
         ax.add_patch(vertical_patch)
 

@@ -4,7 +4,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from tomsgeoms2d.structs import Circle, LineSegment, Lobject, Rectangle, Tobject, Triangle
+from tomsgeoms2d.structs import (
+    Circle, 
+    LineSegment, 
+    Lobject, 
+    Rectangle, 
+    Tobject, 
+    Triangle
+)
 from tomsgeoms2d.utils import geom2ds_intersect
 
 
@@ -377,7 +384,8 @@ def test_tobject():
     ax.set_xlim((-5, 5))
     ax.set_ylim((-5, 5))
 
-    tobject = Tobject(x=3, y=4, width=0.5, length_horizontal=2, length_vertical=3, theta=0.0)
+    tobject = Tobject(x=3, y=4, width=0.5, length_horizontal=2, 
+                      length_vertical=3, theta=0.0)
 
     assert tobject.x == 3
     assert tobject.y == 4
@@ -389,8 +397,6 @@ def test_tobject():
     tobject.plot(ax, color="purple", alpha=0.5)
 
     # Expected vertices for T-shape at (3, 4) with theta=0
-    # Horizontal bar: from (3-1, 4) to (3+1, 4) to (3+1, 3.5) to (3-1, 3.5)
-    # Vertical bar: from (3-0.25, 3.5) to (3-0.25, 0.5) to (3+0.25, 0.5) to (3+0.25, 3.5)
     expected_vertices = np.array([
         (2, 4),      # top left of horizontal bar
         (2, 3.5),    # bottom left of horizontal bar
