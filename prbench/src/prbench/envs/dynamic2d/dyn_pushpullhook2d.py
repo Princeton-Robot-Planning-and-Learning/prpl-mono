@@ -447,8 +447,8 @@ class ObjectCentricDynPushPullHook2DEnv(
                     shape.elasticity = 0.99
                     shape.collision_type = STATIC_COLLISION_TYPE
                     self.pymunk_space.add(b2, shape)
-                    b2.position = x, y
                     b2.angle = theta
+                    b2.position = x, y
                     self._state_obj_to_pymunk_body[obj] = b2
                 elif obj.is_instance(DynRectangleType):
                     # Target block and obstructions
@@ -473,8 +473,8 @@ class ObjectCentricDynPushPullHook2DEnv(
                     shape.body.moment = moment
                     shape.body.mass = mass
                     self.pymunk_space.add(body, shape)
-                    body.position = x, y
                     body.angle = theta
+                    body.position = x, y
                     body.velocity = vx, vy
                     body.angular_velocity = omega
                     self._state_obj_to_pymunk_body[obj] = body
@@ -534,8 +534,8 @@ class ObjectCentricDynPushPullHook2DEnv(
                         shape2.body.moment = moment2
                         shape2.body.mass = mass
                         self.pymunk_space.add(body, shape1, shape2)
-                        body.position = x, y
                         body.angle = theta
+                        body.position = x, y
                         body.velocity = vx, vy
                         body.angular_velocity = omega
                         self._state_obj_to_pymunk_body[obj] = body
@@ -552,8 +552,8 @@ class ObjectCentricDynPushPullHook2DEnv(
                         shape2.density = 1.0
                         shape2.collision_type = ROBOT_COLLISION_TYPE
                         self.pymunk_space.add(body, shape1, shape2)
-                        body.position = x, y
                         body.angle = theta
+                        body.position = x, y
                         body.velocity = vx, vy
                         body.angular_velocity = omega
                         # Add to robot hand

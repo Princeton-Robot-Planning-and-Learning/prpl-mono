@@ -62,3 +62,31 @@ def test_dyn_pusht_random_actions():
             if terminated or truncated:
                 break
     env.close()
+
+def test_dyn_pusht_goal_achievement():
+    """Tests that the goal can be achieved by moving the robot to the goal."""
+    prbench.register_all_environments()
+    env = prbench.make("prbench/DynPushT-v0")
+    obs, _ = env.reset(seed=42)
+    state = env.observation_space.devectorize(obs)
+    name_to_object = {obj.name: obj for obj in state.data}
+    tblock_object = name_to_object["tblock"]
+    goal_tblock_object = name_to_object["goal_tblock"]
+
+    zero_action = np.array([0.0, 0.0], dtype=np.float32)
+    _, _, terminated, _, _ = env.step(zero_action)
+    assert not terminated
+
+    # Move tblock to goal position
+    new_state = state.copy()
+    new_state.set(tblock_object, "x", state.get(goal_tblock_object, "x"))
+    new_state.set(tblock_object, "y", state.get(goal_tblock_object, "y"))
+    new_state.set(tblock_object, "theta", state.get(goal_tblock_object, "theta"))
+    obs, _ = env.reset(
+        options={
+            'init_state': new_state
+        }
+    )
+    _, _, terminated, _, _ = env.step(zero_action)
+    assert terminated
+

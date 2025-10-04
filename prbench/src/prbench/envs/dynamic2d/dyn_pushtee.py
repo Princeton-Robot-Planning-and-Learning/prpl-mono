@@ -39,18 +39,6 @@ Dynamic2DRobotEnvTypeFeatures[GoalTBlockType] = list(
     Dynamic2DRobotEnvTypeFeatures[TObjectType]
 )
 
-def pymunk_to_shapely(body, shapes):
-    geoms = list()
-    for shape in shapes:
-        if isinstance(shape, pymunk.shapes.Poly):
-            verts = [body.local_to_world(v) for v in shape.get_vertices()]
-            verts += [verts[0]]
-            geoms.append(sg.Polygon(verts))
-        else:
-            raise RuntimeError(f'Unsupported shape type {type(shape)}')
-    geom = sg.MultiPolygon(geoms)
-    return geom
-
 @dataclass(frozen=True)
 class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Scene config for DynPushTEnv()."""
@@ -108,8 +96,10 @@ class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
         SE2Pose(4.0, 4.0, np.pi),
     )
 
-    # Success threshold (95% coverage like original)
-    success_threshold: float = 0.95
+    # Success threshold (we use dx, dy, dtheta threshold here, instead of coverage)
+    success_dx_threshold: float = 0.01
+    success_dy_threshold: float = 0.01
+    success_dtheta_threshold: float = np.deg2rad(5)  # 10 degrees
 
     # For sampling initial states
     max_initial_state_sampling_attempts: int = 10_000
@@ -283,7 +273,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
             "color_r": self.config.tblock_rgb[0],
             "color_g": self.config.tblock_rgb[1],
             "color_b": self.config.tblock_rgb[2],
-            "z_order": ZOrder.ALL.value,
+            "z_order": ZOrder.SURFACE.value,
         }
 
         # Create the goal T-block (for visualization only, not in physics)
@@ -305,7 +295,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
             "color_r": self.config.goal_rgb[0],
             "color_g": self.config.goal_rgb[1],
             "color_b": self.config.goal_rgb[2],
-            "z_order": ZOrder.NONE.value,  # Render in background
+            "z_order": ZOrder.FLOOR.value,  # Render in background
         }
 
         # Finalize state
@@ -319,12 +309,8 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
             if obj.is_instance(DotRobotType):
                 self._reset_robot_in_space(obj, state)
             elif obj.is_instance(GoalTBlockType):
-                # just create a body for goal_tblock for coverage computation
-                x = state.get(obj, "x")
-                y = state.get(obj, "y")
-                theta = state.get(obj, "theta")
-                self._goal_body = self._get_goal_pose_body(x, y, theta)
-                self._state_obj_to_pymunk_body[obj] = self._goal_body
+                # Skip adding goal T-block to physics space
+                continue
             elif obj.is_instance(TObjectType):
                 # Add T-block
                 x = state.get(obj, "x")
@@ -373,13 +359,11 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
                 shape2.collision_type = DYNAMIC_COLLISION_TYPE
 
                 # Set center of gravity
-                body.center_of_gravity = (
-                    shape1.center_of_gravity + shape2.center_of_gravity
-                ) / 2
-
                 self.pymunk_space.add(body, shape1, shape2)
-                body.position = x, y
+                # NOTE: Importantly, set angle before position for T-Object
+                # otherwise the set position will be rotated by the angle later.
                 body.angle = theta
+                body.position = (x, y)
                 body.velocity = vx, vy
                 body.angular_velocity = omega
                 self._state_obj_to_pymunk_body[obj] = body
@@ -507,104 +491,21 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         info = self._get_info()
         return observation, reward, terminated, truncated, info
 
-    def _get_goal_pose_body(self, x, y, theta) -> pymunk.Body:
-        """Create a body at the given pose with the same shape as the T-block."""
-        # These does not matter, as it is not added to the space
-        mass = 1.0
-        inertia = pymunk.moment_for_box(mass, (0.5, 1.5))
-        body = pymunk.Body(mass, inertia)
-        # preserving the legacy assignment order for compatibility
-        # the order here doesn't matter somehow, maybe because CoM is aligned with body origin
-        body.position = (x, y)
-        body.angle = theta
-        return body
-    
-    def _goal_satisfied(
-        self,
-        state: ObjectCentricState,
-        static_object_body_cache: dict[Object, Any],  # pylint: disable=unused-argument
-    ) -> bool:
-        """Check if the goal condition is satisfied using polygon intersection."""
-        del state # unused
-        del static_object_body_cache # unused
-        # Get the T-block (exclude goal_tblock)
-        assert self._tblock is not None
-        assert self._goal_body is not None
-        assert self._tblock in self._state_obj_to_pymunk_body
-        tblock_body = self._state_obj_to_pymunk_body[self._tblock]
-        goal_body = self._goal_body
-
-        goal_geom = pymunk_to_shapely(goal_body, tblock_body.shapes)
-        block_geom = pymunk_to_shapely(tblock_body, tblock_body.shapes)
-
-        # Compute coverage
-        intersection_area = goal_geom.intersection(block_geom).area
-        goal_area = goal_geom.area
-        coverage = intersection_area / goal_area
-
-        return coverage > self.config.success_threshold
-
     def _get_reward_and_done(self) -> tuple[float, bool]:
         """Calculate reward and termination based on coverage."""
-        tblock_body = self._state_obj_to_pymunk_body[self._tblock]
-        goal_body = self._goal_body
+        tblock_x = self._current_state.get(self._tblock, "x")
+        tblock_y = self._current_state.get(self._tblock, "y")
+        tblock_theta = self._current_state.get(self._tblock, "theta")
 
-        goal_geom = pymunk_to_shapely(goal_body, tblock_body.shapes)
-        block_geom = pymunk_to_shapely(tblock_body, tblock_body.shapes)
+        tblock_goal_x = self._current_state.get(self._goal_tblock, "x")
+        tblock_goal_y = self._current_state.get(self._goal_tblock, "y")
+        tblock_goal_theta = self._current_state.get(self._goal_tblock, "theta")
 
-        # Compute coverage
-        intersection_area = goal_geom.intersection(block_geom).area
-        goal_area = goal_geom.area
-        coverage = intersection_area / goal_area
-
-        # Reward is clipped coverage / threshold (same as original PushT)
-        reward = np.clip(coverage / self.config.success_threshold, 0, 1)
-        terminated = coverage > self.config.success_threshold
-
-        return reward, terminated
-
-    def get_action_from_gui_input(
-        self, gui_input: dict[str, Any]
-    ) -> np.ndarray:
-        """Get action from GUI input (mouse position or joystick)."""
-        assert self.dot_robot is not None, "Robot not initialized"
-
-        # Get current robot position
-        curr_pos = self.dot_robot.pose
-
-        # For DotRobot with delta actions, compute delta from current to target
-        mouse_pos = gui_input.get("mouse_pos")
-
-        if mouse_pos is not None:
-            # Mouse position is in world coordinates, compute delta
-            dx = mouse_pos[0] - curr_pos.x
-            dy = mouse_pos[1] - curr_pos.y
-
-            # Clip to action space bounds
-            assert isinstance(self.action_space, DotRobotActionSpace)
-            dx = np.clip(dx, self.action_space.low[0], self.action_space.high[0])
-            dy = np.clip(dy, self.action_space.low[1], self.action_space.high[1])
-
-            action = np.array([dx, dy], dtype=np.float32)
-        else:
-            # Fallback to joystick control
-            right_x, right_y = gui_input["right_stick"]
-
-            # Rescale from [-1, 1] to action space bounds
-            assert isinstance(self.action_space, DotRobotActionSpace)
-            low = self.action_space.low
-            high = self.action_space.high
-
-            def _rescale(x: float, lb: float, ub: float) -> float:
-                """Rescale from [-1, 1] to [lb, ub]."""
-                return lb + (x + 1) * (ub - lb) / 2
-
-            action = np.array(
-                [_rescale(right_x, low[0], high[0]), _rescale(right_y, low[1], high[1])],
-                dtype=np.float32,
-            )
-
-        return action
+        dx_abs_ok = abs(tblock_x - tblock_goal_x) < self.config.success_dx_threshold
+        dy_abs_ok = abs(tblock_y - tblock_goal_y) < self.config.success_dy_threshold
+        dtheta_abs_ok = abs(tblock_theta - tblock_goal_theta) < self.config.success_dtheta_threshold
+        terminated = dx_abs_ok and dy_abs_ok and dtheta_abs_ok
+        return -1.0, terminated
 
 
 class DynPushTEnv(ConstantObjectPRBenchEnv):

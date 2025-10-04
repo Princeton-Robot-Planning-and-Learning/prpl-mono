@@ -430,10 +430,10 @@ class ObjectCentricDynamic2DRobotEnv(
                         )
                         new_shapes.append(copied_shape)
                     dynamic_body = pymunk.Body(mass, total_moment)
+                    dynamic_body.angle = kinematic_body.angle
                     dynamic_body.position = kinematic_body.position
                     dynamic_body.velocity = kinematic_body.velocity  # Preserve velocity
                     dynamic_body.angular_velocity = kinematic_body.angular_velocity
-                    dynamic_body.angle = kinematic_body.angle
                     for shape in new_shapes:
                         shape.body = dynamic_body
                         shape.friction = 1.0

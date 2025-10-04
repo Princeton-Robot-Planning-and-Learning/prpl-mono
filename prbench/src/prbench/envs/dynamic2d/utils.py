@@ -316,8 +316,8 @@ class KinRobot:
         self._base_shape.friction = 1
         self._base_shape.collision_type = ROBOT_COLLISION_TYPE
         self._base_shape.density = 1.0
-        self._base_body.position = self._base_position
         self._base_body.angle = self._base_angle
+        self._base_body.position = self._base_position
 
     @property
     def base_pose(self) -> SE2Pose:
@@ -379,8 +379,8 @@ class KinRobot:
 
         init_rel_pos = SE2Pose(x=self._arm_length, y=0.0, theta=0.0)
         init_pose = self.base_pose * init_rel_pos
-        self._gripper_base_body.position = (init_pose.x, init_pose.y)
         self._gripper_base_body.angle = init_pose.theta
+        self._gripper_base_body.position = (init_pose.x, init_pose.y)
 
     @property
     def gripper_base_pose(self) -> SE2Pose:
@@ -419,8 +419,8 @@ class KinRobot:
             x=half_w, y=self._gripper_gap - self.gripper_base_height / 2, theta=0.0
         )
         init_pose = self.gripper_base_pose * init_rel_pos
-        finger_body.position = (init_pose.x, init_pose.y)
         finger_body.angle = init_pose.theta
+        finger_body.position = (init_pose.x, init_pose.y)
         return finger_body, finger_shape
 
     @property
@@ -479,17 +479,17 @@ class KinRobot:
         helder_object_vels: list[Vec2d] | None = None,
     ) -> None:
         """Reset robot to specified positions with zero velocity."""
-        self._base_body.position = (base_x, base_y)
-        self._base_body.velocity = base_vel[0]
         self._base_body.angle = base_theta
         self._base_body.angular_velocity = base_vel[1]
+        self._base_body.position = (base_x, base_y)
+        self._base_body.velocity = base_vel[0]
 
         base_to_gripper = SE2Pose(x=arm_length, y=0.0, theta=0.0)
         gripper_pose = self.base_pose * base_to_gripper
-        self._gripper_base_body.position = (gripper_pose.x, gripper_pose.y)
-        self._gripper_base_body.velocity = arm_vel[0]
         self._gripper_base_body.angle = gripper_pose.theta
         self._gripper_base_body.angular_velocity = arm_vel[1]
+        self._gripper_base_body.position = (gripper_pose.x, gripper_pose.y)
+        self._gripper_base_body.velocity = arm_vel[0]
 
         gripper_to_left_finger = SE2Pose(
             x=self.gripper_finger_width / 2,
@@ -497,10 +497,10 @@ class KinRobot:
             theta=0.0,
         )
         left_finger_pose = gripper_pose * gripper_to_left_finger
-        self._left_finger_body.position = (left_finger_pose.x, left_finger_pose.y)
-        self._left_finger_body.velocity = gripper_vel[0]
         self._left_finger_body.angle = left_finger_pose.theta
         self._left_finger_body.angular_velocity = gripper_vel[1]
+        self._left_finger_body.position = (left_finger_pose.x, left_finger_pose.y)
+        self._left_finger_body.velocity = gripper_vel[0]
 
         # Reset held objects - they have the same velocity as gripper base
         if helder_object_vels is not None and len(helder_object_vels):
@@ -510,6 +510,7 @@ class KinRobot:
             for i, (obj, _, relative_pose) in enumerate(self.held_objects):
                 obj_body, _ = obj
                 new_obj_pose = gripper_pose * relative_pose
+                obj_body.angle = new_obj_pose.theta
                 obj_body.position = (new_obj_pose.x, new_obj_pose.y)
                 obj_body.velocity = helder_object_vels[i]
                 obj_body.angular_velocity = self._gripper_base_body.angular_velocity
@@ -519,15 +520,15 @@ class KinRobot:
 
     def revert_to_last_state(self) -> None:
         """Reset to last state and stay static when collide with static objects."""
-        self._base_body.position = self._base_position
         self._base_body.angle = self._base_angle
+        self._base_body.position = self._base_position
         self._base_body.velocity = Vec2d(0.0, 0.0)
         self._base_body.angular_velocity = 0.0
 
         gripper_base_rel_pos = SE2Pose(x=self._arm_length, y=0.0, theta=0.0)
         gripper_base_pose = self.base_pose * gripper_base_rel_pos
-        self._gripper_base_body.position = (gripper_base_pose.x, gripper_base_pose.y)
         self._gripper_base_body.angle = gripper_base_pose.theta
+        self._gripper_base_body.position = (gripper_base_pose.x, gripper_base_pose.y)
         self._gripper_base_body.velocity = Vec2d(0.0, 0.0)
         self._gripper_base_body.angular_velocity = 0.0
 
@@ -537,17 +538,17 @@ class KinRobot:
             theta=0.0,
         )
         left_finger_pose = gripper_base_pose * left_finger_rel_pos
+        self._left_finger_body.angle = left_finger_pose.theta
         self._left_finger_body.position = (left_finger_pose.x, left_finger_pose.y)
         self._left_finger_body.velocity = Vec2d(0.0, 0.0)
-        self._left_finger_body.angle = left_finger_pose.theta
         self._left_finger_body.angular_velocity = 0.0
 
         # Update held objects
         for obj, _, relative_pose in self.held_objects:
             obj_body, _ = obj
             new_obj_pose = gripper_base_pose * relative_pose
-            obj_body.position = (new_obj_pose.x, new_obj_pose.y)
             obj_body.angle = new_obj_pose.theta
+            obj_body.position = (new_obj_pose.x, new_obj_pose.y)
             obj_body.velocity = Vec2d(0.0, 0.0)
             obj_body.angular_velocity = 0.0
 
