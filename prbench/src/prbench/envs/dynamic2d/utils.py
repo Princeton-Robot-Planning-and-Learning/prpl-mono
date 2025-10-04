@@ -77,25 +77,25 @@ class KinRobotActionSpace(RobotActionSpace):
 class DotRobotActionSpace(RobotActionSpace):
     """An action space for a simple dot robot (kinematic circle).
 
-    Actions are bounded absolute positions in 2D space.
+    Actions are bounded delta positions in 2D space.
     """
 
     def __init__(
         self,
-        min_x: float = 0.0,
-        max_x: float = 10.0,
-        min_y: float = 0.0,
-        max_y: float = 10.0,
+        min_dx: float = -0.1,
+        max_dx: float = 0.1,
+        min_dy: float = -0.1,
+        max_dy: float = 0.1,
     ) -> None:
-        low = np.array([min_x, min_y])
-        high = np.array([max_x, max_y])
+        low = np.array([min_dx, min_dy])
+        high = np.array([max_dx, max_dy])
         super().__init__(low, high)
 
     def create_markdown_description(self) -> str:
         """Create a human-readable markdown description of this space."""
         features = [
-            ("x", "Target x position for robot (positive is right)"),
-            ("y", "Target y position for robot (positive is up)"),
+            ("dx", "Delta x position for robot (positive is right)"),
+            ("dy", "Delta y position for robot (positive is up)"),
         ]
         md_table_str = (
             "| **Index** | **Feature** | **Description** | **Min** | **Max** |"

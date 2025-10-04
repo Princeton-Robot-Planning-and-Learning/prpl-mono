@@ -57,23 +57,23 @@ class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
 
     # World boundaries (scaled from original 512x512 to 0-10 range)
     world_min_x: float = 0.0
-    world_max_x: float = 10.0
+    world_max_x: float = 5.0
     world_min_y: float = 0.0
-    world_max_y: float = 10.0
+    world_max_y: float = 5.0
 
     # Robot parameters (scaled from original 15 radius)
-    init_robot_pos: tuple[float, float] = (5.0, 5.0)
-    robot_radius: float = 0.3
+    init_robot_pos: tuple[float, float] = (1.0, 1.0)
+    robot_radius: float = 0.1
 
-    # Action space parameters (2D position for dot robot)
-    min_x: float = 0.0
-    max_x: float = 10.0
-    min_y: float = 0.0
-    max_y: float = 10.0
+    # Action space parameters (2D delta position for dot robot)
+    min_dx: float = -5e-2
+    max_dx: float = 5e-2
+    min_dy: float = -5e-2
+    max_dy: float = 5e-2
 
     # Controller parameters (from original PushT)
-    kp: float = 100.0
-    kv: float = 20.0
+    kp: float = 50.0
+    kv: float = 5.0
 
     # Physics parameters
     gravity_y: float = 0.0  # No gravity in PushT
@@ -84,28 +84,28 @@ class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
 
     # T-block hyperparameters (scaled from original 50x100 with scale=30)
     tblock_rgb: tuple[float, float, float] = (0.5, 0.5, 0.5)  # Gray
-    tblock_width_bounds: tuple[float, float] = (0.25, 0.35)  # scale=30 -> 30/512*10
-    tblock_length_horizontal_bounds: tuple[float, float] = (2.0, 2.5)  # 4*scale
-    tblock_length_vertical_bounds: tuple[float, float] = (2.0, 2.5)  # 4*scale
+    tblock_width_bounds: tuple[float, float] = (0.1, 0.15)  # scale=30 -> 30/512*10
+    tblock_length_horizontal_bounds: tuple[float, float] = (1.0, 1.25)  # 4*scale
+    tblock_length_vertical_bounds: tuple[float, float] = (1.0, 1.25)  # 4*scale
     tblock_mass: float = 1.0
 
     # Goal pose bounds (randomized)
     goal_rgb: tuple[float, float, float] = (0.5, 1.0, 0.5)  # Light green
     goal_tblock_pose_bounds: tuple[SE2Pose, SE2Pose] = (
-        SE2Pose(2.0, 2.0, -np.pi),
-        SE2Pose(8.0, 8.0, np.pi),
+        SE2Pose(1.0, 1.0, -np.pi),
+        SE2Pose(4.0, 4.0, np.pi),
     )
 
     # Robot init pose bounds (scaled from original 50-450 in 512 space)
     robot_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
         SE2Pose(1.0, 1.0, 0.0),
-        SE2Pose(9.0, 9.0, 0.0),
+        SE2Pose(2.0, 2.0, 0.0),
     )
 
     # T-block init pose bounds (scaled from original 100-400 in 512 space)
     tblock_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
-        SE2Pose(2.0, 2.0, -np.pi),
-        SE2Pose(8.0, 8.0, np.pi),
+        SE2Pose(1.0, 1.0, -np.pi),
+        SE2Pose(4.0, 4.0, np.pi),
     )
 
     # Success threshold (95% coverage like original)
@@ -147,10 +147,10 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
     def _create_action_space(self, config: DynPushTEnvConfig) -> DotRobotActionSpace:
         """Override to use DotRobotActionSpace."""
         return DotRobotActionSpace(
-            min_x=config.min_x,
-            max_x=config.max_x,
-            min_y=config.min_y,
-            max_y=config.max_y,
+            min_dx=config.min_dx,
+            max_dx=config.max_dx,
+            min_dy=config.min_dy,
+            max_dy=config.max_dy,
         )
 
     def _setup_physics_space(self) -> None:
@@ -179,19 +179,16 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         """Create constant objects (walls and goal pose)."""
         init_state_dict: dict[Object, dict[str, float]] = {}
 
-        # Create room walls
-        assert isinstance(self.action_space, DotRobotActionSpace)
-        min_x, min_y = self.action_space.low
-        max_x, max_y = self.action_space.high
+        # Create room walls using world boundaries
         wall_state_dict = create_walls_from_world_boundaries(
             self.config.world_min_x,
             self.config.world_max_x,
             self.config.world_min_y,
             self.config.world_max_y,
-            min_x - self.config.world_max_x,  # Adjust for absolute positions
-            max_x - self.config.world_min_x,
-            min_y - self.config.world_max_y,
-            max_y - self.config.world_min_y,
+            self.config.min_dx,
+            self.config.max_dx,
+            self.config.min_dy,
+            self.config.max_dy,
         )
         init_state_dict.update(wall_state_dict)
 
@@ -455,6 +452,11 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
                 pymunk_body = self._state_obj_to_pymunk_body[obj]
                 state.set(obj, "x", pymunk_body.position.x)
                 state.set(obj, "y", pymunk_body.position.y)
+                # Angle should be in [-pi, pi]
+                if pymunk_body.angle > np.pi:
+                    pymunk_body.angle -= 2 * np.pi
+                elif pymunk_body.angle < -np.pi:
+                    pymunk_body.angle += 2 * np.pi
                 state.set(obj, "theta", pymunk_body.angle)
                 state.set(obj, "vx", pymunk_body.velocity.x)
                 state.set(obj, "vy", pymunk_body.velocity.y)
@@ -468,10 +470,15 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
     ) -> tuple[ObjectCentricState, float, bool, bool, dict]:
         """Override step to use DotRobot control."""
         assert self.action_space.contains(action)
-        tgt_x, tgt_y = action
+        dx, dy = action
         assert self._current_state is not None, "Need to call reset()"
         assert self.pymunk_space is not None, "Space not initialized"
         assert self.dot_robot is not None, "Robot not initialized"
+
+        # Compute target position from current position + delta
+        curr_pos = self.dot_robot.pose
+        tgt_x = curr_pos.x + dx
+        tgt_y = curr_pos.y + dy
 
         # Calculate simulation parameters
         sim_dt = 1.0 / self.config.sim_hz
@@ -490,8 +497,9 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
             # Update robot velocity
             self.dot_robot.update(velocity)
 
-            # Step physics simulation
-            self.pymunk_space.step(sim_dt)
+            # Step physics simulation (more fine-grained than control freq)
+            for _ in range(self.config.sim_hz // self.config.control_hz):
+                self.pymunk_space.step(sim_dt)
 
         reward, terminated = self._get_reward_and_done()
         truncated = False  # no maximum horizon, by default
@@ -558,14 +566,26 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
     def get_action_from_gui_input(
         self, gui_input: dict[str, Any]
     ) -> np.ndarray:
-        """Get action from GUI input (mouse position)."""
-        # For DotRobot, the action is the target position
-        # Use mouse position directly (it's already in world coordinates)
+        """Get action from GUI input (mouse position or joystick)."""
+        assert self.dot_robot is not None, "Robot not initialized"
+
+        # Get current robot position
+        curr_pos = self.dot_robot.pose
+
+        # For DotRobot with delta actions, compute delta from current to target
         mouse_pos = gui_input.get("mouse_pos")
 
         if mouse_pos is not None:
-            # Mouse position is already in world coordinates
-            action = np.array([mouse_pos[0], mouse_pos[1]], dtype=np.float32)
+            # Mouse position is in world coordinates, compute delta
+            dx = mouse_pos[0] - curr_pos.x
+            dy = mouse_pos[1] - curr_pos.y
+
+            # Clip to action space bounds
+            assert isinstance(self.action_space, DotRobotActionSpace)
+            dx = np.clip(dx, self.action_space.low[0], self.action_space.high[0])
+            dy = np.clip(dy, self.action_space.low[1], self.action_space.high[1])
+
+            action = np.array([dx, dy], dtype=np.float32)
         else:
             # Fallback to joystick control
             right_x, right_y = gui_input["right_stick"]
