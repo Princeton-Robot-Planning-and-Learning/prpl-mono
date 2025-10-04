@@ -119,11 +119,13 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
     def __init__(
         self,
         config: DynPushTEnvConfig | None = None,
+        num_tee: int = 1,  # noqa: ARG002
         **kwargs,
     ) -> None:
         super().__init__(config or DynPushTEnvConfig(), **kwargs)
 
         # Override robot and controller with DotRobot
+        self.num_tee = num_tee
         self.dot_robot: DotRobot | None = None
         self.dot_pd_controller = DotRobotPDController(
             kp=self.config.kp,
@@ -506,7 +508,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         dy_abs_ok = abs(tblock_y - tblock_goal_y) < self.config.success_dy_threshold
         dtheta_abs_ok = abs(tblock_theta - tblock_goal_theta) < self.config.success_dtheta_threshold
         terminated = dx_abs_ok and dy_abs_ok and dtheta_abs_ok
-        
+
         return -1.0, terminated
 
     def get_action_from_gui_input(

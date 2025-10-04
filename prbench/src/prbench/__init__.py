@@ -94,8 +94,9 @@ def register_all_environments() -> None:
 
     # DynPushT environment
     _register(
-        id="prbench/DynPushT-v0",
+        id="prbench/DynPushT-t1-v0",
         entry_point="prbench.envs.dynamic2d.dyn_pushtee:DynPushTEnv",
+        kwargs={"num_tee": 1},
     )
 
     # ******* Geom3D Environments *******

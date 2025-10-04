@@ -9,7 +9,7 @@ import prbench
 def test_dyn_pusht_observation_space():
     """Tests that observations are vectors with fixed dimensionality."""
     prbench.register_all_environments()
-    env = prbench.make("prbench/DynPushT-v0")
+    env = prbench.make("prbench/DynPushT-t1-v0")
     assert isinstance(env.observation_space, Box)
     for _ in range(5):
         obs, _ = env.reset()
@@ -19,7 +19,7 @@ def test_dyn_pusht_observation_space():
 def test_dyn_pusht_action_space():
     """Tests that the actions are valid and the step function works."""
     prbench.register_all_environments()
-    env = prbench.make("prbench/DynPushT-v0")
+    env = prbench.make("prbench/DynPushT-t1-v0")
     obs, _ = env.reset(seed=0)
 
     # Test that robot moves with delta actions
@@ -48,7 +48,7 @@ def test_dyn_pusht_action_space():
 def test_dyn_pusht_random_actions():
     """Tests that observations are valid with random actions."""
     prbench.register_all_environments()
-    env = prbench.make("prbench/DynPushT-v0")
+    env = prbench.make("prbench/DynPushT-t1-v0")
     assert isinstance(env.observation_space, Box)
     for _ in range(3):
         obs, _ = env.reset()
@@ -65,7 +65,7 @@ def test_dyn_pusht_random_actions():
 def test_dyn_pusht_goal_achievement():
     """Tests that the goal can be achieved by moving the robot to the goal."""
     prbench.register_all_environments()
-    env = prbench.make("prbench/DynPushT-v0")
+    env = prbench.make("prbench/DynPushT-t1-v0")
     obs, _ = env.reset(seed=42)
     state = env.observation_space.devectorize(obs)
     name_to_object = {obj.name: obj for obj in state.data}
