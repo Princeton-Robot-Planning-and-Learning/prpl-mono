@@ -43,6 +43,15 @@ Dynamic2DRobotEnvTypeFeatures[DynRectangleType] = Dynamic2DRobotEnvTypeFeatures[
     "height",
     "mass",
 ]
+LObjectType = Type("lobject", parent=Dynamic2DType)
+Dynamic2DRobotEnvTypeFeatures[LObjectType] = Dynamic2DRobotEnvTypeFeatures[
+    Dynamic2DType
+] + [
+    "width",
+    "length_side1",
+    "length_side2",
+    "mass",
+]
 
 # A robot with a circle base, a rectangle gripper_base, and two rectangle grippers.
 # The (x, y, theta) are for the center of the robot base circle. The base_radius

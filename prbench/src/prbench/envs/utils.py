@@ -19,11 +19,14 @@ from prbench.envs.dynamic2d.object_types import (
     KinRectangleType,
     KinRobotType,
 )
+from prbench.envs.dynamic2d.object_types import LObjectType as LObjectTypeDyn
 from prbench.envs.geom2d.object_types import (
     CircleType,
     CRVRobotType,
     DoubleRectType,
-    LObjectType,
+)
+from prbench.envs.geom2d.object_types import LObjectType as LObjectTypeGeom
+from prbench.envs.geom2d.object_types import (
     RectangleType,
 )
 from prbench.envs.geom2d.structs import (
@@ -37,6 +40,7 @@ from prbench.envs.geom2d.structs import (
 PURPLE: tuple[float, float, float] = (128 / 255, 0 / 255, 128 / 255)
 BLACK: tuple[float, float, float] = (0.1, 0.1, 0.1)
 BROWN: tuple[float, float, float] = (0.4, 0.2, 0.1)
+ORANGE: tuple[float, float, float] = (1.0, 165 / 255, 0.0)
 
 
 class RobotActionSpace(Box):
@@ -190,7 +194,7 @@ def kin_robot_to_multibody2d(obj: Object, state: ObjectCentricState) -> MultiBod
         y=base_y,
         radius=base_radius,
     )
-    z_order = ZOrder.ALL
+    z_order = ZOrder.SURFACE
     rendering_kwargs = {"facecolor": PURPLE, "edgecolor": BLACK}
     base = Body2D(circ, z_order, rendering_kwargs, name="base")
     bodies.append(base)
@@ -209,7 +213,7 @@ def kin_robot_to_multibody2d(obj: Object, state: ObjectCentricState) -> MultiBod
         width=gripper_base_width,
         rotation_about_center=theta,
     )
-    z_order = ZOrder.ALL
+    z_order = ZOrder.SURFACE
     rendering_kwargs = {"facecolor": PURPLE, "edgecolor": BLACK}
     gripper_base = Body2D(rect, z_order, rendering_kwargs, name="gripper_base")
     gripper_base_pose = SE2Pose(
@@ -233,7 +237,7 @@ def kin_robot_to_multibody2d(obj: Object, state: ObjectCentricState) -> MultiBod
         width=state.get(obj, "arm_length"),
         rotation_about_center=theta,
     )
-    z_order = ZOrder.ALL
+    z_order = ZOrder.SURFACE
     rendering_kwargs = {"facecolor": PURPLE, "edgecolor": BLACK}
     arm = Body2D(rect, z_order, rendering_kwargs, name="arm")
     bodies.append(arm)
@@ -266,7 +270,7 @@ def kin_robot_to_multibody2d(obj: Object, state: ObjectCentricState) -> MultiBod
         width=state.get(obj, "finger_width"),
         rotation_about_center=finger_l_pose.theta,
     )
-    z_order = ZOrder.ALL
+    z_order = ZOrder.SURFACE
     rendering_kwargs = {"facecolor": PURPLE, "edgecolor": BLACK}
     finger_l_body = Body2D(finger_r, z_order, rendering_kwargs, name="arm")
     bodies.append(finger_l_body)
@@ -358,7 +362,7 @@ def geom2d_lobject_to_multibody2d(
     obj: Object, state: ObjectCentricState
 ) -> MultiBody2D:
     """Helper to create a MultiBody2D for an LObjectType object."""
-    assert obj.is_instance(LObjectType)
+    assert obj.is_instance(LObjectTypeGeom) or obj.is_instance(LObjectTypeDyn)
     # Get parameters
     x = state.get(obj, "x")
     y = state.get(obj, "y")
@@ -551,7 +555,7 @@ def object_to_multibody2d(
         }
         body = Body2D(geom, z_order, rendering_kwargs)
         multibody = MultiBody2D(obj.name, [body])
-    elif obj.is_instance(LObjectType):
+    elif obj.is_instance(LObjectTypeDyn) or obj.is_instance(LObjectTypeGeom):
         multibody = geom2d_lobject_to_multibody2d(obj, state)
     elif obj.is_instance(DoubleRectType):
         multibody = geom2d_double_rectangle_to_multibody2d(obj, state)
