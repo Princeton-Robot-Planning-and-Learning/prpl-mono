@@ -325,11 +325,11 @@ class Lobject(Geom2D):
     The hook body pose is defined as follows:
     --------|
             |
-    The hook looks like above when theta = 0.0, 
+    The hook looks like above when theta = 0.0,
     right is x positive, up is y positive.
     The pose refers to the very right top vertex of the hook.
     The geometry is defined by two (non-overlapping) rectanges
-    The "horizonal" one has width=hook_shape[1]-hook_shape[0], 
+    The "horizonal" one has width=hook_shape[1]-hook_shape[0],
     and height=hook_shape[0]
     The "vertical" one has width=hook_shape[0 and height=hook_shape[2]
     """
@@ -569,14 +569,14 @@ class Tobject(Geom2D):
         # Starting from center top, going clockwise
         vertices = np.array(
             [
-                (-lh / 2, 0),       # top left of horizontal bar
-                (-lh / 2, -w),      # bottom left of horizontal bar
-                (-w / 2, -w),       # top left of vertical bar
+                (-lh / 2, 0),  # top left of horizontal bar
+                (-lh / 2, -w),  # bottom left of horizontal bar
+                (-w / 2, -w),  # top left of vertical bar
                 (-w / 2, -w - lv),  # bottom left of vertical bar
-                (w / 2, -w - lv),   # bottom right of vertical bar
-                (w / 2, -w),        # top right of vertical bar
-                (lh / 2, -w),       # bottom right of horizontal bar
-                (lh / 2, 0),        # top right of horizontal bar
+                (w / 2, -w - lv),  # bottom right of vertical bar
+                (w / 2, -w),  # top right of vertical bar
+                (lh / 2, -w),  # bottom right of horizontal bar
+                (lh / 2, 0),  # top right of horizontal bar
             ]
         )
 
@@ -636,7 +636,8 @@ class Tobject(Geom2D):
         """Create a new T-object that is this T-object, but rotated CCW by the
         given rotation (in radians), relative to the (x, y) origin.
 
-        Rotates the vertices first, then uses them to recompute the new theta.
+        Rotates the vertices first, then uses them to recompute the new
+        theta.
         """
         vertices = np.array(self.vertices)
         origin = np.array([x, y])
@@ -675,8 +676,12 @@ class Tobject(Geom2D):
         new_length_horizontal = self.length_horizontal * length_scale
         new_length_vertical = self.length_vertical * length_scale
         return Tobject(
-            self.x, self.y, new_width, new_length_horizontal, 
-            new_length_vertical, self.theta
+            self.x,
+            self.y,
+            new_width,
+            new_length_horizontal,
+            new_length_vertical,
+            self.theta,
         )
 
     def plot(self, ax: plt.Axes, **kwargs: Any) -> None:
@@ -703,10 +708,12 @@ class Tobject(Geom2D):
         )
 
         # Create rectangle patches
-        horizontal_patch = plt.Polygon(horizontal_vertices, 
-                                       closed=True, fill=True, **kwargs)
-        vertical_patch = plt.Polygon(vertical_vertices, 
-                                     closed=True, fill=True, **kwargs)
+        horizontal_patch = plt.Polygon(
+            horizontal_vertices, closed=True, fill=True, **kwargs
+        )
+        vertical_patch = plt.Polygon(
+            vertical_vertices, closed=True, fill=True, **kwargs
+        )
         ax.add_patch(horizontal_patch)
         ax.add_patch(vertical_patch)
 

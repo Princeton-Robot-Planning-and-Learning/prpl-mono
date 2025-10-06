@@ -18,7 +18,7 @@ Each object includes physics properties like mass, moment of inertia (for dynami
 ![initial state GIF](assets/initial_state_gifs/DynObstruction2D-o0.gif)
 
 ### Example Demonstration
-![demo GIF](assets/demo_gifs/DynObstruction2D-o0/DynObstruction2D-o0_seed0_1757344518.gif)
+*(No demonstration GIFs available)*
 
 ### Observation Space
 The entries of an array in this Box space correspond to the following object features:
@@ -31,41 +31,49 @@ The entries of an array in this Box space correspond to the following object fea
 | 4 | target_surface | vy |
 | 5 | target_surface | omega |
 | 6 | target_surface | static |
-| 7 | target_surface | color_r |
-| 8 | target_surface | color_g |
-| 9 | target_surface | color_b |
-| 10 | target_surface | z_order |
-| 11 | target_surface | width |
-| 12 | target_surface | height |
-| 13 | target_block | x |
-| 14 | target_block | y |
-| 15 | target_block | theta |
-| 16 | target_block | vx |
-| 17 | target_block | vy |
-| 18 | target_block | omega |
-| 19 | target_block | static |
-| 20 | target_block | color_r |
-| 21 | target_block | color_g |
-| 22 | target_block | color_b |
-| 23 | target_block | z_order |
-| 24 | target_block | width |
-| 25 | target_block | height |
-| 26 | target_block | mass |
-| 27 | robot | x |
-| 28 | robot | y |
-| 29 | robot | theta |
-| 30 | robot | vx |
-| 31 | robot | vy |
-| 32 | robot | omega |
-| 33 | robot | static |
-| 34 | robot | base_radius |
-| 35 | robot | arm_joint |
-| 36 | robot | arm_length |
-| 37 | robot | gripper_base_width |
-| 38 | robot | gripper_base_height |
-| 39 | robot | finger_gap |
-| 40 | robot | finger_height |
-| 41 | robot | finger_width |
+| 7 | target_surface | held |
+| 8 | target_surface | color_r |
+| 9 | target_surface | color_g |
+| 10 | target_surface | color_b |
+| 11 | target_surface | z_order |
+| 12 | target_surface | width |
+| 13 | target_surface | height |
+| 14 | target_block | x |
+| 15 | target_block | y |
+| 16 | target_block | theta |
+| 17 | target_block | vx |
+| 18 | target_block | vy |
+| 19 | target_block | omega |
+| 20 | target_block | static |
+| 21 | target_block | held |
+| 22 | target_block | color_r |
+| 23 | target_block | color_g |
+| 24 | target_block | color_b |
+| 25 | target_block | z_order |
+| 26 | target_block | width |
+| 27 | target_block | height |
+| 28 | target_block | mass |
+| 29 | robot | x |
+| 30 | robot | y |
+| 31 | robot | theta |
+| 32 | robot | vx_base |
+| 33 | robot | vy_base |
+| 34 | robot | omega_base |
+| 35 | robot | vx_arm |
+| 36 | robot | vy_arm |
+| 37 | robot | omega_arm |
+| 38 | robot | vx_gripper |
+| 39 | robot | vy_gripper |
+| 40 | robot | omega_gripper |
+| 41 | robot | static |
+| 42 | robot | base_radius |
+| 43 | robot | arm_joint |
+| 44 | robot | arm_length |
+| 45 | robot | gripper_base_width |
+| 46 | robot | gripper_base_height |
+| 47 | robot | finger_gap |
+| 48 | robot | finger_height |
+| 49 | robot | finger_width |
 
 
 ### Action Space

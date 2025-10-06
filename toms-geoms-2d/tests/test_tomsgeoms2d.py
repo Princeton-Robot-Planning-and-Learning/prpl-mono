@@ -5,12 +5,12 @@ import numpy as np
 import pytest
 
 from tomsgeoms2d.structs import (
-    Circle, 
-    LineSegment, 
-    Lobject, 
-    Rectangle, 
-    Tobject, 
-    Triangle
+    Circle,
+    LineSegment,
+    Lobject,
+    Rectangle,
+    Tobject,
+    Triangle,
 )
 from tomsgeoms2d.utils import geom2ds_intersect
 
@@ -384,8 +384,9 @@ def test_tobject():
     ax.set_xlim((-5, 5))
     ax.set_ylim((-5, 5))
 
-    tobject = Tobject(x=3, y=4, width=0.5, length_horizontal=2, 
-                      length_vertical=3, theta=0.0)
+    tobject = Tobject(
+        x=3, y=4, width=0.5, length_horizontal=2, length_vertical=3, theta=0.0
+    )
 
     assert tobject.x == 3
     assert tobject.y == 4
@@ -397,16 +398,18 @@ def test_tobject():
     tobject.plot(ax, color="purple", alpha=0.5)
 
     # Expected vertices for T-shape at (3, 4) with theta=0
-    expected_vertices = np.array([
-        (2, 4),      # top left of horizontal bar
-        (2, 3.5),    # bottom left of horizontal bar
-        (2.75, 3.5), # top left of vertical bar
-        (2.75, 0.5), # bottom left of vertical bar
-        (3.25, 0.5), # bottom right of vertical bar
-        (3.25, 3.5), # top right of vertical bar
-        (4, 3.5),    # bottom right of horizontal bar
-        (4, 4),      # top right of horizontal bar
-    ])
+    expected_vertices = np.array(
+        [
+            (2, 4),  # top left of horizontal bar
+            (2, 3.5),  # bottom left of horizontal bar
+            (2.75, 3.5),  # top left of vertical bar
+            (2.75, 0.5),  # bottom left of vertical bar
+            (3.25, 0.5),  # bottom right of vertical bar
+            (3.25, 3.5),  # top right of vertical bar
+            (4, 3.5),  # bottom right of horizontal bar
+            (4, 4),  # top right of horizontal bar
+        ]
+    )
     np.testing.assert_array_almost_equal(tobject.vertices, expected_vertices)
 
     # Test rotation about center
@@ -434,14 +437,18 @@ def test_tobject():
 
 def test_tobject_rectangle_intersection():
     """Tests for Tobject intersection with Rectangle."""
-    tobject = Tobject(x=0, y=0, width=1, length_horizontal=2, length_vertical=2, theta=0)
+    tobject = Tobject(
+        x=0, y=0, width=1, length_horizontal=2, length_vertical=2, theta=0
+    )
     assert geom2ds_intersect(tobject, Rectangle(x=0, y=0, width=1, height=1, theta=0))
     assert geom2ds_intersect(Rectangle(x=0, y=0, width=1, height=1, theta=0), tobject)
 
 
 def test_tobject_circle_intersection():
     """Tests for Tobject intersection with Circle."""
-    tobject = Tobject(x=0, y=0, width=1, length_horizontal=2, length_vertical=2, theta=0)
+    tobject = Tobject(
+        x=0, y=0, width=1, length_horizontal=2, length_vertical=2, theta=0
+    )
     assert geom2ds_intersect(tobject, Circle(x=0, y=0, radius=1))
     assert geom2ds_intersect(Circle(x=0, y=0, radius=1), tobject)
 
