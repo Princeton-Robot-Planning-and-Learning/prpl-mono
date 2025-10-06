@@ -123,6 +123,26 @@ class ObjectCentricDynamic2DRobotEnv(
         # Used for collision checking with Geom2D.
         self._static_object_body_cache: dict[Object, MultiBody2D] = {}
 
+        # Try the idea that we continue stepping the simulation until robot seperates with
+        # everything.
+        self._colliding_shapes: set[pymunk.Shape] = set()
+
+    def _collision_begin(
+        self, arbiter: pymunk.Arbiter, space: pymunk.Space, data: Any
+    ) -> None:
+        """Collision callback for robot colliding with static objects."""
+        del space
+        del data
+        self._colliding_shapes.update(arbiter.shapes[1])
+    
+    def _collision_seperate(
+        self, arbiter: pymunk.Arbiter, space: pymunk.Space, data: Any
+    ) -> None:
+        """Collision callback for robot colliding with static objects."""
+        del space
+        del data
+        self._colliding_shapes.discard(arbiter.shapes[1])
+    
     def _create_observation_space(self, config: _ConfigType) -> ObjectCentricStateSpace:
         types = set(self.type_features)
         return ObjectCentricStateSpace(types)
@@ -191,6 +211,23 @@ class ObjectCentricDynamic2DRobotEnv(
             pre_solve=on_collision_w_static,
             data=self.robot,
         )
+        # Robot collisions with anything else
+        for col_type1 in [ROBOT_COLLISION_TYPE, 
+                         FINGER_COLLISION_TYPE, 
+                         ARM_COLLISION_TYPE]:
+            for col_type2 in [DYNAMIC_COLLISION_TYPE, STATIC_COLLISION_TYPE]:
+                self.pymunk_space.on_collision(
+                    col_type1,
+                    col_type2,
+                    pre_solve=self._collision_begin,
+                    data=None
+                )
+                self.pymunk_space.on_collision(
+                    col_type1,
+                    col_type2,
+                    separate=self._collision_seperate,
+                    data=None
+                )
 
     def _reset_robot_in_space(self, obj: Object, state: ObjectCentricState) -> None:
         """Reset the robot in the PyMunk space."""
