@@ -3,20 +3,19 @@
 import math
 import xml.etree.ElementTree as ET
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import cv2 as cv
 import numpy as np
-from gymnasium.spaces import Space
 from numpy.typing import NDArray
-from prpl_utils.spaces import FunctionalSpace
-from relational_structs import ObjectCentricState, ObjectCentricStateSpace, Type
+from relational_structs import ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
+from prbench.core import PRBenchEnvConfig
 from prbench.envs.tidybot.base_env import (
     ObjectCentricDynamic3DRobotEnv,
-    TidyBot3DConfig,
 )
 from prbench.envs.tidybot.mujoco_utils import MjAct
 from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
@@ -25,7 +24,18 @@ from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
 
 
-class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
+@dataclass(frozen=True)
+class TidyBot3DConfig(PRBenchEnvConfig):
+    """Configuration for TidyBot3D environment."""
+
+    control_frequency: int = 20
+    horizon: int = 1000
+    camera_width: int = 640
+    camera_height: int = 480
+    show_viewer: bool = False
+
+
+class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     """TidyBot 3D environment with mobile manipulation tasks."""
 
     metadata: dict[str, Any] = {"render_modes": ["rgb_array"]}
@@ -81,35 +91,35 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
         """The types and features for this environment."""
         return MujocoObjectTypeFeatures
 
-    def _create_constant_initial_state(self) -> ObjectCentricState:
-        """Create the constant initial state (static objects that never change)."""
-        # For TidyBot, we don't have static objects that persist across resets
-        # All objects are created dynamically in each episode
-        return create_state_from_dict({}, MujocoObjectTypeFeatures)
+    # def _create_constant_initial_state(self) -> ObjectCentricState:
+    #     """Create the constant initial state (static objects that never change)."""
+    #     # For TidyBot, we don't have static objects that persist across resets
+    #     # All objects are created dynamically in each episode
+    #     return create_state_from_dict({}, MujocoObjectTypeFeatures)
 
-    def _create_observation_space(
-        self, config: TidyBot3DConfig
-    ) -> ObjectCentricStateSpace:
-        """Create observation space based on TidyBot's object types."""
-        types = set(self.type_features.keys())
-        return ObjectCentricStateSpace(types)
+    # def _create_observation_space(
+    #     self, config: TidyBot3DConfig
+    # ) -> ObjectCentricStateSpace:
+    #     """Create observation space based on TidyBot's object types."""
+    #     types = set(self.type_features.keys())
+    #     return ObjectCentricStateSpace(types)
 
-    def _create_action_space(self, config: TidyBot3DConfig) -> Space[MjAct]:
-        """Create action space for TidyBot's control interface."""
-        # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
-        low = np.array(
-            [-1.0, -1.0, -np.pi, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.0]
-        )
-        high = np.array([1.0, 1.0, np.pi, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    # def _create_action_space(self, config: TidyBot3DConfig) -> Space[MjAct]:
+    #     """Create action space for TidyBot's control interface."""
+    #     # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
+    #     low = np.array(
+    #         [-1.0, -1.0, -np.pi, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.0]
+    #     )
+    #     high = np.array([1.0, 1.0, np.pi, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
-        def _contains_fn(x: Any) -> bool:
-            return isinstance(x, MjAct)
+    #     def _contains_fn(x: Any) -> bool:
+    #         return isinstance(x, MjAct)
 
-        def _sample_fn(rng: np.random.Generator) -> MjAct:
-            ctrl = rng.uniform(low, high)
-            return MjAct(position_ctrl=ctrl)
+    #     def _sample_fn(rng: np.random.Generator) -> MjAct:
+    #         ctrl = rng.uniform(low, high)
+    #         return MjAct(position_ctrl=ctrl)
 
-        return FunctionalSpace(contains_fn=_contains_fn, sample_fn=_sample_fn)
+    #     return FunctionalSpace(contains_fn=_contains_fn, sample_fn=_sample_fn)
 
     def _vectorize_observation(self, obs: dict[str, Any]) -> NDArray[np.float32]:
         """Convert TidyBot observation dict to vector."""

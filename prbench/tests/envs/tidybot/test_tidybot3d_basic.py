@@ -1,7 +1,6 @@
 """Basic tests for the TidyBot3D environment observation and action space validity,
 step, and reset."""
 
-import numpy as np
 from relational_structs import ObjectCentricState
 
 from prbench.envs.tidybot.mujoco_utils import MjAct
