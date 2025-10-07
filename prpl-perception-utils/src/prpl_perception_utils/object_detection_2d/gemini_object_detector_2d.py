@@ -167,10 +167,7 @@ class GeminiObjectDetector2D(ObjectDetector2D):
 
                 # Finish the object detection.
                 detection = DetectedObject2D(
-                    object_id,
-                    bounding_box,
-                    mask_array,
-                    confidence_score
+                    object_id, bounding_box, mask_array, confidence_score
                 )
                 rgb_detections.append(detection)
 

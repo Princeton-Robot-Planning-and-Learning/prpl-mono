@@ -22,7 +22,9 @@ from relational_structs.utils import create_state_from_dict
 from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionSpace
 from prbench.envs.dynamic2d.object_types import Dynamic2DRobotEnvTypeFeatures
 from prbench.envs.dynamic2d.utils import (
+    ARM_COLLISION_TYPE,
     DYNAMIC_COLLISION_TYPE,
+    FINGER_COLLISION_TYPE,
     ROBOT_COLLISION_TYPE,
     STATIC_COLLISION_TYPE,
     KinRobot,
@@ -79,6 +81,7 @@ class Dynamic2DRobotEnvConfig(PRBenchEnvConfig):
 
     # Physics parameters
     gravity_y: float = -9.8
+    damping: float = 1.0  # Damping applied to all dynamic bodies
     collision_slop: float = 0.001  # Allow small interpenetration, depends on env scale
     control_hz: int = 10  # Control frequency (fps in rendering)
     sim_hz: int = 100  # Simulation frequency (dt in simulation)
@@ -146,6 +149,7 @@ class ObjectCentricDynamic2DRobotEnv(
         """Set up the PyMunk physics space."""
         self.pymunk_space = pymunk.Space()
         self.pymunk_space.gravity = 0, self.config.gravity_y
+        self.pymunk_space.damping = self.config.damping
         self.pymunk_space.collision_slop = self.config.collision_slop
 
         # Create robot
@@ -161,15 +165,29 @@ class ObjectCentricDynamic2DRobotEnv(
         self.robot.add_to_space(self.pymunk_space)
 
         # Set up collision handlers
+        # Finger grasping handler
         self.pymunk_space.on_collision(
             DYNAMIC_COLLISION_TYPE,
-            ROBOT_COLLISION_TYPE,
+            FINGER_COLLISION_TYPE,
             post_solve=on_gripper_grasp,
+            data=self.robot,
+        )
+        # Static collisions
+        self.pymunk_space.on_collision(
+            STATIC_COLLISION_TYPE,
+            ROBOT_COLLISION_TYPE,
+            pre_solve=on_collision_w_static,
             data=self.robot,
         )
         self.pymunk_space.on_collision(
             STATIC_COLLISION_TYPE,
-            ROBOT_COLLISION_TYPE,
+            FINGER_COLLISION_TYPE,
+            pre_solve=on_collision_w_static,
+            data=self.robot,
+        )
+        self.pymunk_space.on_collision(
+            STATIC_COLLISION_TYPE,
+            ARM_COLLISION_TYPE,
             pre_solve=on_collision_w_static,
             data=self.robot,
         )
@@ -413,22 +431,32 @@ class ObjectCentricDynamic2DRobotEnv(
                 if body.id in held_body_ids_shape.keys():
                     # Change to dynamic body
                     kinematic_body = body
-                    points = held_body_ids_shape[body.id].get_vertices()
-                    mass = 1.0  # Assume uniform mass for now
-                    moment = pymunk.moment_for_poly(mass, points, (0, 0))
-                    dynamic_body = pymunk.Body(mass, moment)
+                    mass = self._current_state.get(state_obj, "mass")
+                    shapes = held_body_ids_shape[body.id]
+                    total_moment = 0.0
+                    new_shapes: list[pymunk.Shape] = []
+                    for shape in shapes:
+                        assert isinstance(
+                            shape, pymunk.Poly
+                        ), "Only support polygon shapes for now"
+                        copied_shape = shape.copy()
+                        shape.mass = mass / len(shapes)
+                        total_moment += pymunk.moment_for_poly(
+                            shape.mass, shape.get_vertices()
+                        )
+                        new_shapes.append(copied_shape)
+                    dynamic_body = pymunk.Body(mass, total_moment)
+                    dynamic_body.angle = kinematic_body.angle
                     dynamic_body.position = kinematic_body.position
                     dynamic_body.velocity = kinematic_body.velocity  # Preserve velocity
                     dynamic_body.angular_velocity = kinematic_body.angular_velocity
-                    dynamic_body.angle = kinematic_body.angle
-                    shape = pymunk.Poly(dynamic_body, points)
-                    shape.friction = 1.0
-                    shape.density = 1.0
-                    shape.collision_type = DYNAMIC_COLLISION_TYPE
-                    self.pymunk_space.add(dynamic_body, shape)
-                    self.pymunk_space.remove(
-                        kinematic_body, held_body_ids_shape[body.id]
-                    )
+                    for shape in new_shapes:
+                        shape.body = dynamic_body
+                        shape.friction = 1.0
+                        shape.density = 1.0
+                        shape.collision_type = DYNAMIC_COLLISION_TYPE
+                    self.pymunk_space.add(dynamic_body, *new_shapes)
+                    self.pymunk_space.remove(kinematic_body, *shapes)
                     self._state_obj_to_pymunk_body[state_obj] = dynamic_body
                     held_body_ids_shape.pop(body.id)
             # Then, for any remaining held objects not matched to state objects,
@@ -436,7 +464,7 @@ class ObjectCentricDynamic2DRobotEnv(
             for kin_obj, _, _ in self.robot.held_objects:
                 if kin_obj[0].id in held_body_ids_shape.keys():
                     # Remove any extra objects in hand
-                    self.pymunk_space.remove(kin_obj[0], kin_obj[1])
+                    self.pymunk_space.remove(kin_obj[0], *kin_obj[1])
                     continue
             self.robot.held_objects = []
 

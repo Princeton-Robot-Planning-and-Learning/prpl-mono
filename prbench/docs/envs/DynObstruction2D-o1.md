@@ -20,7 +20,7 @@ Each object includes physics properties like mass, moment of inertia (for dynami
 ![initial state GIF](assets/initial_state_gifs/DynObstruction2D-o1.gif)
 
 ### Example Demonstration
-![demo GIF](assets/demo_gifs/DynObstruction2D-o1/DynObstruction2D-o1_seed0_1757345185.gif)
+*(No demonstration GIFs available)*
 
 ### Observation Space
 The entries of an array in this Box space correspond to the following object features:
@@ -33,55 +33,64 @@ The entries of an array in this Box space correspond to the following object fea
 | 4 | target_surface | vy |
 | 5 | target_surface | omega |
 | 6 | target_surface | static |
-| 7 | target_surface | color_r |
-| 8 | target_surface | color_g |
-| 9 | target_surface | color_b |
-| 10 | target_surface | z_order |
-| 11 | target_surface | width |
-| 12 | target_surface | height |
-| 13 | target_block | x |
-| 14 | target_block | y |
-| 15 | target_block | theta |
-| 16 | target_block | vx |
-| 17 | target_block | vy |
-| 18 | target_block | omega |
-| 19 | target_block | static |
-| 20 | target_block | color_r |
-| 21 | target_block | color_g |
-| 22 | target_block | color_b |
-| 23 | target_block | z_order |
-| 24 | target_block | width |
-| 25 | target_block | height |
-| 26 | target_block | mass |
-| 27 | obstruction0 | x |
-| 28 | obstruction0 | y |
-| 29 | obstruction0 | theta |
-| 30 | obstruction0 | vx |
-| 31 | obstruction0 | vy |
-| 32 | obstruction0 | omega |
-| 33 | obstruction0 | static |
-| 34 | obstruction0 | color_r |
-| 35 | obstruction0 | color_g |
-| 36 | obstruction0 | color_b |
-| 37 | obstruction0 | z_order |
-| 38 | obstruction0 | width |
-| 39 | obstruction0 | height |
-| 40 | obstruction0 | mass |
-| 41 | robot | x |
-| 42 | robot | y |
-| 43 | robot | theta |
-| 44 | robot | vx |
-| 45 | robot | vy |
-| 46 | robot | omega |
-| 47 | robot | static |
-| 48 | robot | base_radius |
-| 49 | robot | arm_joint |
-| 50 | robot | arm_length |
-| 51 | robot | gripper_base_width |
-| 52 | robot | gripper_base_height |
-| 53 | robot | finger_gap |
-| 54 | robot | finger_height |
-| 55 | robot | finger_width |
+| 7 | target_surface | held |
+| 8 | target_surface | color_r |
+| 9 | target_surface | color_g |
+| 10 | target_surface | color_b |
+| 11 | target_surface | z_order |
+| 12 | target_surface | width |
+| 13 | target_surface | height |
+| 14 | target_block | x |
+| 15 | target_block | y |
+| 16 | target_block | theta |
+| 17 | target_block | vx |
+| 18 | target_block | vy |
+| 19 | target_block | omega |
+| 20 | target_block | static |
+| 21 | target_block | held |
+| 22 | target_block | color_r |
+| 23 | target_block | color_g |
+| 24 | target_block | color_b |
+| 25 | target_block | z_order |
+| 26 | target_block | width |
+| 27 | target_block | height |
+| 28 | target_block | mass |
+| 29 | obstruction0 | x |
+| 30 | obstruction0 | y |
+| 31 | obstruction0 | theta |
+| 32 | obstruction0 | vx |
+| 33 | obstruction0 | vy |
+| 34 | obstruction0 | omega |
+| 35 | obstruction0 | static |
+| 36 | obstruction0 | held |
+| 37 | obstruction0 | color_r |
+| 38 | obstruction0 | color_g |
+| 39 | obstruction0 | color_b |
+| 40 | obstruction0 | z_order |
+| 41 | obstruction0 | width |
+| 42 | obstruction0 | height |
+| 43 | obstruction0 | mass |
+| 44 | robot | x |
+| 45 | robot | y |
+| 46 | robot | theta |
+| 47 | robot | vx_base |
+| 48 | robot | vy_base |
+| 49 | robot | omega_base |
+| 50 | robot | vx_arm |
+| 51 | robot | vy_arm |
+| 52 | robot | omega_arm |
+| 53 | robot | vx_gripper |
+| 54 | robot | vy_gripper |
+| 55 | robot | omega_gripper |
+| 56 | robot | static |
+| 57 | robot | base_radius |
+| 58 | robot | arm_joint |
+| 59 | robot | arm_length |
+| 60 | robot | gripper_base_width |
+| 61 | robot | gripper_base_height |
+| 62 | robot | finger_gap |
+| 63 | robot | finger_height |
+| 64 | robot | finger_width |
 
 
 ### Action Space

@@ -43,6 +43,24 @@ Dynamic2DRobotEnvTypeFeatures[DynRectangleType] = Dynamic2DRobotEnvTypeFeatures[
     "height",
     "mass",
 ]
+LObjectType = Type("lobject", parent=Dynamic2DType)
+Dynamic2DRobotEnvTypeFeatures[LObjectType] = Dynamic2DRobotEnvTypeFeatures[
+    Dynamic2DType
+] + [
+    "width",
+    "length_side1",
+    "length_side2",
+    "mass",
+]
+TObjectType = Type("tobject", parent=Dynamic2DType)
+Dynamic2DRobotEnvTypeFeatures[TObjectType] = Dynamic2DRobotEnvTypeFeatures[
+    Dynamic2DType
+] + [
+    "width",
+    "length_horizontal",
+    "length_vertical",
+    "mass",
+]
 
 # A robot with a circle base, a rectangle gripper_base, and two rectangle grippers.
 # The (x, y, theta) are for the center of the robot base circle. The base_radius
@@ -73,4 +91,21 @@ Dynamic2DRobotEnvTypeFeatures[KinRobotType] = [
     "finger_gap",
     "finger_height",
     "finger_width",
+]
+# A simple dot robot (kinematic circle).
+DotRobotType = Type("dot_robot", parent=Dynamic2DType)
+Dynamic2DRobotEnvTypeFeatures[DotRobotType] = [
+    "x",
+    "y",
+    "theta",
+    "vx",
+    "vy",
+    "omega",
+    "static",
+    "held",
+    "color_r",
+    "color_g",
+    "color_b",
+    "z_order",
+    "radius",
 ]

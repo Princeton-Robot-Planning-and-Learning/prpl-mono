@@ -1,0 +1,35 @@
+You are a robot planning assistant. Your task is to analyze the current situation and generate a sequence of actions to achieve the goal.
+
+Available actions and their parameters:
+Actions: TODO
+
+Current objects in the scene:
+################################################################ STATE ###############################################################
+type: crv_robot           x         y     theta    base_radius    arm_joint    arm_length    vacuum    gripper_height    gripper_width
+-----------------  --------  --------  --------  -------------  -----------  ------------  --------  ----------------  ---------------
+robot              0.284113  0.659734  -1.94467            0.1          0.1           0.2         0              0.07             0.01
+
+type: rectangle      x        y    theta    static    color_r    color_g    color_b    z_order    width    height
+-----------------  ---  -------  -------  --------  ---------  ---------  ---------  ---------  -------  --------
+obstacle0          0.5  0              0         1        0.1        0.1        0.1        100     0.01  1.5275
+obstacle1          0.5  1.81066        0         1        0.1        0.1        0.1        100     0.01  0.689336
+
+type: target_region          x        y    theta    static    color_r    color_g    color_b    z_order    width    height
+---------------------  -------  -------  -------  --------  ---------  ---------  ---------  ---------  -------  --------
+target_region          2.24175  2.02023        0         1   0.501961          0   0.501961        101     0.25      0.25
+######################################################################################################################################
+
+
+Goal:
+Goal: TODO
+
+Please analyze the image(s) and current state to generate a step-by-step plan to achieve the goal. For geometric planning tasks, consider obstacles, target locations, and efficient navigation paths.
+
+Format your response as:
+
+Plan:
+1. [action_name]([parameters])
+2. [action_name]([parameters])
+...
+
+Make sure each action is valid and the parameters are appropriate for the current situation. For continuous control, use action arrays in the format [x, y, theta, vel, angular_vel].

@@ -4,7 +4,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from tomsgeoms2d.structs import Circle, LineSegment, Lobject, Rectangle, Triangle
+from tomsgeoms2d.structs import (
+    Circle,
+    LineSegment,
+    Lobject,
+    Rectangle,
+    Tobject,
+    Triangle,
+)
 from tomsgeoms2d.utils import geom2ds_intersect
 
 
@@ -369,6 +376,81 @@ def test_lobject_circle_intersection():
     lobject = Lobject(x=0, y=0, width=1, lengths=[1, 1], theta=0)
     assert geom2ds_intersect(lobject, Circle(x=0, y=0, radius=1))
     assert geom2ds_intersect(Circle(x=0, y=0, radius=1), lobject)
+
+
+def test_tobject():
+    """Tests for Tobject."""
+    _, ax = plt.subplots(1, 1, figsize=(10, 10))
+    ax.set_xlim((-5, 5))
+    ax.set_ylim((-5, 5))
+
+    tobject = Tobject(
+        x=3, y=4, width=0.5, length_horizontal=2, length_vertical=3, theta=0.0
+    )
+
+    assert tobject.x == 3
+    assert tobject.y == 4
+    assert tobject.width == 0.5
+    assert tobject.length_horizontal == 2
+    assert tobject.length_vertical == 3
+    assert tobject.theta == 0.0
+
+    tobject.plot(ax, color="purple", alpha=0.5)
+
+    # Expected vertices for T-shape at (3, 4) with theta=0
+    expected_vertices = np.array(
+        [
+            (2, 4),  # top left of horizontal bar
+            (2, 3.5),  # bottom left of horizontal bar
+            (2.75, 3.5),  # top left of vertical bar
+            (2.75, 0.5),  # bottom left of vertical bar
+            (3.25, 0.5),  # bottom right of vertical bar
+            (3.25, 3.5),  # top right of vertical bar
+            (4, 3.5),  # bottom right of horizontal bar
+            (4, 4),  # top right of horizontal bar
+        ]
+    )
+    np.testing.assert_array_almost_equal(tobject.vertices, expected_vertices)
+
+    # Test rotation about center
+    tobject = tobject.rotate_about_point(tobject.x, tobject.y, np.pi / 6)
+    tobject.plot(ax, color="orange", alpha=0.5)
+
+    # Test rotation about external point
+    tobject = tobject.rotate_about_point(0, 0, np.pi / 6)
+    tobject.plot(ax, color="red", alpha=0.5)
+
+    # Test scaling about center
+    tobject = tobject.scale_about_center(width_scale=0.5, length_scale=0.5)
+    tobject.plot(ax, color="blue", alpha=0.5)
+
+    # Test sample_random_point
+    rng = np.random.default_rng(0)
+    for _ in range(100):
+        p = tobject.sample_random_point(rng)
+        assert tobject.contains_point(p[0], p[1])
+        plt.plot(p[0], p[1], "bo")
+
+    # Uncomment for debugging.
+    # plt.savefig("/tmp/tobject_unit_test.png")
+
+
+def test_tobject_rectangle_intersection():
+    """Tests for Tobject intersection with Rectangle."""
+    tobject = Tobject(
+        x=0, y=0, width=1, length_horizontal=2, length_vertical=2, theta=0
+    )
+    assert geom2ds_intersect(tobject, Rectangle(x=0, y=0, width=1, height=1, theta=0))
+    assert geom2ds_intersect(Rectangle(x=0, y=0, width=1, height=1, theta=0), tobject)
+
+
+def test_tobject_circle_intersection():
+    """Tests for Tobject intersection with Circle."""
+    tobject = Tobject(
+        x=0, y=0, width=1, length_horizontal=2, length_vertical=2, theta=0
+    )
+    assert geom2ds_intersect(tobject, Circle(x=0, y=0, radius=1))
+    assert geom2ds_intersect(Circle(x=0, y=0, radius=1), tobject)
 
 
 def test_geom2ds_intersect():

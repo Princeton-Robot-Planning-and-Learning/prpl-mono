@@ -2,7 +2,7 @@
 
 import numpy as np
 import pybullet as p
-from tomsutils.structs import Image
+from prpl_utils.structs import Image
 
 from pybullet_helpers.geometry import Pose3D
 
