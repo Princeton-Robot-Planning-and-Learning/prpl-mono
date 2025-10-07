@@ -10,7 +10,7 @@ from typing import Any
 import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
-from relational_structs import ObjectCentricState, Type
+from relational_structs import ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from prbench.core import PRBenchEnvConfig
