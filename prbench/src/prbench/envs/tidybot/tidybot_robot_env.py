@@ -258,3 +258,11 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
 
         # Return the merged XML as string
         return ET.tostring(input_root, encoding="unicode")
+
+    def reward(self, obs: MjObs) -> float:
+        """Compute the reward from an observation.
+
+        This is a placeholder implementation since TidyBotRobotEnv is used as a
+        component in TidyBot3DEnv which handles rewards separately.
+        """
+        return 0.0
