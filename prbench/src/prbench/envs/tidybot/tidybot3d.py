@@ -244,7 +244,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 key = f"{camera_name}_image"
                 image_object = MujocoImageObject(key)
                 if key in sim_obs:
-                    state_dict[image_object.object_state_type] = {"rgb": sim_obs[key]}
+                    state_dict[image_object.object_state_type] = {"rgb": sim_obs[key]}  # type: ignore[dict-item]
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
     def step(
@@ -283,7 +283,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         """Check if episode should terminate."""
         return self._reward_calculator.is_terminated(obs)
 
-    def render(self) -> NDArray[np.uint8]:
+    def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the environment."""
         if self.render_mode == "rgb_array":
             obs = self._robot_env.get_obs()

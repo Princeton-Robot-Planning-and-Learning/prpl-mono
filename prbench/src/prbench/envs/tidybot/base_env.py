@@ -16,7 +16,7 @@ from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
 
 
 class ObjectCentricDynamic3DRobotEnv(
-    ObjectCentricPRBenchEnv[ObjectCentricState, MjAct, _ConfigType]
+    ObjectCentricPRBenchEnv[ObjectCentricState, MjAct, _ConfigType]  # type: ignore
 ):
     """Base class for Dynamic3D robot environments."""
 
@@ -31,7 +31,7 @@ class ObjectCentricDynamic3DRobotEnv(
         types = set(self.type_features.keys())
         return ObjectCentricStateSpace(types)
 
-    def _create_action_space(self, config: _ConfigType) -> Space[MjAct]:
+    def _create_action_space(self, config: _ConfigType) -> Space[MjAct]:  # type: ignore
         """Create action space for TidyBot's control interface."""
         # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
         low = np.array(
