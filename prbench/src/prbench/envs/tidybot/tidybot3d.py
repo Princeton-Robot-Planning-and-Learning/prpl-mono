@@ -3,7 +3,6 @@
 import math
 import xml.etree.ElementTree as ET
 from copy import deepcopy
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +20,7 @@ from prbench.envs.tidybot.base_env import (
 )
 from prbench.envs.tidybot.mujoco_utils import MjAct
 from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
-from prbench.envs.tidybot.objects import Cube, MujocoObject
+from prbench.envs.tidybot.objects import Cube, MujocoImageObject, MujocoObject
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
 
@@ -39,6 +38,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
         scene_type: str = "ground",
         num_objects: int = 3,
         render_images: bool = True,
+        camera_names: list[str] | None = None,
         show_images: bool = False,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
@@ -48,13 +48,14 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
         self.scene_type = scene_type
         self.num_objects = num_objects
         self.render_images = render_images
+        self.camera_names = camera_names
         self.show_images = show_images
 
         # Initialize TidyBot-specific components
-        self._tidybot_env = TidyBotRobotEnv(
+        self._robot_env = TidyBotRobotEnv(
             control_frequency=config.control_frequency,
             horizon=config.horizon,
-            camera_names=config.camera_names,
+            camera_names=self.camera_names,
             camera_width=config.camera_width,
             camera_height=config.camera_height,
             seed=seed,
@@ -154,7 +155,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
                         size=0.02,
                         rgba=".5 .7 .5 1",
                         mass=0.1,
-                        env=self._tidybot_env,
+                        env=self._robot_env,
                     )
                     # Get the XML element from the cube
                     body = obj.xml_element
@@ -176,7 +177,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
     def _initialize_object_poses(self) -> None:
         """Initialize object poses in the environment."""
 
-        assert self._tidybot_env.sim is not None, "Simulation not initialized"
+        assert self._robot_env.sim is not None, "Simulation not initialized"
 
         for obj in self._objects:
             pos = np.array([0.0, 0.0, 0.0])
@@ -203,7 +204,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
             # Set object pose in the environment
             obj.set_pose(pos, quat)
 
-        self._tidybot_env.sim.forward()
+        self._robot_env.sim.forward()
 
     def reset(
         self,
@@ -222,8 +223,8 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
         # Reset the underlying TidyBot robot environment
         robot_options = options.copy() if options is not None else {}
         robot_options["xml"] = xml_string
-        self._tidybot_env.reset(seed=seed, options=robot_options)
-        self.np_random = self._tidybot_env.np_random
+        self._robot_env.reset(seed=seed, options=robot_options)
+        self.np_random = self._robot_env.np_random
 
         # Initialize object poses
         self._initialize_object_poses()
@@ -252,17 +253,26 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
 
     def _get_obs(self) -> dict[str, Any]:
         """Get the current raw observation (for compatibility with reward functions)."""
-        obs = self._tidybot_env.get_obs()
+        obs = self._robot_env.get_obs()
         vec_obs = self._vectorize_observation(obs)
         object_centric_state = self._get_object_centric_state()
         return {"vec": vec_obs, "object_centric_state": object_centric_state}
 
     def _get_object_centric_state(self) -> ObjectCentricState:
         """Get the current object-centric state of the environment."""
+        # Collect object-centric data for all objects
         state_dict = {}
         for obj in self._objects:
             obj_data = obj.get_object_centric_data()
             state_dict[obj.object_state_type] = obj_data
+        # Collect image data if rendering images
+        if self.render_images:
+            sim_obs = self._robot_env.get_obs()
+            for camera_name in self._robot_env.camera_names:
+                key = f"{camera_name}_image"
+                image_object = MujocoImageObject(key)
+                if key in sim_obs:
+                    state_dict[image_object.object_state_type] = {"rgb": sim_obs[key]}
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
     def step(
@@ -270,7 +280,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
     ) -> tuple[ObjectCentricState, float, bool, bool, dict[str, Any]]:
         """Step the environment and return object-centric observation."""
         # Run the action through the underlying environment
-        self._tidybot_env.step(action)
+        self._robot_env.step(action)
 
         # Update object-centric state
         self._current_state = self._get_object_centric_state()
@@ -280,7 +290,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
 
         # Visualization loop for rendered image
         if self.show_images:
-            for camera_name in self._tidybot_env.camera_names:
+            for camera_name in self._robot_env.camera_names:
                 self._visualize_image_in_window(
                     raw_obs[f"{camera_name}_image"],
                     f"TidyBot {camera_name} camera",
@@ -304,7 +314,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
     def render(self) -> NDArray[np.uint8]:
         """Render the environment."""
         if self.render_mode == "rgb_array":
-            obs = self._tidybot_env.get_obs()
+            obs = self._robot_env.get_obs()
             # If a specific camera is requested, use it.
             if self._render_camera_name:
                 key = f"{self._render_camera_name}_image"
@@ -322,7 +332,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv):
         if self.show_images:
             # Close OpenCV windows
             cv.destroyAllWindows()  # pylint: disable=no-member
-        self._tidybot_env.close()
+        self._robot_env.close()
 
     def set_render_camera(self, camera_name: str | None) -> None:
         """Set the camera to use for rendering."""

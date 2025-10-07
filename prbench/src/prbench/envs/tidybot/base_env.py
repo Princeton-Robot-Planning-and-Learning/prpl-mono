@@ -18,7 +18,6 @@ class TidyBot3DConfig(PRBenchEnvConfig):
 
     control_frequency: int = 20
     horizon: int = 1000
-    camera_names: list[str] | None = None
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
