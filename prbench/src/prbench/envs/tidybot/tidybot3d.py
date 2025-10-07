@@ -91,36 +91,6 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         """The types and features for this environment."""
         return MujocoObjectTypeFeatures
 
-    # def _create_constant_initial_state(self) -> ObjectCentricState:
-    #     """Create the constant initial state (static objects that never change)."""
-    #     # For TidyBot, we don't have static objects that persist across resets
-    #     # All objects are created dynamically in each episode
-    #     return create_state_from_dict({}, MujocoObjectTypeFeatures)
-
-    # def _create_observation_space(
-    #     self, config: TidyBot3DConfig
-    # ) -> ObjectCentricStateSpace:
-    #     """Create observation space based on TidyBot's object types."""
-    #     types = set(self.type_features.keys())
-    #     return ObjectCentricStateSpace(types)
-
-    # def _create_action_space(self, config: TidyBot3DConfig) -> Space[MjAct]:
-    #     """Create action space for TidyBot's control interface."""
-    #     # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
-    #     low = np.array(
-    #         [-1.0, -1.0, -np.pi, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.0]
-    #     )
-    #     high = np.array([1.0, 1.0, np.pi, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-
-    #     def _contains_fn(x: Any) -> bool:
-    #         return isinstance(x, MjAct)
-
-    #     def _sample_fn(rng: np.random.Generator) -> MjAct:
-    #         ctrl = rng.uniform(low, high)
-    #         return MjAct(position_ctrl=ctrl)
-
-    #     return FunctionalSpace(contains_fn=_contains_fn, sample_fn=_sample_fn)
-
     def _vectorize_observation(self, obs: dict[str, Any]) -> NDArray[np.float32]:
         """Convert TidyBot observation dict to vector."""
         obs_vector: list[float] = []
@@ -223,9 +193,6 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         options: dict[str, Any] | None = None,
     ) -> tuple[ObjectCentricState, dict[str, Any]]:
         """Reset the environment and return object-centric observation."""
-        # Call parent reset for seeding
-        # super().reset(seed=seed)
-
         # Create scene XML
         self._objects = []
         xml_string = self._create_scene_xml()
