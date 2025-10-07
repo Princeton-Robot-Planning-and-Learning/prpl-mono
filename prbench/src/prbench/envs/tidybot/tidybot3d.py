@@ -86,11 +86,6 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Store current state
         self._current_state: ObjectCentricState | None = None
 
-    @property
-    def type_features(self) -> dict[Type, list[str]]:
-        """The types and features for this environment."""
-        return MujocoObjectTypeFeatures
-
     def _vectorize_observation(self, obs: dict[str, Any]) -> NDArray[np.float32]:
         """Convert TidyBot observation dict to vector."""
         obs_vector: list[float] = []

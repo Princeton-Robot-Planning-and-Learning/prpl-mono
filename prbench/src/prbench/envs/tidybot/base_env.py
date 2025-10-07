@@ -65,6 +65,6 @@ class ObjectCentricDynamic3DRobotEnv(
         """Subclasses must implement."""
 
     @property
-    @abc.abstractmethod
     def type_features(self) -> dict[Type, list[str]]:
         """The types and features for this environment."""
+        return MujocoObjectTypeFeatures
