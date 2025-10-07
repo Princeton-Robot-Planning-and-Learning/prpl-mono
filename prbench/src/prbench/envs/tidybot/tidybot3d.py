@@ -244,7 +244,10 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 key = f"{camera_name}_image"
                 image_object = MujocoImageObject(key)
                 if key in sim_obs:
-                    state_dict[image_object.object_state_type] = {"rgb": sim_obs[key]}  # type: ignore[dict-item]
+                    image_data = {"rgb": sim_obs[key]}
+                    state_dict[image_object.object_state_type] = (
+                        image_data  # type: ignore[dict-item]
+                    )
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
     def step(
