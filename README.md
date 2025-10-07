@@ -42,4 +42,3 @@ You can use any individual package externally. For example:
 uv pip install "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-Learning/prpl-mono.git#subdirectory=prpl-utils"
 ```
 But beware that things are changing. Pinning commits is a good idea if you need stable code.
-
