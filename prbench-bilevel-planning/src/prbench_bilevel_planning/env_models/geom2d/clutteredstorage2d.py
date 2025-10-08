@@ -1,38 +1,24 @@
 """Bilevel planning models for the cluttered storage 2D environment."""
 
-from typing import Any, Sequence, cast
-
 import numpy as np
 from bilevel_planning.structs import (
-    LiftedParameterizedController,
     LiftedSkill,
     RelationalAbstractGoal,
     RelationalAbstractState,
     SesameModels,
 )
-from bilevel_planning.trajectory_samplers.trajectory_sampler import (
-    TrajectorySamplingFailure,
-)
 from gymnasium.spaces import Space
 from numpy.typing import NDArray
 from prbench.envs.geom2d.clutteredstorage2d import (
-    ClutteredStorage2DEnvConfig,
     ObjectCentricClutteredStorage2DEnv,
     ShelfType,
     TargetBlockType,
 )
 from prbench.envs.geom2d.object_types import CRVRobotType
-from prbench.envs.geom2d.structs import (
-    SE2Pose,
-)
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
-    get_tool_tip_position,
     is_inside_shelf,
-    run_motion_planning_for_crv_robot,
-    snap_suctioned_objects,
-    state_2d_has_collision,
 )
 from prbench_models.geom2d.envs.clutteredstorage2d.parameterized_skills import (
     create_lifted_controllers,
@@ -41,7 +27,6 @@ from relational_structs import (
     GroundAtom,
     LiftedAtom,
     LiftedOperator,
-    Object,
     ObjectCentricState,
     Predicate,
     Variable,
@@ -57,13 +42,6 @@ def create_bilevel_planning_models(
     assert isinstance(action_space, CRVRobotActionSpace)
 
     sim = ObjectCentricClutteredStorage2DEnv(num_blocks=num_blocks)
-    env_config = ClutteredStorage2DEnvConfig()
-    world_x_min = env_config.world_min_x + env_config.robot_base_radius
-    world_x_max = env_config.world_max_x - env_config.robot_base_radius
-    world_y_min = env_config.world_min_y + env_config.robot_base_radius
-    world_y_max = (
-        env_config.world_max_y - env_config.shelf_height - env_config.robot_base_radius
-    )
 
     # Convert observations into states. The important thing is that states are hashable.
     def observation_to_state(o: NDArray[np.float32]) -> ObjectCentricState:
