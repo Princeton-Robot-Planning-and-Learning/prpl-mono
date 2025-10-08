@@ -246,7 +246,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 if key in sim_obs:
                     image_data = {"rgb": sim_obs[key]}
                     state_dict[image_object.object_state_type] = (
-                        image_data  # type: ignore[dict-item]
+                        image_data  # type: ignore[assignment]
                     )
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
