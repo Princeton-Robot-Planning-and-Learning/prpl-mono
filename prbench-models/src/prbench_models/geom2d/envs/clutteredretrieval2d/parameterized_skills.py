@@ -7,7 +7,11 @@ from bilevel_planning.structs import LiftedParameterizedController
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
-from prbench.envs.geom2d.clutteredretrieval2d import ClutteredRetrieval2DEnvConfig
+from prbench.envs.geom2d.clutteredretrieval2d import (
+    ClutteredRetrieval2DEnvConfig,
+    TargetBlockType,
+    TargetRegionType,
+)
 from prbench.envs.geom2d.object_types import CRVRobotType, RectangleType
 from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
@@ -403,12 +407,6 @@ def create_lifted_controllers(
     Returns:
         Dictionary mapping controller names to LiftedParameterizedController instances.
     """
-    # Import TargetBlockType here to avoid circular imports
-    from prbench.envs.geom2d.clutteredretrieval2d import (
-        TargetBlockType,
-        TargetRegionType,
-    )
-
     # Create partial controller classes that include the action_space
     class PickController(GroundPickController):
         """Controller for picking the target block or obstruction."""
