@@ -34,20 +34,18 @@ def _main(cfg: DictConfig) -> None:
     # Create the environment.
     prbench.register_all_environments()
     env = prbench.make(cfg.env.make_kwargs.env_id)
+    assert hasattr(env.spec, "entry_point"), "We use the entry point to "\
+                                             "identify env class"
+    entry_point = env.spec.entry_point
+    module_path = entry_point.split(":")[0]  # "prbench_envs.geom2d.motion2d"
+    parts = module_path.split(".")
+    env_class_name = parts[-2]  # "geom2d"
+    env_name = parts[-1]  # "motion2d"
 
     # Load environment-specific controllers if available.
-    env_controllers = None
-    if cfg.get("use_env_models", True):
-        env_controllers = get_controllers_for_environment(cfg.env.env_name)
-        if env_controllers:
-            logging.info(
-                f"Successfully loaded {cfg.env.env_name} controllers: "
-                f"{env_controllers}"
-            )
-        else:
-            raise ValueError(
-                f"No specific controllers found for " f"{cfg.env.env_name}"
-            )
+    env_controllers = get_controllers_for_environment(
+        env_class_name, env_name, action_space=env.action_space
+    )
 
     # Create the agent.
     agent: VLMPlanningAgent = VLMPlanningAgent(
