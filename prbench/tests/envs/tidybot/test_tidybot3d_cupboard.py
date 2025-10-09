@@ -54,8 +54,7 @@ def test_tidybot3d_cupboard_reset_changes_with_different_seeds():
     if len(obs1.data) != len(obs2.data):
         raise AssertionError("Observations have different number of objects")
     if len(obs1.data) > 0:
-        assert not np.allclose(obs1["vec"], obs2["vec"], rtol=1e-5, atol=1e-4)
-    # assert not obs1.allclose(obs2, atol=1e-4)
+        assert not obs1.allclose(obs2, atol=1e-4)
     env.close()
 
 
