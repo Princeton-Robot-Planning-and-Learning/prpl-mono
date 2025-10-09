@@ -221,7 +221,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     def _get_current_state(self) -> ObjectCentricState:
         """Get the current object-centric observation."""
         assert self._current_state is not None, "Need to call reset() first"
-        return deepcopy(self._current_state)
+        return self._current_state.copy()
 
     def _get_obs(self) -> dict[str, Any]:
         """Get the current raw observation (for compatibility with reward functions)."""
