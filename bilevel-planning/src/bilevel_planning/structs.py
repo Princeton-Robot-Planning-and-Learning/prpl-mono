@@ -8,7 +8,7 @@ from functools import cached_property
 from typing import Any, Callable, Generic, Sequence, TypeVar
 
 import numpy as np
-from gymnasium.spaces import Space
+from gymnasium.spaces import Space, Box
 from prpl_utils.utils import consistent_hash
 from relational_structs import (
     GroundAtom,
@@ -133,6 +133,7 @@ class LiftedParameterizedController(Generic[_X, _U]):
 
     variables: Sequence[Variable]
     controller_cls: type[GroundParameterizedController]
+    params_space: Box
 
     def ground(
         self, objects: Sequence[Object]
@@ -142,6 +143,12 @@ class LiftedParameterizedController(Generic[_X, _U]):
             o.is_instance(v.type) for o, v in zip(objects, self.variables, strict=True)
         )
         return self.controller_cls(objects)
+
+    def name_vars_str(self) -> str:
+        """Get a string representation of the variable names."""
+        return f"{self.controller_cls.__name__}(types=[" + ", ".join(
+            v.type.name for v in self.variables
+        ) + "]), " + "params_space=" + str(self.params_space)
 
 
 class GroundParameterizedController(ParameterizedController[_X, _U], abc.ABC):

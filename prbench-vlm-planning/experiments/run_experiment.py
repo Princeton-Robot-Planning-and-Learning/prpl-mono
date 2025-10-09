@@ -46,15 +46,17 @@ def _main(cfg: DictConfig) -> None:
     env_controllers = get_controllers_for_environment(
         env_class_name, env_name, action_space=env.action_space
     )
+    assert env_controllers is not None, \
+        "Environment controllers must be available"
 
     # Create the agent.
     agent: VLMPlanningAgent = VLMPlanningAgent(
         observation_space=env.observation_space,
+        env_controllers=env_controllers,
         vlm_model_name=cfg.vlm_model,
         temperature=cfg.temperature,
         max_planning_horizon=cfg.max_planning_horizon,
         seed=cfg.seed,
-        env_controllers=env_controllers,
         use_image=cfg.get("use_image", True),
     )
 

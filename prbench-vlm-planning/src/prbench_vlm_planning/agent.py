@@ -12,6 +12,7 @@ from PIL import ImageDraw
 from prpl_llm_utils.cache import FilePretrainedLargeModelCache
 from prpl_llm_utils.models import OpenAIModel
 from prpl_utils.gym_agent import Agent
+from bilevel_planning.structs import LiftedParameterizedController
 
 
 def create_vlm_by_name(model_name: str):
@@ -41,11 +42,11 @@ class VLMPlanningAgent(Agent[_O, _U]):
     def __init__(
         self,
         observation_space: Any,
+        env_controllers: dict[str, LiftedParameterizedController],
         vlm_model_name: str = "gpt-4o",
         temperature: float = 0.0,
         max_planning_horizon: int = 50,
         seed: int = 0,
-        env_controllers: Optional[Any] = None,
         use_image: bool = True,
     ) -> None:
         """Initialize the VLM planning agent.
@@ -135,12 +136,12 @@ class VLMPlanningAgent(Agent[_O, _U]):
                 images = [pil_img]
 
         # Prepare prompt context
-        objects_str = self._get_objects_str(obs, info)
-        actions_str = self._get_available_actions_str()
+        state_str = self._get_objects_str(obs, info)
+        actions_str = self._get_controllers_str()
         goal_str = self._get_goal_str(info)
 
         prompt = self._base_prompt.format(
-            actions=actions_str, objects=objects_str, goal=goal_str
+            actions=actions_str, state=state_str, goal=goal_str
         )
 
         # Query VLM
@@ -165,9 +166,11 @@ class VLMPlanningAgent(Agent[_O, _U]):
         except Exception as e:
             raise VLMPlanningAgentFailure(f"VLM query failed: {e}")
 
-    def _get_available_actions_str(self) -> str:
+    def _get_controllers_str(self) -> str:
         """Get string description of available actions."""
-        return "Actions: TODO"
+        controllers_str = "\n".join(controller.name_vars_str() for controller in
+                                    self._controllers.values() if self._controllers)
+        return controllers_str
 
     def _get_objects_str(
         self, obs: _O, info: dict[str, Any]  # pylint: disable=unused-argument

@@ -7,6 +7,7 @@ from bilevel_planning.structs import LiftedParameterizedController
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
+from gymnasium.spaces import Box
 from prbench.envs.geom2d.clutteredstorage2d import (
     ClutteredStorage2DEnvConfig,
     ShelfType,
@@ -437,6 +438,28 @@ def create_lifted_controllers(
         Dictionary mapping controller names to LiftedParameterizedController instances.
     """
 
+    # Define params_space for each controller type
+    pick_block_not_on_shelf_params_space = Box(
+        low=np.array([-1.0, 0.0]),
+        high=np.array([1.0, 1.0]),
+        dtype=np.float32,
+    )
+    pick_block_on_shelf_params_space = Box(
+        low=np.array([-1.0, 0.0]),
+        high=np.array([1.0, 1.0]),
+        dtype=np.float32,
+    )
+    place_block_on_shelf_params_space = Box(
+        low=np.array([0.01, 0.1]),
+        high=np.array([0.99, 0.95]),
+        dtype=np.float32,
+    )
+    place_block_not_on_shelf_params_space = Box(
+        low=np.array([0.0, 0.0, 0.0]),
+        high=np.array([1.0, 1.0, 1.0]),
+        dtype=np.float32,
+    )
+
     # Create partial controller classes that include the action_space
     class PickBlockNotOnShelfController(GroundPickBlockNotOnShelfController):
         """Controller for picking a block not on the shelf."""
@@ -472,6 +495,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, block, shelf],
             PickBlockNotOnShelfController,
+            pick_block_not_on_shelf_params_space,
         )
     )
 
@@ -479,6 +503,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, block, shelf],
             PickBlockOnShelfController,
+            pick_block_on_shelf_params_space,
         )
     )
 
@@ -486,6 +511,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, block, shelf],
             PlaceBlockNotOnShelfController,
+            place_block_not_on_shelf_params_space,
         )
     )
 
@@ -493,6 +519,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, block, shelf],
             PlaceBlockOnShelfController,
+            place_block_on_shelf_params_space,
         )
     )
 
