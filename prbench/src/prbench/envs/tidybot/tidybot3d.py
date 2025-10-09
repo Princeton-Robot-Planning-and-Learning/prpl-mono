@@ -2,7 +2,6 @@
 
 import math
 import xml.etree.ElementTree as ET
-from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
