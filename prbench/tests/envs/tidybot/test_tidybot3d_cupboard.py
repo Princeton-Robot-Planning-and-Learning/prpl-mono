@@ -1,7 +1,5 @@
 """Tests for the TidyBot3D cupboard scene: observation/action spaces, reset, and step."""
 
-import numpy as np
-
 from prbench.envs.tidybot.tidybot3d import TidyBot3DEnv
 
 
@@ -41,7 +39,6 @@ def test_tidybot3d_cupboard_reset_seed_reproducible():
     env = TidyBot3DEnv(scene_type="cupboard", num_objects=8, render_images=False)
     obs1, _ = env.reset(seed=42)
     obs2, _ = env.reset(seed=42)
-    # assert np.allclose(obs1["vec"], obs2["vec"], rtol=1e-5, atol=1e-3)
     assert obs1.allclose(obs2, atol=1e-3)
     env.close()
 
