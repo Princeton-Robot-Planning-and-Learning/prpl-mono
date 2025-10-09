@@ -40,7 +40,6 @@ def test_tidybot3d_table_reset_seed_reproducible():
     obs1, _ = env.reset(seed=110)
     obs2, _ = env.reset(seed=110)
     # The previous tolerances didn't pass on my side.
-    # assert np.allclose(obs1["vec"], obs2["vec"], rtol=1e-3, atol=1e-3)
     assert obs1.allclose(obs2, atol=1e-3)
     env.close()
 
@@ -51,6 +50,5 @@ def test_tidybot3d_table_reset_changes_without_seed():
     env = TidyBot3DEnv(scene_type="table", num_objects=3, render_images=False)
     obs1, _ = env.reset(seed=1)
     obs2, _ = env.reset(seed=3)
-    # assert not np.allclose(obs1["vec"], obs2["vec"], rtol=1e-5, atol=1e-6)
     assert not obs1.allclose(obs2, atol=1e-6)
     env.close()

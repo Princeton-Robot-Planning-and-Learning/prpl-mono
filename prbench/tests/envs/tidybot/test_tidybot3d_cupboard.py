@@ -59,15 +59,6 @@ def test_tidybot3d_cupboard_reset_changes_with_different_seeds():
     env.close()
 
 
-# def test_tidybot3d_cupboard_reset_format():
-#     """Reset observation should match observation_space shape and be float32."""
-#     env = TidyBot3DEnv(scene_type="cupboard", num_objects=8, render_images=False)
-#     obs, _ = env.reset()
-#     assert obs["vec"].dtype == np.float32
-#     assert obs["vec"].shape == (140,)
-#     env.close()
-
-
 def test_tidybot3d_cupboard_has_eight_objects():
     """Cupboard environment should be configured with 8 objects."""
     env = TidyBot3DEnv(scene_type="cupboard", num_objects=8, render_images=False)

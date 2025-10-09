@@ -32,7 +32,6 @@ def test_tidybot3d_step():
     obs, _ = env.reset()
     action = env.action_space.sample()
     next_obs, _, _, _, _ = env.step(action)
-    # assert not np.allclose(obs["vec"], next_obs["vec"])
     assert not obs.allclose(next_obs, atol=1e-6)
     env.close()
 
@@ -143,7 +142,6 @@ def test_tidybot3d_env_object_centric_state():
     num_objects = 3
     env = TidyBot3DEnv(num_objects=num_objects, render_images=False)
     obs, _ = env.reset()
-    # object_centric_state = obs.get("object_centric_state", {})
     object_centric_state = obs
     assert isinstance(
         object_centric_state, ObjectCentricState
