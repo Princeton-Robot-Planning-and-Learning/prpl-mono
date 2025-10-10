@@ -3,10 +3,16 @@
 from typing import Optional, Sequence, cast
 
 import numpy as np
+from bilevel_planning.structs import LiftedParameterizedController
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
-from prbench.envs.geom2d.clutteredretrieval2d import ClutteredRetrieval2DEnvConfig
+from prbench.envs.geom2d.clutteredretrieval2d import (
+    ClutteredRetrieval2DEnvConfig,
+    TargetBlockType,
+    TargetRegionType,
+)
+from prbench.envs.geom2d.object_types import CRVRobotType, RectangleType
 from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
@@ -19,6 +25,7 @@ from prbench.envs.utils import state_2d_has_collision
 from relational_structs import (
     Object,
     ObjectCentricState,
+    Variable,
 )
 
 from prbench_models.geom2d.utils import Geom2dRobotController
@@ -385,3 +392,76 @@ class GroundMoveToController(Geom2dRobotController):
         raise TrajectorySamplingFailure(
             "Failed to find a collision-free path to target."
         )
+
+
+def create_lifted_controllers(
+    action_space: CRVRobotActionSpace,
+    init_constant_state: Optional[ObjectCentricState] = None,
+) -> dict[str, LiftedParameterizedController]:
+    """Create lifted parameterized controllers for ClutteredRetrieval2D.
+
+    Args:
+        action_space: The action space for the CRV robot.
+        init_constant_state: Optional initial constant state.
+
+    Returns:
+        Dictionary mapping controller names to LiftedParameterizedController instances.
+    """
+    # Create partial controller classes that include the action_space
+    class PickController(GroundPickController):
+        """Controller for picking the target block or obstruction."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    class PlaceController(GroundPlaceController):
+        """Controller for placing the obstruction."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    class MoveToTgtController(GroundMoveToController):
+        """Controller for moving the robot to the target region."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    # Create variables for lifted controllers
+    robot = Variable("?robot", CRVRobotType)
+    target_block = Variable("?target_block", TargetBlockType)
+    target_region = Variable("?target_region", TargetRegionType)
+    obstruction = Variable("?obstruction", RectangleType)
+
+    # Lifted controllers
+    pick_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
+        [robot, target_block],
+        PickController,
+    )
+
+    pick_obstruction_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, obstruction],
+            PickController,
+        )
+    )
+
+    place_obstruction_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, obstruction],
+            PlaceController,
+        )
+    )
+
+    place_tgt_region_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, target_block, target_region],
+            MoveToTgtController,
+        )
+    )
+
+    return {
+        "pick_tgt": pick_tgt_controller,
+        "pick_obstruction": pick_obstruction_controller,
+        "place_obstruction": place_obstruction_controller,
+        "place_tgt": place_tgt_region_controller,
+    }
