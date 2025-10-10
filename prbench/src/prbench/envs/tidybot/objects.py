@@ -8,20 +8,7 @@ from numpy.typing import NDArray
 from relational_structs import Object
 
 from prbench.envs.tidybot.mujoco_utils import MujocoEnv
-from prbench.envs.tidybot.object_types import MujocoImageObjectType, MujocoObjectType
-
-
-class MujocoImageObject:
-    """Class representing an image object in the Mujoco environment."""
-
-    def __init__(self, name: str) -> None:
-        """Initialize a MujocoImageObject.
-
-        Args:
-            name: Name of the image object
-        """
-        self.name = name
-        self.object_state_type = Object(self.name, MujocoImageObjectType)
+from prbench.envs.tidybot.object_types import MujocoObjectType
 
 
 class MujocoObject:

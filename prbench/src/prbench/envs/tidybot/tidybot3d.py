@@ -18,7 +18,7 @@ from prbench.envs.tidybot.base_env import (
 )
 from prbench.envs.tidybot.mujoco_utils import MjAct
 from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
-from prbench.envs.tidybot.objects import Cube, MujocoImageObject, MujocoObject
+from prbench.envs.tidybot.objects import Cube, MujocoObject
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
 
@@ -236,17 +236,6 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         for obj in self._objects:
             obj_data = obj.get_object_centric_data()
             state_dict[obj.object_state_type] = obj_data
-        # Collect image data if rendering images
-        if self.render_images:
-            sim_obs = self._robot_env.get_obs()
-            for camera_name in self._robot_env.camera_names:
-                key = f"{camera_name}_image"
-                image_object = MujocoImageObject(key)
-                if key in sim_obs:
-                    image_data = {"rgb": sim_obs[key]}
-                    state_dict[image_object.object_state_type] = (
-                        image_data  # type: ignore[assignment]
-                    )
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
     def step(

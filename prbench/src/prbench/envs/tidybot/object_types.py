@@ -14,6 +14,3 @@ MujocoObjectTypeFeatures[MujocoObjectType] = [
     "qy",
     "qz",
 ]
-
-MujocoImageObjectType = Type("mujoco_image")
-MujocoObjectTypeFeatures[MujocoImageObjectType] = ["rgb"]
