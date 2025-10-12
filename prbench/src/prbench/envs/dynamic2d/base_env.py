@@ -407,6 +407,7 @@ class ObjectCentricDynamic2DRobotEnv(
             self.robot.is_closing_finger = False
 
         # Multi-step simulation like pushT env
+        vel_command = []
         for _ in range(n_steps):
             # Use PD control to compute base and gripper velocities
             (
@@ -424,6 +425,25 @@ class ObjectCentricDynamic2DRobotEnv(
                 tgt_gripper,
                 control_dt,
             )
+            vel_command.append(np.array(
+                [
+                    self.robot.base_pose.x,
+                    self.robot.base_pose.y,
+                    self.robot.base_pose.theta,
+                    self.robot.base_vel[0].x,
+                    self.robot.base_vel[0].y,
+                    self.robot.base_vel[1],
+                    self.robot.curr_arm_length,
+                    self.robot.gripper_base_vel[0].x,
+                    self.robot.gripper_base_vel[0].y,
+                    self.robot.gripper_base_vel[1],
+                    self.robot.curr_gripper,
+                    self.robot.finger_vel[0].x,
+                    self.robot.finger_vel[0].y,
+                    self.robot.finger_vel[1],
+                ]
+            ))
+            # np.savetxt("vel_command_154.txt", np.array(vel_command))
             # Update robot with the vel (PD control updates velocities)
             self.robot.update(
                 base_vel,
