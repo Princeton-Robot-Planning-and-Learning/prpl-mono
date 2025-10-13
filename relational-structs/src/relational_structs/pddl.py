@@ -136,7 +136,7 @@ class Predicate:
         return LiftedAtom(self, entities)
 
     @__call__.register
-    def _(self, entities: Sequence[Object]) -> GroundAtom:
+    def _(self, entities: Sequence[Object]) -> GroundAtom:  # pylint: disable=function-redefined
         return GroundAtom(self, entities)
 
     @cached_property
