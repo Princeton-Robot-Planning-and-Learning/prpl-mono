@@ -16,7 +16,6 @@ from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta, PRBenchEnvCo
 from prbench.envs.tidybot.base_env import (
     ObjectCentricDynamic3DRobotEnv,
 )
-from prbench.envs.tidybot.mujoco_utils import Array
 from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
 from prbench.envs.tidybot.objects import Cube, MujocoObject
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator

@@ -12,7 +12,6 @@ import gc
 import os
 import platform
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from threading import Lock
 from typing import Any, TypeAlias
 

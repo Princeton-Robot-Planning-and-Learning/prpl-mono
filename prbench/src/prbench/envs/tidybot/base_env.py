@@ -6,12 +6,11 @@ from typing import Any
 import numpy as np
 from gymnasium.spaces import Space
 from numpy.typing import NDArray
-from prpl_utils.spaces import FunctionalSpace
 from relational_structs import Array, ObjectCentricState, ObjectCentricStateSpace, Type
 from relational_structs.utils import create_state_from_dict
 
 from prbench.core import ObjectCentricPRBenchEnv, _ConfigType
-from prbench.envs.tidybot.mujoco_utils import Array, TidyBot3DRobotActionSpace
+from prbench.envs.tidybot.mujoco_utils import TidyBot3DRobotActionSpace
 from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
 
 
