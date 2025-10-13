@@ -2,21 +2,21 @@
 
 import math
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
-from relational_structs import ObjectCentricState
+from relational_structs import Array, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
-from prbench.core import PRBenchEnvConfig
+from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta, PRBenchEnvConfig
 from prbench.envs.tidybot.base_env import (
     ObjectCentricDynamic3DRobotEnv,
 )
-from prbench.envs.tidybot.mujoco_utils import MjAct
+from prbench.envs.tidybot.mujoco_utils import Array
 from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
 from prbench.envs.tidybot.objects import Cube, MujocoObject
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
@@ -24,17 +24,18 @@ from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
 
 
 @dataclass(frozen=True)
-class TidyBot3DConfig(PRBenchEnvConfig):
+class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
     """Configuration for TidyBot3D environment."""
 
     control_frequency: int = 20
     horizon: int = 1000
+    camera_names: list[str] = field(default_factory=lambda: ["overview"])
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
 
 
-class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
+class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     """TidyBot 3D environment with mobile manipulation tasks."""
 
     metadata: dict[str, Any] = {"render_modes": ["rgb_array"]}
@@ -42,22 +43,20 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     def __init__(
         self,
         config: TidyBot3DConfig = TidyBot3DConfig(),
-        render_mode: str | None = None,
         seed: int | None = None,
         scene_type: str = "ground",
         num_objects: int = 3,
         render_images: bool = True,
-        camera_names: list[str] | None = None,
         show_images: bool = False,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
-        super().__init__(config, render_mode)
+        super().__init__(config)
 
         # Store instance attributes from kwargs
         self.scene_type = scene_type
         self.num_objects = num_objects
         self.render_images = render_images
-        self.camera_names = camera_names
+        self.camera_names = config.camera_names
         self.show_images = show_images
 
         # Initialize TidyBot-specific components
@@ -239,7 +238,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
     def step(
-        self, action: MjAct
+        self, action: Array
     ) -> tuple[ObjectCentricState, float, bool, bool, dict[str, Any]]:
         """Step the environment and return object-centric observation."""
         # Run the action through the underlying environment
@@ -301,10 +300,36 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         """Set the camera to use for rendering."""
         self._render_camera_name = camera_name
 
+    @classmethod
+    def get_available_environments(cls) -> list[str]:
+        """Get list of available TidyBot environment IDs (policy-agnostic)."""
+        scene_configs = [
+            ("ground", [3, 5, 7]),
+        ]
+        env_ids = []
+        for scene_type, object_counts in scene_configs:
+            for num_objects in object_counts:
+                env_ids.append(f"prbench/TidyBot3D-{scene_type}-o{num_objects}-v0")
+        return env_ids
+
+
+class TidyBot3DEnv(ConstantObjectPRBenchEnv):
+    """TidyBot env with a constant number of objects."""
+
+    def _create_object_centric_env(self, *args, **kwargs) -> ObjectCentricTidyBot3DEnv:
+        return ObjectCentricTidyBot3DEnv(*args, **kwargs)
+
+    def _get_constant_object_names(
+        self, exemplar_state: ObjectCentricState
+    ) -> list[str]:
+        return [o.name for o in sorted(exemplar_state)]
+
     def _create_env_markdown_description(self) -> str:
         """Create environment description (policy-agnostic)."""
         scene_description = ""
-        if self.scene_type == "ground":
+        env = self._object_centric_env
+        assert isinstance(env, ObjectCentricTidyBot3DEnv)
+        if env.scene_type == "ground":
             scene_description = (
                 " In the 'ground' scene, objects are placed randomly on a flat "
                 "ground plane."
@@ -313,7 +338,7 @@ class TidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         return f"""A 3D mobile manipulation environment using the TidyBot platform.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: {self.scene_type} with {self.num_objects} objects.{scene_description}
+Scene type: {env.scene_type} with {env.num_objects} objects.{scene_description}
 
 The robot can control:
 - Base pose (x, y, theta)
@@ -342,7 +367,9 @@ The robot can control:
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
-        if self.scene_type == "ground":
+        env = self._object_centric_env
+        assert isinstance(env, ObjectCentricTidyBot3DEnv)
+        if env.scene_type == "ground":
             return (
                 "The primary reward is for successfully placing objects at their "
                 "target locations.\n"
@@ -373,15 +400,3 @@ for Robot Learning
 
 https://github.com/tidybot2/tidybot2
 """
-
-    @classmethod
-    def get_available_environments(cls) -> list[str]:
-        """Get list of available TidyBot environment IDs (policy-agnostic)."""
-        scene_configs = [
-            ("ground", [3, 5, 7]),
-        ]
-        env_ids = []
-        for scene_type, object_counts in scene_configs:
-            for num_objects in object_counts:
-                env_ids.append(f"prbench/TidyBot3D-{scene_type}-o{num_objects}-v0")
-        return env_ids

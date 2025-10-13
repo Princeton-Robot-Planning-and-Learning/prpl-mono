@@ -21,6 +21,9 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 from numpy.typing import NDArray
+from relational_structs import Array
+
+from prbench.core import RobotActionSpace
 
 # This value is then used by the physics engine to determine how much time
 # to simulate for each step.
@@ -57,19 +60,23 @@ _MjSim_render_lock = Lock()
 MjObs: TypeAlias = dict[str, NDArray[Any]]
 
 
-@dataclass(frozen=True)
-class MjAct:
-    """An action in a MuJoCo environment.
+class TidyBot3DRobotActionSpace(RobotActionSpace):
+    """An action in a MuJoCo environment; used to set sim.data.ctrl in MuJoCo."""
 
-    The position_ctrl field is used to set sim.data.ctrl in the MuJoCo environment. For
-    now, we assume that all actuators (as defined in the MuJoCo xml) use position
-    control, hence the variable name.
-    """
+    def __init__(self) -> None:
+        # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
+        low = np.array(
+            [-1.0, -1.0, -np.pi, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.0]
+        )
+        high = np.array([1.0, 1.0, np.pi, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        super().__init__(low, high)
 
-    position_ctrl: NDArray[np.float64]
+    def create_markdown_description(self) -> str:
+        """Create a human-readable markdown description of this space."""
+        return """Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)"""
 
 
-class MujocoEnv(gymnasium.Env[MjObs, MjAct]):
+class MujocoEnv(gymnasium.Env[MjObs, Array]):
     """This is the base class for environments that use MuJoCo for simulation."""
 
     def __init__(
@@ -139,7 +146,7 @@ class MujocoEnv(gymnasium.Env[MjObs, MjAct]):
     def reward(self, obs: MjObs) -> float:
         """Compute the reward from an observation."""
 
-    def step(self, action: MjAct) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
+    def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         assert self.sim is not None, "Simulation must be initialized before stepping."
 
         assert self.timestep is not None, "Timestep must be initialized."
@@ -149,7 +156,7 @@ class MujocoEnv(gymnasium.Env[MjObs, MjAct]):
         # is reached
         control_timestep = 1.0 / self.control_frequency
         for _ in range(int(control_timestep / SIMULATION_TIMESTEP)):
-            self.sim.data.ctrl[:] = action.position_ctrl
+            self.sim.data.ctrl[:] = action
             self.sim.forward()
             self.sim.step()
 
