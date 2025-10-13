@@ -3,6 +3,7 @@
 import numpy as np
 import imageio.v2 as iio
 from gymnasium.spaces import Box
+import pickle
 
 import pytest
 import prbench
@@ -120,21 +121,40 @@ def test_dyn_pusht_resetable():
 
     # Replay all actions and verify observations/rewards
     for i, prev_obs in enumerate(expected_observations):
-        # reset_options = {"init_state": prev_obs}
-        # obs, _ = env.reset(options=reset_options)
-        # assert np.allclose(
-        #     obs, prev_obs, atol=1e-4
-        # ), f"Reset observation mismatch at step {i} in {demo_path}"
+        # if i == 305:
+        #     reset_options = {"init_state": prev_obs}
+        #     obs, _ = env.reset(options=reset_options)
+        #     assert np.allclose(
+        #         obs, prev_obs, atol=1e-4
+        #     ), f"Reset observation mismatch at step {i} in {demo_path}"
+        # with open(f"debug/replay/prev_space_{i:03d}.pkl", "wb") as f:
+        #     pickle.dump(env.unwrapped._object_centric_env.pymunk_space, f)
+        with open(f"debug/replay/prev_space_{i:03d}.pkl", "rb") as f:
+            env.unwrapped._object_centric_env.pymunk_space = pickle.load(f)
+            obj_centric_obs = env.unwrapped._object_centric_env._get_obs()
+            obs = env.observation_space.vectorize(obj_centric_obs)
+        assert np.allclose(
+            obs, prev_obs, atol=1e-4
+        ), f"Reset observation mismatch at step {i} in {demo_path}"
         action = actions[i]
         obs_next, reward, terminated, truncated, _ = env.step(action)
-        # img = env.render()  # type: ignore[no-untyped-call]
-        # iio.imwrite(f"debug/dyn_obstruction2d_{i:03d}.png", img)
+        img = env.render()  # type: ignore[no-untyped-call]
+        iio.imwrite(f"debug/reset_pickle/dyn_obstruction2d_{i:03d}.png", img)
 
         # Check observation matches
         expected_obs = expected_observations[i + 1]
-        assert np.allclose(
+        if not np.allclose(
             obs_next, expected_obs, atol=1e-4
-        ), f"Observation mismatch at step {i} in {demo_path}"
+        ):
+            print(f"Step {i} observation mismatch in {demo_path}")
+            print(f"Max abs diff: {np.max(np.abs(obs_next - expected_obs))}")
+            obj_centric_obs_next = env.observation_space.devectorize(obs_next)
+            obj_centric_expected = env.observation_space.devectorize(expected_obs)
+            for obj in obj_centric_obs_next.data:
+                feature_next = obj_centric_obs_next.data[obj]
+                feature_expected = obj_centric_expected.data[obj]
+                if not np.allclose(feature_next, feature_expected, atol=1e-4):
+                    print(f"Object {obj} mismatch:")
 
         # Check reward matches (if available)
         if expected_rewards is not None and i < len(expected_rewards):
