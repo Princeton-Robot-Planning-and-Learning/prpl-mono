@@ -44,6 +44,28 @@ The entries of an array in this Box space correspond to the following object fea
 | 18 | cube3 | qx |
 | 19 | cube3 | qy |
 | 20 | cube3 | qz |
+| 21 | robot | pos_base_x |
+| 22 | robot | pos_base_y |
+| 23 | robot | pos_base_rot |
+| 24 | robot | pos_arm_joint1 |
+| 25 | robot | pos_arm_joint2 |
+| 26 | robot | pos_arm_joint3 |
+| 27 | robot | pos_arm_joint4 |
+| 28 | robot | pos_arm_joint5 |
+| 29 | robot | pos_arm_joint6 |
+| 30 | robot | pos_arm_joint7 |
+| 31 | robot | pos_gripper |
+| 32 | robot | vel_base_x |
+| 33 | robot | vel_base_y |
+| 34 | robot | vel_base_rot |
+| 35 | robot | vel_arm_joint1 |
+| 36 | robot | vel_arm_joint2 |
+| 37 | robot | vel_arm_joint3 |
+| 38 | robot | vel_arm_joint4 |
+| 39 | robot | vel_arm_joint5 |
+| 40 | robot | vel_arm_joint6 |
+| 41 | robot | vel_arm_joint7 |
+| 42 | robot | vel_gripper |
 
 
 ### Action Space
