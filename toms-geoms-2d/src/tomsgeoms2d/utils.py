@@ -161,6 +161,37 @@ def lobject_intersects_circle(lobj1: Lobject, lobj2: Circle) -> bool:
     return False
 
 
+def tobject_intersects_rectangle(tobj, rect: Rectangle) -> bool:
+    """Checks if a Tobject intersects a rectangle."""
+    # Case 1: any vertex of the rectangle is inside the Tobject.
+    if any(tobj.contains_point(vx, vy) for vx, vy in rect.vertices):
+        return True
+    # Case 2: any vertex of the Tobject is inside the rectangle.
+    if any(rect.contains_point(vx, vy) for vx, vy in tobj.vertices):
+        return True
+    # Case 3: any edge of the Tobject intersects the rectangle.
+    for seg1 in tobj.line_segments:
+        for seg2 in rect.line_segments:
+            if line_segments_intersect(seg1, seg2):
+                return True
+    return False
+
+
+def tobject_intersects_circle(tobj, circ: Circle) -> bool:
+    """Checks if a Tobject intersects a circle."""
+    # Case 1: the circle's center is inside the Tobject.
+    if tobj.contains_point(circ.x, circ.y):
+        return True
+    # Case 2: any vertex of the Tobject is inside the circle.
+    if any(circ.contains_point(vx, vy) for vx, vy in tobj.vertices):
+        return True
+    # Case 3: any edge of the Tobject intersects the circle.
+    for seg1 in tobj.line_segments:
+        if line_segment_intersects_circle(seg1, circ):
+            return True
+    return False
+
+
 def geom2ds_intersect(geom1: Geom2D, geom2: Geom2D) -> bool:
     """Check if two 2D bodies intersect."""
     if isinstance(geom1, LineSegment) and isinstance(geom2, LineSegment):
@@ -189,6 +220,15 @@ def geom2ds_intersect(geom1: Geom2D, geom2: Geom2D) -> bool:
         return lobject_intersects_circle(geom1, geom2)
     if isinstance(geom1, Circle) and isinstance(geom2, Lobject):
         return lobject_intersects_circle(geom2, geom1)
+    # Add Tobject collision checks
+    if geom1.__class__.__name__ == "Tobject" and isinstance(geom2, Rectangle):
+        return tobject_intersects_rectangle(geom1, geom2)
+    if isinstance(geom1, Rectangle) and geom2.__class__.__name__ == "Tobject":
+        return tobject_intersects_rectangle(geom2, geom1)
+    if geom1.__class__.__name__ == "Tobject" and isinstance(geom2, Circle):
+        return tobject_intersects_circle(geom1, geom2)
+    if isinstance(geom1, Circle) and geom2.__class__.__name__ == "Tobject":
+        return tobject_intersects_circle(geom2, geom1)
     raise NotImplementedError(
         "Intersection not implemented for geoms " f"{geom1} and {geom2}"
     )

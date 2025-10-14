@@ -1,0 +1,22 @@
+You are a robot planning assistant. Your task is to analyze the current situation and generate a sequence of actions to achieve the goal.
+
+Available actions and their parameters:
+GroundMoveToPassageController(robot, obstacle1, obstacle2), params_space=Box([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], (3,), float32)
+GroundMoveToTgtController(robot, target), params_space=Box([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], (3,), float32)
+
+Current objects in the scene:
+Object information not available
+
+Goal:
+Goal not specified
+
+Please analyze the image(s) and current state to generate a step-by-step plan to achieve the goal. For geometric planning tasks, consider obstacles, target locations, and efficient navigation paths.
+
+Format your response as:
+
+Plan:
+1. [action_name]([parameters])
+2. [action_name]([parameters])
+...
+
+Make sure each action is valid and the parameters are appropriate for the current situation. For continuous control, use action arrays in the format [x, y, theta, vel, angular_vel].

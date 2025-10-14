@@ -1,5 +1,5 @@
 # prbench/TidyBot3D-table-o7-v0
-*(Random action GIF could not be generated due to rendering issues)*
+![random action GIF](assets/random_action_gifs/TidyBot3D-table-o7.gif)
 
 ### Description
 A 3D mobile manipulation environment using the TidyBot platform.
@@ -14,26 +14,68 @@ The robot can control:
 - Gripper position (open/close)
 
 ### Initial State Distribution
-*(Initial state GIF could not be generated due to rendering issues)*
+![initial state GIF](assets/initial_state_gifs/TidyBot3D-table-o7.gif)
 
 ### Example Demonstration
 *(No demonstration GIFs available)*
 
 ### Observation Space
-Observation includes:
-- Robot state: base pose, arm position/orientation, gripper state
-- Object states: positions and orientations of all objects
-- Camera images: RGB images from base and wrist cameras
-- Scene-specific features: handle positions for cabinets/drawers
+The entries of an array in this Box space correspond to the following object features:
+| **Index** | **Object** | **Feature** |
+| --- | --- | --- |
+| 0 | cube1 | x |
+| 1 | cube1 | y |
+| 2 | cube1 | z |
+| 3 | cube1 | qw |
+| 4 | cube1 | qx |
+| 5 | cube1 | qy |
+| 6 | cube1 | qz |
+| 7 | cube2 | x |
+| 8 | cube2 | y |
+| 9 | cube2 | z |
+| 10 | cube2 | qw |
+| 11 | cube2 | qx |
+| 12 | cube2 | qy |
+| 13 | cube2 | qz |
+| 14 | cube3 | x |
+| 15 | cube3 | y |
+| 16 | cube3 | z |
+| 17 | cube3 | qw |
+| 18 | cube3 | qx |
+| 19 | cube3 | qy |
+| 20 | cube3 | qz |
+| 21 | cube4 | x |
+| 22 | cube4 | y |
+| 23 | cube4 | z |
+| 24 | cube4 | qw |
+| 25 | cube4 | qx |
+| 26 | cube4 | qy |
+| 27 | cube4 | qz |
+| 28 | cube5 | x |
+| 29 | cube5 | y |
+| 30 | cube5 | z |
+| 31 | cube5 | qw |
+| 32 | cube5 | qx |
+| 33 | cube5 | qy |
+| 34 | cube5 | qz |
+| 35 | cube6 | x |
+| 36 | cube6 | y |
+| 37 | cube6 | z |
+| 38 | cube6 | qw |
+| 39 | cube6 | qx |
+| 40 | cube6 | qy |
+| 41 | cube6 | qz |
+| 42 | cube7 | x |
+| 43 | cube7 | y |
+| 44 | cube7 | z |
+| 45 | cube7 | qw |
+| 46 | cube7 | qx |
+| 47 | cube7 | qy |
+| 48 | cube7 | qz |
 
 
 ### Action Space
-Actions control:
-- base_pose: [x, y, theta] - Mobile base position and orientation
-- arm_pos: [x, y, z] - End effector position in world coordinates
-- arm_quat: [x, y, z, w] - End effector orientation as quaternion
-- gripper_pos: [pos] - Gripper open/close position (0=closed, 1=open)
-
+Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
 
 ### Rewards
 Reward function depends on the specific task:

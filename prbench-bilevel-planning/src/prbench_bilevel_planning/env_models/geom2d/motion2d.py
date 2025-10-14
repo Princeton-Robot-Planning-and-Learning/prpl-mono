@@ -2,7 +2,6 @@
 
 import numpy as np
 from bilevel_planning.structs import (
-    LiftedParameterizedController,
     LiftedSkill,
     RelationalAbstractGoal,
     RelationalAbstractState,
@@ -21,8 +20,7 @@ from prbench.envs.geom2d.utils import (
     rectangle_object_to_geom,
 )
 from prbench_models.geom2d.envs.motion2d.parameterized_skills import (
-    GroundMoveToPassageController,
-    GroundMoveToTgtController,
+    create_lifted_controllers,
 )
 from relational_structs import (
     GroundAtom,
@@ -201,44 +199,18 @@ def create_bilevel_planning_models(
         },
     )
 
-    # Create partial controller classes that include the action_space
-    class MoveToTgtController(GroundMoveToTgtController):
-        """Controller for moving the robot to the target region."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space, sim.initial_constant_state)
-
-    class MoveToPassageController(GroundMoveToPassageController):
-        """Controller for moving the robot to a passage."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space, sim.initial_constant_state)
-
-    # Lifted controllers.
-    MoveToTgtFromNoPassageController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, target],
-            MoveToTgtController,
-        )
+    # Get lifted controllers from prbench_models
+    lifted_controllers = create_lifted_controllers(
+        action_space, sim.initial_constant_state
     )
-    MoveToTgtFromPassageController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, target, obstacle1, obstacle2],
-            MoveToTgtController,
-        )
-    )
-    MoveToPassageFromNoPassageController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, obstacle1, obstacle2],
-            MoveToPassageController,
-        )
-    )
-    MoveToPassageFromPassageController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, obstacle1, obstacle2, obstacle3, obstacle4],
-            MoveToPassageController,
-        )
-    )
+    MoveToTgtFromNoPassageController = lifted_controllers["move_to_tgt_from_no_passage"]
+    MoveToTgtFromPassageController = lifted_controllers["move_to_tgt_from_passage"]
+    MoveToPassageFromNoPassageController = lifted_controllers[
+        "move_to_passage_from_no_passage"
+    ]
+    MoveToPassageFromPassageController = lifted_controllers[
+        "move_to_passage_from_passage"
+    ]
 
     # Finalize the skills.
     skills = {

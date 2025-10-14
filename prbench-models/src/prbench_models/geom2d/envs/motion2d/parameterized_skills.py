@@ -3,9 +3,12 @@
 from typing import Optional, Sequence, cast
 
 import numpy as np
+from bilevel_planning.structs import LiftedParameterizedController
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
+from prbench.envs.geom2d.motion2d import RectangleType, TargetRegionType
+from prbench.envs.geom2d.object_types import CRVRobotType
 from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
@@ -15,6 +18,7 @@ from prbench.envs.geom2d.utils import (
 from relational_structs import (
     Object,
     ObjectCentricState,
+    Variable,
 )
 
 from prbench_models.geom2d.utils import Geom2dRobotController
@@ -217,3 +221,71 @@ class GroundMoveToPassageController(GroundMoveToTgtController):
         raise TrajectorySamplingFailure(
             "Failed to find a collision-free path to target."
         )
+
+
+def create_lifted_controllers(
+    action_space: CRVRobotActionSpace,
+    init_constant_state: Optional[ObjectCentricState] = None,
+) -> dict[str, LiftedParameterizedController]:
+    """Create lifted parameterized controllers for Motion2D.
+
+    Args:
+        action_space: The action space for the CRV robot.
+        init_constant_state: Optional initial constant state.
+
+    Returns:
+        Dictionary mapping controller names to LiftedParameterizedController instances.
+    """
+    # Create partial controller classes that include the action_space
+    class MoveToTgtController(GroundMoveToTgtController):
+        """Controller for moving the robot to the target region."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    class MoveToPassageController(GroundMoveToPassageController):
+        """Controller for moving the robot to a passage."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    # Create variables for lifted controllers
+    robot = Variable("?robot", CRVRobotType)
+    target = Variable("?target", TargetRegionType)
+    obstacle1 = Variable("?obstacle1", RectangleType)
+    obstacle2 = Variable("?obstacle2", RectangleType)
+    obstacle3 = Variable("?obstacle3", RectangleType)
+    obstacle4 = Variable("?obstacle4", RectangleType)
+
+    # Lifted controllers
+    move_to_tgt_from_no_passage_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, target],
+            MoveToTgtController,
+        )
+    )
+    move_to_tgt_from_passage_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, target, obstacle1, obstacle2],
+            MoveToTgtController,
+        )
+    )
+    move_to_passage_from_no_passage_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, obstacle1, obstacle2],
+            MoveToPassageController,
+        )
+    )
+    move_to_passage_from_passage_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, obstacle1, obstacle2, obstacle3, obstacle4],
+            MoveToPassageController,
+        )
+    )
+
+    return {
+        "move_to_tgt_from_no_passage": move_to_tgt_from_no_passage_controller,
+        "move_to_tgt_from_passage": move_to_tgt_from_passage_controller,
+        "move_to_passage_from_no_passage": move_to_passage_from_no_passage_controller,
+        "move_to_passage_from_passage": move_to_passage_from_passage_controller,
+    }

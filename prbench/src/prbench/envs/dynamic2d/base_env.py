@@ -22,7 +22,9 @@ from relational_structs.utils import create_state_from_dict
 from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionSpace
 from prbench.envs.dynamic2d.object_types import Dynamic2DRobotEnvTypeFeatures
 from prbench.envs.dynamic2d.utils import (
+    ARM_COLLISION_TYPE,
     DYNAMIC_COLLISION_TYPE,
+    FINGER_COLLISION_TYPE,
     ROBOT_COLLISION_TYPE,
     STATIC_COLLISION_TYPE,
     KinRobot,
@@ -163,15 +165,29 @@ class ObjectCentricDynamic2DRobotEnv(
         self.robot.add_to_space(self.pymunk_space)
 
         # Set up collision handlers
+        # Finger grasping handler
         self.pymunk_space.on_collision(
             DYNAMIC_COLLISION_TYPE,
-            ROBOT_COLLISION_TYPE,
+            FINGER_COLLISION_TYPE,
             post_solve=on_gripper_grasp,
+            data=self.robot,
+        )
+        # Static collisions
+        self.pymunk_space.on_collision(
+            STATIC_COLLISION_TYPE,
+            ROBOT_COLLISION_TYPE,
+            pre_solve=on_collision_w_static,
             data=self.robot,
         )
         self.pymunk_space.on_collision(
             STATIC_COLLISION_TYPE,
-            ROBOT_COLLISION_TYPE,
+            FINGER_COLLISION_TYPE,
+            pre_solve=on_collision_w_static,
+            data=self.robot,
+        )
+        self.pymunk_space.on_collision(
+            STATIC_COLLISION_TYPE,
+            ARM_COLLISION_TYPE,
             pre_solve=on_collision_w_static,
             data=self.robot,
         )
@@ -430,10 +446,10 @@ class ObjectCentricDynamic2DRobotEnv(
                         )
                         new_shapes.append(copied_shape)
                     dynamic_body = pymunk.Body(mass, total_moment)
+                    dynamic_body.angle = kinematic_body.angle
                     dynamic_body.position = kinematic_body.position
                     dynamic_body.velocity = kinematic_body.velocity  # Preserve velocity
                     dynamic_body.angular_velocity = kinematic_body.angular_velocity
-                    dynamic_body.angle = kinematic_body.angle
                     for shape in new_shapes:
                         shape.body = dynamic_body
                         shape.friction = 1.0

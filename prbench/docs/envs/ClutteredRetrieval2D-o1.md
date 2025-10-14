@@ -4,7 +4,7 @@
 ### Description
 A 2D environment where the goal is to "pick up" (suction) a target block.
 
-The target block may be initially obstructed. In this environment, there are always 1 obstacle blocks.
+The target block may be initially obstructed. In this environment, there are always 2 obstacle blocks.
 
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 
@@ -12,7 +12,7 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 ![initial state GIF](assets/initial_state_gifs/ClutteredRetrieval2D-o1.gif)
 
 ### Example Demonstration
-![demo GIF](assets/demo_gifs/ClutteredRetrieval2D-o1/ClutteredRetrieval2D-o1_seed2_1752266113.gif)
+![demo GIF](assets/demo_gifs/ClutteredRetrieval2D-o1/ClutteredRetrieval2D-o1_1758719765.gif)
 
 ### Observation Space
 The entries of an array in this Box space correspond to the following object features:
@@ -37,16 +37,26 @@ The entries of an array in this Box space correspond to the following object fea
 | 16 | target_block | z_order |
 | 17 | target_block | width |
 | 18 | target_block | height |
-| 19 | obstruction0 | x |
-| 20 | obstruction0 | y |
-| 21 | obstruction0 | theta |
-| 22 | obstruction0 | static |
-| 23 | obstruction0 | color_r |
-| 24 | obstruction0 | color_g |
-| 25 | obstruction0 | color_b |
-| 26 | obstruction0 | z_order |
-| 27 | obstruction0 | width |
-| 28 | obstruction0 | height |
+| 19 | target_region | x |
+| 20 | target_region | y |
+| 21 | target_region | theta |
+| 22 | target_region | static |
+| 23 | target_region | color_r |
+| 24 | target_region | color_g |
+| 25 | target_region | color_b |
+| 26 | target_region | z_order |
+| 27 | target_region | width |
+| 28 | target_region | height |
+| 29 | obstruction0 | x |
+| 30 | obstruction0 | y |
+| 31 | obstruction0 | theta |
+| 32 | obstruction0 | static |
+| 33 | obstruction0 | color_r |
+| 34 | obstruction0 | color_g |
+| 35 | obstruction0 | color_b |
+| 36 | obstruction0 | z_order |
+| 37 | obstruction0 | width |
+| 38 | obstruction0 | height |
 
 
 ### Action Space

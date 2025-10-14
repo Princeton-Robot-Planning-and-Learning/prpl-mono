@@ -325,11 +325,11 @@ class Lobject(Geom2D):
     The hook body pose is defined as follows:
     --------|
             |
-    The hook looks like above when theta = 0.0, 
+    The hook looks like above when theta = 0.0,
     right is x positive, up is y positive.
     The pose refers to the very right top vertex of the hook.
     The geometry is defined by two (non-overlapping) rectanges
-    The "horizonal" one has width=hook_shape[1]-hook_shape[0], 
+    The "horizonal" one has width=hook_shape[1]-hook_shape[0],
     and height=hook_shape[0]
     The "vertical" one has width=hook_shape[0 and height=hook_shape[2]
     """
@@ -502,6 +502,220 @@ class Lobject(Geom2D):
         rect2_patch = plt.Polygon(rectangle2_vertices, closed=True, fill=True, **kwargs)
         ax.add_patch(rect1_patch)
         ax.add_patch(rect2_patch)
+
+
+@dataclass(frozen=True)
+class Tobject(Geom2D):
+    """A helper class for representing a T-shaped object for visualizing and
+    collision checking.
+
+    The T-shaped body pose is defined as follows:
+    -----
+      |
+      |
+    The T looks like above when theta = 0.0,
+    right is x positive, up is y positive.
+    The pose refers to the center top of the horizontal bar.
+    The geometry is defined by two (non-overlapping) rectangles:
+    - The "horizontal" one has width=length_horizontal and height=width
+    - The "vertical" one has width=width and height=length_vertical
+    """
+
+    x: float
+    y: float
+    width: float
+    length_horizontal: float
+    length_vertical: float
+    theta: float  # Rotation angle in radians with respect to (x,y)
+
+    def __post_init__(self):
+        # Ensure that the lengths are positive
+        if self.width <= 0 or self.length_horizontal <= 0 or self.length_vertical <= 0:
+            raise ValueError("Width and lengths must be positive.")
+        assert -np.pi <= self.theta <= np.pi, "Expecting angle in [-pi, pi]."
+
+    @functools.cached_property
+    def rotation_matrix(self) -> NDArray[np.float64]:
+        """Get the rotation matrix."""
+        return np.array(
+            [
+                [np.cos(self.theta), -np.sin(self.theta)],
+                [np.sin(self.theta), np.cos(self.theta)],
+            ]
+        )
+
+    @functools.cached_property
+    def inverse_rotation_matrix(self) -> NDArray[np.float64]:
+        """Get the inverse rotation matrix."""
+        return np.array(
+            [
+                [np.cos(self.theta), np.sin(self.theta)],
+                [-np.sin(self.theta), np.cos(self.theta)],
+            ]
+        )
+
+    @functools.cached_property
+    def vertices(self) -> List[Tuple[float, float]]:
+        """Get the eight vertices of the T-object.
+
+        The vertices trace the outline of the T-shape.
+        """
+        w = self.width
+        lh = self.length_horizontal
+        lv = self.length_vertical
+        translate_vector = np.array([self.x, self.y])
+
+        # Define vertices in local frame (before rotation)
+        # Starting from center top, going clockwise
+        vertices = np.array(
+            [
+                (-lh / 2, 0),  # top left of horizontal bar
+                (-lh / 2, -w),  # bottom left of horizontal bar
+                (-w / 2, -w),  # top left of vertical bar
+                (-w / 2, -w - lv),  # bottom left of vertical bar
+                (w / 2, -w - lv),  # bottom right of vertical bar
+                (w / 2, -w),  # top right of vertical bar
+                (lh / 2, -w),  # bottom right of horizontal bar
+                (lh / 2, 0),  # top right of horizontal bar
+            ]
+        )
+
+        vertices = vertices @ self.rotation_matrix.T
+        vertices = translate_vector + vertices
+        # Convert to a list of tuples
+        return list(map(lambda p: (p[0], p[1]), vertices))
+
+    @functools.cached_property
+    def line_segments(self) -> List[LineSegment]:
+        """Get the eight line segments of the T-object."""
+        v = self.vertices
+        return [
+            LineSegment(v[i][0], v[i][1], v[(i + 1) % 8][0], v[(i + 1) % 8][1])
+            for i in range(8)
+        ]
+
+    def contains_point(self, x: float, y: float) -> bool:
+        # First invert translation, then invert rotation.
+        rx, ry = np.array([x - self.x, y - self.y]) @ self.inverse_rotation_matrix.T
+        # Check if the point is within the bounds of the T-object.
+        # Horizontal bar: from -lh/2 to lh/2 in x, from 0 to -w in y
+        in_horizontal = (
+            -self.length_horizontal / 2 <= rx <= self.length_horizontal / 2
+            and -self.width <= ry <= 0
+        )
+        # Vertical bar: from -w/2 to w/2 in x, from -w to -w-lv in y
+        in_vertical = (
+            -self.width / 2 <= rx <= self.width / 2
+            and -self.width - self.length_vertical <= ry <= -self.width
+        )
+        return in_horizontal or in_vertical
+
+    def sample_random_point(self, rng: np.random.Generator) -> Tuple[float, float]:
+        # Sample a random point within the bounds of the T-object.
+        # Choose randomly between horizontal and vertical bars
+        horizontal_area = self.length_horizontal * self.width
+        vertical_area = self.length_vertical * self.width
+        total_area = horizontal_area + vertical_area
+
+        if rng.uniform(0, total_area) < horizontal_area:
+            # Sample from horizontal bar
+            rx = rng.uniform(-self.length_horizontal / 2, self.length_horizontal / 2)
+            ry = rng.uniform(-self.width, 0)
+        else:
+            # Sample from vertical bar
+            rx = rng.uniform(-self.width / 2, self.width / 2)
+            ry = rng.uniform(-self.width - self.length_vertical, -self.width)
+
+        rx, ry = np.array([rx, ry]) @ self.rotation_matrix.T
+        x = rx + self.x
+        y = ry + self.y
+
+        return (x, y)
+
+    def rotate_about_point(self, x: float, y: float, rot: float) -> Tobject:
+        """Create a new T-object that is this T-object, but rotated CCW by the
+        given rotation (in radians), relative to the (x, y) origin.
+
+        Rotates the vertices first, then uses them to recompute the new
+        theta.
+        """
+        vertices = np.array(self.vertices)
+        origin = np.array([x, y])
+        # Translate the vertices so that the origin becomes the center
+        vertices = vertices - origin
+        # Rotate
+        rotate_matrix = np.array(
+            [[np.cos(rot), -np.sin(rot)], [np.sin(rot), np.cos(rot)]]
+        )
+        vertices = vertices @ rotate_matrix.T
+
+        # Translate the vertices back
+        vertices = vertices + origin
+
+        # New center is at vertex 0 (or average of vertices 0 and 7)
+        center_x, center_y = (vertices[0, 0] + vertices[7, 0]) / 2, vertices[0, 1]
+
+        # Compute dimensions
+        width = np.linalg.norm(vertices[1] - vertices[0]).item()
+        length_horizontal = np.linalg.norm(vertices[7] - vertices[0]).item()
+
+        # Compute length_vertical from bottom vertices
+        length_vertical = np.linalg.norm(vertices[3] - vertices[2]).item()
+
+        # Compute new_theta based on the direction of the top edge
+        vector_top = vertices[7] - vertices[0]
+        new_theta = np.arctan2(vector_top[1], vector_top[0])
+
+        return Tobject(
+            center_x, center_y, width, length_horizontal, length_vertical, new_theta
+        )
+
+    def scale_about_center(self, width_scale: float, length_scale: float) -> Tobject:
+        """Scale the T-object about its center."""
+        new_width = self.width * width_scale
+        new_length_horizontal = self.length_horizontal * length_scale
+        new_length_vertical = self.length_vertical * length_scale
+        return Tobject(
+            self.x,
+            self.y,
+            new_width,
+            new_length_horizontal,
+            new_length_vertical,
+            self.theta,
+        )
+
+    def plot(self, ax: plt.Axes, **kwargs: Any) -> None:
+        vertices = self.vertices
+
+        # Horizontal bar vertices (indices 0, 1, 6, 7)
+        horizontal_vertices = np.array(
+            [
+                [vertices[0][0], vertices[0][1]],
+                [vertices[1][0], vertices[1][1]],
+                [vertices[6][0], vertices[6][1]],
+                [vertices[7][0], vertices[7][1]],
+            ]
+        )
+
+        # Vertical bar vertices (indices 2, 3, 4, 5)
+        vertical_vertices = np.array(
+            [
+                [vertices[2][0], vertices[2][1]],
+                [vertices[3][0], vertices[3][1]],
+                [vertices[4][0], vertices[4][1]],
+                [vertices[5][0], vertices[5][1]],
+            ]
+        )
+
+        # Create rectangle patches
+        horizontal_patch = plt.Polygon(
+            horizontal_vertices, closed=True, fill=True, **kwargs
+        )
+        vertical_patch = plt.Polygon(
+            vertical_vertices, closed=True, fill=True, **kwargs
+        )
+        ax.add_patch(horizontal_patch)
+        ax.add_patch(vertical_patch)
 
 
 def line_segments_intersect(seg1: LineSegment, seg2: LineSegment) -> bool:

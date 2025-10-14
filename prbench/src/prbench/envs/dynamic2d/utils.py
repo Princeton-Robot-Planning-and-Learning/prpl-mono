@@ -23,6 +23,8 @@ from prbench.envs.utils import BLACK, RobotActionSpace
 STATIC_COLLISION_TYPE = 0
 DYNAMIC_COLLISION_TYPE = 1
 ROBOT_COLLISION_TYPE = 2
+FINGER_COLLISION_TYPE = 3
+ARM_COLLISION_TYPE = 4
 
 
 class KinRobotActionSpace(RobotActionSpace):
@@ -74,6 +76,174 @@ class KinRobotActionSpace(RobotActionSpace):
         )
 
 
+class DotRobotActionSpace(RobotActionSpace):
+    """An action space for a simple dot robot (kinematic circle).
+
+    Actions are bounded delta positions in 2D space.
+    """
+
+    def __init__(
+        self,
+        min_dx: float = -0.1,
+        max_dx: float = 0.1,
+        min_dy: float = -0.1,
+        max_dy: float = 0.1,
+    ) -> None:
+        low = np.array([min_dx, min_dy])
+        high = np.array([max_dx, max_dy])
+        super().__init__(low, high)
+
+    def create_markdown_description(self) -> str:
+        """Create a human-readable markdown description of this space."""
+        features = [
+            ("dx", "Delta x position for robot (positive is right)"),
+            ("dy", "Delta y position for robot (positive is up)"),
+        ]
+        md_table_str = (
+            "| **Index** | **Feature** | **Description** | **Min** | **Max** |"
+        )
+        md_table_str += "\n| --- | --- | --- | --- | --- |"
+        for idx, (feature, description) in enumerate(features):
+            lb = self.low[idx]
+            ub = self.high[idx]
+            md_table_str += (
+                f"\n| {idx} | {feature} | {description} | {lb:.3f} | {ub:.3f} |"
+            )
+        return (
+            f"The entries of an array in this Box space correspond to the "
+            f"following action features:\n{md_table_str}\n"
+        )
+
+
+class DotRobot:
+    """Simple dot robot implementation using PyMunk physics engine.
+
+    The robot is a kinematic circle that can move to target positions using PD control.
+    This is similar to the agent in the original PushT environment.
+    """
+
+    def __init__(
+        self,
+        init_pos: Vec2d = Vec2d(256.0, 256.0),
+        radius: float = 15.0,
+    ) -> None:
+        # Robot parameters
+        self.radius = radius
+
+        # Track last robot state
+        self._position = init_pos
+
+        # Body and shape references
+        self._body: pymunk.Body | None = None
+        self._shape: pymunk.Shape | None = None
+        self.create_body()
+
+    def add_to_space(self, space: pymunk.Space) -> None:
+        """Add robot to the PyMunk space."""
+        assert self._body is not None and self._shape is not None
+        space.add(self._body, self._shape)
+
+    def create_body(self) -> None:
+        """Create the robot body (kinematic circle)."""
+        self._body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+        self._shape = pymunk.Circle(self._body, self.radius)
+        self._shape.color = (50, 50, 255, 255)  # Blue circle
+        self._shape.friction = 1
+        self._shape.collision_type = ROBOT_COLLISION_TYPE
+        self._shape.density = 1.0
+        self._body.position = self._position
+
+    @property
+    def pose(self) -> SE2Pose:
+        """Get the robot pose as SE2Pose."""
+        assert self._body is not None
+        return SE2Pose(
+            x=self._body.position.x,
+            y=self._body.position.y,
+            theta=0.0,  # Dot robot has no orientation
+        )
+
+    @property
+    def vel(self) -> Vec2d:
+        """Get the robot velocity."""
+        assert self._body is not None
+        return self._body.velocity
+
+    @property
+    def body_id(self) -> int:
+        """Get the body id in pymunk space."""
+        assert self._body is not None
+        return self._body.id
+
+    def reset_position(
+        self,
+        x: float,
+        y: float,
+        vel: Vec2d | None = None,
+    ) -> None:
+        """Reset robot to specified position with optional velocity."""
+        assert self._body is not None
+        self._body.position = (x, y)
+        if vel is not None:
+            self._body.velocity = vel
+        else:
+            self._body.velocity = Vec2d(0.0, 0.0)
+
+        # Update last state
+        self.update_last_state()
+
+    def revert_to_last_state(self) -> None:
+        """Reset to last state and stay static when collide with static objects."""
+        assert self._body is not None
+        self._body.position = self._position
+        self._body.velocity = Vec2d(0.0, 0.0)
+
+    def update_last_state(self) -> None:
+        """Update the last state tracking variables."""
+        assert self._body is not None
+        self._position = Vec2d(self._body.position.x, self._body.position.y)
+
+    def update(self, velocity: Vec2d) -> None:
+        """Update the robot velocity."""
+        assert self._body is not None
+        # Update robot last state
+        self.update_last_state()
+        # Update velocity
+        self._body.velocity = velocity
+
+
+class DotRobotPDController:
+    """A simple PD controller for the DotRobot."""
+
+    def __init__(
+        self,
+        kp: float = 100.0,
+        kv: float = 20.0,
+    ) -> None:
+        self.kp = kp
+        self.kv = kv
+
+    def compute_control(
+        self,
+        robot: DotRobot,
+        tgt_x: float,
+        tgt_y: float,
+        dt: float,
+    ) -> Vec2d:
+        """Compute velocity using PD control."""
+        # Read current state
+        curr_pos = Vec2d(robot.pose.x, robot.pose.y)
+        curr_vel = robot.vel
+
+        # PD control
+        tgt_pos = Vec2d(tgt_x, tgt_y)
+        zero_vel = Vec2d(0, 0)
+        acceleration = self.kp * (tgt_pos - curr_pos) + self.kv * (zero_vel - curr_vel)
+        new_vel = curr_vel + acceleration * dt
+
+        return new_vel
+
+
 class KinRobot:
     """Robot implementation using PyMunk physics engine with four bodies.
 
@@ -101,6 +271,9 @@ class KinRobot:
         gripper_finger_height: float = 0.01,
         finger_move_thresh: float = 0.001,
         grasping_theta_thresh: float = 0.1,
+        base_collision_type: int = ROBOT_COLLISION_TYPE,
+        arm_collision_type: int = ARM_COLLISION_TYPE,
+        finger_collision_type: int = FINGER_COLLISION_TYPE,
     ) -> None:
         # Robot parameters
         self.base_radius = base_radius
@@ -112,6 +285,9 @@ class KinRobot:
         self.gripper_gap_max = gripper_base_height
         self.finger_move_thresh = finger_move_thresh
         self.grasping_theta_thresh = grasping_theta_thresh
+        self.base_collision_type = base_collision_type
+        self.arm_collision_type = arm_collision_type
+        self.finger_collision_type = finger_collision_type
 
         # Track last robot state
         self._base_position = init_pos
@@ -146,10 +322,10 @@ class KinRobot:
         self._base_shape = pymunk.Circle(self._base_body, self.base_radius)
         self._base_shape.color = (255, 50, 50, 255)
         self._base_shape.friction = 1
-        self._base_shape.collision_type = ROBOT_COLLISION_TYPE
+        self._base_shape.collision_type = self.base_collision_type
         self._base_shape.density = 1.0
-        self._base_body.position = self._base_position
         self._base_body.angle = self._base_angle
+        self._base_body.position = self._base_position
 
     @property
     def base_pose(self) -> SE2Pose:
@@ -178,7 +354,7 @@ class KinRobot:
         self._gripper_base_body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
         self._gripper_base_shape = pymunk.Poly(self._gripper_base_body, vs)
         self._gripper_base_shape.friction = 1
-        self._gripper_base_shape.collision_type = ROBOT_COLLISION_TYPE
+        self._gripper_base_shape.collision_type = self.arm_collision_type
         self._gripper_base_shape.density = 1.0
 
         vs_arm = [
@@ -190,7 +366,7 @@ class KinRobot:
         ts_arm = pymunk.Transform(tx=-self.arm_length_max / 2 - half_w, ty=0)
         self._arm_shape = pymunk.Poly(self._gripper_base_body, vs_arm, transform=ts_arm)
         self._arm_shape.friction = 1
-        self._arm_shape.collision_type = ROBOT_COLLISION_TYPE
+        self._arm_shape.collision_type = self.arm_collision_type
         self._arm_shape.density = 1.0
 
         vs_right_finger = [
@@ -206,13 +382,13 @@ class KinRobot:
             self._gripper_base_body, vs_right_finger, transform=ts_finger
         )
         self._right_finger_shape.friction = 1
-        self._right_finger_shape.collision_type = ROBOT_COLLISION_TYPE
+        self._right_finger_shape.collision_type = self.finger_collision_type
         self._right_finger_shape.density = 1.0
 
         init_rel_pos = SE2Pose(x=self._arm_length, y=0.0, theta=0.0)
         init_pose = self.base_pose * init_rel_pos
-        self._gripper_base_body.position = (init_pose.x, init_pose.y)
         self._gripper_base_body.angle = init_pose.theta
+        self._gripper_base_body.position = (init_pose.x, init_pose.y)
 
     @property
     def gripper_base_pose(self) -> SE2Pose:
@@ -245,14 +421,14 @@ class KinRobot:
         finger_shape = pymunk.Poly(finger_body, vs)
         finger_shape.friction = 1
         finger_shape.density = 1.0
-        finger_shape.collision_type = ROBOT_COLLISION_TYPE
+        finger_shape.collision_type = self.finger_collision_type
 
         init_rel_pos = SE2Pose(
             x=half_w, y=self._gripper_gap - self.gripper_base_height / 2, theta=0.0
         )
         init_pose = self.gripper_base_pose * init_rel_pos
-        finger_body.position = (init_pose.x, init_pose.y)
         finger_body.angle = init_pose.theta
+        finger_body.position = (init_pose.x, init_pose.y)
         return finger_body, finger_shape
 
     @property
@@ -311,17 +487,17 @@ class KinRobot:
         helder_object_vels: list[Vec2d] | None = None,
     ) -> None:
         """Reset robot to specified positions with zero velocity."""
-        self._base_body.position = (base_x, base_y)
-        self._base_body.velocity = base_vel[0]
         self._base_body.angle = base_theta
         self._base_body.angular_velocity = base_vel[1]
+        self._base_body.position = (base_x, base_y)
+        self._base_body.velocity = base_vel[0]
 
         base_to_gripper = SE2Pose(x=arm_length, y=0.0, theta=0.0)
         gripper_pose = self.base_pose * base_to_gripper
-        self._gripper_base_body.position = (gripper_pose.x, gripper_pose.y)
-        self._gripper_base_body.velocity = arm_vel[0]
         self._gripper_base_body.angle = gripper_pose.theta
         self._gripper_base_body.angular_velocity = arm_vel[1]
+        self._gripper_base_body.position = (gripper_pose.x, gripper_pose.y)
+        self._gripper_base_body.velocity = arm_vel[0]
 
         gripper_to_left_finger = SE2Pose(
             x=self.gripper_finger_width / 2,
@@ -329,10 +505,10 @@ class KinRobot:
             theta=0.0,
         )
         left_finger_pose = gripper_pose * gripper_to_left_finger
-        self._left_finger_body.position = (left_finger_pose.x, left_finger_pose.y)
-        self._left_finger_body.velocity = gripper_vel[0]
         self._left_finger_body.angle = left_finger_pose.theta
         self._left_finger_body.angular_velocity = gripper_vel[1]
+        self._left_finger_body.position = (left_finger_pose.x, left_finger_pose.y)
+        self._left_finger_body.velocity = gripper_vel[0]
 
         # Reset held objects - they have the same velocity as gripper base
         if helder_object_vels is not None and len(helder_object_vels):
@@ -342,6 +518,7 @@ class KinRobot:
             for i, (obj, _, relative_pose) in enumerate(self.held_objects):
                 obj_body, _ = obj
                 new_obj_pose = gripper_pose * relative_pose
+                obj_body.angle = new_obj_pose.theta
                 obj_body.position = (new_obj_pose.x, new_obj_pose.y)
                 obj_body.velocity = helder_object_vels[i]
                 obj_body.angular_velocity = self._gripper_base_body.angular_velocity
@@ -351,15 +528,15 @@ class KinRobot:
 
     def revert_to_last_state(self) -> None:
         """Reset to last state and stay static when collide with static objects."""
-        self._base_body.position = self._base_position
         self._base_body.angle = self._base_angle
+        self._base_body.position = self._base_position
         self._base_body.velocity = Vec2d(0.0, 0.0)
         self._base_body.angular_velocity = 0.0
 
         gripper_base_rel_pos = SE2Pose(x=self._arm_length, y=0.0, theta=0.0)
         gripper_base_pose = self.base_pose * gripper_base_rel_pos
-        self._gripper_base_body.position = (gripper_base_pose.x, gripper_base_pose.y)
         self._gripper_base_body.angle = gripper_base_pose.theta
+        self._gripper_base_body.position = (gripper_base_pose.x, gripper_base_pose.y)
         self._gripper_base_body.velocity = Vec2d(0.0, 0.0)
         self._gripper_base_body.angular_velocity = 0.0
 
@@ -369,17 +546,17 @@ class KinRobot:
             theta=0.0,
         )
         left_finger_pose = gripper_base_pose * left_finger_rel_pos
+        self._left_finger_body.angle = left_finger_pose.theta
         self._left_finger_body.position = (left_finger_pose.x, left_finger_pose.y)
         self._left_finger_body.velocity = Vec2d(0.0, 0.0)
-        self._left_finger_body.angle = left_finger_pose.theta
         self._left_finger_body.angular_velocity = 0.0
 
         # Update held objects
         for obj, _, relative_pose in self.held_objects:
             obj_body, _ = obj
             new_obj_pose = gripper_base_pose * relative_pose
-            obj_body.position = (new_obj_pose.x, new_obj_pose.y)
             obj_body.angle = new_obj_pose.theta
+            obj_body.position = (new_obj_pose.x, new_obj_pose.y)
             obj_body.velocity = Vec2d(0.0, 0.0)
             obj_body.angular_velocity = 0.0
 
@@ -642,6 +819,15 @@ def on_collision_w_static(
     robot.revert_to_last_state()
 
 
+def on_dot_robot_collision_w_static(
+    arbiter: pymunk.Arbiter, space: pymunk.Space, robot: DotRobot
+) -> None:
+    """Collision callback for DotRobot colliding with static objects."""
+    del arbiter
+    del space
+    robot.revert_to_last_state()
+
+
 def create_walls_from_world_boundaries(
     world_min_x: float,
     world_max_x: float,
@@ -777,5 +963,28 @@ def get_fingered_robot_action_from_gui_input(
         action[4] = low[4]
     if "f" in keys_pressed:
         action[4] = high[4]
+
+    return action
+
+
+def get_dot_robot_action_from_gui_input(
+    action_space: DotRobotActionSpace, gui_input: dict[str, Any]
+) -> NDArray[np.float32]:
+    """Get the mapping from human inputs to actions, derived from action space."""
+    # This will be implemented later - placeholder for now
+    right_x, right_y = gui_input["right_stick"]
+
+    # Initialize the action.
+    low = action_space.low
+    high = action_space.high
+    action = np.zeros(action_space.shape, action_space.dtype)
+
+    def _rescale(x: float, lb: float, ub: float) -> float:
+        """Rescale from [-1, 1] to [lb, ub]."""
+        return lb + (x + 1) * (ub - lb) / 2
+
+    # The right stick controls the x, y movement of the base.
+    action[0] = _rescale(right_x, low[0], high[0])
+    action[1] = _rescale(right_y, low[1], high[1])
 
     return action

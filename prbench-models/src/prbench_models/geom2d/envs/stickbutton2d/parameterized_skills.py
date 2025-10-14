@@ -3,6 +3,8 @@
 from typing import Optional, Sequence
 
 import numpy as np
+from bilevel_planning.structs import LiftedParameterizedController
+from prbench.envs.geom2d.object_types import CircleType, CRVRobotType, RectangleType
 from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
@@ -10,6 +12,7 @@ from prbench.envs.geom2d.utils import (
 from relational_structs import (
     Object,
     ObjectCentricState,
+    Variable,
 )
 
 from prbench_models.geom2d.utils import Geom2dRobotController
@@ -280,3 +283,109 @@ class GroundStickPressButtonController(Geom2dRobotController):
 
     def _get_vacuum_actions(self) -> tuple[float, float]:
         return 1.0, 1.0  # Keep holding stick
+
+
+def create_lifted_controllers(
+    action_space: CRVRobotActionSpace,
+    init_constant_state: Optional[ObjectCentricState] = None,
+) -> dict[str, LiftedParameterizedController]:
+    """Create lifted parameterized controllers for StickButton2D.
+
+    Args:
+        action_space: The action space for the CRV robot.
+        init_constant_state: Optional initial constant state.
+
+    Returns:
+        Dictionary mapping controller names to LiftedParameterizedController instances.
+    """
+
+    # Create partial controller classes that include the action_space
+    class RobotPressButtonController(GroundRobotPressButtonController):
+        """Controller for moving the robot to press a button."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    class PickStickController(GroundPickStickController):
+        """Controller for moving the robot to pick the stick."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    class StickPressButtonController(GroundStickPressButtonController):
+        """Controller for moving the robot to use the stick to press a button."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    class PlaceStickController(GroundPlaceStickController):
+        """Controller for moving the robot to place the stick down."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    # Create variables for lifted controllers
+    robot = Variable("?robot", CRVRobotType)
+    stick = Variable("?stick", RectangleType)
+    button = Variable("?button", CircleType)
+    from_button = Variable("?from_button", CircleType)
+
+    # Lifted controllers
+    robot_press_button_from_nothing_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, button],
+            RobotPressButtonController,
+        )
+    )
+
+    robot_press_button_from_button_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, button, from_button],
+            RobotPressButtonController,
+        )
+    )
+
+    pick_stick_from_nothing_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, stick],
+            PickStickController,
+        )
+    )
+
+    pick_stick_from_button_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, stick, from_button],
+            PickStickController,
+        )
+    )
+
+    stick_press_button_from_nothing_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, stick, button],
+            StickPressButtonController,
+        )
+    )
+
+    stick_press_button_from_button_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, stick, button, from_button],
+            StickPressButtonController,
+        )
+    )
+
+    robot_place_stick_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, stick],
+            PlaceStickController,
+        )
+    )
+
+    return {
+        "robot_press_button_from_nothing": robot_press_button_from_nothing_controller,
+        "robot_press_button_from_button": robot_press_button_from_button_controller,
+        "pick_stick_from_nothing": pick_stick_from_nothing_controller,
+        "pick_stick_from_button": pick_stick_from_button_controller,
+        "stick_press_button_from_nothing": stick_press_button_from_nothing_controller,
+        "stick_press_button_from_button": stick_press_button_from_button_controller,
+        "robot_place_stick": robot_place_stick_controller,
+    }
