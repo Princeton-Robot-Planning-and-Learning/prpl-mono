@@ -172,7 +172,6 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         self, name: str, pos: NDArray[np.float32], quat: NDArray[np.float32]
     ) -> None:
         """Set joint position and orientation in the environment."""
-
         assert self.sim is not None, "Simulation not initialized"
         joint_id = self.sim.model.get_joint_qpos_addr(name)
         self.sim.data.qpos[joint_id : joint_id + 7] = np.array(

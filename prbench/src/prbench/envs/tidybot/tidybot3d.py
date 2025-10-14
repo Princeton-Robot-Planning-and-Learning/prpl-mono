@@ -16,7 +16,7 @@ from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta, PRBenchEnvCo
 from prbench.envs.tidybot.base_env import (
     ObjectCentricDynamic3DRobotEnv,
 )
-from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
+from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures, MujocoRobotObjectType
 from prbench.envs.tidybot.objects import Cube, MujocoObject
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
@@ -189,6 +189,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         options: dict[str, Any] | None = None,
     ) -> tuple[ObjectCentricState, dict[str, Any]]:
         """Reset the environment and return object-centric observation."""
+
         # Create scene XML
         self._objects = []
         xml_string = self._create_scene_xml()
@@ -229,6 +230,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         obs = self._robot_env.get_obs()
         vec_obs = self._vectorize_observation(obs)
         object_centric_state = self._get_object_centric_state()
+        # TODO get rid of this
         return {"vec": vec_obs, "object_centric_state": object_centric_state}
 
     def _get_object_centric_state(self) -> ObjectCentricState:
@@ -238,6 +240,33 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         for obj in self._objects:
             obj_data = obj.get_object_centric_data()
             state_dict[obj.object_state_type] = obj_data
+        # Add robot into object-centric state.
+        robot = MujocoRobotObjectType("robot")
+        # Build this super explicitly, even though verbose, to be careful.
+        state_dict[robot] = {
+            "pos_base_x": self._robot_env.qpos_base[0],
+            "pos_base_y": self._robot_env.qpos_base[1],
+            "pos_base_rot": self._robot_env.qpos_base[2],
+            "pos_arm_joint1": self._robot_env.qpos_arm[0],
+            "pos_arm_joint2": self._robot_env.qpos_arm[1],
+            "pos_arm_joint3": self._robot_env.qpos_arm[2],
+            "pos_arm_joint4": self._robot_env.qpos_arm[3],
+            "pos_arm_joint5": self._robot_env.qpos_arm[4],
+            "pos_arm_joint6": self._robot_env.qpos_arm[5],
+            "pos_arm_joint7": self._robot_env.qpos_arm[6],
+            "pos_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+            "vel_base_x": self._robot_env.qvel_base[0],
+            "vel_base_y": self._robot_env.qvel_base[1],
+            "vel_base_rot": self._robot_env.qvel_base[2],
+            "vel_arm_joint1": self._robot_env.qvel_arm[0],
+            "vel_arm_joint2": self._robot_env.qvel_arm[1],
+            "vel_arm_joint3": self._robot_env.qvel_arm[2],
+            "vel_arm_joint4": self._robot_env.qvel_arm[3],
+            "vel_arm_joint5": self._robot_env.qvel_arm[4],
+            "vel_arm_joint6": self._robot_env.qvel_arm[5],
+            "vel_arm_joint7": self._robot_env.qvel_arm[6],
+            "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+        }
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
     def step(
