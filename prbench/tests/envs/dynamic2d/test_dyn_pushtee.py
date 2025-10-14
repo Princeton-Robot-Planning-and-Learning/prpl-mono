@@ -252,9 +252,6 @@ def test_dyn_pusht_resetable_pickle():
 
     # Replay all actions and verify observations/rewards
     for i, prev_obs in enumerate(expected_observations):
-        # if i > 400:
-        #     # Step after 400 hard to use point query
-        #     break
         obj_centric_obs = env.unwrapped._object_centric_env._get_obs()
         tblock_x = obj_centric_obs.get(env.unwrapped._object_centric_env._tblock, 'x')
         tblock_y = obj_centric_obs.get(env.unwrapped._object_centric_env._tblock, 'y')
@@ -287,7 +284,7 @@ def test_dyn_pusht_resetable_pickle():
                 robot_body,
                 robot_shape,
             )
-            # Set up collision handlers
+            # NOTE: Reset up collision handlers
             env.unwrapped._object_centric_env.pymunk_space.on_collision(
                 STATIC_COLLISION_TYPE,
                 ROBOT_COLLISION_TYPE,
@@ -312,18 +309,9 @@ def test_dyn_pusht_resetable_pickle():
             obj_centric_obs = env.unwrapped._object_centric_env._get_obs()
             obs = env.observation_space.vectorize(obj_centric_obs)
 
-        if not np.allclose(
+        assert np.allclose(
             obs, prev_obs, atol=1e-4
-        ):
-            print(f"Step {i} observation mismatch in {demo_path} before action")
-            print(f"Max abs diff: {np.max(np.abs(obs - prev_obs))}")
-            obj_centric_obs = env.observation_space.devectorize(obs)
-            obj_centric_expected = env.observation_space.devectorize(prev_obs)
-            for obj in obj_centric_obs.data:
-                feature_next = obj_centric_obs.data[obj]
-                feature_expected = obj_centric_expected.data[obj]
-                if not np.allclose(feature_next, feature_expected, atol=1e-4):
-                    print(f"Object {obj} mismatch:")
+        ), f"Reset observation mismatch at step {i} in {demo_path}"
 
         action = actions[i]
         obs_next, reward, terminated, truncated, _ = env.step(action)
@@ -332,18 +320,9 @@ def test_dyn_pusht_resetable_pickle():
 
         # # Check observation matches
         expected_obs = expected_observations[i + 1]
-        if not np.allclose(
+        assert np.allclose(
             obs_next, expected_obs, atol=1e-4
-        ):
-            print(f"Step {i} observation mismatch in {demo_path}")
-            print(f"Max abs diff: {np.max(np.abs(obs_next - expected_obs))}")
-            obj_centric_obs_next = env.observation_space.devectorize(obs_next)
-            obj_centric_expected = env.observation_space.devectorize(expected_obs)
-            for obj in obj_centric_obs_next.data:
-                feature_next = obj_centric_obs_next.data[obj]
-                feature_expected = obj_centric_expected.data[obj]
-                if not np.allclose(feature_next, feature_expected, atol=1e-4):
-                    print(f"Object {obj} mismatch:")
+        ), f"Step {i} observation mismatch in {demo_path}"
 
         # Check reward matches (if available)
         if expected_rewards is not None and i < len(expected_rewards):
