@@ -228,8 +228,10 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
         assert self.ctrl_base is not None, "Base ctrl must be initialized first"
 
         # Sample random values within limits
-        num_joints: int = len(self.qpos_arm)
-        theta: NDArray[np.float64] = self.np_random.uniform(-np.pi, np.pi, num_joints)
+        assert self.qpos_arm is not None
+        assert self.ctrl_arm is not None
+        num_joints: int = self.qpos_arm.shape[0]
+        theta = self.np_random.uniform(-np.pi, np.pi, num_joints).astype(np.float64)
         # Set the arm joint positions in the simulation
         self.qpos_arm[:] = theta
         self.ctrl_arm[:] = theta
