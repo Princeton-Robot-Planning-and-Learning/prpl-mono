@@ -29,7 +29,7 @@ def test_straight_base_motion():
     robot_y = state.get(robot, "pos_base_y")
     robot_rot = state.get(robot, "pos_base_rot")
 
-    # Actions are absolute positions, but we don't want to move too much at once.
+    # Actions are delta positions.
     max_magnitude = 1e-2
     dx = target_x - robot_x
     dy = target_y - robot_y
@@ -38,9 +38,7 @@ def test_straight_base_motion():
     plan = []
     for i in range(1, steps + 1):
         frac = i / steps
-        next_x = robot_x + frac * dx
-        next_y = robot_y + frac * dy
-        plan.append(np.array([next_x, next_y, robot_rot] + [0.0] * 8))
+        plan.append(np.array([frac * dx, frac * dy, robot_rot] + [0.0] * 8))
 
     # Execute the plan.
     for action in plan:

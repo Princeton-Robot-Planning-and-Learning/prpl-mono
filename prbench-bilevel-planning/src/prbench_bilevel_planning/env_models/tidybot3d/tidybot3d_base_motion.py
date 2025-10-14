@@ -13,10 +13,10 @@ from bilevel_planning.structs import (
 )
 from gymnasium.spaces import Space
 from numpy.typing import NDArray
-from prbench.envs.tidybot.mujoco_utils import TidyBot3DRobotActionSpace
 from prbench.envs.tidybot.object_types import MujocoObjectType, MujocoRobotObjectType
 from prbench.envs.tidybot.tidybot3d import ObjectCentricTidyBot3DEnv
 from prbench.envs.tidybot.tidybot_rewards import BaseMotionRewardCalculator
+from prbench.envs.tidybot.tidybot_robot_env import TidyBot3DRobotActionSpace
 from relational_structs import (
     Array,
     GroundAtom,
@@ -43,6 +43,9 @@ def create_bilevel_planning_models(
         render_images=False,
     )
 
+    # Need to call reset to initialize the qpos, qvel.
+    sim.reset()
+
     # Convert observations into states. The important thing is that states are hashable.
     def observation_to_state(o: NDArray[np.float32]) -> ObjectCentricState:
         """Convert the vectors back into (hashable) object-centric states."""
@@ -55,7 +58,6 @@ def create_bilevel_planning_models(
     ) -> ObjectCentricState:
         """Simulate the action."""
         state = x.copy()
-        # TODO need to implement this.
         sim.set_state(state)
         obs, _, _, _, _ = sim.step(u)
         return obs.copy()
@@ -115,7 +117,7 @@ def create_bilevel_planning_models(
     ):
         """Controller for moving directly to the target."""
 
-        max_magnitude: ClassVar[float] = 1e-2
+        max_magnitude: ClassVar[float] = 1e-1
 
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
@@ -145,7 +147,6 @@ def create_bilevel_planning_models(
             target_y = state.get(target, "y")
             robot_x = state.get(robot, "pos_base_x")
             robot_y = state.get(robot, "pos_base_y")
-            robot_rot = state.get(robot, "pos_base_rot")
             total_dx = target_x - robot_x
             total_dy = target_y - robot_y
             total_distance = (total_dx**2 + total_dy**2) ** 0.5
@@ -155,9 +156,7 @@ def create_bilevel_planning_models(
                 distance_to_move = self.max_magnitude
             dx = distance_to_move * total_dx / total_distance
             dy = distance_to_move * total_dy / total_distance
-            next_x = robot_x + dx
-            next_y = robot_y + dy
-            act = np.array([next_x, next_y, robot_rot] + [0.0] * 8)
+            act = np.array([dx, dy, 0] + [0.0] * 8)
             return act
 
         def observe(self, x: ObjectCentricState) -> None:
