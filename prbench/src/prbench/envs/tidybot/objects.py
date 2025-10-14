@@ -123,7 +123,7 @@ class MujocoObject:
 
         Args:
             position: New position as [x, y, z]
-            quaternion: New orientation as quaternion [x, y, z, w]
+            quaternion: New orientation as quaternion [w, x, y, z]
 
         Raises:
             ValueError: If environment is not set

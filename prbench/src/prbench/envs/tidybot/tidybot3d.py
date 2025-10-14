@@ -261,10 +261,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
             obj = state.get_object_from_name(mujoco_object.name)
             position = [state.get(obj, "x"), state.get(obj, "y"), state.get(obj, "z")]
             orientation = [
+                state.get(obj, "qw"),
                 state.get(obj, "qx"),
                 state.get(obj, "qy"),
                 state.get(obj, "qz"),
-                state.get(obj, "qw"),
             ]
             mujoco_object.set_pose(position, orientation)
             linear_velocity = [

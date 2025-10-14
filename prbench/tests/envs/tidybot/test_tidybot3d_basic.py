@@ -175,6 +175,7 @@ def test_tidybot3d_env_set_state():
             env._get_object_centric_state()  # pylint: disable=protected-access
         )
         assert state.allclose(recovered_state)
+
     # Now also try resetting to an intermediate state (with nonzero velocity) and make
     # sure that the trajectory is still reproducible from there.
     # TODO
