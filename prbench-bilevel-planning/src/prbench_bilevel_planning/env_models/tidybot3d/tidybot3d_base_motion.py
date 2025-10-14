@@ -55,7 +55,8 @@ def create_bilevel_planning_models(
     ) -> ObjectCentricState:
         """Simulate the action."""
         state = x.copy()
-        sim.reset(options={"init_state": state})
+        # TODO need to implement this.
+        sim.set_state(state)
         obs, _, _, _, _ = sim.step(u)
         return obs.copy()
 
@@ -127,7 +128,7 @@ def create_bilevel_planning_models(
             return tuple()
 
         def reset(self, x: ObjectCentricState, params: Any) -> None:
-            self._last_state = None
+            self._last_state = x
 
         def terminated(self) -> bool:
             assert self._last_state is not None
@@ -156,7 +157,8 @@ def create_bilevel_planning_models(
             dy = distance_to_move * total_dy / total_distance
             next_x = robot_x + dx
             next_y = robot_y + dy
-            return np.array([next_x, next_y, robot_rot] + [0.0] * 8)
+            act = np.array([next_x, next_y, robot_rot] + [0.0] * 8)
+            return act
 
         def observe(self, x: ObjectCentricState) -> None:
             self._last_state = x
