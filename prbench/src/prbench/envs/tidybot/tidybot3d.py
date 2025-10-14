@@ -214,6 +214,71 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
         return self._get_current_state(), {}
 
+    def set_state(self, state: ObjectCentricState) -> None:
+        """Set the environment to the current state.
+
+        This is useful for planning baselines.
+        """
+        # Reset the robot.
+        robot_obj = state.get_object_from_name("robot")
+
+        # Reset the robot base position.
+        robot_base_pos = [
+            state.get(robot_obj, "pos_base_x"),
+            state.get(robot_obj, "pos_base_y"),
+            state.get(robot_obj, "pos_base_rot"),
+        ]
+        assert self._robot_env.qpos_base is not None
+        self._robot_env.qpos_base[:] = robot_base_pos
+
+        # Reset the robot arm position.
+        robot_arm_pos = [state.get(robot_obj, f"pos_arm_joint{i}") for i in range(1, 8)]
+        assert self._robot_env.qpos_arm is not None
+        self._robot_env.qpos_arm[:] = robot_arm_pos
+
+        # NOTE: gripper position not yet implemented.
+
+        # Reset the robot base velocity.
+        robot_base_vel = [
+            state.get(robot_obj, "vel_base_x"),
+            state.get(robot_obj, "vel_base_y"),
+            state.get(robot_obj, "vel_base_rot"),
+        ]
+        assert self._robot_env.qvel_base is not None
+        self._robot_env.qvel_base[:] = robot_base_vel
+
+        # Reset the robot arm velocity.
+        robot_arm_vel = [state.get(robot_obj, f"vel_arm_joint{i}") for i in range(1, 8)]
+        assert self._robot_env.qvel_arm is not None
+        self._robot_env.qvel_arm[:] = robot_arm_vel
+
+        # NOTE: gripper velocity not yet implemented.
+
+        # TODO: check if ctrl_base and ctrl_arm need to be updated
+
+        # Reset the objects.
+        for mujoco_object in self._objects:
+            obj = state.get_object_from_name(mujoco_object.name)
+            position = [state.get(obj, "x"), state.get(obj, "y"), state.get(obj, "z")]
+            orientation = [
+                state.get(obj, "qx"),
+                state.get(obj, "qy"),
+                state.get(obj, "qz"),
+                state.get(obj, "qw"),
+            ]
+            mujoco_object.set_pose(position, orientation)
+            linear_velocity = [
+                state.get(obj, "vx"),
+                state.get(obj, "vy"),
+                state.get(obj, "vz"),
+            ]
+            angular_velocity = [
+                state.get(obj, "wx"),
+                state.get(obj, "wy"),
+                state.get(obj, "wz"),
+            ]
+            mujoco_object.set_velocity(linear_velocity, angular_velocity)
+
     def _visualize_image_in_window(
         self, image: NDArray[np.uint8], window_name: str
     ) -> None:
