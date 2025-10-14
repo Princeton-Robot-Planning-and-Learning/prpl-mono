@@ -182,7 +182,6 @@ def test_tidybot3d_env_set_state():
     env.set_state(states[1])
     for i in range(start_idx, len(actions)):
         recovered_state, _, _, _, _ = env.step(actions[i])
-        # TODO: this is failing due to small differences...
         assert states[i + 1].allclose(recovered_state)
 
     env.close()
