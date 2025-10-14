@@ -6,13 +6,23 @@ MujocoObjectTypeFeatures: dict[Type, list[str]] = {}
 
 MujocoObjectType = Type("mujoco_object")
 MujocoObjectTypeFeatures[MujocoObjectType] = [
+    # Position.
     "x",
     "y",
     "z",
+    # Orientation (quaternion).
     "qw",
     "qx",
     "qy",
     "qz",
+    # Linear velocity.
+    "vx",
+    "vy",
+    "vz",
+    # Angular velocity.
+    "wx",
+    "wy",
+    "wz",
 ]
 
 MujocoRobotObjectType = Type("mujoco_robot")

@@ -48,6 +48,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         seed: int | None = None,
         scene_type: str = "ground",
         num_objects: int = 3,
+        act_delta: bool = True,
         render_images: bool = True,
         show_images: bool = False,
     ) -> None:
@@ -64,6 +65,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         # Initialize TidyBot-specific components
         self._robot_env = TidyBotRobotEnv(
             control_frequency=config.control_frequency,
+            act_delta=act_delta,
             horizon=config.horizon,
             camera_names=self.camera_names,
             camera_width=config.camera_width,
@@ -213,6 +215,69 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         self._current_state = self._get_object_centric_state()
 
         return self._get_current_state(), {}
+
+    def set_state(self, state: ObjectCentricState) -> None:
+        """Set the environment to the current state.
+
+        This is useful for planning baselines.
+        """
+        # Reset the robot.
+        robot_obj = state.get_object_from_name("robot")
+
+        # Reset the robot base position.
+        robot_base_pos = [
+            state.get(robot_obj, "pos_base_x"),
+            state.get(robot_obj, "pos_base_y"),
+            state.get(robot_obj, "pos_base_rot"),
+        ]
+        assert self._robot_env.qpos_base is not None
+        self._robot_env.qpos_base[:] = robot_base_pos
+
+        # Reset the robot arm position.
+        robot_arm_pos = [state.get(robot_obj, f"pos_arm_joint{i}") for i in range(1, 8)]
+        assert self._robot_env.qpos_arm is not None
+        self._robot_env.qpos_arm[:] = robot_arm_pos
+
+        # NOTE: gripper position not yet implemented.
+
+        # Reset the robot base velocity.
+        robot_base_vel = [
+            state.get(robot_obj, "vel_base_x"),
+            state.get(robot_obj, "vel_base_y"),
+            state.get(robot_obj, "vel_base_rot"),
+        ]
+        assert self._robot_env.qvel_base is not None
+        self._robot_env.qvel_base[:] = robot_base_vel
+
+        # Reset the robot arm velocity.
+        robot_arm_vel = [state.get(robot_obj, f"vel_arm_joint{i}") for i in range(1, 8)]
+        assert self._robot_env.qvel_arm is not None
+        self._robot_env.qvel_arm[:] = robot_arm_vel
+
+        # NOTE: gripper velocity not yet implemented.
+
+        # Reset the objects.
+        for mujoco_object in self._objects:
+            obj = state.get_object_from_name(mujoco_object.name)
+            position = [state.get(obj, "x"), state.get(obj, "y"), state.get(obj, "z")]
+            orientation = [
+                state.get(obj, "qw"),
+                state.get(obj, "qx"),
+                state.get(obj, "qy"),
+                state.get(obj, "qz"),
+            ]
+            mujoco_object.set_pose(position, orientation)
+            linear_velocity = [
+                state.get(obj, "vx"),
+                state.get(obj, "vy"),
+                state.get(obj, "vz"),
+            ]
+            angular_velocity = [
+                state.get(obj, "wx"),
+                state.get(obj, "wy"),
+                state.get(obj, "wz"),
+            ]
+            mujoco_object.set_velocity(linear_velocity, angular_velocity)
 
     def _visualize_image_in_window(
         self, image: NDArray[np.uint8], window_name: str

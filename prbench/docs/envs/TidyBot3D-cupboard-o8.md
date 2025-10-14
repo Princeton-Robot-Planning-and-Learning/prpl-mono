@@ -23,6 +23,28 @@ The robot can control:
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |
 | --- | --- | --- |
+| 0 | robot | pos_base_x |
+| 1 | robot | pos_base_y |
+| 2 | robot | pos_base_rot |
+| 3 | robot | pos_arm_joint1 |
+| 4 | robot | pos_arm_joint2 |
+| 5 | robot | pos_arm_joint3 |
+| 6 | robot | pos_arm_joint4 |
+| 7 | robot | pos_arm_joint5 |
+| 8 | robot | pos_arm_joint6 |
+| 9 | robot | pos_arm_joint7 |
+| 10 | robot | pos_gripper |
+| 11 | robot | vel_base_x |
+| 12 | robot | vel_base_y |
+| 13 | robot | vel_base_rot |
+| 14 | robot | vel_arm_joint1 |
+| 15 | robot | vel_arm_joint2 |
+| 16 | robot | vel_arm_joint3 |
+| 17 | robot | vel_arm_joint4 |
+| 18 | robot | vel_arm_joint5 |
+| 19 | robot | vel_arm_joint6 |
+| 20 | robot | vel_arm_joint7 |
+| 21 | robot | vel_gripper |
 
 
 ### Action Space
