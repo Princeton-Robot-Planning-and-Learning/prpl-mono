@@ -254,8 +254,6 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
         # NOTE: gripper velocity not yet implemented.
 
-        # TODO: check if ctrl_base and ctrl_arm need to be updated
-
         # Reset the objects.
         for mujoco_object in self._objects:
             obj = state.get_object_from_name(mujoco_object.name)
