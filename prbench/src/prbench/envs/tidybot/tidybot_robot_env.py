@@ -304,9 +304,9 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
             abs_action = curr_qpos + action[:-1]
             # Add gripper action
             abs_action = np.concatenate([abs_action, [action[-1]]], -1)
-            super().step(abs_action)
+            return super().step(abs_action)
         else:  # Use action as-is.
-            super().step(action)
+            return super().step(action)
 
     def reward(self, obs: MjObs) -> float:
         """Compute the reward from an observation.
