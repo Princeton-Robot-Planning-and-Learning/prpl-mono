@@ -228,8 +228,8 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
         assert self.ctrl_base is not None, "Base ctrl must be initialized first"
 
         # Sample random values within limits
-        num_joints = len(self.qpos_arm)
-        theta = self.np_random.uniform(-np.pi, np.pi, num_joints)
+        num_joints: int = len(self.qpos_arm)
+        theta: NDArray[np.float64] = self.np_random.uniform(-np.pi, np.pi, num_joints)
         # Set the arm joint positions in the simulation
         self.qpos_arm[:] = theta
         self.ctrl_arm[:] = theta
@@ -305,8 +305,8 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
             # Add gripper action
             abs_action = np.concatenate([abs_action, [action[-1]]], -1)
             return super().step(abs_action)
-        else:  # Use action as-is.
-            return super().step(action)
+        # Use action as-is.
+        return super().step(action)
 
     def reward(self, obs: MjObs) -> float:
         """Compute the reward from an observation.
