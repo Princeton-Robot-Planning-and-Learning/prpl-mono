@@ -100,13 +100,17 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
             model_file = "cupboard_scene.xml"
         elif self.scene_type == "table":
             model_file = "table_scene.xml"
-        else:
+        elif self.scene_type == "ground":
             model_file = "ground_scene.xml"
+        elif self.scene_type == "base_motion":
+            model_file = "base_motion.xml"
+        else:
+            raise ValueError(f"Unrecognized scene type: {self.scene_type}")
         # Construct absolute path to model file
         absolute_model_path = model_base_path / model_file
 
         # --- Dynamic object insertion logic ---
-        needs_dynamic_objects = self.scene_type in ["ground", "table"]
+        needs_dynamic_objects = self.scene_type in ["ground", "table", "base_motion"]
         if needs_dynamic_objects:
             tree = ET.parse(str(absolute_model_path))
             root = tree.getroot()
@@ -298,18 +302,6 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
     def set_render_camera(self, camera_name: str | None) -> None:
         """Set the camera to use for rendering."""
         self._render_camera_name = camera_name
-
-    @classmethod
-    def get_available_environments(cls) -> list[str]:
-        """Get list of available TidyBot environment IDs (policy-agnostic)."""
-        scene_configs = [
-            ("ground", [3, 5, 7]),
-        ]
-        env_ids = []
-        for scene_type, object_counts in scene_configs:
-            for num_objects in object_counts:
-                env_ids.append(f"prbench/TidyBot3D-{scene_type}-o{num_objects}-v0")
-        return env_ids
 
 
 class TidyBot3DEnv(ConstantObjectPRBenchEnv):
