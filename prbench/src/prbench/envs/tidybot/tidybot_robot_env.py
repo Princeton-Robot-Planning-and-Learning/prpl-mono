@@ -194,6 +194,7 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
 
         # Randomize the base pose of the robot in the sim
         self._randomize_base_pose()
+        self._randomize_arm_pose()
 
         return self.get_obs(), {}
 
@@ -216,6 +217,22 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
         # Set the base position and orientation in the simulation
         self.qpos_base[:] = [x, y, theta]
         self.ctrl_base[:] = [x, y, theta]
+        self.sim.forward()  # Update the simulation state
+
+    def _randomize_arm_pose(self) -> None:
+        """Randomize the arm pose of the robot within defined limits."""
+        assert (
+            self.sim is not None
+        ), "Simulation must be initialized before randomizing base pose."
+        assert self.qpos_base is not None, "Base qpos must be initialized first"
+        assert self.ctrl_base is not None, "Base ctrl must be initialized first"
+
+        # Sample random values within limits
+        num_joints = len(self.qpos_arm)
+        theta = self.np_random.uniform(-np.pi, np.pi, num_joints)
+        # Set the arm joint positions in the simulation
+        self.qpos_arm[:] = theta
+        self.ctrl_arm[:] = theta
         self.sim.forward()  # Update the simulation state
 
     def _insert_robot_into_xml(self, xml_string: str) -> str:
