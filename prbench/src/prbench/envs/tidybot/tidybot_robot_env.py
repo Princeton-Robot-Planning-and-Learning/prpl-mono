@@ -8,8 +8,26 @@ from typing import Any, Optional
 
 import numpy as np
 from numpy.typing import NDArray
+from relational_structs import Array
 
+from prbench.core import RobotActionSpace
 from prbench.envs.tidybot.mujoco_utils import MjObs, MujocoEnv
+
+
+class TidyBot3DRobotActionSpace(RobotActionSpace):
+    """An action in a MuJoCo environment; used to set sim.data.ctrl in MuJoCo."""
+
+    def __init__(self) -> None:
+        # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
+        low = np.array(
+            [-0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, 0.0]
+        )
+        high = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.0])
+        super().__init__(low, high)
+
+    def create_markdown_description(self) -> str:
+        """Create a human-readable markdown description of this space."""
+        return """Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)"""
 
 
 class TidyBotRobotEnv(MujocoEnv, abc.ABC):
@@ -21,6 +39,7 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
     def __init__(
         self,
         control_frequency: float,
+        act_delta: bool = True,
         horizon: int = 1000,
         camera_names: Optional[list[str]] = None,
         camera_width: int = 640,
@@ -44,6 +63,8 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
             seed=seed,
             show_viewer=show_viewer,
         )
+
+        self.act_delta = act_delta
 
         # Robot state/actuator references (initialized in _setup_robot_references)
         self.qpos_base: Optional[NDArray[np.float64]] = None
@@ -258,6 +279,17 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
 
         # Return the merged XML as string
         return ET.tostring(input_root, encoding="unicode")
+
+    def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
+        if self.act_delta:  # Interpret action as delta.
+            # Compute absolute joint action.
+            curr_qpos = np.concatenate([self.qpos_base, self.qpos_arm], -1)
+            abs_action = curr_qpos + action[:-1]
+            # Add gripper action
+            abs_action = np.concatenate([abs_action, [action[-1]]], -1)
+            super().step(abs_action)
+        else:  # Use action as-is.
+            super().step(action)
 
     def reward(self, obs: MjObs) -> float:
         """Compute the reward from an observation.

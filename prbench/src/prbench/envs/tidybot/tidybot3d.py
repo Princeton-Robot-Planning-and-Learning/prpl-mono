@@ -48,6 +48,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         seed: int | None = None,
         scene_type: str = "ground",
         num_objects: int = 3,
+        act_delta: bool = True,
         render_images: bool = True,
         show_images: bool = False,
     ) -> None:
@@ -64,6 +65,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         # Initialize TidyBot-specific components
         self._robot_env = TidyBotRobotEnv(
             control_frequency=config.control_frequency,
+            act_delta=act_delta,
             horizon=config.horizon,
             camera_names=self.camera_names,
             camera_width=config.camera_width,

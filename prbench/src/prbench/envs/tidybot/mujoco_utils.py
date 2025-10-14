@@ -22,8 +22,6 @@ import numpy as np
 from numpy.typing import NDArray
 from relational_structs import Array
 
-from prbench.core import RobotActionSpace
-
 # This value is then used by the physics engine to determine how much time
 # to simulate for each step.
 SIMULATION_TIMESTEP = 0.002  # (in seconds)
@@ -57,22 +55,6 @@ _MjSim_render_lock = Lock()
 
 
 MjObs: TypeAlias = dict[str, NDArray[Any]]
-
-
-class TidyBot3DRobotActionSpace(RobotActionSpace):
-    """An action in a MuJoCo environment; used to set sim.data.ctrl in MuJoCo."""
-
-    def __init__(self) -> None:
-        # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
-        low = np.array(
-            [-1.0, -1.0, -np.pi, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.0]
-        )
-        high = np.array([1.0, 1.0, np.pi, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-        super().__init__(low, high)
-
-    def create_markdown_description(self) -> str:
-        """Create a human-readable markdown description of this space."""
-        return """Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)"""
 
 
 class MujocoEnv(gymnasium.Env[MjObs, Array]):
