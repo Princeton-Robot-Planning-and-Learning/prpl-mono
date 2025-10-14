@@ -3,7 +3,7 @@ step, and reset."""
 
 from relational_structs import ObjectCentricState
 
-from prbench.envs.tidybot.object_types import MujocoObjectType, MujocoObjectTypeFeatures
+from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
 from prbench.envs.tidybot.tidybot3d import ObjectCentricTidyBot3DEnv
 
 
@@ -145,11 +145,10 @@ def test_tidybot3d_env_object_centric_state():
         object_centric_state, ObjectCentricState
     ), "Object-centric state should be a dict"
     assert (
-        len(object_centric_state.data) == num_objects
+        len(object_centric_state.data) == num_objects + 1  # plus one for robot
     ), "Incorrect number of objects in state"
-    object_state_type = MujocoObjectType  # All objects should be of this type
-    for _, state in object_centric_state.data.items():
+    for obj, state in object_centric_state.data.items():
         assert len(state) == len(
-            MujocoObjectTypeFeatures[object_state_type]
+            MujocoObjectTypeFeatures[obj.type]
         ), "State vector length mismatch"
     env.close()

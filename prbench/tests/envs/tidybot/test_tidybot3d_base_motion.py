@@ -1,10 +1,11 @@
 """Tests for the TidyBot3D base motion environment."""
 
-from relational_structs.spaces import ObjectCentricBoxSpace
-import prbench
+import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
-import numpy as np
+from relational_structs.spaces import ObjectCentricBoxSpace
+
+import prbench
 
 
 def test_straight_base_motion():
@@ -27,12 +28,12 @@ def test_straight_base_motion():
     robot_x = state.get(robot, "pos_base_x")
     robot_y = state.get(robot, "pos_base_y")
     robot_rot = state.get(robot, "pos_base_rot")
-    
+
     # Actions are absolute positions, but we don't want to move too much at once.
     max_magnitude = 1e-2
     dx = target_x - robot_x
     dy = target_y - robot_y
-    distance = (dx ** 2 + dy ** 2) ** 0.5
+    distance = (dx**2 + dy**2) ** 0.5
     steps = int(distance / max_magnitude) + 1
     plan = []
     for i in range(1, steps + 1):
@@ -40,14 +41,13 @@ def test_straight_base_motion():
         next_x = robot_x + frac * dx
         next_y = robot_y + frac * dy
         plan.append(np.array([next_x, next_y, robot_rot] + [0.0] * 8))
-    
+
     # Execute the plan.
     for action in plan:
         _, _, done, _, _ = env.step(action)
         if done:  # success
             break
     else:
-        # TODO assert false
-        pass
+        assert False, "Failed to reach target"
 
     env.close()

@@ -9,14 +9,17 @@ from typing import Any
 import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
-from relational_structs import Array, ObjectCentricState
+from relational_structs import Array, Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta, PRBenchEnvConfig
 from prbench.envs.tidybot.base_env import (
     ObjectCentricDynamic3DRobotEnv,
 )
-from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures, MujocoRobotObjectType
+from prbench.envs.tidybot.object_types import (
+    MujocoObjectTypeFeatures,
+    MujocoRobotObjectType,
+)
 from prbench.envs.tidybot.objects import Cube, MujocoObject
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
@@ -123,12 +126,15 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                     ):
                         worldbody.remove(body)
                 # Insert new cubes
+                # For the base motion environment, make the cube small enough that the
+                # robot can roll over it without a collision.
+                cube_size = 0.01 if self.scene_type == "base_motion" else 0.02
                 for i in range(self.num_objects):
                     name = f"cube{i+1}"
                     # Create cube using the Cube class
                     obj = Cube(
                         name=name,
-                        size=0.02,
+                        size=cube_size,
                         rgba=".5 .7 .5 1",
                         mass=0.1,
                         env=self._robot_env,
@@ -230,7 +236,6 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         obs = self._robot_env.get_obs()
         vec_obs = self._vectorize_observation(obs)
         object_centric_state = self._get_object_centric_state()
-        # TODO get rid of this
         return {"vec": vec_obs, "object_centric_state": object_centric_state}
 
     def _get_object_centric_state(self) -> ObjectCentricState:
@@ -241,8 +246,12 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
             obj_data = obj.get_object_centric_data()
             state_dict[obj.object_state_type] = obj_data
         # Add robot into object-centric state.
-        robot = MujocoRobotObjectType("robot")
+        robot = Object("robot", MujocoRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
+        assert self._robot_env.qpos_base is not None
+        assert self._robot_env.qpos_arm is not None
+        assert self._robot_env.qvel_base is not None
+        assert self._robot_env.qvel_arm is not None
         state_dict[robot] = {
             "pos_base_x": self._robot_env.qpos_base[0],
             "pos_base_y": self._robot_env.qpos_base[1],
