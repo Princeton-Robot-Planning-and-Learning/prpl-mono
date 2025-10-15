@@ -11,7 +11,6 @@ from typing import (
     List,
     Optional,
     Sequence,
-    Set,
     Tuple,
     TypeVar,
     cast,
@@ -26,13 +25,6 @@ from numpy.typing import NDArray
 from prpl_llm_utils.cache import FilePretrainedLargeModelCache
 from prpl_llm_utils.models import OpenAIModel
 from relational_structs.objects import Object, Type
-
-from prbench_vlm_planning.structs import Dog
-
-
-def get_good_dogs_of_breed(dogs: Set[Dog], breed: str) -> Set:
-    """Get all good dogs of the specified breed."""
-    return {d for d in dogs if d.is_good() and d.breed == breed}
 
 
 def create_vlm_by_name(model_name: str):
