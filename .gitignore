@@ -7,6 +7,7 @@ logs
 llm_cache.db
 vlm_cache
 unit_test_videos
+prbench-vlm-planning/outputs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
