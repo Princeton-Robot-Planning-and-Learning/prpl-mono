@@ -2,7 +2,6 @@
 
 import logging
 import os
-from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -82,6 +81,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
         self._current_policy: Optional[Callable[[_O], _U]] = None
         self._plan_step = 0
         self._last_obs: Optional[_O] = None
+        self._next_action: Optional[_U] = None
 
         # Load base prompt from file
         self._base_prompt = self._load_base_prompt()
@@ -115,6 +115,9 @@ class VLMPlanningAgent(Agent[_O, _U]):
 
         if self._plan_step >= self._max_planning_horizon:
             raise VLMPlanningAgentFailure("Plan exhausted")
+
+        if self._next_action is None:
+            raise VLMPlanningAgentFailure("No next action available")
 
         self._plan_step += 1
         return self._next_action
@@ -181,7 +184,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
                 start_index = plan_prediction_txt.index("Plan:\n") + len("Plan:\n")
                 parsable_plan_prediction = plan_prediction_txt[start_index:]
             except ValueError:
-                raise ValueError("VLM output is badly formatted; cannot " "parse plan!")
+                raise ValueError("VLM output is badly formatted; cannot parse plan!")
             parsed_controller_plan = parse_model_output_into_option_plan(
                 parsable_plan_prediction,
                 set(state.data),

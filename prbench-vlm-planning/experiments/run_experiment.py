@@ -29,10 +29,12 @@ def _main(cfg: DictConfig) -> None:
     # Create the environment.
     prbench.register_all_environments()
     env = prbench.make(f"prbench/{cfg.env}")
-    assert hasattr(env.spec, "entry_point"), (
-        "We use the entry point to " "identify env class"
-    )
+    assert env.spec is not None, "Environment spec must not be None"
+    assert hasattr(
+        env.spec, "entry_point"
+    ), "We use the entry point to identify env class"
     entry_point = env.spec.entry_point
+    assert isinstance(entry_point, str), "Entry point must be a string"
     module_path = entry_point.split(":")[0]  # "prbench_envs.geom2d.motion2d"
     parts = module_path.split(".")
     env_class_name = parts[-2]  # "geom2d"

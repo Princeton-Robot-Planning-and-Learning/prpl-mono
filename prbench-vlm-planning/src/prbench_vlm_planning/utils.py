@@ -69,7 +69,7 @@ def parse_model_output_into_option_plan(
     ] = []
     # Setup dictionaries enabling us to easily map names to specific
     # Python objects during parsing.
-    option_name_to_option = {name: op for name, op in options.items()}
+    option_name_to_option = dict(options.items())
     type_name_to_type = {typ.name: typ for typ in types}
     obj_name_to_obj = {o.name: o for o in objects}
     options_str_list = model_prediction.split("\n")
@@ -203,7 +203,7 @@ def controller_and_param_plan_to_policy(
     queue = list(controller_and_param_plan)
 
     def _controller_and_params_policy(
-        obs: _O,
+        obs: _O,  # pylint: disable=unused-argument
     ) -> Tuple[GroundParameterizedController, Sequence[float]]:
         if not queue:
             raise Exception("Controller plan exhausted")
@@ -222,12 +222,12 @@ def option_policy_to_policy(
     ],
     max_horizon: Optional[int],
     observation_space: Any,
-) -> Callable[[_O], _U]:
+) -> Callable[[Any], Any]:
     """Create a policy that executes the given option policy."""
-    cur_option = None
+    cur_option: Optional[GroundParameterizedController] = None
     num_cur_option_steps = 0
 
-    def _policy(obs: _O) -> _U:
+    def _policy(obs: Any) -> Any:
         nonlocal cur_option, num_cur_option_steps
 
         # Convert observation to ObjectCentricState

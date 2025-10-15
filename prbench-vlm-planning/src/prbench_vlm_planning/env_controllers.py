@@ -1,9 +1,8 @@
 """Environment-specific controller loading utilities."""
 
 import importlib
-import inspect
 import logging
-from typing import Any, Optional, Set
+from typing import Any, Optional
 
 from bilevel_planning.structs import LiftedParameterizedController
 
@@ -73,54 +72,6 @@ def _import_lifted_controllers(
     except NotImplementedError as e:
         logging.error(f"{env_type}: {e}")
         raise
-    except ImportError as e:
-        logging.info(f"{env_type} controllers not available: {e}")
-        return None
-    except Exception as e:
-        logging.error(f"Error loading controllers from {module_path}: {e}")
-        return None
-
-
-def _import_all_controllers(module_path: str, env_type: str) -> Optional[Set[Any]]:
-    """Import all controller classes from a given module.
-
-    Args:
-        module_path: Python import path to the parameterized_skills module
-        env_type: Environment type name for logging
-
-    Returns:
-        Set with all controller classes, or None if import fails
-    """
-    try:
-        # Import the module
-        module = importlib.import_module(module_path)
-
-        # Check if base controller class is available
-        if Geom2dRobotController is None:
-            raise ImportError("Could not import Geom2dRobotController")
-
-        # Find all controller classes that are subclasses of Geom2dRobotController
-        controllers = set()
-        for name, obj in inspect.getmembers(module, inspect.isclass):
-            if not name.startswith("_"):
-                # Check if it's a subclass of Geom2dRobotController
-                if (
-                    Geom2dRobotController is not None
-                    and issubclass(obj, Geom2dRobotController)
-                    and obj != Geom2dRobotController
-                ):
-                    controllers.add(obj)
-
-        if controllers:
-            logging.info(
-                f"Found {len(controllers)} controllers for {env_type}: "
-                f"{[cls.__name__ for cls in controllers]}"
-            )
-            return controllers
-
-        logging.info(f"No controllers found in {module_path}")
-        return None
-
     except ImportError as e:
         logging.info(f"{env_type} controllers not available: {e}")
         return None
