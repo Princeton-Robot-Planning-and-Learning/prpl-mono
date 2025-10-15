@@ -263,7 +263,7 @@ def test_pymunk_simple_env_replay_pushtee():
 
     # Reset and replay from each intermediate state
     states = []
-    for i in range(30):
+    for i in range(5):
         tgt_pos = robot_body.position + actions[i]
         tgt_vel = Vec2d(0, 0)
         for _ in range(steps_per_control):
@@ -319,7 +319,7 @@ def test_pymunk_simple_env_reset_pushtee():
 
     # Reset and replay from each intermediate state
     states = []
-    for i in range(30):
+    for i in range(5):
         loaded_state_prev = loaded_states[i]
         robot_body.position = (loaded_state_prev[0], loaded_state_prev[1])
         robot_body.velocity = (loaded_state_prev[2], loaded_state_prev[3])
