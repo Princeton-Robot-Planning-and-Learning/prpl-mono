@@ -175,11 +175,17 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                 z = 0.44
                 pos = np.array([x, y, z])
             else:
-                # Randomize position within a reasonable range
-                # for the ground environment
-                x = round(self.np_random.uniform(0.4, 0.8), 3)
-                y = round(self.np_random.uniform(-0.3, 0.3), 3)
-                z = 0.02
+                # Randomize position within a reasonable range, but make sure far
+                # enough from the robot.
+                assert self._robot_env.qpos_base is not None
+                robot_x, robot_y, _ = self._robot_env.qpos_base
+                while True:
+                    x = round(self.np_random.uniform(0.4, 0.8), 3)
+                    y = round(self.np_random.uniform(-0.3, 0.3), 3)
+                    if abs(x - robot_x) > 1e-1 or abs(y - robot_y) > 1e-1:
+                        break
+                cube_size = 0.01 if self.scene_type == "base_motion" else 0.02
+                z = cube_size
                 pos = np.array([x, y, z])
             # Randomize orientation around Z-axis (yaw)
             theta = self.np_random.uniform(-math.pi, math.pi)
