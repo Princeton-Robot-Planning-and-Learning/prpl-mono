@@ -230,7 +230,7 @@ class GroundPlaceOnTargetController(_GroundPlaceController):
 
 def create_lifted_controllers(
     action_space: CRVRobotActionSpace,
-    init_constant_state: ObjectCentricState = None,
+    init_constant_state: ObjectCentricState | None = None,
 ) -> dict[str, LiftedParameterizedController]:
     """Create lifted parameterized controllers for Obstruction2D.
 
@@ -240,6 +240,7 @@ def create_lifted_controllers(
     Returns:
         Dictionary mapping controller names to LiftedParameterizedController instances.
     """
+    del init_constant_state  # unused
 
     # Define params_space for controllers
     pick_params_space = Box(
