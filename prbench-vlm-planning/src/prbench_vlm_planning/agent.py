@@ -6,12 +6,9 @@ from typing import (
     Any,
     Callable,
     Collection,
-    Dict,
     Hashable,
-    List,
     Optional,
     Sequence,
-    Tuple,
     TypeVar,
     cast,
 )
@@ -153,7 +150,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
                 images = [pil_img]
 
         # Prepare prompt context
-        state = self._get_object_centric_state(obs)
+        state = self._observation_space.devectorize(obs)
         controller_str = self._get_controllers_str()
         goal_str = self._get_goal_str(info)
 
@@ -192,8 +189,8 @@ class VLMPlanningAgent(Agent[_O, _U]):
                 self._controllers,
                 parse_continuous_params=True,
             )
-            controller_and_params_plan: List[
-                Tuple[GroundParameterizedController, Sequence[float]]
+            controller_and_params_plan: list[
+                tuple[GroundParameterizedController, Sequence[float]]
             ] = []
             for controller, objs, params in parsed_controller_plan:
                 logging.info(
@@ -223,18 +220,6 @@ class VLMPlanningAgent(Agent[_O, _U]):
         )
         return controllers_str
 
-    def _get_object_centric_state(self, obs: _O) -> ObjectCentricState:
-        """Get string description of objects in the scene."""
-
-        def observation_to_state(o: NDArray[np.float32]):
-            """Convert the vectors back into (hashable) object-centric states."""
-            return self._observation_space.devectorize(o)
-
-        # Convert observation to state using observation space
-        # Cast obs to the expected NDArray type for observation_to_state
-        state = observation_to_state(cast(NDArray[np.float32], obs))
-        return state
-
     def _get_goal_str(
         self, info: dict[str, Any]  # pylint: disable=unused-argument
     ) -> str:
@@ -250,7 +235,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
             types_str = " ".join(t.name for t in sorted(types))
         # Case 2: type hierarchy.
         else:
-            parent_to_children_types: Dict[Type, List[Type]] = {t: [] for t in types}
+            parent_to_children_types: dict[Type, list[Type]] = {t: [] for t in types}
             for t in sorted(types):
                 if t.parent:
                     parent_to_children_types[t.parent].append(t)

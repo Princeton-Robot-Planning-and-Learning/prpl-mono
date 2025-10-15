@@ -22,7 +22,7 @@ Please return a plan that achieves the provided goal from an initial state descr
 
 Please provide your output in the following format (excluding the angle brackets and ellipsis, which are just for illustration purposes).
 Be sure to include the parens '(' and ')', as well as square brackets '[' and ']' even if there are no objects/continuous parameters.
-Do not bold or italicize or otherwise apply any extra formaating to the plan text. Do not provide any numbers for steps in the plan, or
+Do not bold or italicize or otherwise apply any extra formating to the plan text. Do not provide any numbers for steps in the plan, or
 any reasoning for each step below the 'Plan:' heading:
 <Explanation of scene + your reasoning>
 Plan:

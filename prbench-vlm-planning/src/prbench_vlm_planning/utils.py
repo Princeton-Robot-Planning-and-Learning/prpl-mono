@@ -6,12 +6,9 @@ from typing import (
     Any,
     Callable,
     Collection,
-    Dict,
     Hashable,
-    List,
     Optional,
     Sequence,
-    Tuple,
     TypeVar,
     cast,
 )
@@ -45,9 +42,9 @@ def parse_model_output_into_option_plan(
     model_prediction: str,
     objects: Collection[Object],
     types: Collection[Type],
-    options: Dict[str, LiftedParameterizedController],
+    options: dict[str, LiftedParameterizedController],
     parse_continuous_params: bool,
-) -> List[Tuple[LiftedParameterizedController, Sequence[Object], Sequence[float]]]:
+) -> list[tuple[LiftedParameterizedController, Sequence[Object], Sequence[float]]]:
     """Assuming text for an option plan that is predicted as text by a large model,
     parse it into a sequence of ParameterizedOptions coupled with a list of objects and
     continuous parameters that will be used to ground the ParameterizedOption.
@@ -56,8 +53,8 @@ def parse_model_output_into_option_plan(
     option_name(obj0:type0, obj1:type1,...)[continuous_param0,
     continuous_param1, ...].
     """
-    option_plan: List[
-        Tuple[LiftedParameterizedController, Sequence[Object], Sequence[float]]
+    option_plan: list[
+        tuple[LiftedParameterizedController, Sequence[Object], Sequence[float]]
     ] = []
     # Setup dictionaries enabling us to easily map names to specific
     # Python objects during parsing.
@@ -192,8 +189,8 @@ _U = TypeVar("_U", bound=Hashable)
 
 
 def controller_and_param_plan_to_policy(
-    controller_and_param_plan: List[
-        Tuple[GroundParameterizedController, Sequence[float]]
+    controller_and_param_plan: list[
+        tuple[GroundParameterizedController, Sequence[float]]
     ],
     max_horizon: int,
     observation_space: Any,
@@ -203,7 +200,7 @@ def controller_and_param_plan_to_policy(
 
     def _controller_and_params_policy(
         obs: _O,  # pylint: disable=unused-argument
-    ) -> Tuple[GroundParameterizedController, Sequence[float]]:
+    ) -> tuple[GroundParameterizedController, Sequence[float]]:
         if not queue:
             raise Exception("Controller plan exhausted")
         controller, params = queue.pop(0)
@@ -217,7 +214,7 @@ def controller_and_param_plan_to_policy(
 
 def option_policy_to_policy(
     option_policy: Callable[
-        [_O], Tuple[GroundParameterizedController, Sequence[float]]
+        [_O], tuple[GroundParameterizedController, Sequence[float]]
     ],
     max_horizon: Optional[int],
     observation_space: Any,
