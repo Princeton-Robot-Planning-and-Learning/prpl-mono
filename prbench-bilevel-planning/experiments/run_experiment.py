@@ -104,15 +104,22 @@ def _run_single_episode_evaluation(
         try:
             agent.reset(obs, info)
         except AgentFailure:
-            logging.info("Agent failed to find any plan.")
+            logging.info("Agent failed during reset().")
             planning_failed = True
     planning_time += result["time"]
     if planning_failed:
         return {"success": False, "steps": steps, "planning_time": planning_time}
     for _ in range(max_eval_steps):
-        with timer() as result:
-            action = agent.step()
+        step_failed = False
+        try:
+            with timer() as result:
+                action = agent.step()
+        except AgentFailure:
+            logging.info("Agent failed during step().")
+            step_failed = True
         planning_time += result["time"]
+        if step_failed:
+            return {"success": False, "steps": steps, "planning_time": planning_time}
         obs, rew, done, truncated, info = env.step(action)
         reward = float(rew)
         assert not truncated

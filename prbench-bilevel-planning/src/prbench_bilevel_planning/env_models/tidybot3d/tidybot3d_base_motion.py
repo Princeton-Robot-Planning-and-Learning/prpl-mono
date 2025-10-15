@@ -86,7 +86,8 @@ def create_bilevel_planning_models(
         dx = target_x - robot_x
         dy = target_y - robot_y
         distance = (dx**2 + dy**2) ** 0.5
-        if distance <= BaseMotionRewardCalculator.dist_thresh:
+        # Divide threshold by 2 to avoid possible numerical issues.
+        if distance <= BaseMotionRewardCalculator.dist_thresh / 2:
             atoms.add(GroundAtom(AtTarget, [robot, target]))
         objects = {robot, target}
         return RelationalAbstractState(atoms, objects)
