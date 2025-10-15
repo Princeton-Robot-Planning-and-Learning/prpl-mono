@@ -1,30 +1,43 @@
 """VLM planning agent for prbench environments."""
 
+import logging
 import os
 from pathlib import Path
-from typing import Any, Hashable, List, Optional, TypeVar, cast, Collection, \
-    Dict, Sequence, Tuple, Callable
-import logging
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Hashable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    cast,
+)
 
 import numpy as np
 import PIL.Image
+from bilevel_planning.structs import (
+    GroundParameterizedController,
+    LiftedParameterizedController,
+)
 from numpy.typing import NDArray
 from PIL import ImageDraw
 from prpl_utils.gym_agent import Agent
-from bilevel_planning.structs import LiftedParameterizedController, \
-    GroundParameterizedController
 from relational_structs import ObjectCentricState
 from relational_structs.objects import Type
 
 from prbench_vlm_planning.utils import (
+    controller_and_param_plan_to_policy,
     create_vlm_by_name,
     parse_model_output_into_option_plan,
-    controller_and_param_plan_to_policy
 )
-
 
 _O = TypeVar("_O", bound=Hashable)
 _U = TypeVar("_U", bound=Hashable)
+
 
 class VLMPlanningAgentFailure(BaseException):
     """Raised when the VLM planning agent fails."""
@@ -93,8 +106,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
             self._next_action = self._current_policy(obs)
         except Exception as e:
             logging.exception("Failed to generate initial plan")
-            raise VLMPlanningAgentFailure(f"Failed to generate initial plan: "\
-                                          f"{e}")
+            raise VLMPlanningAgentFailure(f"Failed to generate initial plan: " f"{e}")
 
     def _get_action(self) -> _U:
         """Get the next action from the current plan."""
@@ -106,15 +118,14 @@ class VLMPlanningAgent(Agent[_O, _U]):
 
         self._plan_step += 1
         return self._next_action
-    
+
     def update(self, obs: _O, reward: float, done: bool, info: dict[str, Any]) -> None:
         """Update the agent with the latest observation and reward."""
         super().update(obs, reward, done, info)
         assert self._current_policy is not None
         self._next_action = self._current_policy(obs)
 
-    def _generate_plan(self, obs: _O, info: dict[str, Any]
-                       ) -> Callable[[_O], _U]:
+    def _generate_plan(self, obs: _O, info: dict[str, Any]) -> Callable[[_O], _U]:
         """Generate a plan using the VLM."""
 
         # Store observation for goal derivation
@@ -147,8 +158,8 @@ class VLMPlanningAgent(Agent[_O, _U]):
             controllers=controller_str,
             typed_objects=set(state.data),
             type_hierarchy=self.create_types_str(set(state.type_features)),
-            init_state_str=state.pretty_str(), 
-            goal_str=goal_str
+            init_state_str=state.pretty_str(),
+            goal_str=goal_str,
         )
 
         # Query VLM
@@ -167,29 +178,33 @@ class VLMPlanningAgent(Agent[_O, _U]):
             # Parse the plan
             plan_prediction_txt = response.text
             try:
-                start_index = plan_prediction_txt.index("Plan:\n") +\
-                                len("Plan:\n")
+                start_index = plan_prediction_txt.index("Plan:\n") + len("Plan:\n")
                 parsable_plan_prediction = plan_prediction_txt[start_index:]
             except ValueError:
-                raise ValueError("VLM output is badly formatted; cannot "
-                                "parse plan!")
+                raise ValueError("VLM output is badly formatted; cannot " "parse plan!")
             parsed_controller_plan = parse_model_output_into_option_plan(
-                parsable_plan_prediction, set(state.data),
-                set(state.type_features), self._controllers,
-                parse_continuous_params=True
+                parsable_plan_prediction,
+                set(state.data),
+                set(state.type_features),
+                self._controllers,
+                parse_continuous_params=True,
             )
-            controller_and_params_plan: List[Tuple[GroundParameterizedController,
-                                                    Sequence[float]]] = []
+            controller_and_params_plan: List[
+                Tuple[GroundParameterizedController, Sequence[float]]
+            ] = []
             for controller, objs, params in parsed_controller_plan:
-                logging.info(f"Parsed option: {controller} with objects "
-                             f"{objs} and params {params}")
+                logging.info(
+                    f"Parsed option: {controller} with objects "
+                    f"{objs} and params {params}"
+                )
                 grounded_controller = controller.ground(objs)
                 controller_and_params_plan.append((grounded_controller, params))
-            
+
             policy = controller_and_param_plan_to_policy(
-                                            controller_and_params_plan,
-                                            self._max_planning_horizon,
-                                            self._observation_space)
+                controller_and_params_plan,
+                self._max_planning_horizon,
+                self._observation_space,
+            )
             return policy
 
         except Exception as e:
@@ -198,17 +213,18 @@ class VLMPlanningAgent(Agent[_O, _U]):
 
     def _get_controllers_str(self) -> str:
         """Get string description of available actions."""
-        controllers_str = "\n".join(f"{name}{controller.var_str}" for 
-                            name, controller in self._controllers.items() if 
-                            self._controllers)
+        controllers_str = "\n".join(
+            f"{name}{controller.var_str}"
+            for name, controller in self._controllers.items()
+            if self._controllers
+        )
         return controllers_str
 
     def _get_object_centric_state(self, obs: _O) -> ObjectCentricState:
         """Get string description of objects in the scene."""
 
         def observation_to_state(o: NDArray[np.float32]):
-            """Convert the vectors back into (hashable) object-centric states.
-            """
+            """Convert the vectors back into (hashable) object-centric states."""
             return self._observation_space.devectorize(o)
 
         # Convert observation to state using observation space
@@ -223,7 +239,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
         goal_description = info.get("description")
         assert isinstance(goal_description, str)
         return goal_description
-    
+
     def create_types_str(self, types: Collection[Type]) -> str:
         """Create a PDDL-style types string that handles hierarchy correctly."""
         # Case 1: no type hierarchy.
@@ -231,9 +247,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
             types_str = " ".join(t.name for t in sorted(types))
         # Case 2: type hierarchy.
         else:
-            parent_to_children_types: Dict[Type,
-                                        List[Type]] = {t: []
-                                                        for t in types}
+            parent_to_children_types: Dict[Type, List[Type]] = {t: [] for t in types}
             for t in sorted(types):
                 if t.parent:
                     parent_to_children_types[t.parent].append(t)
@@ -245,7 +259,8 @@ class VLMPlanningAgent(Agent[_O, _U]):
                     # as a child of another type.
                     is_child_type = any(
                         parent_type in children
-                        for children in parent_to_children_types.values())
+                        for children in parent_to_children_types.values()
+                    )
                     if not is_child_type:
                         types_str += f"\n    {parent_type.name}"
                     # Otherwise, the type will appear as a child elsewhere.

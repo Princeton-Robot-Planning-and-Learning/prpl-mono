@@ -25,14 +25,13 @@ from prbench_vlm_planning.env_controllers import get_controllers_for_environment
 @hydra.main(version_base=None, config_name="config", config_path="conf/")
 def _main(cfg: DictConfig) -> None:
 
-    logging.info(
-        f"Running seed={cfg.seed}, env={cfg.env}, vlm_model={cfg.vlm_model}"
-    )
+    logging.info(f"Running seed={cfg.seed}, env={cfg.env}, vlm_model={cfg.vlm_model}")
     # Create the environment.
     prbench.register_all_environments()
     env = prbench.make(f"prbench/{cfg.env}")
-    assert hasattr(env.spec, "entry_point"), "We use the entry point to "\
-                                             "identify env class"
+    assert hasattr(env.spec, "entry_point"), (
+        "We use the entry point to " "identify env class"
+    )
     entry_point = env.spec.entry_point
     module_path = entry_point.split(":")[0]  # "prbench_envs.geom2d.motion2d"
     parts = module_path.split(".")
@@ -43,8 +42,7 @@ def _main(cfg: DictConfig) -> None:
     env_controllers = get_controllers_for_environment(
         env_class_name, env_name, action_space=env.action_space
     )
-    assert env_controllers is not None, \
-        "Environment controllers must be available"
+    assert env_controllers is not None, "Environment controllers must be available"
 
     # Create the agent.
     agent: VLMPlanningAgent = VLMPlanningAgent(
