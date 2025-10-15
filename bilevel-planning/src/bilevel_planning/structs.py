@@ -154,6 +154,7 @@ class LiftedParameterizedController(Generic[_X, _U]):
         """Get the types of the variables."""
         return [v.type for v in self.variables]
 
+    @property
     def name_vars_str(self) -> str:
         """Get a string representation of the variable names."""
         return f"{self.controller_cls.__name__}{self.var_str}"
