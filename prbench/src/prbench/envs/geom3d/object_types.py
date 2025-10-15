@@ -43,6 +43,26 @@ Geom3DEnvTypeFeatures[Geom3DCuboidType] = [
     "half_extent_z",
 ]
 
+# Triangle objects: parameterize by triangle kind and side lengths (a,b,c)
+# plus a thickness/depth along Z. Pose and grasp_active included.
+Geom3DTriangleType = Type("Geom3DTriangle")
+Geom3DEnvTypeFeatures[Geom3DTriangleType] = [
+    "pose_x",
+    "pose_y",
+    "pose_z",
+    "pose_qx",
+    "pose_qy",
+    "pose_qz",
+    "pose_qw",
+    "grasp_active",
+    # Triangle specification: either equilateral/isosceles/scalene etc.
+    # The consumer can interpret these fields; they are numeric features.
+    "triangle_type",  # encoded as an int or small float category
+    "side_a",
+    "side_b",
+    "depth",
+]
+
 # A point is just a position. For example, it could be a target point to reach.
 Geom3DPointType = Type("Geom3DPoint")
 Geom3DEnvTypeFeatures[Geom3DPointType] = [

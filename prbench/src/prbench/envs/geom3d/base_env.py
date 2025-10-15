@@ -34,6 +34,7 @@ from relational_structs.utils import create_state_from_dict
 from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionSpace
 from prbench.envs.geom3d.object_types import (
     Geom3DCuboidType,
+    Geom3DTriangleType,
     Geom3DEnvTypeFeatures,
     Geom3DPointType,
     Geom3DRobotType,
@@ -85,7 +86,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
             "camera_target": self.robot_base_pose.position,
             "camera_yaw": 90,
             "camera_distance": 1.5,
-            "camera_pitch": -20,
+            "camera_pitch": -40,
         }
 
 
@@ -202,6 +203,16 @@ class ObjectCentricGeom3DRobotEnv(
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         """Get the half extents for a cuboid object."""
 
+    @abc.abstractmethod
+    def _get_triangle_features(self, object_name: str) -> tuple[float, float, float, float]:
+        """Return triangle parameters (side_a, side_b, side_c, depth, triangle_type).
+
+        Subclasses that support triangles should override this. The default
+        implementation returns zeros to provide a safe fallback for
+        serialization.
+        """
+        return 0.0, 0.0, 0.0, 0.0
+
     @property
     def _grasped_object_id(self) -> int | None:
         if self._grasped_object is not None:
@@ -273,6 +284,7 @@ class ObjectCentricGeom3DRobotEnv(
             -self.config.max_action_mag,
             self.config.max_action_mag,
         )
+
         next_joints = np.clip(
             current_joints + delta_joints,
             self.robot.joint_lower_limits[:7],
@@ -477,8 +489,53 @@ class ObjectCentricGeom3DRobotEnv(
                 feats["x"] = pose.position[0]
                 feats["y"] = pose.position[1]
                 feats["z"] = pose.position[2]
+            # Handle triangles.
+            elif object_type == Geom3DTriangleType:
+                body_id = self._object_name_to_pybullet_id(object_name)
+                pose = get_pose(body_id, self.physics_client_id)
+                pose_feat_names = [
+                    "pose_x",
+                    "pose_y",
+                    "pose_z",
+                    "pose_qx",
+                    "pose_qy",
+                    "pose_qz",
+                    "pose_qw",
+                ]
+                pose_feats = list(pose.position) + list(pose.orientation)
+                for feat_name, feat in zip(pose_feat_names, pose_feats, strict=True):
+                    feats[feat_name] = feat
+                # Add grasp active.
+                if self._grasped_object == object_name:
+                    feats["grasp_active"] = 1
+                else:
+                    feats["grasp_active"] = 0
+                # Triangle-specific features: these are stored in the env's
+                # half-extents mapping for cuboids; for triangles we expect the
+                # environment to provide these when creating the object. We try
+                # to fetch them via _get_half_extents if possible (fallback to 0).
+                # Here we use _get_triangle_features if implemented by envs.
+                try:
+                    a, b, depth, ttype = self._get_triangle_features(object_name)
+                except AttributeError:
+                    # Fallback defaults
+                    a = b = depth = 0.0
+                    ttype = 0.0
+                feats["triangle_type"] = float(ttype)
+                feats["side_a"] = float(a)
+                feats["side_b"] = float(b)
+                feats["depth"] = float(depth)
+
             else:
                 raise NotImplementedError(f"Unsupported object type: {object_type}")
             # Add feats to state dict.
             state_dict[obj] = feats
         return state_dict
+
+    def get_action_from_gui_input(
+        self, gui_input: dict[str, Any]
+    ) -> NDArray[np.float32]:
+        """Get the mapping from human inputs to actions."""
+        # This will be implemented later
+        assert isinstance(self.action_space, Geom3DRobotActionSpace)
+        return get_robot_action_from_gui_input(self.action_space, gui_input)
