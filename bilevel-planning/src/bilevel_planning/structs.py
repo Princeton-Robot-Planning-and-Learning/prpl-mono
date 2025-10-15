@@ -133,7 +133,7 @@ class LiftedParameterizedController(Generic[_X, _U]):
 
     variables: Sequence[Variable]
     controller_cls: type[GroundParameterizedController]
-    params_space: Box
+    params_space: Box | None = None
 
     def ground(
         self, objects: Sequence[Object]
@@ -148,7 +148,7 @@ class LiftedParameterizedController(Generic[_X, _U]):
     def name(self) -> str:
         """Get the name of the controller class."""
         return self.controller_cls.__name__
-    
+
     @property
     def types(self) -> Sequence[Type]:
         """Get the types of the variables."""
@@ -158,13 +158,16 @@ class LiftedParameterizedController(Generic[_X, _U]):
     def name_vars_str(self) -> str:
         """Get a string representation of the variable names."""
         return f"{self.controller_cls.__name__}{self.var_str}"
-    
+
     @property
     def var_str(self) -> str:
         """Get a string representation of the variable types."""
-        return f"(types=[" + ", ".join(
+        result = "(types=[" + ", ".join(
             v.type.name for v in self.variables
-        ) + "]), " + "params_space=" + str(self.params_space)
+        ) + "])"
+        if self.params_space is not None:
+            result += ", params_space=" + str(self.params_space)
+        return result
 
 class GroundParameterizedController(ParameterizedController[_X, _U], abc.ABC):
     """A parameterized controller that is object-parameterized.
