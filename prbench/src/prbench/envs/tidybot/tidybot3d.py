@@ -177,6 +177,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
             else:
                 # Randomize position within a reasonable range, but make sure far
                 # enough from the robot.
+                assert self._robot_env.qpos_base is not None
                 robot_x, robot_y, _ = self._robot_env.qpos_base
                 while True:
                     x = round(self.np_random.uniform(0.4, 0.8), 3)
