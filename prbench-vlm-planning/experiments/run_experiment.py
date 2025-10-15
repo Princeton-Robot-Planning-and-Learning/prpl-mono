@@ -1,9 +1,7 @@
 """Main entry point for running VLM planning experiments.
 
 Examples:
-    python experiments/run_experiment.py env=Motion2D-p1 seed=0 vlm_model=gpt-5
-    python experiments/run_experiment.py env=Motion2D-p1 seed=0 \\
-        vlm_model=gpt-5-nano temperature=1
+    python experiments/run_experiment.py env=Motion2D-p0-v0 seed=0 vlm_model=gpt-5
 
     python experiments/run_experiment.py -m env=Motion2D-p1 seed='range(0,10)'
 """
@@ -28,12 +26,11 @@ from prbench_vlm_planning.env_controllers import get_controllers_for_environment
 def _main(cfg: DictConfig) -> None:
 
     logging.info(
-        f"Running seed={cfg.seed}, env={cfg.env.env_name}, vlm_model={cfg.vlm_model}"
+        f"Running seed={cfg.seed}, env={cfg.env}, vlm_model={cfg.vlm_model}"
     )
-
     # Create the environment.
     prbench.register_all_environments()
-    env = prbench.make(cfg.env.make_kwargs.env_id)
+    env = prbench.make(f"prbench/{cfg.env}")
     assert hasattr(env.spec, "entry_point"), "We use the entry point to "\
                                              "identify env class"
     entry_point = env.spec.entry_point

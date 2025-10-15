@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 from typing import Any, Callable, Collection, Hashable, List, Optional, \
-    Sequence, Set, Tuple, TypeVar, cast
+    Sequence, Set, Tuple, TypeVar, cast, Dict
 
 import numpy as np
 from numpy.typing import NDArray
@@ -37,7 +37,7 @@ def create_vlm_by_name(model_name: str):
 
 def parse_model_output_into_option_plan(
     model_prediction: str, objects: Collection[Object],
-    types: Collection[Type], options: Collection[LiftedParameterizedController],
+    types: Collection[Type], options: Dict[str, LiftedParameterizedController],
     parse_continuous_params: bool
 ) -> List[Tuple[LiftedParameterizedController, Sequence[Object],
                 Sequence[float]]]:
@@ -54,11 +54,12 @@ def parse_model_output_into_option_plan(
                             Sequence[float]]] = []
     # Setup dictionaries enabling us to easily map names to specific
     # Python objects during parsing.
-    option_name_to_option = {op.name: op for op in options}
+    option_name_to_option = {name: op for name, op in options.items()}
     type_name_to_type = {typ.name: typ for typ in types}
     obj_name_to_obj = {o.name: o for o in objects}
     options_str_list = model_prediction.split('\n')
     for option_str in options_str_list:
+        logging.debug(f"Parsing option string: {option_str}")
         option_str_stripped = option_str.strip()
         option_name = option_str_stripped.split('(')[0]
         # Skip empty option strs.
@@ -212,6 +213,8 @@ def option_policy_to_policy(
 
             # Get new controller from the option policy
             cur_option, params = option_policy(obs)
+            if len(params) == 0:
+                params = [0.0]
             # Initialize the controller with its parameters
             cur_option.reset(state, params)  # pylint: disable=protected-access
             num_cur_option_steps = 0

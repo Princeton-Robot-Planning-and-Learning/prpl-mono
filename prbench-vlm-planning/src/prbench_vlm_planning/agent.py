@@ -175,7 +175,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
                                 "parse plan!")
             parsed_controller_plan = parse_model_output_into_option_plan(
                 parsable_plan_prediction, set(state.data),
-                set(state.type_features), list(self._controllers.values()),
+                set(state.type_features), self._controllers,
                 parse_continuous_params=True
             )
             controller_and_params_plan: List[Tuple[GroundParameterizedController,
@@ -190,7 +190,6 @@ class VLMPlanningAgent(Agent[_O, _U]):
                                             controller_and_params_plan,
                                             self._max_planning_horizon,
                                             self._observation_space)
-
             return policy
 
         except Exception as e:
@@ -199,8 +198,9 @@ class VLMPlanningAgent(Agent[_O, _U]):
 
     def _get_controllers_str(self) -> str:
         """Get string description of available actions."""
-        controllers_str = "\n".join(controller.name_vars_str() for controller in
-                                    self._controllers.values() if self._controllers)
+        controllers_str = "\n".join(f"{name}{controller.var_str}" for 
+                            name, controller in self._controllers.items() if 
+                            self._controllers)
         return controllers_str
 
     def _get_object_centric_state(self, obs: _O) -> ObjectCentricState:
