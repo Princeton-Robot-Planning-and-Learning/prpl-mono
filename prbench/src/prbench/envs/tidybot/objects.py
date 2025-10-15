@@ -240,3 +240,233 @@ class Cube(MujocoObject):
             f"Cube(name='{self.name}', joint_name='{self.joint_name}', "
             f"size={self.size}, rgba='{self.rgba}', mass={self.mass})"
         )
+
+
+class Table(MujocoObject):
+    """A table object for TidyBot environments."""
+
+    def __init__(
+        self,
+        name: str,
+        table_config: dict[str, Union[str, float]],
+        position: Optional[Union[list[float], NDArray[np.float32]]] = None,
+        leg_inset: float = 0.05,
+        regions: Optional[dict] = None,
+        env: Optional[MujocoEnv] = None,
+    ) -> None:
+        """Initialize a Table object.
+
+        Args:
+            name: Name of the table body in the XML
+            table_config: Dictionary containing table configuration with keys:
+                - "shape": Shape of the table - "rectangle" or "circle"
+                - "height": Table height in meters
+                - "thickness": Table top thickness in meters
+                - "length": Total table length in meters (for rectangle)
+                - "width": Total table width in meters (for rectangle)
+                - "diameter": Diameter of circular table in meters (for circle)
+            position: Position of the table as [x, y, z]. Defaults to [0, 0, 0]
+            leg_inset: Distance legs are inset from table edges
+            env: Reference to the environment (needed for position get/set operations)
+        """
+        # Initialize base class
+        super().__init__(name, env)
+
+        # Parse table configuration
+        self.table_shape = table_config["shape"]
+        self.table_height = table_config["height"]
+        self.table_thickness = table_config["thickness"]
+        self.leg_inset = leg_inset
+        self.regions = regions if regions is not None else {}
+        
+        # Handle position parameter
+        if position is None:
+            self.position = [0.0, 0.0, 0.0]
+        else:
+            self.position = list(position)
+        
+        # Shape-specific parameters
+        if self.table_shape == "rectangle":
+            self.table_length = table_config["length"]
+            self.table_width = table_config["width"]
+            self.table_diameter = None  # Not used for rectangle
+        elif self.table_shape == "circle":
+            self.table_diameter = table_config["diameter"]
+            self.table_length = None  # Not used for circle
+            self.table_width = None  # Not used for circle
+        else:
+            raise ValueError(f"Unknown table shape: {self.table_shape}. Must be 'rectangle' or 'circle'")
+
+        # Create the XML element
+        self.xml_element = self._create_xml_element()
+
+    def _create_xml_element(self) -> ET.Element:
+        """Create the XML Element for this table.
+
+        Returns:
+            ET.Element representing the table body
+        """
+        # Create table body element
+        table_body = ET.Element("body")
+        table_body.set("name", self.name)
+        position_str = " ".join(str(x) for x in self.position)
+        table_body.set("pos", position_str)
+
+        if self.table_shape == "rectangle":
+            # Calculate MuJoCo geom sizes (half the actual dimensions)
+            table_half_length = self.table_length / 2
+            table_half_width = self.table_width / 2
+            table_half_thickness = self.table_thickness / 2
+            leg_radius = 0.02
+            leg_half_height = (self.table_height - self.table_thickness) / 2
+
+            # Calculate leg positions (inset from edges)
+            leg_x_offset = table_half_length - self.leg_inset
+            leg_y_offset = table_half_width - self.leg_inset
+            leg_z_pos = leg_half_height  # Center of leg cylinder
+            table_top_z_pos = self.table_height - table_half_thickness
+
+            # Create rectangular table top geom
+            table_top = ET.SubElement(table_body, "geom")
+            table_top.set("name", f"{self.name}_top")
+            table_top.set("type", "box")
+            table_top.set(
+                "size", f"{table_half_length} {table_half_width} {table_half_thickness}"
+            )
+            table_top.set("pos", f"0 0 {table_top_z_pos}")
+            table_top.set("rgba", "0.8 0.6 0.4 1")
+
+            # Create table legs at four corners
+            leg_positions = [
+                (f"{leg_x_offset} {leg_y_offset} {leg_z_pos}", f"{self.name}_leg1"),
+                (f"{-leg_x_offset} {leg_y_offset} {leg_z_pos}", f"{self.name}_leg2"),
+                (f"{leg_x_offset} {-leg_y_offset} {leg_z_pos}", f"{self.name}_leg3"),
+                (f"{-leg_x_offset} {-leg_y_offset} {leg_z_pos}", f"{self.name}_leg4"),
+            ]
+
+            for pos, name in leg_positions:
+                leg = ET.SubElement(table_body, "geom")
+                leg.set("name", name)
+                leg.set("type", "cylinder")
+                leg.set("size", f"{leg_radius} {leg_half_height}")
+                leg.set("pos", pos)
+                leg.set("rgba", "0.6 0.4 0.2 1")
+
+        elif self.table_shape == "circle":
+            # Calculate MuJoCo geom sizes for circular table
+            table_radius = self.table_diameter / 2
+            table_half_thickness = self.table_thickness / 2
+            leg_radius = 0.02
+            leg_half_height = (self.table_height - self.table_thickness) / 2
+
+            # Calculate leg positions (inset from edge on a circle)
+            # Place 4 legs at 45-degree intervals from edge
+            leg_distance_from_center = table_radius - self.leg_inset
+            leg_z_pos = leg_half_height  # Center of leg cylinder
+            table_top_z_pos = self.table_height - table_half_thickness
+
+            # Create circular table top geom (using cylinder)
+            table_top = ET.SubElement(table_body, "geom")
+            table_top.set("name", f"{self.name}_top")
+            table_top.set("type", "cylinder")
+            table_top.set("size", f"{table_radius} {table_half_thickness}")
+            table_top.set("pos", f"0 0 {table_top_z_pos}")
+            table_top.set("rgba", "0.8 0.6 0.4 1")
+
+            # Create table legs at 4 positions around the circle (at 45, 135, 225, 315 degrees)
+            import math
+
+            leg_angles = [
+                math.pi / 4,
+                3 * math.pi / 4,
+                5 * math.pi / 4,
+                7 * math.pi / 4,
+            ]  # 45, 135, 225, 315 degrees
+
+            for i, angle in enumerate(leg_angles, 1):
+                leg_x = leg_distance_from_center * math.cos(angle)
+                leg_y = leg_distance_from_center * math.sin(angle)
+
+                leg = ET.SubElement(table_body, "geom")
+                leg.set("name", f"{self.name}_leg{i}")
+                leg.set("type", "cylinder")
+                leg.set("size", f"{leg_radius} {leg_half_height}")
+                leg.set("pos", f"{leg_x} {leg_y} {leg_z_pos}")
+                leg.set("rgba", "0.6 0.4 0.2 1")
+
+        else:
+            raise ValueError(
+                f"Unknown table shape: {self.table_shape}. Must be 'rectangle' or 'circle'"
+            )
+
+        return table_body
+
+    def sample_pose_in_region(
+        self, 
+        regions: list[list[float]], 
+        np_random: Optional[np.random.Generator] = None
+    ) -> tuple[float, float, float]:
+        """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
+        
+        Args:
+            regions: List of bounding boxes, where each bounding box is a list of 4 floats:
+                    [x_start, y_start, x_end, y_end] in table-relative coordinates
+            np_random: Random number generator. If None, uses numpy's default random
+            
+        Returns:
+            Tuple of (x, y, z) coordinates in world coordinates (offset by table position)
+            
+        Raises:
+            ValueError: If regions list is empty or if any region has invalid bounds
+        """
+        if not regions:
+            raise ValueError("Regions list cannot be empty")
+            
+        # Use provided random generator or default numpy random
+        rng = np_random if np_random is not None else np.random.default_rng()
+        
+        # Randomly select one of the regions
+        selected_region = rng.choice(regions)
+        
+        # Validate the selected region
+        if len(selected_region) != 4:
+            raise ValueError(f"Each region must have exactly 4 values [x_start, y_start, x_end, y_end], got {len(selected_region)}")
+            
+        x_start, y_start, x_end, y_end = selected_region
+        
+        # Validate bounds
+        if x_start >= x_end:
+            raise ValueError(f"x_start ({x_start}) must be less than x_end ({x_end})")
+        if y_start >= y_end:
+            raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
+        
+        # Sample uniformly within the selected region
+        x = rng.uniform(x_start, x_end)
+        y = rng.uniform(y_start, y_end)
+
+        # Sample z coordinate on top of the table
+        z = self.table_height + 0.1  # Slightly above the table surface
+
+        # Offset by the table's position to get world coordinates
+        world_x = x + self.position[0]
+        world_y = y + self.position[1]
+        world_z = z + self.position[2]
+
+        return (world_x, world_y, world_z)
+
+    def __str__(self) -> str:
+        """String representation of the table."""
+        return (
+            f"Table(name='{self.name}', shape='{self.table_shape}', "
+            f"height={self.table_height}, thickness={self.table_thickness})"
+        )
+
+    def __repr__(self) -> str:
+        """Detailed string representation of the table."""
+        return (
+            f"Table(name='{self.name}', joint_name='{self.joint_name}', "
+            f"shape='{self.table_shape}', length={self.table_length}, "
+            f"width={self.table_width}, diameter={self.table_diameter}, "
+            f"height={self.table_height}, thickness={self.table_thickness}, "
+            f"position={self.position}, leg_inset={self.leg_inset})"
+        )
