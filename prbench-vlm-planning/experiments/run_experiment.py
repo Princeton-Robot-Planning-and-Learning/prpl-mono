@@ -1,9 +1,7 @@
 """Main entry point for running VLM planning experiments.
 
 Examples:
-    python experiments/run_experiment.py env=Motion2D-p1 seed=0 vlm_model=gpt-5
-    python experiments/run_experiment.py env=Motion2D-p1 seed=0 \\
-        vlm_model=gpt-5-nano temperature=1
+    python experiments/run_experiment.py env=Motion2D-p0-v0 seed=0 vlm_model=gpt-5
 
     python experiments/run_experiment.py -m env=Motion2D-p1 seed='range(0,10)'
 """
@@ -27,36 +25,35 @@ from prbench_vlm_planning.env_controllers import get_controllers_for_environment
 @hydra.main(version_base=None, config_name="config", config_path="conf/")
 def _main(cfg: DictConfig) -> None:
 
-    logging.info(
-        f"Running seed={cfg.seed}, env={cfg.env.env_name}, vlm_model={cfg.vlm_model}"
-    )
-
+    logging.info(f"Running seed={cfg.seed}, env={cfg.env}, vlm_model={cfg.vlm_model}")
     # Create the environment.
     prbench.register_all_environments()
-    env = prbench.make(cfg.env.make_kwargs.env_id)
+    env = prbench.make(f"prbench/{cfg.env}")
+    assert env.spec is not None, "Environment spec must not be None"
+    assert hasattr(
+        env.spec, "entry_point"
+    ), "We use the entry point to identify env class"
+    entry_point = env.spec.entry_point
+    assert isinstance(entry_point, str), "Entry point must be a string"
+    module_path = entry_point.split(":")[0]  # "prbench_envs.geom2d.motion2d"
+    parts = module_path.split(".")
+    env_class_name = parts[-2]  # "geom2d"
+    env_name = parts[-1]  # "motion2d"
 
     # Load environment-specific controllers if available.
-    env_controllers = None
-    if cfg.get("use_env_models", True):
-        env_controllers = get_controllers_for_environment(cfg.env.env_name)
-        if env_controllers:
-            logging.info(
-                f"Successfully loaded {cfg.env.env_name} controllers: "
-                f"{env_controllers}"
-            )
-        else:
-            raise ValueError(
-                f"No specific controllers found for " f"{cfg.env.env_name}"
-            )
+    env_controllers = get_controllers_for_environment(
+        env_class_name, env_name, action_space=env.action_space
+    )
+    assert env_controllers is not None, "Environment controllers must be available"
 
     # Create the agent.
     agent: VLMPlanningAgent = VLMPlanningAgent(
         observation_space=env.observation_space,
+        env_controllers=env_controllers,
         vlm_model_name=cfg.vlm_model,
         temperature=cfg.temperature,
         max_planning_horizon=cfg.max_planning_horizon,
         seed=cfg.seed,
-        env_controllers=env_controllers,
         use_image=cfg.get("use_image", True),
     )
 

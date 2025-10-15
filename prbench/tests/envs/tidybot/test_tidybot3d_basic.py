@@ -152,3 +152,36 @@ def test_tidybot3d_env_object_centric_state():
             MujocoObjectTypeFeatures[obj.type]
         ), "State vector length mismatch"
     env.close()
+
+
+def test_tidybot3d_env_set_state():
+    """Test that the state of the environment can be consistently reset."""
+    # Generate a random trajectory.
+    states = []
+    actions = []
+    env = ObjectCentricTidyBot3DEnv(num_objects=3, render_images=False)
+    obs, _ = env.reset(seed=123)
+    states.append(obs)
+    for _ in range(5):
+        action = env.action_space.sample()
+        obs, _, _, _, _ = env.step(action)
+        actions.append(action)
+        states.append(obs)
+
+    # First just try resetting each state in the trajectory.
+    for state in states:
+        env.set_state(state)
+        recovered_state = (
+            env._get_object_centric_state()  # pylint: disable=protected-access
+        )
+        assert state.allclose(recovered_state)
+
+    # Now also try resetting to an intermediate state (with nonzero velocity) and make
+    # sure that the trajectory is still reproducible from there.
+    start_idx = 1
+    env.set_state(states[1])
+    for i in range(start_idx, len(actions)):
+        recovered_state, _, _, _, _ = env.step(actions[i])
+        assert states[i + 1].allclose(recovered_state)
+
+    env.close()

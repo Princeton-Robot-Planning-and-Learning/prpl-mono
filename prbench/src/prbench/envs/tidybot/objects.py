@@ -123,7 +123,7 @@ class MujocoObject:
 
         Args:
             position: New position as [x, y, z]
-            quaternion: New orientation as quaternion [x, y, z, w]
+            quaternion: New orientation as quaternion [w, x, y, z]
 
         Raises:
             ValueError: If environment is not set
@@ -133,6 +133,27 @@ class MujocoObject:
 
         self.env.set_joint_pos_quat(
             self.joint_name, np.array(position), np.array(quaternion)
+        )
+
+    def set_velocity(
+        self,
+        linear_velocity: Union[list[float], NDArray[np.float32]],
+        angular_velocity: Union[list[float], NDArray[np.float32]],
+    ) -> None:
+        """Set the object's linear and angular velocity.
+
+        Args:
+            linear_velocity: New linear velocity as [vx, vy, vz]
+            angular_velocity: New angular velocity as [wx, wy, wz]
+
+        Raises:
+            ValueError: If environment is not set
+        """
+        if self.env is None:
+            raise ValueError("Environment must be set to set velocity")
+
+        self.env.set_joint_vel(
+            self.joint_name, np.array(linear_velocity), np.array(angular_velocity)
         )
 
     def get_object_centric_data(self) -> dict[str, float]:
@@ -148,8 +169,9 @@ class MujocoObject:
             raise ValueError("Environment must be set to get state")
 
         pos, quat = self.env.get_joint_pos_quat(self.joint_name)
+        linear_vel, angular_vel = self.env.get_joint_vel(self.joint_name)
 
-        # create and return the data
+        # Create and return the data
         obj_data = {
             "x": pos[0],
             "y": pos[1],
@@ -158,6 +180,12 @@ class MujocoObject:
             "qx": quat[1],
             "qy": quat[2],
             "qz": quat[3],
+            "vx": linear_vel[0],
+            "vy": linear_vel[1],
+            "vz": linear_vel[2],
+            "wx": angular_vel[0],
+            "wy": angular_vel[1],
+            "wz": angular_vel[2],
         }
         return obj_data
 

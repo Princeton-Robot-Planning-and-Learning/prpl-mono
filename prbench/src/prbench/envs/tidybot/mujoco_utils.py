@@ -171,6 +171,30 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         quat = self.sim.data.qpos[joint_id + 3 : joint_id + 7]
         return pos, quat
 
+    def set_joint_vel(
+        self,
+        name: str,
+        linear_vel: NDArray[np.float32],
+        angular_vel: NDArray[np.float32],
+    ) -> None:
+        """Set joint linear and angular velocity in the environment."""
+        assert self.sim is not None, "Simulation not initialized"
+        joint_id = self.sim.model.get_joint_qvel_addr(name)
+        self.sim.data.qvel[joint_id : joint_id + 6] = np.array(
+            [float(x) for x in linear_vel] + [float(q) for q in angular_vel]
+        )
+
+    def get_joint_vel(
+        self, name: str
+    ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+        """Get joint linear and angular velocity in the environment."""
+
+        assert self.sim is not None, "Simulation not initialized"
+        joint_id = self.sim.model.get_joint_qvel_addr(name)
+        linear_vel = self.sim.data.qvel[joint_id : joint_id + 3]
+        angular_vel = self.sim.data.qvel[joint_id + 3 : joint_id + 6]
+        return linear_vel, angular_vel
+
     def get_obs(self) -> MjObs:
         """Get the current observation."""
         assert self.sim is not None, "Simulation must be initialized."

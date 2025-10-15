@@ -7,6 +7,7 @@ from bilevel_planning.structs import LiftedParameterizedController
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
+from gymnasium.spaces import Box
 from prbench.envs.geom2d.clutteredretrieval2d import (
     ClutteredRetrieval2DEnvConfig,
     TargetBlockType,
@@ -407,6 +408,24 @@ def create_lifted_controllers(
     Returns:
         Dictionary mapping controller names to LiftedParameterizedController instances.
     """
+
+    # Define params_space for each controller type
+    pick_params_space = Box(
+        low=np.array([0.0, 0.0, 0.0]),
+        high=np.array([1.0, 1.0, 1.0]),
+        dtype=np.float32,
+    )
+    place_params_space = Box(
+        low=np.array([0.0, 0.0, 0.0]),
+        high=np.array([1.0, 1.0, 1.0]),
+        dtype=np.float32,
+    )
+    move_to_params_space = Box(
+        low=np.array([0.0]),
+        high=np.array([1.0]),
+        dtype=np.float32,
+    )
+
     # Create partial controller classes that include the action_space
     class PickController(GroundPickController):
         """Controller for picking the target block or obstruction."""
@@ -436,12 +455,14 @@ def create_lifted_controllers(
     pick_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
         [robot, target_block],
         PickController,
+        pick_params_space,
     )
 
     pick_obstruction_controller: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, obstruction],
             PickController,
+            pick_params_space,
         )
     )
 
@@ -449,6 +470,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, obstruction],
             PlaceController,
+            place_params_space,
         )
     )
 
@@ -456,6 +478,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, target_block, target_region],
             MoveToTgtController,
+            move_to_params_space,
         )
     )
 

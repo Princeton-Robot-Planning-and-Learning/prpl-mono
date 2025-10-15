@@ -128,14 +128,12 @@ def register_all_environments() -> None:
 
     for scene_type, object_counts in scene_configs:
         for num_objects in object_counts:
-            act_delta = not scene_type == "base_motion"
             register(
                 id=f"prbench/TidyBot3D-{scene_type}-o{num_objects}-v0",
                 entry_point="prbench.envs.tidybot.tidybot3d:TidyBot3DEnv",
                 kwargs={
                     "scene_type": scene_type,
                     "num_objects": num_objects,
-                    "act_delta": act_delta,
                 },
             )
 
