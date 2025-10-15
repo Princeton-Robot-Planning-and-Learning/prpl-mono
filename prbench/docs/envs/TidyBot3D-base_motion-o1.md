@@ -1,11 +1,11 @@
-# prbench/TidyBot3D-cupboard-o8-v0
-![random action GIF](assets/random_action_gifs/TidyBot3D-cupboard-o8.gif)
+# prbench/TidyBot3D-base_motion-o1-v0
+![random action GIF](assets/random_action_gifs/TidyBot3D-base_motion-o1.gif)
 
 ### Description
 A 3D mobile manipulation environment using the TidyBot platform.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: cupboard with 8 objects.
+Scene type: base_motion with 1 objects.
 
 The robot can control:
 - Base pose (x, y, theta)
@@ -14,7 +14,7 @@ The robot can control:
 - Gripper position (open/close)
 
 ### Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/TidyBot3D-cupboard-o8.gif)
+![initial state GIF](assets/initial_state_gifs/TidyBot3D-base_motion-o1.gif)
 
 ### Example Demonstration
 *(No demonstration GIFs available)*
@@ -23,28 +23,35 @@ The robot can control:
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |
 | --- | --- | --- |
-| 0 | robot | pos_base_x |
-| 1 | robot | pos_base_y |
-| 2 | robot | pos_base_rot |
-| 3 | robot | pos_arm_joint1 |
-| 4 | robot | pos_arm_joint2 |
-| 5 | robot | pos_arm_joint3 |
-| 6 | robot | pos_arm_joint4 |
-| 7 | robot | pos_arm_joint5 |
-| 8 | robot | pos_arm_joint6 |
-| 9 | robot | pos_arm_joint7 |
-| 10 | robot | pos_gripper |
-| 11 | robot | vel_base_x |
-| 12 | robot | vel_base_y |
-| 13 | robot | vel_base_rot |
-| 14 | robot | vel_arm_joint1 |
-| 15 | robot | vel_arm_joint2 |
-| 16 | robot | vel_arm_joint3 |
-| 17 | robot | vel_arm_joint4 |
-| 18 | robot | vel_arm_joint5 |
-| 19 | robot | vel_arm_joint6 |
-| 20 | robot | vel_arm_joint7 |
-| 21 | robot | vel_gripper |
+| 0 | cube1 | x |
+| 1 | cube1 | y |
+| 2 | cube1 | z |
+| 3 | cube1 | qw |
+| 4 | cube1 | qx |
+| 5 | cube1 | qy |
+| 6 | cube1 | qz |
+| 7 | robot | pos_base_x |
+| 8 | robot | pos_base_y |
+| 9 | robot | pos_base_rot |
+| 10 | robot | pos_arm_joint1 |
+| 11 | robot | pos_arm_joint2 |
+| 12 | robot | pos_arm_joint3 |
+| 13 | robot | pos_arm_joint4 |
+| 14 | robot | pos_arm_joint5 |
+| 15 | robot | pos_arm_joint6 |
+| 16 | robot | pos_arm_joint7 |
+| 17 | robot | pos_gripper |
+| 18 | robot | vel_base_x |
+| 19 | robot | vel_base_y |
+| 20 | robot | vel_base_rot |
+| 21 | robot | vel_arm_joint1 |
+| 22 | robot | vel_arm_joint2 |
+| 23 | robot | vel_arm_joint3 |
+| 24 | robot | vel_arm_joint4 |
+| 25 | robot | vel_arm_joint5 |
+| 26 | robot | vel_arm_joint6 |
+| 27 | robot | vel_arm_joint7 |
+| 28 | robot | vel_gripper |
 
 
 ### Action Space

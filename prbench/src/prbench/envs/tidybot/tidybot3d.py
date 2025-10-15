@@ -2,116 +2,91 @@
 
 import math
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import cv2 as cv
 import numpy as np
-from gymnasium.spaces import Space
 from numpy.typing import NDArray
-from prpl_utils.spaces import FunctionalSpace
-from relational_structs import ObjectCentricState
+from relational_structs import Array, Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
-from prbench.envs.tidybot.mujoco_utils import MjAct, MjObs
-from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
+from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta, PRBenchEnvConfig
+from prbench.envs.tidybot.base_env import (
+    ObjectCentricDynamic3DRobotEnv,
+)
+from prbench.envs.tidybot.object_types import (
+    MujocoObjectTypeFeatures,
+    MujocoRobotObjectType,
+)
 from prbench.envs.tidybot.objects import Cube, MujocoObject
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
 
 
-class TidyBot3DEnv(TidyBotRobotEnv):
+@dataclass(frozen=True)
+class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
+    """Configuration for TidyBot3D environment."""
+
+    control_frequency: int = 20
+    horizon: int = 1000
+    camera_names: list[str] = field(default_factory=lambda: ["overview"])
+    camera_width: int = 640
+    camera_height: int = 480
+    show_viewer: bool = False
+
+
+class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     """TidyBot 3D environment with mobile manipulation tasks."""
 
     metadata: dict[str, Any] = {"render_modes": ["rgb_array"]}
 
     def __init__(
         self,
-        control_frequency: int = 20,
-        horizon: int = 1000,
-        camera_names: list[str] | None = None,
-        camera_width: int = 640,
-        camera_height: int = 480,
+        config: TidyBot3DConfig = TidyBot3DConfig(),
+        seed: int | None = None,
         scene_type: str = "ground",
         num_objects: int = 3,
-        render_mode: str | None = None,
-        custom_grasp: bool = False,
+        act_delta: bool = True,
         render_images: bool = True,
-        seed: int | None = None,
-        show_viewer: bool = False,
         show_images: bool = False,
     ) -> None:
-        super().__init__(
-            control_frequency,
-            horizon=horizon,
-            camera_names=camera_names,
-            camera_width=camera_width,
-            camera_height=camera_height,
-            seed=seed,
-            show_viewer=show_viewer,
-        )
+        # Initialize ObjectCentricPRBenchEnv first
+        super().__init__(config)
 
+        # Store instance attributes from kwargs
         self.scene_type = scene_type
         self.num_objects = num_objects
-        self.render_mode = render_mode
-        self.custom_grasp = custom_grasp
         self.render_images = render_images
+        self.camera_names = config.camera_names
         self.show_images = show_images
+
+        # Initialize TidyBot-specific components
+        self._robot_env = TidyBotRobotEnv(
+            control_frequency=config.control_frequency,
+            act_delta=act_delta,
+            horizon=config.horizon,
+            camera_names=self.camera_names,
+            camera_width=config.camera_width,
+            camera_height=config.camera_height,
+            seed=seed,
+            show_viewer=config.show_viewer,
+        )
+
         self._render_camera_name: str | None = "overview"
 
         # Cannot show images if not rendering images
-        if self.show_images:
-            if not self.render_images:
-                raise ValueError("Cannot show images if render_images is False")
+        if show_images and not render_images:
+            raise ValueError("Cannot show images if render_images is False")
 
         # Initialize empty object list
         self._objects: list[MujocoObject] = []
 
-        self._reward_calculator = create_reward_calculator(
-            self.scene_type, self.num_objects
-        )
+        self._reward_calculator = create_reward_calculator(scene_type, num_objects)
 
-        # Define observation and action spaces
-        self.observation_space = self._create_observation_space()
-        self.action_space = self._create_action_space()
-
-        # Add metadata for documentation
-        self.metadata.update(
-            {
-                "description": self._create_env_markdown_description(),
-                "observation_space_description": (
-                    self._create_obs_markdown_description()
-                ),
-                "action_space_description": (
-                    self._create_action_markdown_description()
-                ),
-                "reward_description": self._create_reward_markdown_description(),
-                "references": self._create_references_markdown_description(),
-                "render_fps": 20,
-            }
-        )
-
-    def _create_observation_space(self) -> Space[MjObs]:
-        """Create observation space based on TidyBot's observation structure."""
-        # NOTE: this will be refactored soon after we introduce object-centric structs.
-        return FunctionalSpace(contains_fn=lambda _: True)
-
-    def _create_action_space(self) -> Space[MjAct]:
-        """Create action space for TidyBot's control interface."""
-        # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
-        low = np.array(
-            [-1.0, -1.0, -np.pi, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.0]
-        )
-        high = np.array([1.0, 1.0, np.pi, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-
-        def _contains_fn(x: Any) -> bool:
-            return isinstance(x, MjAct)
-
-        def _sample_fn(rng: np.random.Generator) -> MjAct:
-            ctrl = rng.uniform(low, high)
-            return MjAct(position_ctrl=ctrl)
-
-        return FunctionalSpace(contains_fn=_contains_fn, sample_fn=_sample_fn)
+        # Store current state
+        self._current_state: ObjectCentricState | None = None
 
     def _vectorize_observation(self, obs: dict[str, Any]) -> NDArray[np.float32]:
         """Convert TidyBot observation dict to vector."""
@@ -130,13 +105,17 @@ class TidyBot3DEnv(TidyBotRobotEnv):
             model_file = "cupboard_scene.xml"
         elif self.scene_type == "table":
             model_file = "table_scene.xml"
-        else:
+        elif self.scene_type == "ground":
             model_file = "ground_scene.xml"
+        elif self.scene_type == "base_motion":
+            model_file = "base_motion.xml"
+        else:
+            raise ValueError(f"Unrecognized scene type: {self.scene_type}")
         # Construct absolute path to model file
         absolute_model_path = model_base_path / model_file
 
         # --- Dynamic object insertion logic ---
-        needs_dynamic_objects = self.scene_type in ["ground", "table"]
+        needs_dynamic_objects = self.scene_type in ["ground", "table", "base_motion"]
         if needs_dynamic_objects:
             tree = ET.parse(str(absolute_model_path))
             root = tree.getroot()
@@ -149,11 +128,18 @@ class TidyBot3DEnv(TidyBotRobotEnv):
                     ):
                         worldbody.remove(body)
                 # Insert new cubes
+                # For the base motion environment, make the cube small enough that the
+                # robot can roll over it without a collision.
+                cube_size = 0.01 if self.scene_type == "base_motion" else 0.02
                 for i in range(self.num_objects):
                     name = f"cube{i+1}"
                     # Create cube using the Cube class
                     obj = Cube(
-                        name=name, size=0.02, rgba=".5 .7 .5 1", mass=0.1, env=self
+                        name=name,
+                        size=cube_size,
+                        rgba=".5 .7 .5 1",
+                        mass=0.1,
+                        env=self._robot_env,
                     )
                     # Get the XML element from the cube
                     body = obj.xml_element
@@ -175,7 +161,7 @@ class TidyBot3DEnv(TidyBotRobotEnv):
     def _initialize_object_poses(self) -> None:
         """Initialize object poses in the environment."""
 
-        assert self.sim is not None, "Simulation not initialized"
+        assert self._robot_env.sim is not None, "Simulation not initialized"
 
         for obj in self._objects:
             pos = np.array([0.0, 0.0, 0.0])
@@ -202,14 +188,16 @@ class TidyBot3DEnv(TidyBotRobotEnv):
             # Set object pose in the environment
             obj.set_pose(pos, quat)
 
-        self.sim.forward()
+        self._robot_env.sim.forward()
 
     def reset(
         self,
         *,
         seed: int | None = None,
         options: dict[str, Any] | None = None,
-    ) -> tuple[dict[str, Any], dict[str, Any]]:
+    ) -> tuple[ObjectCentricState, dict[str, Any]]:
+        """Reset the environment and return object-centric observation."""
+
         # Create scene XML
         self._objects = []
         xml_string = self._create_scene_xml()
@@ -217,15 +205,79 @@ class TidyBot3DEnv(TidyBotRobotEnv):
         # Reset the underlying TidyBot robot environment
         robot_options = options.copy() if options is not None else {}
         robot_options["xml"] = xml_string
-        super().reset(seed=seed, options=robot_options)
+        self._robot_env.reset(seed=seed, options=robot_options)
+        self.np_random = self._robot_env.np_random
 
         # Initialize object poses
         self._initialize_object_poses()
 
-        # Get observation and vectorize
-        obs = self.get_obs()
+        # Get object-centric observation
+        self._current_state = self._get_object_centric_state()
 
-        return obs, {}
+        return self._get_current_state(), {}
+
+    def set_state(self, state: ObjectCentricState) -> None:
+        """Set the environment to the current state.
+
+        This is useful for planning baselines.
+        """
+        # Reset the robot.
+        robot_obj = state.get_object_from_name("robot")
+
+        # Reset the robot base position.
+        robot_base_pos = [
+            state.get(robot_obj, "pos_base_x"),
+            state.get(robot_obj, "pos_base_y"),
+            state.get(robot_obj, "pos_base_rot"),
+        ]
+        assert self._robot_env.qpos_base is not None
+        self._robot_env.qpos_base[:] = robot_base_pos
+
+        # Reset the robot arm position.
+        robot_arm_pos = [state.get(robot_obj, f"pos_arm_joint{i}") for i in range(1, 8)]
+        assert self._robot_env.qpos_arm is not None
+        self._robot_env.qpos_arm[:] = robot_arm_pos
+
+        # NOTE: gripper position not yet implemented.
+
+        # Reset the robot base velocity.
+        robot_base_vel = [
+            state.get(robot_obj, "vel_base_x"),
+            state.get(robot_obj, "vel_base_y"),
+            state.get(robot_obj, "vel_base_rot"),
+        ]
+        assert self._robot_env.qvel_base is not None
+        self._robot_env.qvel_base[:] = robot_base_vel
+
+        # Reset the robot arm velocity.
+        robot_arm_vel = [state.get(robot_obj, f"vel_arm_joint{i}") for i in range(1, 8)]
+        assert self._robot_env.qvel_arm is not None
+        self._robot_env.qvel_arm[:] = robot_arm_vel
+
+        # NOTE: gripper velocity not yet implemented.
+
+        # Reset the objects.
+        for mujoco_object in self._objects:
+            obj = state.get_object_from_name(mujoco_object.name)
+            position = [state.get(obj, "x"), state.get(obj, "y"), state.get(obj, "z")]
+            orientation = [
+                state.get(obj, "qw"),
+                state.get(obj, "qx"),
+                state.get(obj, "qy"),
+                state.get(obj, "qz"),
+            ]
+            mujoco_object.set_pose(position, orientation)
+            linear_velocity = [
+                state.get(obj, "vx"),
+                state.get(obj, "vy"),
+                state.get(obj, "vz"),
+            ]
+            angular_velocity = [
+                state.get(obj, "wx"),
+                state.get(obj, "wy"),
+                state.get(obj, "wz"),
+            ]
+            mujoco_object.set_velocity(linear_velocity, angular_velocity)
 
     def _visualize_image_in_window(
         self, image: NDArray[np.uint8], window_name: str
@@ -239,42 +291,85 @@ class TidyBot3DEnv(TidyBotRobotEnv):
             cv.imshow(window_name, display_image)  # pylint: disable=no-member
             cv.waitKey(1)  # pylint: disable=no-member
 
-    def get_obs(self) -> dict[str, Any]:
-        """Get the current observation."""
-        obs = super().get_obs()
+    def _get_current_state(self) -> ObjectCentricState:
+        """Get the current object-centric observation."""
+        assert self._current_state is not None, "Need to call reset() first"
+        return self._current_state.copy()
+
+    def _get_obs(self) -> dict[str, Any]:
+        """Get the current raw observation (for compatibility with reward functions)."""
+        obs = self._robot_env.get_obs()
         vec_obs = self._vectorize_observation(obs)
         object_centric_state = self._get_object_centric_state()
         return {"vec": vec_obs, "object_centric_state": object_centric_state}
 
     def _get_object_centric_state(self) -> ObjectCentricState:
         """Get the current object-centric state of the environment."""
+        # Collect object-centric data for all objects
         state_dict = {}
         for obj in self._objects:
             obj_data = obj.get_object_centric_data()
             state_dict[obj.object_state_type] = obj_data
+        # Add robot into object-centric state.
+        robot = Object("robot", MujocoRobotObjectType)
+        # Build this super explicitly, even though verbose, to be careful.
+        assert self._robot_env.qpos_base is not None
+        assert self._robot_env.qpos_arm is not None
+        assert self._robot_env.qvel_base is not None
+        assert self._robot_env.qvel_arm is not None
+        state_dict[robot] = {
+            "pos_base_x": self._robot_env.qpos_base[0],
+            "pos_base_y": self._robot_env.qpos_base[1],
+            "pos_base_rot": self._robot_env.qpos_base[2],
+            "pos_arm_joint1": self._robot_env.qpos_arm[0],
+            "pos_arm_joint2": self._robot_env.qpos_arm[1],
+            "pos_arm_joint3": self._robot_env.qpos_arm[2],
+            "pos_arm_joint4": self._robot_env.qpos_arm[3],
+            "pos_arm_joint5": self._robot_env.qpos_arm[4],
+            "pos_arm_joint6": self._robot_env.qpos_arm[5],
+            "pos_arm_joint7": self._robot_env.qpos_arm[6],
+            "pos_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+            "vel_base_x": self._robot_env.qvel_base[0],
+            "vel_base_y": self._robot_env.qvel_base[1],
+            "vel_base_rot": self._robot_env.qvel_base[2],
+            "vel_arm_joint1": self._robot_env.qvel_arm[0],
+            "vel_arm_joint2": self._robot_env.qvel_arm[1],
+            "vel_arm_joint3": self._robot_env.qvel_arm[2],
+            "vel_arm_joint4": self._robot_env.qvel_arm[3],
+            "vel_arm_joint5": self._robot_env.qvel_arm[4],
+            "vel_arm_joint6": self._robot_env.qvel_arm[5],
+            "vel_arm_joint7": self._robot_env.qvel_arm[6],
+            "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+        }
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
-    def step(self, action: MjAct) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
-        # Run the action.
-        super().step(action)
+    def step(
+        self, action: Array
+    ) -> tuple[ObjectCentricState, float, bool, bool, dict[str, Any]]:
+        """Step the environment and return object-centric observation."""
+        # Run the action through the underlying environment
+        self._robot_env.step(action)
 
-        # Get observation
-        obs = self.get_obs()
+        # Update object-centric state
+        self._current_state = self._get_object_centric_state()
+
+        # Get raw observation for reward calculation
+        raw_obs = self._get_obs()
 
         # Visualization loop for rendered image
         if self.show_images:
-            for camera_name in self.camera_names:
+            for camera_name in self._robot_env.camera_names:
                 self._visualize_image_in_window(
-                    obs[f"{camera_name}_image"],
+                    raw_obs[f"{camera_name}_image"],
                     f"TidyBot {camera_name} camera",
                 )
 
         # Calculate reward and termination
-        reward = self.reward(obs)
-        terminated = self._is_terminated(obs)
+        reward = self.reward(raw_obs)
+        terminated = self._is_terminated(raw_obs)
         truncated = False
 
-        return obs, reward, terminated, truncated, {}
+        return self._get_current_state(), reward, terminated, truncated, {}
 
     def reward(self, obs: dict[str, Any]) -> float:
         """Calculate reward based on task completion."""
@@ -284,10 +379,10 @@ class TidyBot3DEnv(TidyBotRobotEnv):
         """Check if episode should terminate."""
         return self._reward_calculator.is_terminated(obs)
 
-    def render(self) -> Any:
+    def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the environment."""
         if self.render_mode == "rgb_array":
-            obs = super().get_obs()
+            obs = self._robot_env.get_obs()
             # If a specific camera is requested, use it.
             if self._render_camera_name:
                 key = f"{self._render_camera_name}_image"
@@ -298,23 +393,37 @@ class TidyBot3DEnv(TidyBotRobotEnv):
                 if key.endswith("_image"):
                     return value
             raise RuntimeError("No camera image available in observation.")
-        return None
+        raise NotImplementedError(f"Render mode {self.render_mode} not supported")
 
     def close(self) -> None:
         """Close the environment."""
         if self.show_images:
             # Close OpenCV windows
             cv.destroyAllWindows()  # pylint: disable=no-member
-        super().close()
+        self._robot_env.close()
 
     def set_render_camera(self, camera_name: str | None) -> None:
         """Set the camera to use for rendering."""
         self._render_camera_name = camera_name
 
+
+class TidyBot3DEnv(ConstantObjectPRBenchEnv):
+    """TidyBot env with a constant number of objects."""
+
+    def _create_object_centric_env(self, *args, **kwargs) -> ObjectCentricTidyBot3DEnv:
+        return ObjectCentricTidyBot3DEnv(*args, **kwargs)
+
+    def _get_constant_object_names(
+        self, exemplar_state: ObjectCentricState
+    ) -> list[str]:
+        return [o.name for o in sorted(exemplar_state)]
+
     def _create_env_markdown_description(self) -> str:
         """Create environment description (policy-agnostic)."""
         scene_description = ""
-        if self.scene_type == "ground":
+        env = self._object_centric_env
+        assert isinstance(env, ObjectCentricTidyBot3DEnv)
+        if env.scene_type == "ground":
             scene_description = (
                 " In the 'ground' scene, objects are placed randomly on a flat "
                 "ground plane."
@@ -323,7 +432,7 @@ class TidyBot3DEnv(TidyBotRobotEnv):
         return f"""A 3D mobile manipulation environment using the TidyBot platform.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: {self.scene_type} with {self.num_objects} objects.{scene_description}
+Scene type: {env.scene_type} with {env.num_objects} objects.{scene_description}
 
 The robot can control:
 - Base pose (x, y, theta)
@@ -352,7 +461,9 @@ The robot can control:
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
-        if self.scene_type == "ground":
+        env = self._object_centric_env
+        assert isinstance(env, ObjectCentricTidyBot3DEnv)
+        if env.scene_type == "ground":
             return (
                 "The primary reward is for successfully placing objects at their "
                 "target locations.\n"
@@ -383,15 +494,3 @@ for Robot Learning
 
 https://github.com/tidybot2/tidybot2
 """
-
-    @classmethod
-    def get_available_environments(cls) -> list[str]:
-        """Get list of available TidyBot environment IDs (policy-agnostic)."""
-        scene_configs = [
-            ("ground", [3, 5, 7]),
-        ]
-        env_ids = []
-        for scene_type, object_counts in scene_configs:
-            for num_objects in object_counts:
-                env_ids.append(f"prbench/TidyBot3D-{scene_type}-o{num_objects}-v0")
-        return env_ids

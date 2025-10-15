@@ -1,0 +1,10 @@
+# Used to refer to the family of environments, e.g., with different numbers of objects. 
+env_name: "motion2d"
+
+# Passed into prbench.make() to create the environment.
+make_kwargs:
+  id: "prbench/Motion2D-p5-v0"
+
+# Passed into create_bilevel_planning_models() to create the env models.
+env_model_kwargs:
+  num_passages: 5
