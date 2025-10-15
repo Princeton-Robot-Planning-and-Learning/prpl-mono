@@ -68,13 +68,9 @@
   </default>
 
   <asset>
-    <material name="black" rgba="0.11372549 0.11372549 0.10196078 1"/>
-    <material name="gray" rgba="0.62745098 0.65098039 0.64705882 1"/>
-    <material name="dark_gray" rgba="0.35294118 0.37647059 0.37254902 1"/>
-    <mesh file="base/bumper.stl"/>
-    <mesh file="base/bottom_plate.stl"/>
+    <material name="silver" rgba="0.75294118 0.75294118 0.75294118 1"/>
+    <material name="black" rgba="0.30196078 0.30196078 0.30196078 1"/>
     <mesh file="base/body.stl"/>
-    <mesh file="base/top_plate.stl"/>
     <mesh file="base/arm_plate.stl"/>
 
     <mesh name="gen3/base_link" file="gen3/base_link.stl"/>
@@ -105,19 +101,13 @@
       <joint name="joint_x" type="slide" axis="1 0 0"/>
       <joint name="joint_y" type="slide" axis="0 1 0"/>
       <joint name="joint_th"/>
-      <geom class="base/visual" mesh="bumper" material="black"/>
-      <geom class="base/visual" mesh="bottom_plate" material="dark_gray"/>
-      <geom class="base/visual" mesh="body" material="gray"/>
-      <geom class="base/visual" mesh="top_plate" material="dark_gray"/>
-      <geom class="base/visual" mesh="arm_plate" material="gray"/>
-      <geom class="base/collision" mesh="bumper"/>
-      <geom class="base/collision" mesh="bottom_plate"/>
+      <geom class="base/visual" mesh="body" material="silver"/>
+      <geom class="base/visual" mesh="arm_plate" material="black"/>
       <geom class="base/collision" mesh="body"/>
-      <geom class="base/collision" mesh="top_plate"/>
       <geom class="base/collision" mesh="arm_plate"/>
       <camera name="base" pos="0.2525 0 0.335" euler="0 -0.7853981634 -1.5707963268" fovy="52.23384539951277"
         resolution="640 360"/>
-      <body name="gen3/base_link" pos="0 0 0.335" quat="1 0 0 0">
+      <body name="gen3/base_link" pos="0.1199 0 0.3948" quat="1 0 0 0">
         <inertial pos="-0.000648 -0.000166 0.084487" quat="0.999294 0.00139618 -0.0118387 0.035636" mass="1.697"
           diaginertia="0.00462407 0.00449437 0.00207755"/>
         <geom class="gen3/visual" mesh="gen3/base_link"/>

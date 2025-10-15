@@ -13,13 +13,9 @@
   </default>
 
   <asset>
-    <material name="black" rgba="0.11372549 0.11372549 0.10196078 1"/>
-    <material name="gray" rgba="0.62745098 0.65098039 0.64705882 1"/>
-    <material name="dark_gray" rgba="0.35294118 0.37647059 0.37254902 1"/>
-    <mesh file="base/bumper.stl"/>
-    <mesh file="base/bottom_plate.stl"/>
+    <material name="silver" rgba="0.75294118 0.75294118 0.75294118 1"/>
+    <material name="black" rgba="0.30196078 0.30196078 0.30196078 1"/>
     <mesh file="base/body.stl"/>
-    <mesh file="base/top_plate.stl"/>
     <mesh file="base/arm_plate.stl"/>
   </asset>
 
@@ -29,15 +25,9 @@
       <joint name="joint_x" type="slide" axis="1 0 0"/>
       <joint name="joint_y" type="slide" axis="0 1 0"/>
       <joint name="joint_th"/>
-      <geom class="visual" mesh="bumper" material="black"/>
-      <geom class="visual" mesh="bottom_plate" material="dark_gray"/>
-      <geom class="visual" mesh="body" material="gray"/>
-      <geom class="visual" mesh="top_plate" material="dark_gray"/>
-      <geom class="visual" mesh="arm_plate" material="gray"/>
-      <geom class="collision" mesh="bumper"/>
-      <geom class="collision" mesh="bottom_plate"/>
+      <geom class="visual" mesh="body" material="silver"/>
+      <geom class="visual" mesh="arm_plate" material="black"/>
       <geom class="collision" mesh="body"/>
-      <geom class="collision" mesh="top_plate"/>
       <geom class="collision" mesh="arm_plate"/>
     </body>
   </worldbody>
