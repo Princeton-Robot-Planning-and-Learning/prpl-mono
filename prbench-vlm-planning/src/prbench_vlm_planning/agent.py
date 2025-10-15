@@ -10,7 +10,6 @@ from typing import (
     Optional,
     Sequence,
     TypeVar,
-    cast,
 )
 
 import numpy as np
@@ -19,10 +18,8 @@ from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
 )
-from numpy.typing import NDArray
 from PIL import ImageDraw
 from prpl_utils.gym_agent import Agent
-from relational_structs import ObjectCentricState
 from relational_structs.objects import Type
 
 from prbench_vlm_planning.utils import (

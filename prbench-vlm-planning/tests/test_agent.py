@@ -199,23 +199,6 @@ def test_agent_update(agent_kwargs, mock_env_info, sample_observation, mock_vlm)
         assert np.array_equal(agent._next_action, action2)
 
 
-def test_agent_get_object_centric_state(agent_kwargs, sample_state):
-    """Test conversion to object-centric state."""
-    with patch("prbench_vlm_planning.agent.create_vlm_by_name") as mock_create_vlm:
-        mock_vlm = Mock()
-        mock_create_vlm.return_value = mock_vlm
-
-        with patch("builtins.open", create=True):
-            with patch("os.path.dirname"):
-                with patch("os.path.join"):
-                    agent = VLMPlanningAgent(**agent_kwargs)
-
-        obs = np.array([1.0, 2.0, 3.0])
-        state = agent._get_object_centric_state(obs)
-
-        assert state == sample_state
-
-
 def test_agent_get_goal_str(agent_kwargs, mock_env_info):
     """Test getting goal description string."""
     with patch("prbench_vlm_planning.agent.create_vlm_by_name") as mock_create_vlm:
@@ -332,8 +315,16 @@ def test_agent_with_image_observation(agent_kwargs, mock_env_info, mock_vlm):
             mock_pil_image = Mock()
             mock_from_array.return_value = mock_pil_image
 
+            # Mock the state that will be returned by devectorize
+            mock_state = Mock()
+            mock_state.data = []
+            mock_state.type_features = []
+            mock_state.pretty_str.return_value = "state"
+
             with (
-                patch.object(agent, "_get_object_centric_state") as mock_get_state,
+                patch.object(
+                    agent._observation_space, "devectorize", return_value=mock_state
+                ) as mock_devectorize,
                 patch.object(agent, "_get_controllers_str") as mock_get_controllers,
                 patch.object(agent, "_get_goal_str") as mock_get_goal,
                 patch.object(agent, "create_types_str") as mock_create_types,
@@ -342,11 +333,6 @@ def test_agent_with_image_observation(agent_kwargs, mock_env_info, mock_vlm):
                     return_value=mock_policy,
                 ),
             ):
-                mock_state = Mock()
-                mock_state.data = []
-                mock_state.type_features = []
-                mock_state.pretty_str.return_value = "state"
-                mock_get_state.return_value = mock_state
                 mock_get_controllers.return_value = "controllers"
                 mock_get_goal.return_value = "goal"
                 mock_create_types.return_value = "types"
@@ -364,3 +350,5 @@ def test_agent_with_image_observation(agent_kwargs, mock_env_info, mock_vlm):
                 mock_vlm.query.assert_called_once()
                 call_kwargs = mock_vlm.query.call_args[1]
                 assert "imgs" in call_kwargs
+                # Verify devectorize was called
+                mock_devectorize.assert_called_once()
