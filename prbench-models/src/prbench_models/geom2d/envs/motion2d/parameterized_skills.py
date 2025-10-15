@@ -264,28 +264,28 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, target],
             MoveToTgtController,
-            Box(0.0, 1.0, (0,)),
+            Box(0.0, 1.0, (3,)),
         )
     )
     move_to_tgt_from_passage_controller: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, target, obstacle1, obstacle2],
             MoveToTgtController,
-            Box(0.0, 1.0, (0,)),
+            Box(0.0, 1.0, (3,)),
         )
     )
     move_to_passage_from_no_passage_controller: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, obstacle1, obstacle2],
             MoveToPassageController,
-            Box(0.0, 1.0, (0,)),
+            Box(0.0, 1.0, (3,)),
         )
     )
     move_to_passage_from_passage_controller: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, obstacle1, obstacle2, obstacle3, obstacle4],
             MoveToPassageController,
-            Box(0.0, 1.0, (0,)),
+            Box(0.0, 1.0, (3,)),
         )
     )
 
