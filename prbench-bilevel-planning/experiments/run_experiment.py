@@ -14,12 +14,14 @@ Examples:
 
 import logging
 import os
+from pathlib import Path
 
 import hydra
 import numpy as np
 import pandas as pd
 import prbench
 from gymnasium.core import Env
+from gymnasium.wrappers import RecordVideo
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from prpl_utils.utils import sample_seed_from_rng, timer
@@ -35,7 +37,13 @@ def _main(cfg: DictConfig) -> None:
 
     # Create the environment.
     prbench.register_all_environments()
-    env = prbench.make(**cfg.env.make_kwargs)
+    env = prbench.make(**cfg.env.make_kwargs, render_mode="rgb_array")
+
+    # Record videos.
+    if cfg.make_videos:
+        video_path = Path(cfg.video_folder)
+        video_path.mkdir(parents=True, exist_ok=True)
+        env = RecordVideo(env, str(video_path), episode_trigger=lambda _: True)
 
     # Create the env models.
     env_models = create_bilevel_planning_models(
@@ -87,6 +95,9 @@ def _main(cfg: DictConfig) -> None:
         OmegaConf.save(cfg, f)
     logging.info(f"Saved config to {config_path}")
 
+    # Finish.
+    env.close()  # type: ignore
+
 
 def _run_single_episode_evaluation(
     agent: BilevelPlanningAgent,
@@ -111,12 +122,12 @@ def _run_single_episode_evaluation(
         return {"success": False, "steps": steps, "planning_time": planning_time}
     for _ in range(max_eval_steps):
         step_failed = False
-        try:
-            with timer() as result:
+        with timer() as result:
+            try:
                 action = agent.step()
-        except AgentFailure:
-            logging.info("Agent failed during step().")
-            step_failed = True
+            except AgentFailure:
+                logging.info("Agent failed during step().")
+                step_failed = True
         planning_time += result["time"]
         if step_failed:
             return {"success": False, "steps": steps, "planning_time": planning_time}

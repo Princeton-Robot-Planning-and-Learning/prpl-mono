@@ -183,7 +183,8 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                     y = round(self.np_random.uniform(-0.3, 0.3), 3)
                     if abs(x - robot_x) > 1e-1 or abs(y - robot_y) > 1e-1:
                         break
-                z = 0.02
+                cube_size = 0.01 if self.scene_type == "base_motion" else 0.02
+                z = cube_size
                 pos = np.array([x, y, z])
             # Randomize orientation around Z-axis (yaw)
             theta = self.np_random.uniform(-math.pi, math.pi)
