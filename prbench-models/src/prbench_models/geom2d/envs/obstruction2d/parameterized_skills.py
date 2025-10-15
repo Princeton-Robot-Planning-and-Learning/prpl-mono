@@ -258,19 +258,19 @@ def create_lifted_controllers(
         """Pick controller with pre-configured action space."""
 
         def __init__(self, objects):
-            super().__init__(objects, action_space, init_constant_state)
+            super().__init__(objects, action_space)
 
     class PlaceOnTableController(GroundPlaceOnTableController):
         """Place on table controller with pre-configured action space."""
 
         def __init__(self, objects):
-            super().__init__(objects, action_space, init_constant_state)
+            super().__init__(objects, action_space)
 
     class PlaceOnTargetController(GroundPlaceOnTargetController):
         """Place on target controller with pre-configured action space."""
 
         def __init__(self, objects):
-            super().__init__(objects, action_space, init_constant_state)
+            super().__init__(objects, action_space)
 
     # Create variables for lifted controllers
     robot = Variable("?robot", CRVRobotType)
