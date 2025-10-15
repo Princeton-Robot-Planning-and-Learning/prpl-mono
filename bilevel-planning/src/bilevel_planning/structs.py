@@ -144,12 +144,21 @@ class LiftedParameterizedController(Generic[_X, _U]):
         )
         return self.controller_cls(objects)
 
+    @property
+    def name(self) -> str:
+        """Get the name of the controller class."""
+        return self.controller_cls.__name__
+    
+    @property
+    def types(self) -> Sequence[Type]:
+        """Get the types of the variables."""
+        return [v.type for v in self.variables]
+
     def name_vars_str(self) -> str:
         """Get a string representation of the variable names."""
         return f"{self.controller_cls.__name__}(types=[" + ", ".join(
             v.type.name for v in self.variables
         ) + "]), " + "params_space=" + str(self.params_space)
-
 
 class GroundParameterizedController(ParameterizedController[_X, _U], abc.ABC):
     """A parameterized controller that is object-parameterized.
