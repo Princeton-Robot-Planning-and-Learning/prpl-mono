@@ -1,6 +1,7 @@
 """Utility functions."""
 
 from pathlib import Path
+
 import numpy as np
 import pybullet as p
 
@@ -121,6 +122,7 @@ def create_pybullet_cylinder(
 
     return cylinder_id
 
+
 def create_pybullet_triangle(
     color: tuple[float, float, float, float],
     type: str,
@@ -130,7 +132,6 @@ def create_pybullet_triangle(
     mass: float = 0,
     friction: float | None = None,
 ) -> int:
-    
     """A generic utility for creating a triangle.
 
     Returns the PyBullet ID of the newly created triangle.
@@ -140,23 +141,23 @@ def create_pybullet_triangle(
     # the state values when a task is reset.
     position = (0, 0, 0)
     orientation = (1, 0, 0, 0)
-    
+
     vertices = []
-    if type == 'equilateral':
+    if type == "equilateral":
         side = side_lengths[0]
         height = (np.sqrt(3) / 2) * side
         v0 = [-side / 2, -height / 3, 0]
         v1 = [side / 2, -height / 3, 0]
         v2 = [0, 2 * height / 3, 0]
         vertices = [v0, v1, v2]
-    elif type == 'isosceles':
+    elif type == "isosceles":
         base = side_lengths[0]
         height = side_lengths[1]
         v0 = [-base / 2, 0, 0]
         v1 = [base / 2, 0, 0]
         v2 = [0, height, 0]
         vertices = [v0, v1, v2]
-    elif type == 'right':
+    elif type == "right":
         base = side_lengths[0]
         height = side_lengths[1]
         v0 = [0, 0, 0]
@@ -164,7 +165,9 @@ def create_pybullet_triangle(
         v2 = [0, height, 0]
         vertices = [v0, v1, v2]
     else:
-        raise ValueError("Unsupported triangle type. Use 'equilateral', 'isosceles', or 'right'.")
+        raise ValueError(
+            "Unsupported triangle type. Use 'equilateral', 'isosceles', or 'right'."
+        )
 
     # Extrude the 2D triangle to create a 3D mesh
     mesh_vertices = []
@@ -176,21 +179,40 @@ def create_pybullet_triangle(
     # Define the indices for the triangular and rectangular faces
     indices = [
         # Front face
-        0, 1, 2,
+        0,
+        1,
+        2,
         # Back face
-        3, 5, 4,
+        3,
+        5,
+        4,
         # Side faces
-        0, 3, 4,
-        0, 4, 1,
-        1, 4, 5,
-        1, 5, 2,
-        2, 5, 3,
-        2, 3, 0
+        0,
+        3,
+        4,
+        0,
+        4,
+        1,
+        1,
+        4,
+        5,
+        1,
+        5,
+        2,
+        2,
+        5,
+        3,
+        2,
+        3,
+        0,
     ]
 
     # Create the collision shape.
     collision_id = p.createCollisionShape(
-        p.GEOM_MESH, vertices=mesh_vertices, indices=indices, physicsClientId=physics_client_id
+        p.GEOM_MESH,
+        vertices=mesh_vertices,
+        indices=indices,
+        physicsClientId=physics_client_id,
     )
     # Create the visual_shape.
     visual_id = p.createVisualShape(

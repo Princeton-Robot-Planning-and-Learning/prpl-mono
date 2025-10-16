@@ -79,12 +79,11 @@ class ObjectCentricBoxSpace(Box):
         high = np.full(shape, np.inf, dtype=np.float32)
         super().__init__(low, high, shape, dtype=np.float32)
 
-    def update_constant_objects(
-        self, constant_objects: list[Object]
-    ) -> None:
+    def update_constant_objects(self, constant_objects: list[Object]) -> None:
         """Update the constant objects in this space.
-        This is particularly important if the number of objects
-        or their types change with resets.
+
+        This is particularly important if the number of objects or their
+        types change with resets.
         """
         self.constant_objects = constant_objects
         num_dims = sum(len(self.type_features[o.type]) for o in constant_objects)
