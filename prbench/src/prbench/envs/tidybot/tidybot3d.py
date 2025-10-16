@@ -25,6 +25,11 @@ from prbench.envs.tidybot.object_types import (
 from prbench.envs.tidybot.objects import Cube, Table, MujocoObject
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
+from prbench.envs.tidybot.utils import (
+    get_table_bbox,
+    sample_collision_free_position,
+    sample_pose_in_region,
+)
 
 
 @dataclass(frozen=True)
@@ -50,10 +55,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         seed: int | None = None,
         scene_type: str = "ground",
         num_objects: int = 3,
+        task_config_path: str = "./tasks/ground-o3.json",
         act_delta: bool = True,
         render_images: bool = True,
         show_images: bool = False,
-        task_config: str = None,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
         super().__init__(config)
@@ -64,11 +69,13 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         self.render_images = render_images
         self.camera_names = config.camera_names
         self.show_images = show_images
-        self.task_config = None
-        if task_config is not None:
-            assert os.path.exists(task_config), f"task_config path {task_config} does not exist."
-            with open(task_config, 'r') as f:
-                self.task_config = json.load(f)
+
+        # Parse task configuration
+        if not os.path.isabs(task_config_path):
+            task_config_path = str(Path(__file__).parent / task_config_path)
+        assert os.path.exists(task_config_path), f"task_config_path {task_config_path} does not exist."
+        with open(task_config_path, 'r') as f:
+            self.task_config = json.load(f)
 
         # Initialize TidyBot-specific components
         self._robot_env = TidyBotRobotEnv(
@@ -106,7 +113,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
             obs_vector.extend(value.flatten())
         return np.array(obs_vector, dtype=np.float32)
 
-    def _create_scene_xml(self, task_config : dict|None = None) -> str:
+    def _create_scene_xml(self) -> str:
         """Create the MuJoCo XML string for the current scene configuration."""
 
         # Set model path to local models directory
@@ -124,160 +131,120 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         # Construct absolute path to model file
         absolute_model_path = model_base_path / model_file
 
-        # --- Dynamic object insertion logic ---
-        needs_dynamic_objects = self.scene_type in ["ground", "table", "base_motion"]
-        if needs_dynamic_objects:
-            tree = ET.parse(str(absolute_model_path))
-            root = tree.getroot()
-            worldbody = root.find("worldbody")
-            if worldbody is not None:
-                # Remove all existing cube bodies
+        with open(absolute_model_path, "r", encoding="utf-8") as f:
+            xml_string = f.read()
+
+        # Insert objects in scene
+        tree = ET.parse(str(absolute_model_path))
+        root = tree.getroot()
+        worldbody = root.find("worldbody")
+        if worldbody is not None:
+            # Remove all existing cube bodies
+            for body in list(worldbody):
+                if body.tag == "body" and body.attrib.get("name", "").startswith(
+                    "cube"
+                ):
+                    worldbody.remove(body)
+
+            # Add tables and objects based on task configuration
+            if self.task_config is not None:
+                # Find and remove the existing table body
                 for body in list(worldbody):
-                    if body.tag == "body" and body.attrib.get("name", "").startswith(
-                        "cube"
-                    ):
+                    if body.tag == "body" and body.attrib.get("name") == "table":
                         worldbody.remove(body)
+                        break
 
-                # Modify table dimensions if this is a table scene
-                if task_config is not None:
-                    # Find and remove the existing table body
-                    for body in list(worldbody):
-                        if body.tag == "body" and body.attrib.get("name") == "table":
-                            worldbody.remove(body)
-                            break
+                # Insert fixtures (only tables supported for now)
+                fixtures = self.task_config.get("fixtures", {})
+                table_configs = fixtures.get("table", {})
+                
+                # Keep track of placed table bounding boxes for collision detection
+                placed_table_bboxes = []
+                
+                for table_name, table_config in table_configs.items():
+                    # Sample collision-free position for the table
+                    table_pos = sample_collision_free_position(
+                        table_config, 
+                        placed_table_bboxes, 
+                        self.np_random
+                    )
+                    
+                    # Add this table's bounding box to the list
+                    table_bbox = get_table_bbox(table_pos, table_config)
+                    placed_table_bboxes.append(table_bbox)
 
-                    # Insert fixtures (only tables supported for now)
-                    fixtures = task_config.get("fixtures", {})
-                    table_configs = fixtures.get("table", {})
-                    for table_name, table_config in table_configs.items():
-                        # Generate random position for the table
-                        table_pos = np.array([
-                            self.np_random.uniform(-1.5, 1.5),  # x coordinate
-                            self.np_random.uniform(0, 1.5),  # y coordinate
-                            0.0                               # z coordinate (fixed at 0)
-                        ])
+                    # Find regions for this table if specified
+                    regions = {}
+                    fixture_regions = self.task_config.get("regions", {})
+                    for region_name, region_config in fixture_regions.items():
+                        if region_config["target"] == table_name:
+                            region_ranges = region_config["ranges"]
+                            regions[region_name] = region_ranges
 
-                        # Find regions for this table if specified
-                        regions = {}
-                        fixture_regions = task_config.get("regions", {})
-                        for region_name, region_config in fixture_regions.items():
-                            if region_config["target"] == table_name:
-                                region_ranges = region_config["ranges"]
-                                regions[region_name] = region_ranges
+                    # Create new table with configuration dictionary
+                    new_table = Table(
+                        name=table_name,
+                        table_config=table_config,
+                        position=table_pos,
+                        regions=regions,
+                        env=self._robot_env
+                    )
+                    self._fixtures_dict[table_name] = new_table
+                    table_body = new_table.xml_element
+                    worldbody.append(table_body)                    
+                
+                # Insert objects (only cubes supported for now)
+                objects = self.task_config.get("objects", {})
+                cube_configs = objects.get("cube", {})
+                for cube_name, cube_config in cube_configs.items():
+                    obj = Cube(
+                        name=cube_name,
+                        size=cube_config["size"],
+                        rgba=" ".join(map(str, cube_config["rgba"])),
+                        mass=cube_config["mass"],
+                        env=self._robot_env,
+                    )
+                    body = obj.xml_element
+                    worldbody.append(body)
+                    self._objects.append(obj)
+                    self._objects_dict[cube_name] = obj
 
-                        # Create new table with configuration dictionary
-                        new_table = Table(
-                            name=table_name,
-                            table_config=table_config,
-                            position=table_pos,
-                            regions=regions,
-                            env=self._robot_env
-                        )
-                        self._fixtures_dict[table_name] = new_table
-                        table_body = new_table.xml_element
-                        worldbody.append(table_body)
-
-                    # Insert objects (only cubes supported for now)
-                    objects = task_config.get("objects", {})
-                    cube_configs = objects.get("cube", {})
-                    for cube_name, cube_config in cube_configs.items():
-                        obj = Cube(
-                            name=cube_name,
-                            size=cube_config["size"],
-                            rgba=" ".join(map(str, cube_config["rgba"])),
-                            mass=cube_config["mass"],
-                            env=self._robot_env,
-                        )
-                        body = obj.xml_element
-                        worldbody.append(body)
-                        self._objects.append(obj)
-                        self._objects_dict[cube_name] = obj
-
-                else:
-                    # Insert new cubes manually
-                    # For the base motion environment, make the cube small enough that the
-                    # robot can roll over it without a collision.
-                    cube_size = 0.01 if self.scene_type == "base_motion" else 0.02
-                    for i in range(self.num_objects):
-                        name = f"cube{i+1}"
-                        # Create cube using the Cube class
-                        obj = Cube(
-                            name=name,
-                            size=cube_size,
-                            rgba=".5 .7 .5 1",
-                            mass=0.1,
-                            env=self._robot_env,
-                        )
-                        # Get the XML element from the cube
-                        body = obj.xml_element
-
-                        worldbody.append(body)
-                        self._objects.append(obj)
-                        self._objects_dict[name] = obj
-
-                # Get XML string from tree
-                xml_string = ET.tostring(root, encoding="unicode")
-            else:
-                with open(absolute_model_path, "r", encoding="utf-8") as f:
-                    xml_string = f.read()
-        else:
-            with open(absolute_model_path, "r", encoding="utf-8") as f:
-                xml_string = f.read()
+            # Get XML string from tree
+            xml_string = ET.tostring(root, encoding="unicode")
 
         return xml_string
 
-    def _initialize_object_poses(self, task_config : dict|None = None) -> None:
+    def _initialize_object_poses(self) -> None:
         """Initialize object poses in the environment."""
 
         assert self._robot_env.sim is not None, "Simulation not initialized"
 
-        if task_config is not None:
-            # Set object pose based on task configuration
-            init_predicates = task_config.get("initial_state", [])
-            for pred in init_predicates:
-                if pred[0] == "on":
-                    obj_name = pred[1]
-                    if obj_name not in self._objects_dict:
-                        raise ValueError(f"Object {obj_name} not found in environment.")
-                    region_name = pred[2]
-                    region_config = task_config["regions"][region_name]
-                    region_ranges = region_config["ranges"]
-                    target_fixture = self._fixtures_dict[region_config["target"]]
-                    pos_x, pos_y, pos_z = target_fixture.sample_pose_in_region(region_ranges, self.np_random)
-
-                    # Randomize orientation around Z-axis (yaw)
-                    theta = self.np_random.uniform(-math.pi, math.pi)
-                    quat = np.array([math.cos(theta / 2), 0, 0, math.sin(theta / 2)])
-
-                    # Set object pose in the environment
-                    obj = self._objects_dict[obj_name]
-                    obj.set_pose(np.array([pos_x, pos_y, pos_z]), quat)
-        else:
-            for obj in self._objects:
-
-                pos = np.array([0.0, 0.0, 0.0])
-                if self.scene_type == "cupboard":
-                    pass  # no position randomization for cupboard scene
-                elif self.scene_type == "table":
-                    # Randomize position within a reasonable range
-                    # for the table environment
-                    x = round(self.np_random.uniform(0.2, 0.8), 3)
-                    y = round(self.np_random.uniform(-0.15, 0.15), 3)
-                    z = 0.44
-                    pos = np.array([x, y, z])
+        # Set object pose based on task configuration
+        init_predicates = self.task_config.get("initial_state", [])
+        for pred in init_predicates:
+            if pred[0] == "on":
+                obj_name = pred[1]
+                if obj_name not in self._objects_dict:
+                    raise ValueError(f"Object {obj_name} not found in environment.")
+                region_name = pred[2]
+                region_config = self.task_config["regions"][region_name]
+                region_ranges = region_config["ranges"]
+                
+                if region_config["target"] == "ground":
+                    # Sample pose directly on the ground using utility function
+                    pos_x, pos_y, pos_z = sample_pose_in_region(region_ranges, self.np_random, z_coordinate=0.02)
                 else:
-                    # Randomize position within a reasonable range
-                    # for the ground environment
-                    x = round(self.np_random.uniform(0.4, 0.8), 3)
-                    y = round(self.np_random.uniform(-0.3, 0.3), 3)
-                    z = 0.02
-                    pos = np.array([x, y, z])
+                    # Sample pose on a fixture (table, etc.)
+                    fixture = self._fixtures_dict[region_config["target"]]
+                    pos_x, pos_y, pos_z = fixture.sample_pose_in_region(region_ranges, self.np_random)
+
                 # Randomize orientation around Z-axis (yaw)
                 theta = self.np_random.uniform(-math.pi, math.pi)
                 quat = np.array([math.cos(theta / 2), 0, 0, math.sin(theta / 2)])
 
                 # Set object pose in the environment
-                obj.set_pose(pos, quat)
+                obj = self._objects_dict[obj_name]
+                obj.set_pose(np.array([pos_x, pos_y, pos_z]), quat)
 
         self._robot_env.sim.forward()
 
@@ -293,7 +260,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         self._objects = []
         self._objects_dict = {}
         self._fixtures_dict = {}
-        xml_string = self._create_scene_xml(self.task_config)
+        xml_string = self._create_scene_xml()
 
         # Reset the underlying TidyBot robot environment
         robot_options = options.copy() if options is not None else {}
@@ -302,7 +269,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         self.np_random = self._robot_env.np_random
 
         # Initialize object poses
-        self._initialize_object_poses(self.task_config)
+        self._initialize_object_poses()
 
         # Get object-centric observation
         self._current_state = self._get_object_centric_state()
