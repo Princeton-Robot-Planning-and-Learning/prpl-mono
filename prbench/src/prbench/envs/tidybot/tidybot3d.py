@@ -76,7 +76,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         assert os.path.exists(
             task_config_path
         ), f"task_config_path {task_config_path} does not exist."
-        with open(task_config_path, "r") as f:
+        with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
 
         # Initialize TidyBot-specific components

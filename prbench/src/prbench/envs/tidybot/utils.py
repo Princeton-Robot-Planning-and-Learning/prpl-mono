@@ -42,8 +42,7 @@ def get_table_bbox(
             pos[0] + radius,  # x_max
             pos[1] + radius,  # y_max
         ]
-    else:
-        raise ValueError(f"Unknown table shape: {table_config['shape']}")
+    raise ValueError(f"Unknown table shape: {table_config['shape']}")
 
 
 def bboxes_overlap(bbox1: list[float], bbox2: list[float], margin: float = 0.2) -> bool:
@@ -114,7 +113,8 @@ def sample_collision_free_position(
             return candidate_pos
 
     # If we couldn't find a collision-free position after max_attempts,
-    # return a fallback position (this shouldn't happen often with reasonable table sizes)
+    # return a fallback position (this shouldn't happen often with reasonable
+    # table sizes)
     print(
         f"Warning: Could not find collision-free position after {max_attempts} attempts"
     )
@@ -155,7 +155,8 @@ def sample_pose_in_region(
     # Validate the selected region
     if len(selected_region) != 4:
         raise ValueError(
-            f"Each region must have exactly 4 values [x_start, y_start, x_end, y_end], got {len(selected_region)}"
+            f"Each region must have exactly 4 values [x_start, y_start, x_end, y_end], "
+            f"got {len(selected_region)}"
         )
 
     x_start, y_start, x_end, y_end = selected_region

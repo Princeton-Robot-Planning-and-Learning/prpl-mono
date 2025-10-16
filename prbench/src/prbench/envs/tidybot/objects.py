@@ -324,7 +324,8 @@ class Table(MujocoObject):
             self.table_width = None  # Not used for circle
         else:
             raise ValueError(
-                f"Unknown table shape: {self.table_shape}. Must be 'rectangle' or 'circle'"
+                f"Unknown table shape: {self.table_shape}. "
+                f"Must be 'rectangle' or 'circle'"
             )
 
         # Create the XML element
@@ -361,17 +362,30 @@ class Table(MujocoObject):
             table_top.set("name", f"{self.name}_top")
             table_top.set("type", "box")
             table_top.set(
-                "size", f"{table_half_length} {table_half_width} {table_half_thickness}"
+                "size",
+                f"{table_half_length} {table_half_width} {table_half_thickness}",
             )
             table_top.set("pos", f"0 0 {table_top_z_pos}")
             table_top.set("rgba", "0.8 0.6 0.4 1")
 
             # Create table legs at four corners
             leg_positions = [
-                (f"{leg_x_offset} {leg_y_offset} {leg_z_pos}", f"{self.name}_leg1"),
-                (f"{-leg_x_offset} {leg_y_offset} {leg_z_pos}", f"{self.name}_leg2"),
-                (f"{leg_x_offset} {-leg_y_offset} {leg_z_pos}", f"{self.name}_leg3"),
-                (f"{-leg_x_offset} {-leg_y_offset} {leg_z_pos}", f"{self.name}_leg4"),
+                (
+                    f"{leg_x_offset} {leg_y_offset} {leg_z_pos}",
+                    f"{self.name}_leg1",
+                ),
+                (
+                    f"{-leg_x_offset} {leg_y_offset} {leg_z_pos}",
+                    f"{self.name}_leg2",
+                ),
+                (
+                    f"{leg_x_offset} {-leg_y_offset} {leg_z_pos}",
+                    f"{self.name}_leg3",
+                ),
+                (
+                    f"{-leg_x_offset} {-leg_y_offset} {leg_z_pos}",
+                    f"{self.name}_leg4",
+                ),
             ]
 
             for pos, name in leg_positions:
@@ -403,7 +417,8 @@ class Table(MujocoObject):
             table_top.set("pos", f"0 0 {table_top_z_pos}")
             table_top.set("rgba", "0.8 0.6 0.4 1")
 
-            # Create table legs at 4 positions around the circle (at 45, 135, 225, 315 degrees)
+            # Create table legs at 4 positions around the circle
+            # (at 45, 135, 225, 315 degrees)
             import math
 
             leg_angles = [
@@ -426,7 +441,8 @@ class Table(MujocoObject):
 
         else:
             raise ValueError(
-                f"Unknown table shape: {self.table_shape}. Must be 'rectangle' or 'circle'"
+                f"Unknown table shape: {self.table_shape}. "
+                f"Must be 'rectangle' or 'circle'"
             )
 
         return table_body
@@ -439,12 +455,14 @@ class Table(MujocoObject):
         """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
 
         Args:
-            regions: List of bounding boxes, where each bounding box is a list of 4 floats:
-                    [x_start, y_start, x_end, y_end] in table-relative coordinates
+            regions: List of bounding boxes, where each bounding box is a list of
+                    4 floats: [x_start, y_start, x_end, y_end] in table-relative
+                    coordinates
             np_random: Random number generator. If None, uses numpy's default random
 
         Returns:
-            Tuple of (x, y, z) coordinates in world coordinates (offset by table position)
+            Tuple of (x, y, z) coordinates in world coordinates (offset by table
+            position)
 
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
@@ -461,7 +479,8 @@ class Table(MujocoObject):
         # Validate the selected region
         if len(selected_region) != 4:
             raise ValueError(
-                f"Each region must have exactly 4 values [x_start, y_start, x_end, y_end], got {len(selected_region)}"
+                f"Each region must have exactly 4 values "
+                f"[x_start, y_start, x_end, y_end], got {len(selected_region)}"
             )
 
         x_start, y_start, x_end, y_end = selected_region
