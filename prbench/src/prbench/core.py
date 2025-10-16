@@ -212,7 +212,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
     def _create_references_markdown_description(self) -> str:
         """Create a markdown description of the reference (e.g. papers) for this env."""
 
-    def reset(self, *args, **kwargs) -> tuple[NDArray[np.float32], dict]:
+    def reset(self, *args, **kwargs) -> tuple[NDArray[np.float64], dict]:
         super().reset(*args, **kwargs)  # necessary to reset RNG if seed is given
         if (kwargs.get("options") is not None) and (
             "init_state" in kwargs.get("options", {})
@@ -234,7 +234,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
 
     def step(
         self, *args, **kwargs
-    ) -> tuple[NDArray[np.float32], float, bool, bool, dict]:
+    ) -> tuple[NDArray[np.float64], float, bool, bool, dict]:
         obs, reward, terminated, truncated, done = self._object_centric_env.step(
             *args, **kwargs
         )
@@ -247,6 +247,6 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
 
     def get_action_from_gui_input(
         self, gui_input: dict[str, Any]
-    ) -> NDArray[np.float32]:
+    ) -> NDArray[np.float64]:
         """Get the mapping from human inputs to actions."""
         return self._object_centric_env.get_action_from_gui_input(gui_input)

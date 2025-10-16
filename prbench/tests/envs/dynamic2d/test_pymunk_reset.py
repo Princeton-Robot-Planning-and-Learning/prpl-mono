@@ -32,18 +32,24 @@ def test_pymunk_simple_env():
     states = [np.array([robot_body.position.x, 
               robot_body.position.y,
               robot_body.velocity.x,
-              robot_body.velocity.y])
+              robot_body.velocity.y], dtype=np.float32)
     ]
     for i in range(len(actions)):
-        tgt_pos = robot_body.position + actions[i]
-        tgt_vel = Vec2d(0, 0)
+        tgt_pos = np.array([robot_body.position.x,
+                            robot_body.position.y], dtype=np.float32) \
+                           + actions[i].astype(np.float32)
+        tgt_vel = np.array([0.0, 0.0], dtype=np.float32)
         for _ in range(steps_per_control):
-            curr_pos = robot_body.position
-            curr_vel = robot_body.velocity
+            curr_pos = np.array([robot_body.position.x,
+                            robot_body.position.y], dtype=np.float32)
+            curr_vel = np.array([robot_body.velocity.x,
+                            robot_body.velocity.y], dtype=np.float32)
             # PD control
             acceleration = kp * (tgt_pos - curr_pos) + kv * (tgt_vel - curr_vel)
             new_vel = curr_vel + acceleration * control_dt
-            robot_body.velocity = new_vel
+            robot_body.velocity = (
+                new_vel[0], new_vel[1]
+            )
             for _ in range(sim_hz // control_hz):
                 space.step(sim_dt)
         pos_control_err = np.linalg.norm(np.array(tgt_pos) - np.array(robot_body.position))
@@ -51,12 +57,11 @@ def test_pymunk_simple_env():
         states.append(np.array([robot_body.position.x, 
                         robot_body.position.y,
                         robot_body.velocity.x,
-                        robot_body.velocity.y]))
+                        robot_body.velocity.y], dtype=np.float32))
     np.savez("state_actions.npz",
         states=np.array(states),
         actions=np.array(actions)
     )
-        
 
 def test_pymunk_simple_env_replay():
     space = pymunk.Space()
@@ -136,25 +141,31 @@ def test_pymunk_simple_env_reset():
 
     # Reset and replay from each intermediate state
     states = []
-    for i in range(len(actions)):
+    for i in range(20):
         loaded_state_prev = loaded_states[i]
         robot_body.position = (loaded_state_prev[0], loaded_state_prev[1])
         robot_body.velocity = (loaded_state_prev[2], loaded_state_prev[3])
-        tgt_pos = robot_body.position + actions[i]
-        tgt_vel = Vec2d(0, 0)
+        tgt_pos = np.array([robot_body.position.x,
+                            robot_body.position.y], dtype=np.float32) \
+                           + actions[i].astype(np.float32)
+        tgt_vel = np.array([0.0, 0.0], dtype=np.float32)
         for _ in range(steps_per_control):
-            curr_pos = robot_body.position
-            curr_vel = robot_body.velocity
+            curr_pos = np.array([robot_body.position.x,
+                            robot_body.position.y], dtype=np.float32)
+            curr_vel = np.array([robot_body.velocity.x,
+                            robot_body.velocity.y], dtype=np.float32)
             # PD control
             acceleration = kp * (tgt_pos - curr_pos) + kv * (tgt_vel - curr_vel)
             new_vel = curr_vel + acceleration * control_dt
-            robot_body.velocity = new_vel
+            robot_body.velocity = (
+                new_vel[0], new_vel[1]
+            )
             for _ in range(sim_hz // control_hz):
                 space.step(sim_dt)
         states.append(np.array([robot_body.position.x,
                         robot_body.position.y,
                         robot_body.velocity.x,
-                        robot_body.velocity.y]))
+                        robot_body.velocity.y], dtype=np.float32))
         # error to loaded states
         loaded_state = loaded_states[i+1]
         max_err = np.max(np.abs(loaded_state - states[-1]))
@@ -228,7 +239,7 @@ def test_pymunk_simple_env_remove_add_reset():
 
 def test_pymunk_simple_env_replay_pushtee():
     # Extract demo information
-    demo_path = 'prbench/demos/DynPushT-t1/0/1759591501.p'
+    demo_path = 'demos/DynPushT-t1/0/1760636935.p'
     demo_data = load_demo(demo_path)
     actions = demo_data["actions"]
     expected_observations = demo_data["observations"]
@@ -263,7 +274,7 @@ def test_pymunk_simple_env_replay_pushtee():
 
     # Reset and replay from each intermediate state
     states = []
-    for i in range(5):
+    for i in range(len(actions)):
         tgt_pos = robot_body.position + actions[i]
         tgt_vel = Vec2d(0, 0)
         for _ in range(steps_per_control):
@@ -286,7 +297,7 @@ def test_pymunk_simple_env_replay_pushtee():
 
 def test_pymunk_simple_env_reset_pushtee():
     # Extract demo information
-    demo_path = 'prbench/demos/DynPushT-t1/0/1759591501.p'
+    demo_path = 'demos/DynPushT-t1/0/1760636935.p'
     demo_data = load_demo(demo_path)
     actions = demo_data["actions"]
     expected_observations = demo_data["observations"]
@@ -319,7 +330,7 @@ def test_pymunk_simple_env_reset_pushtee():
 
     # Reset and replay from each intermediate state
     states = []
-    for i in range(5):
+    for i in range(len(actions)):
         loaded_state_prev = loaded_states[i]
         robot_body.position = (loaded_state_prev[0], loaded_state_prev[1])
         robot_body.velocity = (loaded_state_prev[2], loaded_state_prev[3])

@@ -79,15 +79,17 @@ class ObjectCentricState:
             raise ValueError(f"Object '{name}' not found in state")
         return matches[0]
 
-    def vec(self, objects: Sequence[Object]) -> Array:
+    def vec(self, objects: Sequence[Object],
+            dtype: Any = np.float32
+            ) -> Array:
         """Concatenated vector of features for each of the objects in the given
         ordered list."""
         feats: List[Array] = []
         if len(objects) == 0:
-            return np.zeros(0, dtype=np.float32)
+            return np.zeros(0, dtype=dtype)
         for obj in objects:
             feats.append(self[obj])
-        return np.hstack(feats).astype(np.float32)
+        return np.hstack(feats).astype(dtype)
 
     @classmethod
     def from_vec(

@@ -563,7 +563,7 @@ class ObjectCentricDynamic2DRobotEnv(
 
     def get_action_from_gui_input(
         self, gui_input: dict[str, Any]
-    ) -> NDArray[np.float32]:
+    ) -> NDArray[np.float64]:
         """Get the mapping from human inputs to actions."""
         # This will be implemented later
         assert isinstance(self.action_space, KinRobotActionSpace)
