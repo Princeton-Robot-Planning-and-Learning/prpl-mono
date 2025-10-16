@@ -306,13 +306,13 @@ class Table(MujocoObject):
         self.table_thickness = table_config["thickness"]
         self.leg_inset = leg_inset
         self.regions = regions if regions is not None else {}
-        
+
         # Handle position parameter
         if position is None:
             self.position = [0.0, 0.0, 0.0]
         else:
             self.position = list(position)
-        
+
         # Shape-specific parameters
         if self.table_shape == "rectangle":
             self.table_length = table_config["length"]
@@ -323,7 +323,9 @@ class Table(MujocoObject):
             self.table_length = None  # Not used for circle
             self.table_width = None  # Not used for circle
         else:
-            raise ValueError(f"Unknown table shape: {self.table_shape}. Must be 'rectangle' or 'circle'")
+            raise ValueError(
+                f"Unknown table shape: {self.table_shape}. Must be 'rectangle' or 'circle'"
+            )
 
         # Create the XML element
         self.xml_element = self._create_xml_element()
@@ -430,44 +432,46 @@ class Table(MujocoObject):
         return table_body
 
     def sample_pose_in_region(
-        self, 
-        regions: list[list[float]], 
-        np_random: Optional[np.random.Generator] = None
+        self,
+        regions: list[list[float]],
+        np_random: Optional[np.random.Generator] = None,
     ) -> tuple[float, float, float]:
         """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
-        
+
         Args:
             regions: List of bounding boxes, where each bounding box is a list of 4 floats:
                     [x_start, y_start, x_end, y_end] in table-relative coordinates
             np_random: Random number generator. If None, uses numpy's default random
-            
+
         Returns:
             Tuple of (x, y, z) coordinates in world coordinates (offset by table position)
-            
+
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
         """
         if not regions:
             raise ValueError("Regions list cannot be empty")
-            
+
         # Use provided random generator or default numpy random
         rng = np_random if np_random is not None else np.random.default_rng()
-        
+
         # Randomly select one of the regions
         selected_region = rng.choice(regions)
-        
+
         # Validate the selected region
         if len(selected_region) != 4:
-            raise ValueError(f"Each region must have exactly 4 values [x_start, y_start, x_end, y_end], got {len(selected_region)}")
-            
+            raise ValueError(
+                f"Each region must have exactly 4 values [x_start, y_start, x_end, y_end], got {len(selected_region)}"
+            )
+
         x_start, y_start, x_end, y_end = selected_region
-        
+
         # Validate bounds
         if x_start >= x_end:
             raise ValueError(f"x_start ({x_start}) must be less than x_end ({x_end})")
         if y_start >= y_end:
             raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
-        
+
         # Sample uniformly within the selected region
         x = rng.uniform(x_start, x_end)
         y = rng.uniform(y_start, y_end)

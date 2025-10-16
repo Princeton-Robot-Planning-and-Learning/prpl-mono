@@ -1,8 +1,8 @@
 """TidyBot 3D environment wrapper for PRBench."""
 
-import os
 import json
 import math
+import os
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,7 +22,7 @@ from prbench.envs.tidybot.object_types import (
     MujocoObjectTypeFeatures,
     MujocoRobotObjectType,
 )
-from prbench.envs.tidybot.objects import Cube, Table, MujocoObject
+from prbench.envs.tidybot.objects import Cube, MujocoObject, Table
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
 from prbench.envs.tidybot.utils import (
@@ -73,8 +73,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         # Parse task configuration
         if not os.path.isabs(task_config_path):
             task_config_path = str(Path(__file__).parent / task_config_path)
-        assert os.path.exists(task_config_path), f"task_config_path {task_config_path} does not exist."
-        with open(task_config_path, 'r') as f:
+        assert os.path.exists(
+            task_config_path
+        ), f"task_config_path {task_config_path} does not exist."
+        with open(task_config_path, "r") as f:
             self.task_config = json.load(f)
 
         # Initialize TidyBot-specific components
@@ -97,7 +99,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
         # Initialize empty object list
         self._objects: list[MujocoObject] = []
-        self._objects_dict : dict[str, MujocoObject] = {}
+        self._objects_dict: dict[str, MujocoObject] = {}
         self._fixtures_dict: dict[str, MujocoObject] = {}
 
         self._reward_calculator = create_reward_calculator(scene_type, num_objects)
@@ -157,18 +159,16 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                 # Insert fixtures (only tables supported for now)
                 fixtures = self.task_config.get("fixtures", {})
                 table_configs = fixtures.get("table", {})
-                
+
                 # Keep track of placed table bounding boxes for collision detection
                 placed_table_bboxes = []
-                
+
                 for table_name, table_config in table_configs.items():
                     # Sample collision-free position for the table
                     table_pos = sample_collision_free_position(
-                        table_config, 
-                        placed_table_bboxes, 
-                        self.np_random
+                        table_config, placed_table_bboxes, self.np_random
                     )
-                    
+
                     # Add this table's bounding box to the list
                     table_bbox = get_table_bbox(table_pos, table_config)
                     placed_table_bboxes.append(table_bbox)
@@ -187,12 +187,12 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                         table_config=table_config,
                         position=table_pos,
                         regions=regions,
-                        env=self._robot_env
+                        env=self._robot_env,
                     )
                     self._fixtures_dict[table_name] = new_table
                     table_body = new_table.xml_element
-                    worldbody.append(table_body)                    
-                
+                    worldbody.append(table_body)
+
                 # Insert objects (only cubes supported for now)
                 objects = self.task_config.get("objects", {})
                 cube_configs = objects.get("cube", {})
@@ -229,14 +229,18 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                 region_name = pred[2]
                 region_config = self.task_config["regions"][region_name]
                 region_ranges = region_config["ranges"]
-                
+
                 if region_config["target"] == "ground":
                     # Sample pose directly on the ground using utility function
-                    pos_x, pos_y, pos_z = sample_pose_in_region(region_ranges, self.np_random, z_coordinate=0.02)
+                    pos_x, pos_y, pos_z = sample_pose_in_region(
+                        region_ranges, self.np_random, z_coordinate=0.02
+                    )
                 else:
                     # Sample pose on a fixture (table, etc.)
                     fixture = self._fixtures_dict[region_config["target"]]
-                    pos_x, pos_y, pos_z = fixture.sample_pose_in_region(region_ranges, self.np_random)
+                    pos_x, pos_y, pos_z = fixture.sample_pose_in_region(
+                        region_ranges, self.np_random
+                    )
 
                 # Randomize orientation around Z-axis (yaw)
                 theta = self.np_random.uniform(-math.pi, math.pi)
