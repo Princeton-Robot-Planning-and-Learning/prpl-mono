@@ -1,19 +1,10 @@
 """Tests for dyn_pushtee.py."""
 
 import numpy as np
-import imageio.v2 as iio
 from gymnasium.spaces import Box
-import pickle
-
-import pymunk
 import pytest
 import prbench
 from prbench.utils import load_demo
-from prbench.envs.dynamic2d.utils import (
-    ROBOT_COLLISION_TYPE,
-    STATIC_COLLISION_TYPE,
-    on_dot_robot_collision_w_static,
-)
 
 def test_dyn_pusht_observation_space():
     """Tests that observations are vectors with fixed dimensionality."""
@@ -102,7 +93,7 @@ def test_dyn_pusht_replayable():
     env = prbench.make("prbench/DynPushT-t1-v0")
 
     # Extract demo information
-    demo_path = 'prbench/demos/DynPushT-t1/0/1759591501.p'
+    demo_path = 'prbench/demos/DynPushT-t1/0/1760636935.p'
     demo_data = load_demo(demo_path)
     env_id = demo_data["env_id"]
     actions = demo_data["actions"]
@@ -122,7 +113,7 @@ def test_dyn_pusht_replayable():
 
     # Check initial observation matches
     assert np.allclose(
-        obs, expected_observations[0], atol=1e-4
+        obs, expected_observations[0], atol=1e-5
     ), f"Initial observation mismatch in {demo_path}"
 
     # Replay all actions and verify observations/rewards
@@ -135,7 +126,7 @@ def test_dyn_pusht_replayable():
         # Check observation matches
         expected_obs = expected_observations[i + 1]
         assert np.allclose(
-            obs_next, expected_obs, atol=1e-4
+            obs_next, expected_obs, atol=1e-5
         ), f"Step {i} observation mismatch in {demo_path}"
 
         # Check reward matches (if available)
@@ -157,13 +148,12 @@ def test_dyn_pusht_resetable():
     env = prbench.make("prbench/DynPushT-t1-v0")
 
     # Extract demo information
-    demo_path = 'prbench/demos/DynPushT-t1/0/1759591501.p'
+    demo_path = 'prbench/demos/DynPushT-t1/0/1760636935.p'
     demo_data = load_demo(demo_path)
     env_id = demo_data["env_id"]
     actions = demo_data["actions"]
     expected_observations = demo_data["observations"]
     expected_rewards = demo_data.get("rewards", None)
-    seed = demo_data["seed"]
 
     # Skip if no actions to replay
     if len(actions) == 0:
@@ -173,16 +163,10 @@ def test_dyn_pusht_resetable():
     env = prbench.make(env_id, render_mode="rgb_array")
 
     # Test reproducibility: reset with seed and replay actions
-    obs, _ = env.reset(seed=seed)
-
-    # Check initial observation matches
-    print(f"Max abs diff: {np.max(np.abs(obs - expected_observations[0]))}")
-
     # Replay all actions and verify observations/rewards
     for i, prev_obs in enumerate(expected_observations):
         reset_options = {"init_state": prev_obs}
         obs, _ = env.reset(options=reset_options)
-        print(f"{i}: Max abs diff before: {np.max(np.abs(obs - prev_obs))}")
 
         action = actions[i]
         obs_next, reward, terminated, truncated, _ = env.step(action)
@@ -191,129 +175,9 @@ def test_dyn_pusht_resetable():
 
         # # Check observation matches
         expected_obs = expected_observations[i + 1]
-        print(f"{i}: Max abs diff after: {np.max(np.abs(obs_next - expected_obs))}")
-        # if not np.allclose(
-        #     obs_next, expected_obs, atol=1e-4
-        # ):
-        #     print(f"Step {i} observation mismatch in {demo_path}")
-        #     print(f"Max abs diff: {np.max(np.abs(obs_next - expected_obs))}")
-        #     obj_centric_obs_next = env.observation_space.devectorize(obs_next)
-        #     obj_centric_expected = env.observation_space.devectorize(expected_obs)
-        #     for obj in obj_centric_obs_next.data:
-        #         feature_next = obj_centric_obs_next.data[obj]
-        #         feature_expected = obj_centric_expected.data[obj]
-        #         if not np.allclose(feature_next, feature_expected, atol=1e-4):
-        #             print(f"Object {obj} mismatch:")
-
-        # Check reward matches (if available)
-        if expected_rewards is not None and i < len(expected_rewards):
-            expected_reward = expected_rewards[i]
-            assert reward == expected_reward, (
-                f"Reward mismatch at step {i} in {demo_path}: "
-                f"got {reward}, expected {expected_reward}"
-            )
-        # Stop if episode ended early
-        if terminated or truncated:
-            break
-    env.close()  # type: ignore[no-untyped-call]
-
-
-def test_dyn_pusht_resetable_pickle():
-    """Tests that reset with options works."""
-    prbench.register_all_environments()
-    env = prbench.make("prbench/DynPushT-t1-v0")
-
-    # Extract demo information
-    demo_path = 'prbench/demos/DynPushT-t1/0/1759591501.p'
-    demo_data = load_demo(demo_path)
-    env_id = demo_data["env_id"]
-    actions = demo_data["actions"]
-    expected_observations = demo_data["observations"]
-    expected_rewards = demo_data.get("rewards", None)
-    seed = demo_data["seed"]
-
-    # Skip if no actions to replay
-    if len(actions) == 0:
-        pytest.skip(f"Demo {demo_path} contains no actions")
-
-    # Create environment
-    env = prbench.make(env_id, render_mode="rgb_array")
-
-    # Test reproducibility: reset with seed and replay actions
-    obs, _ = env.reset(seed=seed)
-
-    # Check initial observation matches
-    print(f"Max abs diff: {np.max(np.abs(obs - expected_observations[0]))}")
-
-    # Replay all actions and verify observations/rewards
-    for i, prev_obs in enumerate(expected_observations):
-        # obj_centric_obs = env.unwrapped._object_centric_env._get_obs()
-        # tblock_x = obj_centric_obs.get(env.unwrapped._object_centric_env._tblock, 'x')
-        # tblock_y = obj_centric_obs.get(env.unwrapped._object_centric_env._tblock, 'y')
-        # tblock_pos = (tblock_x, tblock_y)
-        # with open(f"debug/replay_pickle/prev_space_{i:03d}.pkl", "wb") as f:
-        #     pickle_dict = {
-        #         'space': env.unwrapped._object_centric_env.pymunk_space,
-        #         'robot_pose': env.unwrapped._object_centric_env.dot_robot.pose,
-        #         'tblock_pos': tblock_pos
-        #     }
-        #     pickle.dump(pickle_dict, f)
-
-        # Reset from pickle
-        with open(f"debug/replay_pickle/prev_space_{i:03d}.pkl", "rb") as f:
-            dict = pickle.load(f)
-            env.unwrapped._object_centric_env.pymunk_space = dict['space']
-            point_query_rob = env.unwrapped._object_centric_env.pymunk_space.point_query(
-                (dict['robot_pose'].x, dict['robot_pose'].y),
-                0.01,
-                pymunk.ShapeFilter()
-            )
-            for pq in point_query_rob:
-                if (pq.shape.body.body_type == pymunk.Body.KINEMATIC) and \
-                    isinstance(pq.shape, pymunk.Circle):
-                    robot_shape = pq.shape
-                    robot_body = robot_shape.body
-                    break
-            # NOTE: Overwirte the body
-            env.unwrapped._object_centric_env.dot_robot.reset_body_shape(
-                robot_body,
-                robot_shape,
-            )
-            # NOTE: Reset up collision handlers
-            env.unwrapped._object_centric_env.pymunk_space.on_collision(
-                STATIC_COLLISION_TYPE,
-                ROBOT_COLLISION_TYPE,
-                pre_solve=on_dot_robot_collision_w_static,
-                data=env.unwrapped._object_centric_env.dot_robot,
-            )
-
-            point_query_tblock = env.unwrapped._object_centric_env.pymunk_space.point_query(
-                dict['tblock_pos'],
-                0.01,
-                pymunk.ShapeFilter()
-            )
-            for pq in point_query_tblock:
-                if pq.shape.body.body_type == pymunk.Body.DYNAMIC:
-                    tblock_body = pq.shape.body
-                    break
-            # NOTE: Overwirte the body
-            env.unwrapped._object_centric_env._state_obj_to_pymunk_body[
-                env.unwrapped._object_centric_env._tblock
-            ] = tblock_body
-
-            obj_centric_obs = env.unwrapped._object_centric_env._get_obs()
-            obs = env.observation_space.vectorize(obj_centric_obs)
-
-        print(f"{i}: Max abs diff before: {np.max(np.abs(obs - prev_obs))}")
-
-        action = actions[i]
-        obs_next, reward, terminated, truncated, _ = env.step(action)
-        # img = env.render()  # type: ignore[no-untyped-call]
-        # iio.imwrite(f"debug/replay_pickle/dyn_obstruction2d_{i:03d}.png", img)
-
-        # # Check observation matches
-        expected_obs = expected_observations[i + 1]
-        print(f"{i}: Max abs diff after: {np.max(np.abs(obs_next - expected_obs))}")
+        assert np.allclose(
+            obs_next, expected_obs, atol=1e-5
+        ), f"Step {i} observation mismatch in {demo_path}"
 
         # Check reward matches (if available)
         if expected_rewards is not None and i < len(expected_rewards):
