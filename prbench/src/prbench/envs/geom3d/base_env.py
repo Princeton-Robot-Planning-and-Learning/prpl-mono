@@ -73,7 +73,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     max_action_mag: float = 0.05
 
     # This is used to check whether a grasped object can be placed on a surface.
-    min_placement_dist: float = 5e-3
+    min_placement_dist: float = 5e-3  # this is a more reasonable default
 
     # For rendering.
     render_dpi: int = 300
@@ -87,7 +87,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
             "camera_target": self.robot_base_pose.position,
             "camera_yaw": 90,
             "camera_distance": 1.5,
-            "camera_pitch": -40,
+            "camera_pitch": -20,
         }
 
 
@@ -512,11 +512,8 @@ class ObjectCentricGeom3DRobotEnv(
                     feats["grasp_active"] = 1
                 else:
                     feats["grasp_active"] = 0
-                # Triangle-specific features: these are stored in the env's
-                # half-extents mapping for cuboids; for triangles we expect the
-                # environment to provide these when creating the object. We try
-                # to fetch them via _get_half_extents if possible (fallback to 0).
-                # Here we use _get_triangle_features if implemented by envs.
+                # Triangle-specific features (fallback to 0).
+                # Here we use _get_triangle_features implemented within the envs.
                 try:
                     a, b, depth, ttype = self._get_triangle_features(object_name)
                 except AttributeError:

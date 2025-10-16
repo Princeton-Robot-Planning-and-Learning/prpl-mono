@@ -236,6 +236,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
                 )
                 kwargs["options"]["init_state"] = obj_centric_state
         obs, info = self._object_centric_env.reset(*args, **kwargs)
+        # check if args/kwargs have a flag to update constant objects
         self.update_constant_objects(obs)
         assert isinstance(self.observation_space, ObjectCentricBoxSpace)
         vec_obs = self.observation_space.vectorize(obs)

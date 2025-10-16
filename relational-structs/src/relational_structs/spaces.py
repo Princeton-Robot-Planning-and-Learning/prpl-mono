@@ -82,7 +82,10 @@ class ObjectCentricBoxSpace(Box):
     def update_constant_objects(
         self, constant_objects: list[Object]
     ) -> None:
-        """Update the constant objects in this space."""
+        """Update the constant objects in this space.
+        This is particularly important if the number of objects
+        or their types change with resets.
+        """
         self.constant_objects = constant_objects
         num_dims = sum(len(self.type_features[o.type]) for o in constant_objects)
         shape = (num_dims,)
