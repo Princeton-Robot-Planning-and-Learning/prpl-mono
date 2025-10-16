@@ -79,6 +79,17 @@ class ObjectCentricBoxSpace(Box):
         high = np.full(shape, np.inf, dtype=np.float32)
         super().__init__(low, high, shape, dtype=np.float32)
 
+    def update_constant_objects(
+        self, constant_objects: list[Object]
+    ) -> None:
+        """Update the constant objects in this space."""
+        self.constant_objects = constant_objects
+        num_dims = sum(len(self.type_features[o.type]) for o in constant_objects)
+        shape = (num_dims,)
+        low = np.full(shape, -np.inf, dtype=np.float32)
+        high = np.full(shape, np.inf, dtype=np.float32)
+        super().__init__(low, high, shape, dtype=np.float32)
+
     def vectorize(self, object_centric_state: ObjectCentricState) -> Array:
         """Create a vector in this space for the given object-centric state."""
         return object_centric_state.vec(self.constant_objects)

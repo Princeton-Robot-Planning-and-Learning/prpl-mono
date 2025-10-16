@@ -34,15 +34,16 @@ from relational_structs.utils import create_state_from_dict
 from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionSpace
 from prbench.envs.geom3d.object_types import (
     Geom3DCuboidType,
-    Geom3DTriangleType,
     Geom3DEnvTypeFeatures,
     Geom3DPointType,
     Geom3DRobotType,
+    Geom3DTriangleType,
 )
 from prbench.envs.geom3d.utils import (
     Geom3DObjectCentricState,
     Geom3DRobotActionSpace,
     extend_joints_to_include_fingers,
+    get_robot_action_from_gui_input,
     remove_fingers_from_extended_joints,
 )
 
@@ -72,7 +73,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     max_action_mag: float = 0.05
 
     # This is used to check whether a grasped object can be placed on a surface.
-    min_placement_dist: float = 1e-3
+    min_placement_dist: float = 5e-3
 
     # For rendering.
     render_dpi: int = 300
@@ -203,14 +204,15 @@ class ObjectCentricGeom3DRobotEnv(
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         """Get the half extents for a cuboid object."""
 
-    @abc.abstractmethod
-    def _get_triangle_features(self, object_name: str) -> tuple[float, float, float, float]:
-        """Return triangle parameters (side_a, side_b, side_c, depth, triangle_type).
+    def _get_triangle_features(
+        self, object_name: str
+    ) -> tuple[float, float, float, float]:
+        """Return triangle parameters (side_a, side_b, depth, triangle_type).
 
         Subclasses that support triangles should override this. The default
-        implementation returns zeros to provide a safe fallback for
-        serialization.
+        implementation returns zeros to provide a safe fallback for serialization.
         """
+        assert object_name is not None
         return 0.0, 0.0, 0.0, 0.0
 
     @property

@@ -1,12 +1,14 @@
 """Utilities."""
 
 from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
-
 from pybullet_helpers.geometry import Pose
 from pybullet_helpers.joint import JointPositions
 from relational_structs import Object, ObjectCentricState
+from scipy.spatial.transform import Rotation
+from shapely.geometry import Polygon
 
 from prbench.envs.geom3d.object_types import Geom3DCuboidType
 from prbench.envs.utils import RobotActionSpace
@@ -104,6 +106,7 @@ def remove_fingers_from_extended_joints(
     assert len(joint_positions) == 13
     return joint_positions[:7]
 
+
 def get_robot_action_from_gui_input(
     action_space: Geom3DRobotActionSpace, gui_input: dict[str, Any]
 ) -> NDArray[np.float32]:
@@ -129,18 +132,66 @@ def get_robot_action_from_gui_input(
     # The left stick controls the rotation of the base. Only the x axis
     # is used right now.
     action[2] = _rescale(left_x, low[2], high[2])
+    action[4] = _rescale(left_y, low[4], high[4])
 
     # The w/s mouse keys are used to adjust the robot arm.
     if "a" in keys_pressed:
-        action[3] = low[3]
+        action[5] = low[5]
     if "s" in keys_pressed:
-        action[3] = high[3]
+        action[5] = high[5]
 
     # The space bar is used to close the gripper.
     # Open the gripper by default.
     if "d" in keys_pressed:
-        action[4] = low[4]
+        action[6] = low[6]
     if "f" in keys_pressed:
-        action[4] = high[4]
+        action[6] = high[6]
 
     return action
+
+
+def is_on_top(
+    poseA: Pose,
+    halfA: tuple[float, float, float],
+    poseB: Pose,
+    halfB: tuple[float, float, float],
+) -> bool:
+    """Check if box B is on top of box A.
+
+    Args:
+        poseA: Pose of box A. (position, orientation as quaternion).
+        halfA: Half extents of box A (hx, hy, hz).
+        poseB: Pose of box B. (position, orientation as quaternion).
+        halfB: Half extents of box B (hx, hy, hz).
+    Returns:
+        True if box B is on top of box A, False otherwise.
+    """
+    posA, quatA = poseA.position, poseA.orientation
+    posB, quatB = poseB.position, poseB.orientation
+
+    R_A = Rotation.from_quat(quatA).as_matrix()
+    R_B = Rotation.from_quat(quatB).as_matrix()
+
+    def corners(
+        p: tuple[float, float, float], R: np.ndarray, h: np.ndarray
+    ) -> np.ndarray:
+        local = np.array(
+            [
+                [sx * h[0], sy * h[1], sz * h[2]]
+                for sx in [-1, 1]
+                for sy in [-1, 1]
+                for sz in [-1, 1]
+            ]
+        )
+        return (R @ local.T).T + p
+
+    C_A = corners(posA, R_A, np.array(halfA))
+    C_B = corners(posB, R_B, np.array(halfB))
+
+    PA = Polygon(C_A[:, :2]).convex_hull
+    PB = Polygon(C_B[:, :2]).convex_hull
+
+    overlap = PA.intersects(PB)
+    zA_max, zB_min = np.max(C_A[:, 2]), np.min(C_B[:, 2])
+
+    return overlap and (zB_min >= zA_max)
