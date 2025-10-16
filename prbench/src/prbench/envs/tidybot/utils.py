@@ -118,6 +118,13 @@ def sample_collision_free_position(
     print(
         f"Warning: Could not find collision-free position after {max_attempts} attempts"
     )
+    return np.array(
+        [
+            np_random.uniform(x_range[0], x_range[1]),
+            np_random.uniform(y_range[0], y_range[1]),
+            0.0,
+        ]
+    )
 
 
 def sample_pose_in_region(
