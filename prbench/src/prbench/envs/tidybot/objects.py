@@ -307,6 +307,11 @@ class Table(MujocoObject):
         self.leg_inset = leg_inset
         self.regions = regions if regions is not None else {}
 
+        # Optional parameters
+        self.table_length: Optional[float] = None
+        self.table_width: Optional[float] = None
+        self.table_diameter: Optional[float] = None
+
         # Handle position parameter
         if position is None:
             self.position = [0.0, 0.0, 0.0]
@@ -317,11 +322,8 @@ class Table(MujocoObject):
         if self.table_shape == "rectangle":
             self.table_length = float(table_config["length"])
             self.table_width = float(table_config["width"])
-            self.table_diameter = None  # Not used for rectangle
         elif self.table_shape == "circle":
             self.table_diameter = float(table_config["diameter"])
-            self.table_length = None  # Not used for circle
-            self.table_width = None  # Not used for circle
         else:
             raise ValueError(
                 f"Unknown table shape: {self.table_shape}. "
@@ -344,6 +346,9 @@ class Table(MujocoObject):
         table_body.set("pos", position_str)
 
         if self.table_shape == "rectangle":
+            assert self.table_length is not None
+            assert self.table_width is not None
+
             # Calculate MuJoCo geom sizes (half the actual dimensions)
             table_half_length = float(self.table_length) / 2
             table_half_width = float(self.table_width) / 2
@@ -397,6 +402,8 @@ class Table(MujocoObject):
                 leg.set("rgba", "0.6 0.4 0.2 1")
 
         elif self.table_shape == "circle":
+            assert self.table_diameter is not None
+
             # Calculate MuJoCo geom sizes for circular table
             table_radius = float(self.table_diameter) / 2
             table_half_thickness = self.table_thickness / 2
