@@ -301,9 +301,9 @@ class Table(MujocoObject):
         super().__init__(name, env)
 
         # Parse table configuration
-        self.table_shape = table_config["shape"]
-        self.table_height = table_config["height"]
-        self.table_thickness = table_config["thickness"]
+        self.table_shape = str(table_config["shape"])
+        self.table_height = float(table_config["height"])
+        self.table_thickness = float(table_config["thickness"])
         self.leg_inset = leg_inset
         self.regions = regions if regions is not None else {}
 
@@ -315,11 +315,11 @@ class Table(MujocoObject):
 
         # Shape-specific parameters
         if self.table_shape == "rectangle":
-            self.table_length = table_config["length"]
-            self.table_width = table_config["width"]
+            self.table_length = float(table_config["length"])
+            self.table_width = float(table_config["width"])
             self.table_diameter = None  # Not used for rectangle
         elif self.table_shape == "circle":
-            self.table_diameter = table_config["diameter"]
+            self.table_diameter = float(table_config["diameter"])
             self.table_length = None  # Not used for circle
             self.table_width = None  # Not used for circle
         else:
@@ -345,8 +345,8 @@ class Table(MujocoObject):
 
         if self.table_shape == "rectangle":
             # Calculate MuJoCo geom sizes (half the actual dimensions)
-            table_half_length = self.table_length / 2
-            table_half_width = self.table_width / 2
+            table_half_length = float(self.table_length) / 2
+            table_half_width = float(self.table_width) / 2
             table_half_thickness = self.table_thickness / 2
             leg_radius = 0.02
             leg_half_height = (self.table_height - self.table_thickness) / 2
@@ -398,7 +398,7 @@ class Table(MujocoObject):
 
         elif self.table_shape == "circle":
             # Calculate MuJoCo geom sizes for circular table
-            table_radius = self.table_diameter / 2
+            table_radius = float(self.table_diameter) / 2
             table_half_thickness = self.table_thickness / 2
             leg_radius = 0.02
             leg_half_height = (self.table_height - self.table_thickness) / 2
