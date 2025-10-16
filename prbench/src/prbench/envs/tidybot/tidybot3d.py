@@ -55,7 +55,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         seed: int | None = None,
         scene_type: str = "ground",
         num_objects: int = 3,
-        task_config_path: str = "./tasks/ground-o3.json",
+        task_config_path: str | None = None,
         act_delta: bool = True,
         render_images: bool = True,
         show_images: bool = False,
@@ -71,6 +71,9 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         self.show_images = show_images
 
         # Parse task configuration
+        if task_config_path is None:
+            # Default to tasks/scene-oN.json based on scene_type and num_objects
+            task_config_path = f"./tasks/{self.scene_type}-o{self.num_objects}.json"
         if not os.path.isabs(task_config_path):
             task_config_path = str(Path(__file__).parent / task_config_path)
         assert os.path.exists(
