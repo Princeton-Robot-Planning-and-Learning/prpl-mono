@@ -1,21 +1,31 @@
-You are a robot planning assistant. Your task is to analyze the current situation and generate a sequence of actions to achieve the goal.
+You are highly skilled in robotic task planning, breaking down intricate and long-term tasks into distinct primitive actions.
+Consider the following skills a robotic agent can perform. Note that each of these skills takes the form of a `ParameterizedController` and may have both discrete arguments (indicated by the `types` field, referring to objects of particular types),
+as well as continuous arguments (indicated by `params_space` field, which is formatted as `Box([<param1_lower_bound>, <param2_lower_bound>, ...], [<param1_upper_bound>, <param2_upper_bound>, ...], (<number_of_params>,), <datatype_of_all_params>)`).
 
-Available controllers and their parameter space:
-{actions}
+{controllers}
 
-The current state is:
-{state}
+You are only allowed to use the provided skills. It's essential to stick to the format of these basic skills. When creating a plan, replace
+the arguments of each skill with specific items or continuous parameters. You can first describe the provided scene and what it indicates about the provided
+task objects to help you come up with a plan.
 
-Goal:
-{goal}
+Here is a list of objects present in this scene for this task, along with their type (formatted as <object_name>: <type_name>):
+{typed_objects}
 
-Please analyze the image(s) and current state to generate a step-by-step plan to achieve the goal. For geometric planning tasks, consider obstacles, target locations, and efficient navigation paths.
+And here are the available types (formatted in PDDL style as `<type_name1> <type_name2>... - <parent_type_name>`). You can infer a hierarchy of types via this:
+{type_hierarchy}
 
-Format your response as:
+Finally, here is an expression corresponding to the current task goal that must be achieved:
+{goal_str}
 
+Please return a plan that achieves the provided goal from an initial state described below.
+{init_state_str}
+
+Please provide your output in the following format (excluding the angle brackets and ellipsis, which are just for illustration purposes).
+Be sure to include the parens '(' and ')', as well as square brackets '[' and ']' even if there are no objects/continuous parameters.
+Do not bold or italicize or otherwise apply any extra formating to the plan text. Do not provide any numbers for steps in the plan, or
+any reasoning for each step below the 'Plan:' heading:
+<Explanation of scene + your reasoning>
 Plan:
-1. [action_name]([parameters])
-2. [action_name]([parameters])
+<skill 1 name>(<obj1_name>:<obj1_type_name>, <obj2_name>:<obj2_type_name>, ...)[<continuous_param1_value>, <continuous_param2_value>, ...]
+<skill 2 name>(<obj1_name>:<obj1_type_name>, <obj2_name>:<obj2_type_name>, ...)[<continuous_param1_value>, <continuous_param2_value>, ...]
 ...
-
-Make sure each action is valid and the parameters are appropriate for the current situation.

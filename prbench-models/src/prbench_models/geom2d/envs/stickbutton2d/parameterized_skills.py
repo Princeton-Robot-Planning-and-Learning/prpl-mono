@@ -4,6 +4,7 @@ from typing import Optional, Sequence
 
 import numpy as np
 from bilevel_planning.structs import LiftedParameterizedController
+from gymnasium.spaces import Box
 from prbench.envs.geom2d.object_types import CircleType, CRVRobotType, RectangleType
 from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
@@ -299,6 +300,28 @@ def create_lifted_controllers(
         Dictionary mapping controller names to LiftedParameterizedController instances.
     """
 
+    # Define params_space for each controller type
+    robot_press_button_params_space = Box(
+        low=np.array([0.0]),
+        high=np.array([0.0]),
+        dtype=np.float32,
+    )
+    pick_stick_params_space = Box(
+        low=np.array([0.0, 0.0]),
+        high=np.array([1.0, 1.0]),
+        dtype=np.float32,
+    )
+    stick_press_button_params_space = Box(
+        low=np.array([0.0]),
+        high=np.array([0.0]),
+        dtype=np.float32,
+    )
+    place_stick_params_space = Box(
+        low=np.array([0.0]),
+        high=np.array([0.0]),
+        dtype=np.float32,
+    )
+
     # Create partial controller classes that include the action_space
     class RobotPressButtonController(GroundRobotPressButtonController):
         """Controller for moving the robot to press a button."""
@@ -335,6 +358,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, button],
             RobotPressButtonController,
+            robot_press_button_params_space,
         )
     )
 
@@ -342,6 +366,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, button, from_button],
             RobotPressButtonController,
+            robot_press_button_params_space,
         )
     )
 
@@ -349,6 +374,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, stick],
             PickStickController,
+            pick_stick_params_space,
         )
     )
 
@@ -356,6 +382,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, stick, from_button],
             PickStickController,
+            pick_stick_params_space,
         )
     )
 
@@ -363,6 +390,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, stick, button],
             StickPressButtonController,
+            stick_press_button_params_space,
         )
     )
 
@@ -370,6 +398,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, stick, button, from_button],
             StickPressButtonController,
+            stick_press_button_params_space,
         )
     )
 
@@ -377,6 +406,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, stick],
             PlaceStickController,
+            place_stick_params_space,
         )
     )
 
