@@ -117,7 +117,7 @@ def register_all_environments() -> None:
         )
 
     # Packing3D environment with different numbers of parts to be packed.
-    num_parts = [1, 2, 3, 4, 5]
+    num_parts = [1, 2, 3]
     for num_part in num_parts:
         _register(
             id=f"prbench/Packing3D-p{num_part}-v0",
