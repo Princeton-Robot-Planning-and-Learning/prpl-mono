@@ -239,7 +239,7 @@ def test_pymunk_simple_env_remove_add_reset():
 
 def test_pymunk_simple_env_replay_pushtee():
     # Extract demo information
-    demo_path = 'demos/DynPushT-t1/0/1760636935.p'
+    demo_path = 'prbench/demos/DynPushT-t1/0/1760636935.p'
     demo_data = load_demo(demo_path)
     actions = demo_data["actions"]
     expected_observations = demo_data["observations"]
@@ -297,7 +297,7 @@ def test_pymunk_simple_env_replay_pushtee():
 
 def test_pymunk_simple_env_reset_pushtee():
     # Extract demo information
-    demo_path = 'demos/DynPushT-t1/0/1760636935.p'
+    demo_path = 'prbench/demos/DynPushT-t1/0/1760636935.p'
     demo_data = load_demo(demo_path)
     actions = demo_data["actions"]
     expected_observations = demo_data["observations"]
