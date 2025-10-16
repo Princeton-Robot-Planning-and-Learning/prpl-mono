@@ -119,23 +119,23 @@ def register_all_environments() -> None:
     # ******* Dynamic3D Environments *******
 
     # TidyBot3D environments with different scenes and object counts
-    scene_configs = [
-        ("ground", [3, 5, 7]),  # Ground/scene.xml with different object counts
-        ("table", [3, 5, 7]),  # Table with different object counts
-        ("cupboard", [8]),  # Cupboard environment
-        ("base_motion", [1]),  # Must move base only to reach target on ground
-    ]
+    tasks_root = os.path.join(os.path.dirname(__file__), "envs", "tidybot", "tasks")
+    task_configs = os.listdir(tasks_root)
 
-    for scene_type, object_counts in scene_configs:
-        for num_objects in object_counts:
-            register(
-                id=f"prbench/TidyBot3D-{scene_type}-o{num_objects}-v0",
-                entry_point="prbench.envs.tidybot.tidybot3d:TidyBot3DEnv",
-                kwargs={
-                    "scene_type": scene_type,
-                    "num_objects": num_objects,
-                },
-            )
+    for task_config in task_configs:
+        config_name = task_config.replace(".json", "")
+        scene_type = config_name.split("-")[0]
+        num_objects = int(config_name.split("-o")[-1])
+        task_config_path = os.path.join(tasks_root, task_config)
+        register(
+            id=f"prbench/TidyBot3D-{config_name}-v0",
+            entry_point="prbench.envs.tidybot.tidybot3d:TidyBot3DEnv",
+            kwargs={
+                "scene_type": scene_type,
+                "num_objects": num_objects,
+                "task_config_path": task_config_path,
+            },
+        )
 
 
 def _register(id: str, *args, **kwargs) -> None:  # pylint: disable=redefined-builtin
