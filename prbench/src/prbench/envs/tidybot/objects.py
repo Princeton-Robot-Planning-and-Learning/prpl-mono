@@ -2,7 +2,7 @@
 
 import math
 import xml.etree.ElementTree as ET
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 from numpy.typing import NDArray
@@ -18,7 +18,7 @@ class MujocoObject:
     def __init__(
         self,
         name: str,
-        env: Optional[MujocoEnv] = None,
+        env: MujocoEnv | None = None,
     ) -> None:
         """Initialize a MujocoObject.
 
@@ -200,7 +200,7 @@ class Cube(MujocoObject):
         size: Union[float, list[float]] = 0.02,
         rgba: Union[str, list[float]] = ".5 .7 .5 1",
         mass: float = 0.1,
-        env: Optional[MujocoEnv] = None,
+        env: MujocoEnv | None = None,
     ) -> None:
         """Initialize a Cube object.
 
@@ -277,7 +277,7 @@ class MujocoFixture:
     def __init__(
         self,
         name: str,
-        env: Optional[MujocoEnv] = None,
+        env: MujocoEnv | None = None,
     ) -> None:
         """Initialize a MujocoFixture.
 
@@ -318,11 +318,11 @@ class Table(MujocoFixture):
     def __init__(
         self,
         name: str,
-        table_config: dict[str, Union[str, float]],
-        position: Optional[Union[list[float], NDArray[np.float32]]] = None,
+        table_config: dict[str, str | float],
+        position: list[float] | NDArray[np.float32] | None = None,
         leg_inset: float = 0.05,
-        regions: Optional[dict] = None,
-        env: Optional[MujocoEnv] = None,
+        regions: dict | None = None,
+        env: MujocoEnv | None = None,
     ) -> None:
         """Initialize a Table object.
 
@@ -350,9 +350,9 @@ class Table(MujocoFixture):
         self.regions = regions if regions is not None else {}
 
         # Optional parameters
-        self.table_length: Optional[float] = None
-        self.table_width: Optional[float] = None
-        self.table_diameter: Optional[float] = None
+        self.table_length: float | None = None
+        self.table_width: float | None = None
+        self.table_diameter: float | None = None
 
         # Handle position parameter
         if position is None:

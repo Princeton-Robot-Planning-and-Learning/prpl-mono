@@ -119,7 +119,7 @@ def register_all_environments() -> None:
     # ******* Dynamic3D Environments *******
 
     # TidyBot3D environments with different scenes and object counts
-    tasks_root = os.path.join(os.path.dirname(__file__), "envs", "tidybot", "tasks")
+    tasks_root = os.path.join(Path(__file__).parent, "envs", "tidybot", "tasks")
     task_configs = os.listdir(tasks_root)
 
     for task_config in task_configs:
