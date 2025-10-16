@@ -130,10 +130,13 @@ class TestBboxesOverlap:
 class TestSampleCollisionFreePosition:
     """Tests for sample_collision_free_position function."""
 
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.np_random = np.random.default_rng(42)
-        self.table_config = {"shape": "rectangle", "length": 0.5, "width": 0.5}
+    # Class-level test fixtures
+    np_random = np.random.default_rng(42)
+    table_config = {
+        "shape": "rectangle",
+        "length": 0.5,
+        "width": 0.5,
+    }
 
     def test_no_existing_tables(self):
         """Test sampling when no tables are placed yet."""
@@ -233,9 +236,8 @@ class TestSampleCollisionFreePosition:
 class TestSamplePoseInRegion:
     """Tests for sample_pose_in_region function."""
 
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.np_random = np.random.default_rng(42)
+    # Class-level test fixture
+    np_random = np.random.default_rng(42)
 
     def test_single_region(self):
         """Test sampling from a single region."""
