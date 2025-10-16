@@ -63,6 +63,16 @@
                 "size": 0.06,
                 "rgba": [0.1, 0.1, 0.5, 1],
                 "mass": 0.1
+            },
+            "cube4": {
+                "size": 0.02,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube5": {
+                "size": 0.02,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.1
             }
         }
     },
@@ -80,6 +90,16 @@
         [
             "on",
             "cube3",
+            "ground_2_object_init_region"
+        ],
+        [
+            "on",
+            "cube4",
+            "ground_2_object_init_region"
+        ],
+        [
+            "on",
+            "cube5",
             "ground_2_object_init_region"
         ]
     ]
