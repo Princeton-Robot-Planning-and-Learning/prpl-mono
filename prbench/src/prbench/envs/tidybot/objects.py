@@ -1,5 +1,6 @@
 """Object definitions for TidyBot environments."""
 
+import math
 import xml.etree.ElementTree as ET
 from typing import Optional, Union
 
@@ -426,8 +427,6 @@ class Table(MujocoObject):
 
             # Create table legs at 4 positions around the circle
             # (at 45, 135, 225, 315 degrees)
-            import math
-
             leg_angles = [
                 math.pi / 4,
                 3 * math.pi / 4,

@@ -34,7 +34,7 @@ def get_table_bbox(
             pos[0] + half_length,  # x_max
             pos[1] + half_width,  # y_max
         ]
-    elif table_config["shape"] == "circle":
+    if table_config["shape"] == "circle":
         radius = table_config["diameter"] / 2
         return [
             pos[0] - radius,  # x_min
