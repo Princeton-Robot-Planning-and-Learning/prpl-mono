@@ -95,6 +95,10 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         self.np_random = np.random.default_rng(seed)
         super().__init__()
 
+    def seed(self, seed: int | None = None) -> list[int]:
+        """Set the random seed for the environment."""
+        super().reset(seed=seed)
+
     def reset(
         self,
         *,

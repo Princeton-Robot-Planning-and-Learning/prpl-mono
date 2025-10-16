@@ -263,6 +263,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
     ) -> tuple[ObjectCentricState, dict[str, Any]]:
         """Reset the environment and return object-centric observation."""
 
+        # Reset the random seed
+        self._robot_env.seed(seed=seed)
+        self.np_random = self._robot_env.np_random
+
         # Create scene XML
         self._objects = []
         self._objects_dict = {}
@@ -272,8 +276,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         # Reset the underlying TidyBot robot environment
         robot_options = options.copy() if options is not None else {}
         robot_options["xml"] = xml_string
-        self._robot_env.reset(seed=seed, options=robot_options)
-        self.np_random = self._robot_env.np_random
+        self._robot_env.reset(options=robot_options)
 
         # Initialize object poses
         self._initialize_object_poses()
