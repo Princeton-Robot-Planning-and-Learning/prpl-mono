@@ -271,7 +271,48 @@ class Cube(MujocoObject):
         )
 
 
-class Table(MujocoObject):
+class MujocoFixture:
+    """Base class for MuJoCo fixtures (static objects)."""
+
+    def __init__(
+        self,
+        name: str,
+        env: Optional[MujocoEnv] = None,
+    ) -> None:
+        """Initialize a MujocoFixture.
+
+        Args:
+            name: Name of the fixture body in the XML
+            env: Reference to the environment
+        """
+        self.name = name
+        self.env = env
+
+    def sample_pose_in_region(
+        self,
+        regions: list[list[float]],
+        np_random: np.random.Generator,
+    ) -> tuple[float, float, float]:
+        """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
+
+        Args:
+            regions: List of bounding boxes, where each bounding box is a list of
+                    4 floats: [x_start, y_start, x_end, y_end] in table-relative
+                    coordinates
+            np_random: Random number generator. If None, uses numpy's default random
+
+        Returns:
+            Tuple of (x, y, z) coordinates in world coordinates (offset by table
+            position)
+
+        Raises:
+            ValueError: If regions list is empty or if any region has invalid bounds
+        """
+
+        raise NotImplementedError("Subclasses must implement sample_pose_in_region")
+
+
+class Table(MujocoFixture):
     """A table object for TidyBot environments."""
 
     def __init__(
@@ -456,7 +497,7 @@ class Table(MujocoObject):
     def sample_pose_in_region(
         self,
         regions: list[list[float]],
-        np_random: Optional[np.random.Generator] = None,
+        np_random: np.random.Generator,
     ) -> tuple[float, float, float]:
         """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
 
@@ -476,11 +517,8 @@ class Table(MujocoObject):
         if not regions:
             raise ValueError("Regions list cannot be empty")
 
-        # Use provided random generator or default numpy random
-        rng = np_random if np_random is not None else np.random.default_rng()
-
         # Randomly select one of the regions
-        selected_region = rng.choice(regions)
+        selected_region = np_random.choice(regions)
 
         # Validate the selected region
         if len(selected_region) != 4:
@@ -498,8 +536,8 @@ class Table(MujocoObject):
             raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
 
         # Sample uniformly within the selected region
-        x = rng.uniform(x_start, x_end)
-        y = rng.uniform(y_start, y_end)
+        x = np_random.uniform(x_start, x_end)
+        y = np_random.uniform(y_start, y_end)
 
         # Sample z coordinate on top of the table
         z = self.table_height + 0.1  # Slightly above the table surface
@@ -521,7 +559,7 @@ class Table(MujocoObject):
     def __repr__(self) -> str:
         """Detailed string representation of the table."""
         return (
-            f"Table(name='{self.name}', joint_name='{self.joint_name}', "
+            f"Table(name='{self.name}', "
             f"shape='{self.table_shape}', length={self.table_length}, "
             f"width={self.table_width}, diameter={self.table_diameter}, "
             f"height={self.table_height}, thickness={self.table_thickness}, "

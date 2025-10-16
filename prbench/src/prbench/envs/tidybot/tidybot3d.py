@@ -22,7 +22,7 @@ from prbench.envs.tidybot.object_types import (
     MujocoObjectTypeFeatures,
     MujocoRobotObjectType,
 )
-from prbench.envs.tidybot.objects import Cube, MujocoObject, Table
+from prbench.envs.tidybot.objects import Cube, MujocoFixture, MujocoObject, Table
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
 from prbench.envs.tidybot.utils import (
@@ -103,7 +103,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         # Initialize empty object list
         self._objects: list[MujocoObject] = []
         self._objects_dict: dict[str, MujocoObject] = {}
-        self._fixtures_dict: dict[str, MujocoObject] = {}
+        self._fixtures_dict: dict[str, MujocoFixture] = {}
 
         self._reward_calculator = create_reward_calculator(scene_type, num_objects)
 
@@ -164,7 +164,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                 table_configs = fixtures.get("table", {})
 
                 # Keep track of placed table bounding boxes for collision detection
-                placed_table_bboxes = []
+                placed_table_bboxes: list[list[float]] = []
 
                 for table_name, table_config in table_configs.items():
                     # Sample collision-free position for the table
