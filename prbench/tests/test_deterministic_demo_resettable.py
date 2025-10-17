@@ -16,8 +16,10 @@ def test_deterministic_demo_replay(demo_path: Path):
     This test verifies that:
     1. Loading a demo file succeeds
     2. Environment can be created for the demo's environment ID
-    3. Replaying actions with the same seed produces identical observations
-    4. Replaying actions produces identical rewards (if available)
+    For each observation and action pair in the demo:
+        3. Resetting the environment with that observation
+        4. Replaying the action produces the next observation
+        5. Checking the reproduced observation matches the demo's next observation
     """
     # Register all environments
     prbench.register_all_environments()

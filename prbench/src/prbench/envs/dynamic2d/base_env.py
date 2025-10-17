@@ -392,7 +392,6 @@ class ObjectCentricDynamic2DRobotEnv(
                 tgt_gripper,
                 control_dt,
             )
-            # np.savetxt("vel_command_154.txt", np.array(vel_command))
             # Update robot with the vel (PD control updates velocities)
             self.robot.update(
                 base_vel,

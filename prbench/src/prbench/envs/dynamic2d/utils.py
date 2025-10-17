@@ -49,7 +49,7 @@ class KinRobotActionSpace(RobotActionSpace):
     ) -> None:
         low = np.array([min_dx, min_dy, min_dtheta, min_darm, min_dgripper])
         high = np.array([max_dx, max_dy, max_dtheta, max_darm, max_dgripper])
-        super().__init__(low, high)
+        super().__init__(low, high, dtype=np.float64)
 
     def create_markdown_description(self) -> str:
         """Create a human-readable markdown description of this space."""
@@ -174,12 +174,6 @@ class DotRobot:
         """Get the body id in pymunk space."""
         assert self._body is not None
         return self._body.id
-
-    def reset_body_shape(self, body: pymunk.Body, shape: pymunk.Shape) -> None:
-        """Reset the robot body and shape."""
-        self._body = body
-        self._shape = shape
-        self.update_last_state()
 
     def reset_position(
         self,
