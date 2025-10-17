@@ -175,9 +175,7 @@ class DotRobot:
         assert self._body is not None
         return self._body.id
 
-    def reset_body_shape(self,
-                         body: pymunk.Body,
-                        shape: pymunk.Shape) -> None:
+    def reset_body_shape(self, body: pymunk.Body, shape: pymunk.Shape) -> None:
         """Reset the robot body and shape."""
         self._body = body
         self._shape = shape

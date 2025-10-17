@@ -516,9 +516,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
 
         return -1.0, terminated
 
-    def get_action_from_gui_input(
-        self, gui_input: dict[str, Any]
-    ) -> NDArray[np.float64]:
+    def get_action_from_gui_input(self, gui_input: dict[str, Any]) -> NDArray[Any]:
         """Get the mapping from human inputs to actions."""
         # This will be implemented later
         assert isinstance(self.action_space, DotRobotActionSpace)
@@ -535,8 +533,9 @@ class DynPushTEnv(ConstantObjectPRBenchEnv):
             self._object_centric_env.observation_space, ObjectCentricStateSpace
         )
         self.observation_space = self._object_centric_env.observation_space.to_box(
-            self._constant_objects, self._object_centric_env.type_features,
-            dtype=np.float64
+            self._constant_objects,
+            self._object_centric_env.type_features,
+            dtype=np.float64,
         )
 
     def _create_object_centric_env(

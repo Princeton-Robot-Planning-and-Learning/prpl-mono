@@ -123,26 +123,6 @@ class ObjectCentricDynamic2DRobotEnv(
         # Used for collision checking with Geom2D.
         self._static_object_body_cache: dict[Object, MultiBody2D] = {}
 
-        # Try the idea that we continue stepping the simulation until robot seperates with
-        # everything.
-        self._colliding_shapes: set[pymunk.Shape] = set()
-
-    def _collision_begin(
-        self, arbiter: pymunk.Arbiter, space: pymunk.Space, data: Any
-    ) -> None:
-        """Collision callback for robot colliding with static objects."""
-        del space
-        del data
-        self._colliding_shapes.update(arbiter.shapes[1])
-    
-    def _collision_seperate(
-        self, arbiter: pymunk.Arbiter, space: pymunk.Space, data: Any
-    ) -> None:
-        """Collision callback for robot colliding with static objects."""
-        del space
-        del data
-        self._colliding_shapes.discard(arbiter.shapes[1])
-    
     def _create_observation_space(self, config: _ConfigType) -> ObjectCentricStateSpace:
         types = set(self.type_features)
         return ObjectCentricStateSpace(types)
@@ -211,23 +191,6 @@ class ObjectCentricDynamic2DRobotEnv(
             pre_solve=on_collision_w_static,
             data=self.robot,
         )
-        # Robot collisions with anything else
-        for col_type1 in [ROBOT_COLLISION_TYPE, 
-                         FINGER_COLLISION_TYPE, 
-                         ARM_COLLISION_TYPE]:
-            for col_type2 in [DYNAMIC_COLLISION_TYPE, STATIC_COLLISION_TYPE]:
-                self.pymunk_space.on_collision(
-                    col_type1,
-                    col_type2,
-                    pre_solve=self._collision_begin,
-                    data=None
-                )
-                self.pymunk_space.on_collision(
-                    col_type1,
-                    col_type2,
-                    separate=self._collision_seperate,
-                    data=None
-                )
 
     def _reset_robot_in_space(self, obj: Object, state: ObjectCentricState) -> None:
         """Reset the robot in the PyMunk space."""
@@ -412,7 +375,6 @@ class ObjectCentricDynamic2DRobotEnv(
             self.robot.is_closing_finger = False
 
         # Multi-step simulation like pushT env
-        vel_command = []
         for _ in range(n_steps):
             # Use PD control to compute base and gripper velocities
             (
@@ -430,24 +392,6 @@ class ObjectCentricDynamic2DRobotEnv(
                 tgt_gripper,
                 control_dt,
             )
-            vel_command.append(np.array(
-                [
-                    self.robot.base_pose.x,
-                    self.robot.base_pose.y,
-                    self.robot.base_pose.theta,
-                    self.robot.base_vel[0].x,
-                    self.robot.base_vel[0].y,
-                    self.robot.base_vel[1],
-                    self.robot.curr_arm_length,
-                    self.robot.gripper_base_vel[0].x,
-                    self.robot.gripper_base_vel[0].y,
-                    self.robot.gripper_base_vel[1],
-                    self.robot.curr_gripper,
-                    self.robot.finger_vel[0].x,
-                    self.robot.finger_vel[0].y,
-                    self.robot.finger_vel[1],
-                ]
-            ))
             # np.savetxt("vel_command_154.txt", np.array(vel_command))
             # Update robot with the vel (PD control updates velocities)
             self.robot.update(
@@ -561,9 +505,7 @@ class ObjectCentricDynamic2DRobotEnv(
             self.config.render_dpi,
         )
 
-    def get_action_from_gui_input(
-        self, gui_input: dict[str, Any]
-    ) -> NDArray[np.float64]:
+    def get_action_from_gui_input(self, gui_input: dict[str, Any]) -> NDArray[Any]:
         """Get the mapping from human inputs to actions."""
         # This will be implemented later
         assert isinstance(self.action_space, KinRobotActionSpace)

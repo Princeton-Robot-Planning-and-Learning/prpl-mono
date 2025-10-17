@@ -2,9 +2,9 @@
 
 import numpy as np
 from gymnasium.spaces import Box
-import pytest
+
 import prbench
-from prbench.utils import load_demo
+
 
 def test_dyn_pusht_observation_space():
     """Tests that observations are vectors with fixed dimensionality."""
@@ -86,108 +86,3 @@ def test_dyn_pusht_goal_achievement():
     obs, _ = env.reset(options={"init_state": new_state})
     _, _, terminated, _, _ = env.step(zero_action)
     assert terminated
-
-
-def test_dyn_pusht_replayable():
-    """Tests that reset with options works."""
-    prbench.register_all_environments()
-    env = prbench.make("prbench/DynPushT-t1-v0")
-
-    # Extract demo information
-    demo_path = 'prbench/demos/DynPushT-t1/0/1760636935.p'
-    demo_data = load_demo(demo_path)
-    env_id = demo_data["env_id"]
-    actions = demo_data["actions"]
-    expected_observations = demo_data["observations"]
-    expected_rewards = demo_data.get("rewards", None)
-    seed = demo_data["seed"]
-
-    # Skip if no actions to replay
-    if len(actions) == 0:
-        pytest.skip(f"Demo {demo_path} contains no actions")
-
-    # Create environment
-    env = prbench.make(env_id, render_mode="rgb_array")
-
-    # Test reproducibility: reset with seed and replay actions
-    obs, _ = env.reset(seed=seed)
-
-    # Check initial observation matches
-    assert np.allclose(
-        obs, expected_observations[0], atol=1e-5
-    ), f"Initial observation mismatch in {demo_path}"
-
-    # Replay all actions and verify observations/rewards
-    for i, _ in enumerate(expected_observations):
-        action = actions[i]
-        obs_next, reward, terminated, truncated, _ = env.step(action)
-        # img = env.render()  # type: ignore[no-untyped-call]
-        # iio.imwrite(f"debug/replay_pickle/dyn_obstruction2d_{i:03d}.png", img)
-
-        # Check observation matches
-        expected_obs = expected_observations[i + 1]
-        assert np.allclose(
-            obs_next, expected_obs, atol=1e-5
-        ), f"Step {i} observation mismatch in {demo_path}"
-
-        # Check reward matches (if available)
-        if expected_rewards is not None and i < len(expected_rewards):
-            expected_reward = expected_rewards[i]
-            assert reward == expected_reward, (
-                f"Reward mismatch at step {i} in {demo_path}: "
-                f"got {reward}, expected {expected_reward}"
-            )
-        # Stop if episode ended early
-        if terminated or truncated:
-            break
-    env.close()  # type: ignore[no-untyped-call]
-
-
-def test_dyn_pusht_resetable():
-    """Tests that reset with options works."""
-    prbench.register_all_environments()
-    env = prbench.make("prbench/DynPushT-t1-v0")
-
-    # Extract demo information
-    demo_path = 'prbench/demos/DynPushT-t1/0/1760636935.p'
-    demo_data = load_demo(demo_path)
-    env_id = demo_data["env_id"]
-    actions = demo_data["actions"]
-    expected_observations = demo_data["observations"]
-    expected_rewards = demo_data.get("rewards", None)
-
-    # Skip if no actions to replay
-    if len(actions) == 0:
-        pytest.skip(f"Demo {demo_path} contains no actions")
-
-    # Create environment
-    env = prbench.make(env_id, render_mode="rgb_array")
-
-    # Test reproducibility: reset with seed and replay actions
-    # Replay all actions and verify observations/rewards
-    for i, prev_obs in enumerate(expected_observations):
-        reset_options = {"init_state": prev_obs}
-        obs, _ = env.reset(options=reset_options)
-
-        action = actions[i]
-        obs_next, reward, terminated, truncated, _ = env.step(action)
-        # img = env.render()  # type: ignore[no-untyped-call]
-        # iio.imwrite(f"debug/replay_pickle/dyn_obstruction2d_{i:03d}.png", img)
-
-        # # Check observation matches
-        expected_obs = expected_observations[i + 1]
-        assert np.allclose(
-            obs_next, expected_obs, atol=1e-5
-        ), f"Step {i} observation mismatch in {demo_path}"
-
-        # Check reward matches (if available)
-        if expected_rewards is not None and i < len(expected_rewards):
-            expected_reward = expected_rewards[i]
-            assert reward == expected_reward, (
-                f"Reward mismatch at step {i} in {demo_path}: "
-                f"got {reward}, expected {expected_reward}"
-            )
-        # Stop if episode ended early
-        if terminated or truncated:
-            break
-    env.close()  # type: ignore[no-untyped-call]

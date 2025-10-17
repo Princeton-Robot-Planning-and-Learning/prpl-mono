@@ -51,13 +51,14 @@ def test_deterministic_demo_replay(demo_path: Path):
     ), f"Initial observation mismatch in {demo_path}"
 
     # Replay all actions and verify observations/rewards
-    for i, action in enumerate(actions):
-        obs, reward, terminated, truncated, _ = env.step(action)
+    for i, _ in enumerate(expected_observations):
+        action = actions[i]
+        obs_next, reward, terminated, truncated, _ = env.step(action)
 
         # Check observation matches
         expected_obs = expected_observations[i + 1]
         assert np.allclose(
-            obs, expected_obs, atol=1e-4
+            obs_next, expected_obs, atol=1e-5
         ), f"Observation mismatch at step {i} in {demo_path}"
 
         # Check reward matches (if available)
@@ -67,7 +68,6 @@ def test_deterministic_demo_replay(demo_path: Path):
                 f"Reward mismatch at step {i} in {demo_path}: "
                 f"got {reward}, expected {expected_reward}"
             )
-
         # Stop if episode ended early
         if terminated or truncated:
             break
