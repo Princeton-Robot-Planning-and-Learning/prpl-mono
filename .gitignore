@@ -5,7 +5,9 @@ MUJOCO_LOG.TXT
 uv.lock
 logs
 llm_cache.db
+vlm_cache
 unit_test_videos
+prbench-vlm-planning/outputs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -130,9 +132,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
-env/
 venv/
-ENV/
 env.bak/
 venv.bak/
 

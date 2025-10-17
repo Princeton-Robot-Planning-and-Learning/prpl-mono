@@ -123,6 +123,7 @@ def register_all_environments() -> None:
         ("ground", [3, 5, 7]),  # Ground/scene.xml with different object counts
         ("table", [3, 5, 7]),  # Table with different object counts
         ("cupboard", [8]),  # Cupboard environment
+        ("base_motion", [1]),  # Must move base only to reach target on ground
     ]
 
     for scene_type, object_counts in scene_configs:

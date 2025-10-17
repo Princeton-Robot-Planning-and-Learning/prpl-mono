@@ -6,7 +6,11 @@ from typing import Any
 import numpy as np
 import pymunk
 from numpy.typing import NDArray
+<<<<<<< HEAD
 from relational_structs import Object, ObjectCentricState, ObjectCentricStateSpace, Type
+=======
+from relational_structs import Object, ObjectCentricState, Type
+>>>>>>> main
 from relational_structs.utils import create_state_from_dict
 
 from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta
@@ -516,7 +520,13 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
 
         return -1.0, terminated
 
+<<<<<<< HEAD
     def get_action_from_gui_input(self, gui_input: dict[str, Any]) -> NDArray[Any]:
+=======
+    def get_action_from_gui_input(
+        self, gui_input: dict[str, Any]
+    ) -> NDArray[np.float32]:
+>>>>>>> main
         """Get the mapping from human inputs to actions."""
         # This will be implemented later
         assert isinstance(self.action_space, DotRobotActionSpace)
@@ -526,6 +536,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
 class DynPushTEnv(ConstantObjectPRBenchEnv):
     """Dynamic PushT env with a constant number of objects."""
 
+<<<<<<< HEAD
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # This is a Box space with some extra functionality to allow easy vectorizing.
@@ -538,6 +549,8 @@ class DynPushTEnv(ConstantObjectPRBenchEnv):
             dtype=np.float64,
         )
 
+=======
+>>>>>>> main
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricDynamic2DRobotEnv:

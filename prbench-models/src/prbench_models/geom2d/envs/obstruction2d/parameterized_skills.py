@@ -3,12 +3,14 @@
 from typing import Sequence
 
 import numpy as np
+from bilevel_planning.structs import LiftedParameterizedController
+from gymnasium.spaces import Box
 from numpy.typing import NDArray
 from prbench.envs.geom2d.object_types import CRVRobotType, RectangleType
 from prbench.envs.geom2d.obstruction2d import TargetSurfaceType
 from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import CRVRobotActionSpace
-from relational_structs import Object, ObjectCentricState
+from relational_structs import Object, ObjectCentricState, Variable
 
 from prbench_models.geom2d.utils import Geom2dRobotController
 
@@ -224,3 +226,82 @@ class GroundPlaceOnTargetController(_GroundPlaceController):
         if lower_x > upper_x:
             lower_x, upper_x = upper_x, lower_x
         return rng.uniform(lower_x, upper_x)
+
+
+def create_lifted_controllers(
+    action_space: CRVRobotActionSpace,
+    init_constant_state: ObjectCentricState | None = None,
+) -> dict[str, LiftedParameterizedController]:
+    """Create lifted parameterized controllers for Obstruction2D.
+
+    Args:
+        action_space: The action space for the CRV robot.
+
+    Returns:
+        Dictionary mapping controller names to LiftedParameterizedController instances.
+    """
+    del init_constant_state  # unused
+
+    # Define params_space for controllers
+    pick_params_space = Box(
+        low=np.array([0.0]),
+        high=np.array([1.0]),
+        dtype=np.float32,
+    )
+    place_params_space = Box(
+        low=np.array([0.0]),
+        high=np.array([1.0]),
+        dtype=np.float32,
+    )
+
+    # Create partial controller classes that include the action_space
+    class PickController(GroundPickController):
+        """Pick controller with pre-configured action space."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space)
+
+    class PlaceOnTableController(GroundPlaceOnTableController):
+        """Place on table controller with pre-configured action space."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space)
+
+    class PlaceOnTargetController(GroundPlaceOnTargetController):
+        """Place on target controller with pre-configured action space."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space)
+
+    # Create variables for lifted controllers
+    robot = Variable("?robot", CRVRobotType)
+    block = Variable("?block", RectangleType)
+
+    # Lifted controllers
+    pick_controller: LiftedParameterizedController = LiftedParameterizedController(
+        [robot, block],
+        PickController,
+        pick_params_space,
+    )
+
+    place_on_table_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, block],
+            PlaceOnTableController,
+            place_params_space,
+        )
+    )
+
+    place_on_target_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, block],
+            PlaceOnTargetController,
+            place_params_space,
+        )
+    )
+
+    return {
+        "pick": pick_controller,
+        "place_on_table": place_on_table_controller,
+        "place_on_target": place_on_target_controller,
+    }

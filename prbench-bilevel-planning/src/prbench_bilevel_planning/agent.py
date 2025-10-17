@@ -62,7 +62,8 @@ class BilevelPlanningAgent(Agent[_O, _U]):
         self._current_plan = self._run_planning()
 
     def _get_action(self) -> _U:
-        assert self._current_plan, "Ran out of planning steps, failure!"
+        if not self._current_plan:
+            raise AgentFailure("Ran out of planning steps, failure!")
         return self._current_plan.pop(0)
 
     def _run_planning(self) -> list[_U]:

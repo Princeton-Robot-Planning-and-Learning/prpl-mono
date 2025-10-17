@@ -12,7 +12,6 @@ import gc
 import os
 import platform
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from threading import Lock
 from typing import Any, TypeAlias
 
@@ -21,6 +20,7 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 from numpy.typing import NDArray
+from relational_structs import Array
 
 # This value is then used by the physics engine to determine how much time
 # to simulate for each step.
@@ -57,19 +57,7 @@ _MjSim_render_lock = Lock()
 MjObs: TypeAlias = dict[str, NDArray[Any]]
 
 
-@dataclass(frozen=True)
-class MjAct:
-    """An action in a MuJoCo environment.
-
-    The position_ctrl field is used to set sim.data.ctrl in the MuJoCo environment. For
-    now, we assume that all actuators (as defined in the MuJoCo xml) use position
-    control, hence the variable name.
-    """
-
-    position_ctrl: NDArray[np.float64]
-
-
-class MujocoEnv(gymnasium.Env[MjObs, MjAct]):
+class MujocoEnv(gymnasium.Env[MjObs, Array]):
     """This is the base class for environments that use MuJoCo for simulation."""
 
     def __init__(
@@ -139,7 +127,7 @@ class MujocoEnv(gymnasium.Env[MjObs, MjAct]):
     def reward(self, obs: MjObs) -> float:
         """Compute the reward from an observation."""
 
-    def step(self, action: MjAct) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
+    def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         assert self.sim is not None, "Simulation must be initialized before stepping."
 
         assert self.timestep is not None, "Timestep must be initialized."
@@ -149,7 +137,7 @@ class MujocoEnv(gymnasium.Env[MjObs, MjAct]):
         # is reached
         control_timestep = 1.0 / self.control_frequency
         for _ in range(int(control_timestep / SIMULATION_TIMESTEP)):
-            self.sim.data.ctrl[:] = action.position_ctrl
+            self.sim.data.ctrl[:] = action
             self.sim.forward()
             self.sim.step()
 
@@ -161,6 +149,51 @@ class MujocoEnv(gymnasium.Env[MjObs, MjAct]):
         info: dict[str, object] = {}
 
         return obs, reward, terminated, truncated, info
+
+    def set_joint_pos_quat(
+        self, name: str, pos: NDArray[np.float32], quat: NDArray[np.float32]
+    ) -> None:
+        """Set joint position and orientation in the environment."""
+        assert self.sim is not None, "Simulation not initialized"
+        joint_id = self.sim.model.get_joint_qpos_addr(name)
+        self.sim.data.qpos[joint_id : joint_id + 7] = np.array(
+            [float(x) for x in pos] + [float(q) for q in quat]
+        )
+
+    def get_joint_pos_quat(
+        self, name: str
+    ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+        """Get joint position and orientation in the environment."""
+
+        assert self.sim is not None, "Simulation not initialized"
+        joint_id = self.sim.model.get_joint_qpos_addr(name)
+        pos = self.sim.data.qpos[joint_id : joint_id + 3]
+        quat = self.sim.data.qpos[joint_id + 3 : joint_id + 7]
+        return pos, quat
+
+    def set_joint_vel(
+        self,
+        name: str,
+        linear_vel: NDArray[np.float32],
+        angular_vel: NDArray[np.float32],
+    ) -> None:
+        """Set joint linear and angular velocity in the environment."""
+        assert self.sim is not None, "Simulation not initialized"
+        joint_id = self.sim.model.get_joint_qvel_addr(name)
+        self.sim.data.qvel[joint_id : joint_id + 6] = np.array(
+            [float(x) for x in linear_vel] + [float(q) for q in angular_vel]
+        )
+
+    def get_joint_vel(
+        self, name: str
+    ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+        """Get joint linear and angular velocity in the environment."""
+
+        assert self.sim is not None, "Simulation not initialized"
+        joint_id = self.sim.model.get_joint_qvel_addr(name)
+        linear_vel = self.sim.data.qvel[joint_id : joint_id + 3]
+        angular_vel = self.sim.data.qvel[joint_id + 3 : joint_id + 6]
+        return linear_vel, angular_vel
 
     def get_obs(self) -> MjObs:
         """Get the current observation."""

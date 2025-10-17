@@ -3,10 +3,17 @@
 from typing import Optional, Sequence, cast
 
 import numpy as np
+from bilevel_planning.structs import LiftedParameterizedController
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
-from prbench.envs.geom2d.clutteredstorage2d import ClutteredStorage2DEnvConfig
+from gymnasium.spaces import Box
+from prbench.envs.geom2d.clutteredstorage2d import (
+    ClutteredStorage2DEnvConfig,
+    ShelfType,
+    TargetBlockType,
+)
+from prbench.envs.geom2d.object_types import CRVRobotType
 from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
@@ -19,6 +26,7 @@ from prbench.envs.geom2d.utils import (
 from relational_structs import (
     Object,
     ObjectCentricState,
+    Variable,
 )
 
 from prbench_models.geom2d.utils import Geom2dRobotController
@@ -414,3 +422,110 @@ class GroundPlaceBlockNotOnShelfController(Geom2dRobotController):
             final_waypoints.append((wp, robot_radius))
 
         return final_waypoints
+
+
+def create_lifted_controllers(
+    action_space: CRVRobotActionSpace,
+    init_constant_state: Optional[ObjectCentricState] = None,
+) -> dict[str, LiftedParameterizedController]:
+    """Create lifted parameterized controllers for ClutteredStorage2D.
+
+    Args:
+        action_space: The action space for the CRV robot.
+        init_constant_state: Optional initial constant state.
+
+    Returns:
+        Dictionary mapping controller names to LiftedParameterizedController instances.
+    """
+
+    # Define params_space for each controller type
+    pick_block_not_on_shelf_params_space = Box(
+        low=np.array([-1.0, 0.0]),
+        high=np.array([1.0, 1.0]),
+        dtype=np.float32,
+    )
+    pick_block_on_shelf_params_space = Box(
+        low=np.array([-1.0, 0.0]),
+        high=np.array([1.0, 1.0]),
+        dtype=np.float32,
+    )
+    place_block_on_shelf_params_space = Box(
+        low=np.array([0.01, 0.1]),
+        high=np.array([0.99, 0.95]),
+        dtype=np.float32,
+    )
+    place_block_not_on_shelf_params_space = Box(
+        low=np.array([0.0, 0.0, 0.0]),
+        high=np.array([1.0, 1.0, 1.0]),
+        dtype=np.float32,
+    )
+
+    # Create partial controller classes that include the action_space
+    class PickBlockNotOnShelfController(GroundPickBlockNotOnShelfController):
+        """Controller for picking a block not on the shelf."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    class PickBlockOnShelfController(GroundPickBlockOnShelfController):
+        """Controller for picking a block on the shelf."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    class PlaceBlockOnShelfController(GroundPlaceBlockOnShelfController):
+        """Controller for placing a block on the shelf."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    class PlaceBlockNotOnShelfController(GroundPlaceBlockNotOnShelfController):
+        """Controller for placing a block not on the shelf."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
+    # Create variables for lifted controllers
+    robot = Variable("?robot", CRVRobotType)
+    block = Variable("?block", TargetBlockType)
+    shelf = Variable("?shelf", ShelfType)
+
+    # Lifted controllers
+    pick_block_not_on_shelf_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, block, shelf],
+            PickBlockNotOnShelfController,
+            pick_block_not_on_shelf_params_space,
+        )
+    )
+
+    pick_block_on_shelf_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, block, shelf],
+            PickBlockOnShelfController,
+            pick_block_on_shelf_params_space,
+        )
+    )
+
+    place_block_not_on_shelf_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, block, shelf],
+            PlaceBlockNotOnShelfController,
+            place_block_not_on_shelf_params_space,
+        )
+    )
+
+    place_block_on_shelf_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, block, shelf],
+            PlaceBlockOnShelfController,
+            place_block_on_shelf_params_space,
+        )
+    )
+
+    return {
+        "pick_block_not_on_shelf": pick_block_not_on_shelf_controller,
+        "pick_block_on_shelf": pick_block_on_shelf_controller,
+        "place_block_not_on_shelf": place_block_not_on_shelf_controller,
+        "place_block_on_shelf": place_block_on_shelf_controller,
+    }

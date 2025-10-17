@@ -2,7 +2,6 @@
 
 import numpy as np
 from bilevel_planning.structs import (
-    LiftedParameterizedController,
     LiftedSkill,
     RelationalAbstractGoal,
     RelationalAbstractState,
@@ -22,9 +21,7 @@ from prbench.envs.geom2d.utils import (
     is_inside,
 )
 from prbench_models.geom2d.envs.clutteredretrieval2d.parameterized_skills import (
-    GroundMoveToController,
-    GroundPickController,
-    GroundPlaceController,
+    create_lifted_controllers,
 )
 from relational_structs import (
     GroundAtom,
@@ -157,51 +154,14 @@ def create_bilevel_planning_models(
         delete_effects={LiftedAtom(HoldingObstruction, [robot, obstruction])},
     )
 
-    # Create partial controller classes that include the action_space
-    class PickController(GroundPickController):
-        """Controller for picking the target block or obstruction."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space, sim.initial_constant_state)
-
-    class PlaceController(GroundPlaceController):
-        """Controller for placing the obstruction."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space, sim.initial_constant_state)
-
-    class MoveToTgtController(GroundMoveToController):
-        """Controller for moving the robot to the target region."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space, sim.initial_constant_state)
-
-    # Lifted controllers.
-    PickTgtController: LiftedParameterizedController = LiftedParameterizedController(
-        [robot, target_block],
-        PickController,
+    # Get lifted controllers from prbench_models
+    lifted_controllers = create_lifted_controllers(
+        action_space, sim.initial_constant_state
     )
-
-    PickObstructionController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, obstruction],
-            PickController,
-        )
-    )
-
-    PlaceObstructionController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, obstruction],
-            PlaceController,
-        )
-    )
-
-    PlaceTgtRegionController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, target_block, target_region],
-            MoveToTgtController,
-        )
-    )
+    PickTgtController = lifted_controllers["pick_tgt"]
+    PickObstructionController = lifted_controllers["pick_obstruction"]
+    PlaceObstructionController = lifted_controllers["place_obstruction"]
+    PlaceTgtRegionController = lifted_controllers["place_tgt"]
 
     # Finalize the skills.
     skills = {

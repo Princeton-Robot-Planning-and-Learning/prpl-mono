@@ -1,5 +1,5 @@
 # prbench/TidyBot3D-cupboard-o8-v0
-*(Random action GIF could not be generated due to rendering issues)*
+![random action GIF](assets/random_action_gifs/TidyBot3D-cupboard-o8.gif)
 
 ### Description
 A 3D mobile manipulation environment using the TidyBot platform.
@@ -14,26 +14,41 @@ The robot can control:
 - Gripper position (open/close)
 
 ### Initial State Distribution
-*(Initial state GIF could not be generated due to rendering issues)*
+![initial state GIF](assets/initial_state_gifs/TidyBot3D-cupboard-o8.gif)
 
 ### Example Demonstration
 *(No demonstration GIFs available)*
 
 ### Observation Space
-Observation includes:
-- Robot state: base pose, arm position/orientation, gripper state
-- Object states: positions and orientations of all objects
-- Camera images: RGB images from base and wrist cameras
-- Scene-specific features: handle positions for cabinets/drawers
+The entries of an array in this Box space correspond to the following object features:
+| **Index** | **Object** | **Feature** |
+| --- | --- | --- |
+| 0 | robot | pos_base_x |
+| 1 | robot | pos_base_y |
+| 2 | robot | pos_base_rot |
+| 3 | robot | pos_arm_joint1 |
+| 4 | robot | pos_arm_joint2 |
+| 5 | robot | pos_arm_joint3 |
+| 6 | robot | pos_arm_joint4 |
+| 7 | robot | pos_arm_joint5 |
+| 8 | robot | pos_arm_joint6 |
+| 9 | robot | pos_arm_joint7 |
+| 10 | robot | pos_gripper |
+| 11 | robot | vel_base_x |
+| 12 | robot | vel_base_y |
+| 13 | robot | vel_base_rot |
+| 14 | robot | vel_arm_joint1 |
+| 15 | robot | vel_arm_joint2 |
+| 16 | robot | vel_arm_joint3 |
+| 17 | robot | vel_arm_joint4 |
+| 18 | robot | vel_arm_joint5 |
+| 19 | robot | vel_arm_joint6 |
+| 20 | robot | vel_arm_joint7 |
+| 21 | robot | vel_gripper |
 
 
 ### Action Space
-Actions control:
-- base_pose: [x, y, theta] - Mobile base position and orientation
-- arm_pos: [x, y, z] - End effector position in world coordinates
-- arm_quat: [x, y, z, w] - End effector orientation as quaternion
-- gripper_pos: [pos] - Gripper open/close position (0=closed, 1=open)
-
+Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
 
 ### Rewards
 Reward function depends on the specific task:

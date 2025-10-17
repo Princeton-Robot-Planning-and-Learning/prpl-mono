@@ -2,7 +2,6 @@
 
 import numpy as np
 from bilevel_planning.structs import (
-    LiftedParameterizedController,
     LiftedSkill,
     RelationalAbstractGoal,
     RelationalAbstractState,
@@ -21,10 +20,7 @@ from prbench.envs.geom2d.utils import (
     object_to_multibody2d,
 )
 from prbench_models.geom2d.envs.stickbutton2d.parameterized_skills import (
-    GroundPickStickController,
-    GroundPlaceStickController,
-    GroundRobotPressButtonController,
-    GroundStickPressButtonController,
+    create_lifted_controllers,
 )
 from relational_structs import (
     GroundAtom,
@@ -269,80 +265,25 @@ def create_bilevel_planning_models(
         delete_effects={LiftedAtom(Grasped, [robot, stick])},
     )
 
-    class RobotPressButtonController(GroundRobotPressButtonController):
-        """Controller for moving the robot to press a button."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space, sim.initial_constant_state)
-
-    class PickStickController(GroundPickStickController):
-        """Controller for moving the robot to pick the stick."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space, sim.initial_constant_state)
-
-    class StickPressButtonController(GroundStickPressButtonController):
-        """Controller for moving the robot to use the stick to press a button."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space, sim.initial_constant_state)
-
-    class PlaceStickController(GroundPlaceStickController):
-        """Controller for moving the robot to place the stick down."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space, sim.initial_constant_state)
-
-    # Create lifted controllers that match operator parameters exactly
-
-    RobotPressButtonFromNothingController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, button],
-            RobotPressButtonController,
-        )
+    # Get lifted controllers from prbench_models
+    lifted_controllers = create_lifted_controllers(
+        action_space, sim.initial_constant_state
     )
-
-    RobotPressButtonFromButtonController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, button, from_button],
-            RobotPressButtonController,
-        )
-    )
-
-    PickStickFromNothingController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, stick],
-            PickStickController,
-        )
-    )
-
-    PickStickFromButtonController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, stick, from_button],
-            PickStickController,
-        )
-    )
-
-    StickPressButtonFromNothingController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, stick, button],
-            StickPressButtonController,
-        )
-    )
-
-    StickPressButtonFromButtonController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, stick, button, from_button],
-            StickPressButtonController,
-        )
-    )
-
-    RobotPlaceStickController: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, stick],
-            PlaceStickController,
-        )
-    )
+    RobotPressButtonFromNothingController = lifted_controllers[
+        "robot_press_button_from_nothing"
+    ]
+    RobotPressButtonFromButtonController = lifted_controllers[
+        "robot_press_button_from_button"
+    ]
+    PickStickFromNothingController = lifted_controllers["pick_stick_from_nothing"]
+    PickStickFromButtonController = lifted_controllers["pick_stick_from_button"]
+    StickPressButtonFromNothingController = lifted_controllers[
+        "stick_press_button_from_nothing"
+    ]
+    StickPressButtonFromButtonController = lifted_controllers[
+        "stick_press_button_from_button"
+    ]
+    RobotPlaceStickController = lifted_controllers["robot_place_stick"]
 
     # Finalize the skills.
     skills = {

@@ -1,31 +1,32 @@
 """VLM planning agent for prbench environments."""
 
+import logging
 import os
-import re
-from pathlib import Path
-from typing import Any, Hashable, List, Optional, TypeVar, cast
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Hashable,
+    Optional,
+    Sequence,
+    TypeVar,
+)
 
 import numpy as np
 import PIL.Image
-from numpy.typing import NDArray
+from bilevel_planning.structs import (
+    GroundParameterizedController,
+    LiftedParameterizedController,
+)
 from PIL import ImageDraw
-from prpl_llm_utils.cache import FilePretrainedLargeModelCache
-from prpl_llm_utils.models import OpenAIModel
 from prpl_utils.gym_agent import Agent
+from relational_structs.objects import Type
 
-
-def create_vlm_by_name(model_name: str):
-    """Create a VLM instance using prpl_llm_utils."""
-    # Create a cache directory in the current working directory
-    cache_dir = Path("./vlm_cache")
-    cache_dir.mkdir(exist_ok=True)
-    cache = FilePretrainedLargeModelCache(cache_dir)
-
-    try:
-        return OpenAIModel(model_name, cache)
-    except Exception as e:
-        raise ValueError(f"Failed to create VLM model: {e}")
-
+from prbench_vlm_planning.utils import (
+    controller_and_param_plan_to_policy,
+    create_vlm_by_name,
+    parse_model_output_into_option_plan,
+)
 
 _O = TypeVar("_O", bound=Hashable)
 _U = TypeVar("_U", bound=Hashable)
@@ -41,11 +42,11 @@ class VLMPlanningAgent(Agent[_O, _U]):
     def __init__(
         self,
         observation_space: Any,
+        env_controllers: dict[str, LiftedParameterizedController],
         vlm_model_name: str = "gpt-4o",
         temperature: float = 0.0,
         max_planning_horizon: int = 50,
         seed: int = 0,
-        env_controllers: Optional[Any] = None,
         use_image: bool = True,
     ) -> None:
         """Initialize the VLM planning agent.
@@ -71,9 +72,10 @@ class VLMPlanningAgent(Agent[_O, _U]):
         self._use_image = use_image
 
         # Current plan state
-        self._current_plan: Optional[List[_U]] = None
+        self._current_policy: Optional[Callable[[_O], _U]] = None
         self._plan_step = 0
         self._last_obs: Optional[_O] = None
+        self._next_action: Optional[_U] = None
 
         # Load base prompt from file
         self._base_prompt = self._load_base_prompt()
@@ -90,27 +92,37 @@ class VLMPlanningAgent(Agent[_O, _U]):
     def reset(self, obs: _O, info: dict[str, Any]) -> None:
         """Reset the agent for a new episode."""
         super().reset(obs, info)
-        self._current_plan = None
+        self._current_policy = None
         self._plan_step = 0
 
         try:
-            self._current_plan = self._generate_plan(obs, info)
+            self._current_policy = self._generate_plan(obs, info)
+            self._next_action = self._current_policy(obs)
         except Exception as e:
-            raise VLMPlanningAgentFailure(f"Failed to generate initial plan: {e}")
+            logging.exception("Failed to generate initial plan")
+            raise VLMPlanningAgentFailure(f"Failed to generate initial plan: " f"{e}")
 
     def _get_action(self) -> _U:
         """Get the next action from the current plan."""
-        if not self._current_plan:
+        if not self._current_policy:
             raise VLMPlanningAgentFailure("No current plan available")
 
-        if self._plan_step >= len(self._current_plan):
+        if self._plan_step >= self._max_planning_horizon:
             raise VLMPlanningAgentFailure("Plan exhausted")
 
-        action = self._current_plan[self._plan_step]
-        self._plan_step += 1
-        return action
+        if self._next_action is None:
+            raise VLMPlanningAgentFailure("No next action available")
 
-    def _generate_plan(self, obs: _O, info: dict[str, Any]) -> List[_U]:
+        self._plan_step += 1
+        return self._next_action
+
+    def update(self, obs: _O, reward: float, done: bool, info: dict[str, Any]) -> None:
+        """Update the agent with the latest observation and reward."""
+        super().update(obs, reward, done, info)
+        assert self._current_policy is not None
+        self._next_action = self._current_policy(obs)
+
+    def _generate_plan(self, obs: _O, info: dict[str, Any]) -> Callable[[_O], _U]:
         """Generate a plan using the VLM."""
 
         # Store observation for goal derivation
@@ -135,12 +147,16 @@ class VLMPlanningAgent(Agent[_O, _U]):
                 images = [pil_img]
 
         # Prepare prompt context
-        objects_str = self._get_objects_str(obs, info)
-        actions_str = self._get_available_actions_str()
+        state = self._observation_space.devectorize(obs)
+        controller_str = self._get_controllers_str()
         goal_str = self._get_goal_str(info)
 
         prompt = self._base_prompt.format(
-            actions=actions_str, objects=objects_str, goal=goal_str
+            controllers=controller_str,
+            typed_objects=set(state.data),
+            type_hierarchy=self.create_types_str(set(state.type_features)),
+            init_state_str=state.pretty_str(),
+            goal_str=goal_str,
         )
 
         # Query VLM
@@ -156,32 +172,50 @@ class VLMPlanningAgent(Agent[_O, _U]):
                 prompt=prompt, imgs=images, hyperparameters=hyperparameters
             )
 
-            # Extract text from response
-            plan_text = response.text
-
             # Parse the plan
-            return self._parse_plan_from_text(plan_text, obs, info)
+            plan_prediction_txt = response.text
+            try:
+                start_index = plan_prediction_txt.index("Plan:\n") + len("Plan:\n")
+                parsable_plan_prediction = plan_prediction_txt[start_index:]
+            except ValueError:
+                raise ValueError("VLM output is badly formatted; cannot parse plan!")
+            parsed_controller_plan = parse_model_output_into_option_plan(
+                parsable_plan_prediction,
+                set(state.data),
+                set(state.type_features),
+                self._controllers,
+                parse_continuous_params=True,
+            )
+            controller_and_params_plan: list[
+                tuple[GroundParameterizedController, Sequence[float]]
+            ] = []
+            for controller, objs, params in parsed_controller_plan:
+                logging.info(
+                    f"Parsed option: {controller} with objects "
+                    f"{objs} and params {params}"
+                )
+                grounded_controller = controller.ground(objs)
+                controller_and_params_plan.append((grounded_controller, params))
+
+            policy = controller_and_param_plan_to_policy(
+                controller_and_params_plan,
+                self._max_planning_horizon,
+                self._observation_space,
+            )
+            return policy
 
         except Exception as e:
+            logging.exception("VLM query failed")
             raise VLMPlanningAgentFailure(f"VLM query failed: {e}")
 
-    def _get_available_actions_str(self) -> str:
+    def _get_controllers_str(self) -> str:
         """Get string description of available actions."""
-        return "Actions: TODO"
-
-    def _get_objects_str(
-        self, obs: _O, info: dict[str, Any]  # pylint: disable=unused-argument
-    ) -> str:
-        """Get string description of objects in the scene."""
-
-        def observation_to_state(o: NDArray[np.float32]):
-            """Convert the vectors back into (hashable) object-centric states."""
-            return self._observation_space.devectorize(o)
-
-        # Convert observation to state using observation space
-        # Cast obs to the expected NDArray type for observation_to_state
-        state = observation_to_state(cast(NDArray[np.float32], obs))
-        return state.pretty_str()
+        controllers_str = "\n".join(
+            f"{name}{controller.var_str}"
+            for name, controller in self._controllers.items()
+            if self._controllers
+        )
+        return controllers_str
 
     def _get_goal_str(
         self, info: dict[str, Any]  # pylint: disable=unused-argument
@@ -191,67 +225,31 @@ class VLMPlanningAgent(Agent[_O, _U]):
         assert isinstance(goal_description, str)
         return goal_description
 
-    def _parse_plan_from_text(
-        self,
-        plan_text: str,
-        obs: _O,  # pylint: disable=unused-argument
-        info: dict[str, Any],  # pylint: disable=unused-argument
-    ) -> List[_U]:
-        """Parse the VLM output into a list of actions."""
-        lines = plan_text.split("\n")
-        plan_actions = []
-
-        # Find the "Plan:" section
-        plan_start = -1
-        for i, line in enumerate(lines):
-            if line.strip().lower().startswith("plan:"):
-                plan_start = i + 1
-                break
-
-        if plan_start == -1:
-            raise VLMPlanningAgentFailure(
-                "Could not find 'Plan:' section in VLM output"
-            )
-
-        # Parse each plan step
-        for line in lines[plan_start:]:
-            line = line.strip()
-            if not line or not any(c.isalnum() for c in line):
-                continue
-
-            # Remove numbering (e.g., "1. ", "2. ", etc.)
-            line = re.sub(r"^\d+\.\s*", "", line)
-
-            # Try to parse action arrays from the text
-            if line:
-                action = self._parse_action_from_text(line)
-                if action is not None:
-                    plan_actions.append(cast(_U, action))
-
-                if len(plan_actions) >= self._max_planning_horizon:
-                    break
-
-        if not plan_actions:
-            raise VLMPlanningAgentFailure("No valid actions parsed from VLM output")
-
-        return plan_actions
-
-    def _parse_action_from_text(self, action_text: str) -> Optional[np.ndarray]:
-        """Parse a single action from text."""
-        # Look for array-like patterns [a, b, c, d, e]
-        pattern = (
-            r"\[([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?"
-            r"(?:\s*,\s*[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)*)\]"
-        )
-        array_match = re.search(pattern, action_text)
-        if array_match:
-            try:
-                # Parse the numbers from the array
-                numbers_str = array_match.group(1)
-                numbers = [float(x.strip()) for x in numbers_str.split(",")]
-                return np.array(numbers, dtype=np.float32)
-            except (ValueError, TypeError):
-                pass
-
-        # No valid action found
-        raise ValueError(f"Unable to parse action from text: {action_text}")
+    def create_types_str(self, types: Collection[Type]) -> str:
+        """Create a PDDL-style types string that handles hierarchy correctly."""
+        # Case 1: no type hierarchy.
+        if all(t.parent is None for t in types):
+            types_str = " ".join(t.name for t in sorted(types))
+        # Case 2: type hierarchy.
+        else:
+            parent_to_children_types: dict[Type, list[Type]] = {t: [] for t in types}
+            for t in sorted(types):
+                if t.parent:
+                    parent_to_children_types[t.parent].append(t)
+            types_str = ""
+            for parent_type in sorted(parent_to_children_types):
+                child_types = parent_to_children_types[parent_type]
+                if not child_types:
+                    # Special case: type has no children and also does not appear
+                    # as a child of another type.
+                    is_child_type = any(
+                        parent_type in children
+                        for children in parent_to_children_types.values()
+                    )
+                    if not is_child_type:
+                        types_str += f"\n    {parent_type.name}"
+                    # Otherwise, the type will appear as a child elsewhere.
+                else:
+                    child_type_str = " ".join(t.name for t in child_types)
+                    types_str += f"\n    {child_type_str} - {parent_type.name}"
+        return types_str

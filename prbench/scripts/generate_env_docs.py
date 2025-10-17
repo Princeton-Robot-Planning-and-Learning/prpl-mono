@@ -166,11 +166,18 @@ def _main() -> None:
     parser.add_argument(
         "--force", action="store_true", help="Force regeneration of all environments"
     )
+    parser.add_argument(
+        "--force-tidybot",
+        action="store_true",
+        help="Force regeneration of all environments for tidybot",
+    )
     args = parser.parse_args()
 
     print("Regenerating environment docs...")
     if args.force:
         print("Force flag detected - regenerating all environments")
+    elif args.force_tidybot:
+        print("Force tidybot flag detected - regenerating all environments for tidybot")
     else:
         print("Checking for changes using git diff origin/main...")
 
@@ -190,6 +197,17 @@ def _main() -> None:
         env = prbench.make(env_id, render_mode="rgb_array")
 
         if args.force or is_env_changed(env, changed_files):
+            print(f"  Regenerating {env_id}...")
+            has_random_gif = create_random_action_gif(env_id, env)
+            has_initial_gif = create_initial_state_gif(env_id, env)
+            md = generate_markdown(env_id, env, has_random_gif, has_initial_gif)
+            assert env_id.startswith("prbench/")
+            env_filename = sanitize_env_id(env_id)
+            filename = OUTPUT_DIR / f"{env_filename}.md"
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(md)
+            regenerated_envs += 1
+        elif args.force_tidybot and "TidyBot3D" in env_id:
             print(f"  Regenerating {env_id}...")
             has_random_gif = create_random_action_gif(env_id, env)
             has_initial_gif = create_initial_state_gif(env_id, env)
