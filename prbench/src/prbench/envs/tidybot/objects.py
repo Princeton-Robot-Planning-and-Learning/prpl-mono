@@ -319,7 +319,7 @@ class Table(MujocoFixture):
         self,
         name: str,
         table_config: dict[str, str | float],
-        position: list[float] | NDArray[np.float32] | None = None,
+        position: list[float] | NDArray[np.float32],
         leg_inset: float = 0.05,
         regions: dict | None = None,
         env: MujocoEnv | None = None,
