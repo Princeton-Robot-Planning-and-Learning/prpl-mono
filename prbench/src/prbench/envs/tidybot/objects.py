@@ -2,7 +2,7 @@
 
 import math
 import xml.etree.ElementTree as ET
-from typing import Union
+from typing import TypeVar, Union
 
 import numpy as np
 from numpy.typing import NDArray
@@ -10,6 +10,70 @@ from relational_structs import Object
 
 from prbench.envs.tidybot.mujoco_utils import MujocoEnv
 from prbench.envs.tidybot.object_types import MujocoObjectType
+
+# Type variables for decorator type preservation
+T = TypeVar("T", bound=type)
+FixtureT = TypeVar("FixtureT", bound="MujocoFixture")
+ObjectT = TypeVar("ObjectT", bound="MujocoObject")
+
+REGISTERED_FIXTURES: dict[str, type["MujocoFixture"]] = {}
+REGISTERED_OBJECTS: dict[str, type["MujocoObject"]] = {}
+
+
+def register_fixture(cls: type[FixtureT]) -> type[FixtureT]:
+    """Register fixture classes for TidyBot environments."""
+    REGISTERED_FIXTURES[cls.__name__.lower()] = cls
+    return cls
+
+
+def register_object(cls: type[ObjectT]) -> type[ObjectT]:
+    """Register object classes for TidyBot environments."""
+    REGISTERED_OBJECTS[cls.__name__.lower()] = cls
+    return cls
+
+
+def get_fixture_class(name: str) -> type["MujocoFixture"]:
+    """Get a fixture class by name.
+
+    Args:
+        name: Name of the fixture class (case-insensitive)
+
+    Returns:
+        The fixture class
+
+    Raises:
+        ValueError: If the fixture class is not found
+    """
+    name_lower = name.lower()
+    if name_lower not in REGISTERED_FIXTURES:
+        available_fixtures = list(REGISTERED_FIXTURES.keys())
+        raise ValueError(
+            f"Fixture class '{name}' not found. "
+            f"Available fixtures: {available_fixtures}"
+        )
+    return REGISTERED_FIXTURES[name_lower]
+
+
+def get_object_class(name: str) -> type["MujocoObject"]:
+    """Get an object class by name.
+
+    Args:
+        name: Name of the object class (case-insensitive)
+
+    Returns:
+        The object class
+
+    Raises:
+        ValueError: If the object class is not found
+    """
+    name_lower = name.lower()
+    if name_lower not in REGISTERED_OBJECTS:
+        available_objects = list(REGISTERED_OBJECTS.keys())
+        raise ValueError(
+            f"Object class '{name}' not found. "
+            f"Available objects: {available_objects}"
+        )
+    return REGISTERED_OBJECTS[name_lower]
 
 
 class MujocoObject:
@@ -19,6 +83,7 @@ class MujocoObject:
         self,
         name: str,
         env: MujocoEnv | None = None,
+        options: dict | None = None,
     ) -> None:
         """Initialize a MujocoObject.
 
@@ -29,9 +94,12 @@ class MujocoObject:
         self.name = name
         self.joint_name = f"{name}_joint"
         self.env = env
+        self.options = options if options is not None else {}
 
         # Create the corresponding Object for state representation key
         self.object_state_type = Object(self.name, MujocoObjectType)
+
+        self.xml_element: ET.Element  # To be defined in subclasses
 
     def get_position(self) -> NDArray[np.float32]:
         """Get the object's current position.
@@ -191,42 +259,44 @@ class MujocoObject:
         return obj_data
 
 
+@register_object
 class Cube(MujocoObject):
     """A cube object for TidyBot environments."""
 
     def __init__(
         self,
         name: str,
-        size: Union[float, list[float]] = 0.02,
-        rgba: Union[str, list[float]] = ".5 .7 .5 1",
-        mass: float = 0.1,
         env: MujocoEnv | None = None,
+        options: dict | None = None,
     ) -> None:
         """Initialize a Cube object.
 
         Args:
             name: Name of the cube body in the XML
-            size: Size of the cube (either scalar or [x, y, z] dimensions)
-            rgba: Color of the cube (either string or [r, g, b, a] values)
-            mass: Mass of the cube
+            options: Dictionary of cube options:
+                - size: Size of the cube (either scalar or [x, y, z] dimensions)
+                - rgba: Color of the cube (either string or [r, g, b, a] values)
+                - mass: Mass of the cube
             env: Reference to the environment (needed for position get/set operations)
         """
         # Initialize base class
-        super().__init__(name, env)
+        super().__init__(name, env, options)
 
         # Handle size parameter
+        size = self.options.get("size", 0.02)
         if isinstance(size, (int, float)):
             self.size = [size, size, size]
         else:
             self.size = list(size)
 
         # Handle rgba parameter
+        rgba = self.options.get("rgba", ".5 .7 .5 1")
         if isinstance(rgba, str):
             self.rgba = rgba
         else:
             self.rgba = " ".join(str(x) for x in rgba)
 
-        self.mass = mass
+        self.mass = self.options.get("mass", 0.1)
 
         # Create the XML element
         self.xml_element = self._create_xml_element()
@@ -277,16 +347,23 @@ class MujocoFixture:
     def __init__(
         self,
         name: str,
-        env: MujocoEnv | None = None,
+        fixture_config: dict[str, str | float],
+        position: list[float] | NDArray[np.float32],
+        regions: dict | None = None,
     ) -> None:
         """Initialize a MujocoFixture.
 
         Args:
             name: Name of the fixture body in the XML
-            env: Reference to the environment
+            fixture_config: Dictionary containing fixture configuration
+            position: Position of the fixture as [x, y, z]
         """
         self.name = name
-        self.env = env
+        self.fixture_config = fixture_config
+        self.position = position
+        self.regions = regions
+
+        self.xml_element: ET.Element  # To be defined in subclasses
 
     def sample_pose_in_region(
         self,
@@ -312,60 +389,50 @@ class MujocoFixture:
         raise NotImplementedError("Subclasses must implement sample_pose_in_region")
 
 
+@register_fixture
 class Table(MujocoFixture):
     """A table object for TidyBot environments."""
 
     def __init__(
         self,
         name: str,
-        table_config: dict[str, str | float],
+        fixture_config: dict[str, str | float],
         position: list[float] | NDArray[np.float32],
-        leg_inset: float = 0.05,
         regions: dict | None = None,
-        env: MujocoEnv | None = None,
     ) -> None:
         """Initialize a Table object.
 
         Args:
             name: Name of the table body in the XML
-            table_config: Dictionary containing table configuration with keys:
+            fixture_config: Dictionary containing table configuration with keys:
                 - "shape": Shape of the table - "rectangle" or "circle"
                 - "height": Table height in meters
                 - "thickness": Table top thickness in meters
                 - "length": Total table length in meters (for rectangle)
                 - "width": Total table width in meters (for rectangle)
                 - "diameter": Diameter of circular table in meters (for circle)
-            position: Position of the table as [x, y, z]. Defaults to [0, 0, 0]
-            leg_inset: Distance legs are inset from table edges
-            env: Reference to the environment (needed for position get/set operations)
+            position: Position of the table as [x, y, z]
         """
         # Initialize base class
-        super().__init__(name, env)
+        super().__init__(name, fixture_config, position, regions)
 
         # Parse table configuration
-        self.table_shape = str(table_config["shape"])
-        self.table_height = float(table_config["height"])
-        self.table_thickness = float(table_config["thickness"])
-        self.leg_inset = leg_inset
-        self.regions = regions if regions is not None else {}
+        self.table_shape = str(self.fixture_config["shape"])
+        self.table_height = float(self.fixture_config["height"])
+        self.table_thickness = float(self.fixture_config["thickness"])
+        self.leg_inset = 0.05
 
         # Optional parameters
         self.table_length: float | None = None
         self.table_width: float | None = None
         self.table_diameter: float | None = None
 
-        # Handle position parameter
-        if position is None:
-            self.position = [0.0, 0.0, 0.0]
-        else:
-            self.position = list(position)
-
         # Shape-specific parameters
         if self.table_shape == "rectangle":
-            self.table_length = float(table_config["length"])
-            self.table_width = float(table_config["width"])
+            self.table_length = float(self.fixture_config["length"])
+            self.table_width = float(self.fixture_config["width"])
         elif self.table_shape == "circle":
-            self.table_diameter = float(table_config["diameter"])
+            self.table_diameter = float(self.fixture_config["diameter"])
         else:
             raise ValueError(
                 f"Unknown table shape: {self.table_shape}. "

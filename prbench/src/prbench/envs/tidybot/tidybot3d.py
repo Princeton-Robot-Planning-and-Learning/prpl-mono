@@ -22,7 +22,12 @@ from prbench.envs.tidybot.object_types import (
     MujocoObjectTypeFeatures,
     MujocoRobotObjectType,
 )
-from prbench.envs.tidybot.objects import Cube, MujocoFixture, MujocoObject, Table
+from prbench.envs.tidybot.objects import (
+    MujocoFixture,
+    MujocoObject,
+    get_fixture_class,
+    get_object_class,
+)
 from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
 from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
 from prbench.envs.tidybot.utils import (
@@ -161,56 +166,62 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
                 # Insert fixtures (only tables supported for now)
                 fixtures = self.task_config.get("fixtures", {})
-                table_configs = fixtures.get("table", {})
 
-                # Keep track of placed table bounding boxes for collision detection
-                placed_table_bboxes: list[list[float]] = []
+                for fixture_type, fixture_configs in fixtures.items():
 
-                for table_name, table_config in table_configs.items():
-                    # Sample collision-free position for the table
-                    table_pos = sample_collision_free_position(
-                        table_config, placed_table_bboxes, self.np_random
-                    )
+                    # Keep track of placed fixture bounding boxes for collision detection
+                    placed_fixture_bboxes: list[list[float]] = []
 
-                    # Add this table's bounding box to the list
-                    table_bbox = get_table_bbox(table_pos, table_config)
-                    placed_table_bboxes.append(table_bbox)
+                    for fixture_name, fixture_config in fixture_configs.items():
+                        # Sample collision-free position for the fixture
+                        fixture_pos = sample_collision_free_position(
+                            fixture_config, placed_fixture_bboxes, self.np_random
+                        )
 
-                    # Find regions for this table if specified
-                    regions = {}
-                    fixture_regions = self.task_config.get("regions", {})
-                    for region_name, region_config in fixture_regions.items():
-                        if region_config["target"] == table_name:
-                            region_ranges = region_config["ranges"]
-                            regions[region_name] = region_ranges
+                        # Add this fixture's bounding box to the list
+                        fixture_bbox = get_table_bbox(fixture_pos, fixture_config)
+                        placed_fixture_bboxes.append(fixture_bbox)
 
-                    # Create new table with configuration dictionary
-                    new_table = Table(
-                        name=table_name,
-                        table_config=table_config,
-                        position=table_pos,
-                        regions=regions,
-                        env=self._robot_env,
-                    )
-                    self._fixtures_dict[table_name] = new_table
-                    table_body = new_table.xml_element
-                    worldbody.append(table_body)
+                        # Find regions for this fixture if specified
+                        regions = {}
+                        fixture_regions = self.task_config.get("regions", {})
+                        for region_name, region_config in fixture_regions.items():
+                            if region_config["target"] == fixture_name:
+                                region_ranges = region_config["ranges"]
+                                regions[region_name] = region_ranges
 
-                # Insert objects (only cubes supported for now)
+                        # Create new fixture with configuration dictionary
+                        fixture_cls = get_fixture_class(fixture_type)
+                        new_fixture = fixture_cls(
+                            name=fixture_name,
+                            fixture_config=fixture_config,
+                            position=fixture_pos,
+                            regions=regions,
+                            # env=self._robot_env,
+                        )
+                        self._fixtures_dict[fixture_name] = new_fixture
+                        fixture_body = new_fixture.xml_element
+                        worldbody.append(fixture_body)
+
+                # Insert objects
                 objects = self.task_config.get("objects", {})
-                cube_configs = objects.get("cube", {})
-                for cube_name, cube_config in cube_configs.items():
-                    obj = Cube(
-                        name=cube_name,
-                        size=cube_config["size"],
-                        rgba=" ".join(map(str, cube_config["rgba"])),
-                        mass=cube_config["mass"],
-                        env=self._robot_env,
-                    )
-                    body = obj.xml_element
-                    worldbody.append(body)
-                    self._objects.append(obj)
-                    self._objects_dict[cube_name] = obj
+                for object_type, object_configs in objects.items():
+                    for object_name, object_config in object_configs.items():
+                        obj_cls = get_object_class(object_type)
+                        obj_options = {
+                            "size": object_config["size"],
+                            "rgba": " ".join(map(str, object_config["rgba"])),
+                            "mass": object_config["mass"],
+                        }
+                        obj = obj_cls(
+                            name=object_name,
+                            env=self._robot_env,
+                            options=obj_options,
+                        )
+                        body = obj.xml_element
+                        worldbody.append(body)
+                        self._objects.append(obj)
+                        self._objects_dict[object_name] = obj
 
             # Get XML string from tree
             xml_string = ET.tostring(root, encoding="unicode")
