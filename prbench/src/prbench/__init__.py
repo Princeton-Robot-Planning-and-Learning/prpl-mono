@@ -1,8 +1,8 @@
 """Register environments and expose them through make()."""
 
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import gymnasium
 from gymnasium.envs.registration import register

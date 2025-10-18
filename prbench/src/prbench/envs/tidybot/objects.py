@@ -342,7 +342,11 @@ class Cube(MujocoObject):
 
 
 class MujocoFixture:
-    """Base class for MuJoCo fixtures (static objects)."""
+    """Base class for MuJoCo fixtures (static objects).
+
+    These are non-movable objects, like tables, that cannot be manipulated by the robot,
+    and cannot change position/orientation after sim initialization.
+    """
 
     def __init__(
         self,
@@ -391,7 +395,7 @@ class MujocoFixture:
 
 @register_fixture
 class Table(MujocoFixture):
-    """A table object for TidyBot environments."""
+    """A table fixture."""
 
     def __init__(
         self,
