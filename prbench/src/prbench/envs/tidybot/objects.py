@@ -1,5 +1,7 @@
 """Object definitions for TidyBot environments."""
 
+from __future__ import annotations
+
 import math
 import xml.etree.ElementTree as ET
 from typing import TypeVar, Union
@@ -16,8 +18,8 @@ T = TypeVar("T", bound=type)
 FixtureT = TypeVar("FixtureT", bound="MujocoFixture")
 ObjectT = TypeVar("ObjectT", bound="MujocoObject")
 
-REGISTERED_FIXTURES: dict[str, type["MujocoFixture"]] = {}
-REGISTERED_OBJECTS: dict[str, type["MujocoObject"]] = {}
+REGISTERED_FIXTURES: dict[str, type[MujocoFixture]] = {}
+REGISTERED_OBJECTS: dict[str, type[MujocoObject]] = {}
 
 
 def register_fixture(cls: type[FixtureT]) -> type[FixtureT]:
@@ -32,7 +34,7 @@ def register_object(cls: type[ObjectT]) -> type[ObjectT]:
     return cls
 
 
-def get_fixture_class(name: str) -> type["MujocoFixture"]:
+def get_fixture_class(name: str) -> type[MujocoFixture]:
     """Get a fixture class by name.
 
     Args:
@@ -54,7 +56,7 @@ def get_fixture_class(name: str) -> type["MujocoFixture"]:
     return REGISTERED_FIXTURES[name_lower]
 
 
-def get_object_class(name: str) -> type["MujocoObject"]:
+def get_object_class(name: str) -> type[MujocoObject]:
     """Get an object class by name.
 
     Args:
