@@ -162,8 +162,10 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         # Check if it's a freejoint
         joint_type = self.sim.model.get_joint_type(name)
-        assert joint_type == mujoco.mjtJoint.mjJNT_FREE, f"Joint '{name}' must be a freejoint, got type {joint_type}"
-        
+        assert (
+            joint_type == mujoco.mjtJoint.mjJNT_FREE  # pylint: disable=no-member
+        ), f"Joint '{name}' must be a freejoint, got type {joint_type}"
+
         joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
 
         self.sim.data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = np.array(
@@ -192,8 +194,10 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         # Check if it's a freejoint
         joint_type = self.sim.model.get_joint_type(name)
-        assert joint_type == mujoco.mjtJoint.mjJNT_FREE, f"Joint '{name}' must be a freejoint, got type {joint_type}"
-        
+        assert (
+            joint_type == mujoco.mjtJoint.mjJNT_FREE  # pylint: disable=no-member
+        ), f"Joint '{name}' must be a freejoint, got type {joint_type}"
+
         joint_qvel_addr = self.sim.model.get_joint_qvel_addr(name)
 
         self.sim.data.qvel[joint_qvel_addr : joint_qvel_addr + 6] = np.array(
@@ -347,10 +351,9 @@ class MjModel:
         joint_id = self._joint_name2id[name]
         assert joint_id is not None, "Joint ID should not be None here."
         return self._model.jnt_dofadr[joint_id]
-    
+
     def get_joint_type(self, name: str) -> int:
-        """
-        Returns the joint type for given joint.
+        """Returns the joint type for given joint.
 
         Args:
             name (str): name of the joint
