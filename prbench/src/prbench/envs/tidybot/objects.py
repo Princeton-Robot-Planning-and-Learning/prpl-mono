@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import abc
 import math
 import xml.etree.ElementTree as ET
 from typing import TypeVar, Union
@@ -342,7 +343,7 @@ class Cube(MujocoObject):
         )
 
 
-class MujocoFixture:
+class MujocoFixture(abc.ABC):
     """Base class for MuJoCo fixtures (static objects).
 
     These are non-movable objects, like tables, that cannot be manipulated by the robot,
@@ -370,6 +371,15 @@ class MujocoFixture:
 
         self.xml_element: ET.Element  # To be defined in subclasses
 
+    @abc.abstractmethod
+    def _create_xml_element(self) -> ET.Element:
+        """Create the XML Element for this fixture.
+
+        Returns:
+            ET.Element representing the fixture body
+        """
+
+    @abc.abstractmethod
     def sample_pose_in_region(
         self,
         regions: list[list[float]],
@@ -390,8 +400,6 @@ class MujocoFixture:
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
         """
-
-        raise NotImplementedError("Subclasses must implement sample_pose_in_region")
 
 
 @register_fixture
