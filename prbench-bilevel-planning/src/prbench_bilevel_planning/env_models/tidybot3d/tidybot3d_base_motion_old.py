@@ -116,121 +116,51 @@ def create_bilevel_planning_models(
     class MoveToTargetGroundController(
         GroundParameterizedController[ObjectCentricState, Array]
     ):
-        """Controller for moving to the target through a sequence of waypoints."""
+        """Controller for moving directly to the target."""
 
         max_magnitude: ClassVar[float] = 1e-1
-        waypoint_threshold: ClassVar[float] = 0.05  # Distance to consider waypoint reached
 
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
             self._last_state: ObjectCentricState | None = None
-            self._waypoints: list[tuple[float, float]] = []
-            self._current_waypoint_idx: int = 0
 
         def sample_parameters(
             self, x: ObjectCentricState, rng: np.random.Generator
         ) -> Any:
-            """Sample waypoints between robot and target.
-            
-            Returns a tuple of waypoints as (x, y) coordinates.
-            For now, samples intermediate waypoints or returns empty for direct path.
-            """
-            robot = x.get_object_from_name("robot")
-            target = x.get_object_from_name("cube1")
-            robot_x = x.get(robot, "pos_base_x")
-            robot_y = x.get(robot, "pos_base_y")
-            target_x = x.get(target, "x")
-            target_y = x.get(target, "y")
-            
-            # Option 1: Direct path (no intermediate waypoints)
-            # Option 2: Sample 1-3 intermediate waypoints
-            num_waypoints = rng.integers(0, 4)  # 0-3 intermediate waypoints
-            
-            if num_waypoints == 0:
-                # Direct path to target
-                waypoints = [(target_x, target_y)]
-            else:
-                # Generate intermediate waypoints along a path with some variation
-                waypoints = []
-                for i in range(1, num_waypoints + 1):
-                    t = i / (num_waypoints + 1)
-                    # Interpolate with some random offset
-                    offset_x = rng.uniform(-0.3, 0.3)
-                    offset_y = rng.uniform(-0.3, 0.3)
-                    wp_x = robot_x + t * (target_x - robot_x) + offset_x
-                    wp_y = robot_y + t * (target_y - robot_y) + offset_y
-                    waypoints.append((wp_x, wp_y))
-                # Add final target
-                waypoints.append((target_x, target_y))
-            
-            return tuple(waypoints)
+            # No parameters for this controller.
+            return tuple()
 
         def reset(self, x: ObjectCentricState, params: Any) -> None:
-            """Reset controller with given waypoints."""
             self._last_state = x
-            self._waypoints = list(params) if params else []
-            self._current_waypoint_idx = 0
-            
-            # If no waypoints provided, use direct path to target
-            if not self._waypoints:
-                target = x.get_object_from_name("cube1")
-                target_x = x.get(target, "x")
-                target_y = x.get(target, "y")
-                self._waypoints = [(target_x, target_y)]
 
         def terminated(self) -> bool:
-            """Check if we've reached the final goal."""
             assert self._last_state is not None
             goal = goal_deriver(self._last_state)
             return goal.check_state(self._last_state)
 
         def step(self) -> Array:
-            """Take one step towards the current waypoint."""
+            # Take one step towards the target.
             state = self._last_state
             assert state is not None
-            
+            target = state.get_object_from_name("cube1")
             robot = state.get_object_from_name("robot")
+            target_x = state.get(target, "x")
+            target_y = state.get(target, "y")
             robot_x = state.get(robot, "pos_base_x")
             robot_y = state.get(robot, "pos_base_y")
-            
-            # Check if we've reached the current waypoint
-            if self._current_waypoint_idx < len(self._waypoints):
-                current_wp_x, current_wp_y = self._waypoints[self._current_waypoint_idx]
-                dist_to_current = ((current_wp_x - robot_x)**2 + (current_wp_y - robot_y)**2) ** 0.5
-                
-                # If reached current waypoint, move to next
-                if dist_to_current <= self.waypoint_threshold:
-                    self._current_waypoint_idx += 1
-                    if self._current_waypoint_idx >= len(self._waypoints):
-                        # Reached all waypoints, stay in place
-                        return np.array([0.0, 0.0, 0.0] + [0.0] * 8)
-            
-            # Move towards current waypoint
-            if self._current_waypoint_idx < len(self._waypoints):
-                target_x, target_y = self._waypoints[self._current_waypoint_idx]
-            else:
-                # Should not happen, but handle gracefully
-                return np.array([0.0, 0.0, 0.0] + [0.0] * 8)
-            
             total_dx = target_x - robot_x
             total_dy = target_y - robot_y
             total_distance = (total_dx**2 + total_dy**2) ** 0.5
-            
-            if total_distance < 1e-6:  # Avoid division by zero
-                return np.array([0.0, 0.0, 0.0] + [0.0] * 8)
-            
             if total_distance <= self.max_magnitude:
                 distance_to_move = total_distance
             else:
                 distance_to_move = self.max_magnitude
-            
             dx = distance_to_move * total_dx / total_distance
             dy = distance_to_move * total_dy / total_distance
             act = np.array([dx, dy, 0] + [0.0] * 8)
             return act
 
         def observe(self, x: ObjectCentricState) -> None:
-            """Update internal state with new observation."""
             self._last_state = x
 
     LiftedMoveToTargetController: LiftedParameterizedController = (
