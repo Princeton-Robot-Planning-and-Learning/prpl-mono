@@ -159,8 +159,14 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
     ) -> None:
         """Set joint position and orientation in the environment."""
         assert self.sim is not None, "Simulation not initialized"
-        joint_id = self.sim.model.get_joint_qpos_addr(name)
-        self.sim.data.qpos[joint_id : joint_id + 7] = np.array(
+
+        # Check if it's a freejoint
+        joint_type = self.sim.model.get_joint_type(name)
+        assert joint_type == mujoco.mjtJoint.mjJNT_FREE, f"Joint '{name}' must be a freejoint, got type {joint_type}"
+        
+        joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
+
+        self.sim.data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = np.array(
             [float(x) for x in pos] + [float(q) for q in quat]
         )
 
@@ -170,9 +176,9 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         """Get joint position and orientation in the environment."""
 
         assert self.sim is not None, "Simulation not initialized"
-        joint_id = self.sim.model.get_joint_qpos_addr(name)
-        pos = self.sim.data.qpos[joint_id : joint_id + 3]
-        quat = self.sim.data.qpos[joint_id + 3 : joint_id + 7]
+        joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
+        pos = self.sim.data.qpos[joint_qpos_addr : joint_qpos_addr + 3]
+        quat = self.sim.data.qpos[joint_qpos_addr + 3 : joint_qpos_addr + 7]
         return pos, quat
 
     def set_joint_vel(
@@ -183,8 +189,14 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
     ) -> None:
         """Set joint linear and angular velocity in the environment."""
         assert self.sim is not None, "Simulation not initialized"
-        joint_id = self.sim.model.get_joint_qvel_addr(name)
-        self.sim.data.qvel[joint_id : joint_id + 6] = np.array(
+
+        # Check if it's a freejoint
+        joint_type = self.sim.model.get_joint_type(name)
+        assert joint_type == mujoco.mjtJoint.mjJNT_FREE, f"Joint '{name}' must be a freejoint, got type {joint_type}"
+        
+        joint_qvel_addr = self.sim.model.get_joint_qvel_addr(name)
+
+        self.sim.data.qvel[joint_qvel_addr : joint_qvel_addr + 6] = np.array(
             [float(x) for x in linear_vel] + [float(q) for q in angular_vel]
         )
 
@@ -194,9 +206,9 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         """Get joint linear and angular velocity in the environment."""
 
         assert self.sim is not None, "Simulation not initialized"
-        joint_id = self.sim.model.get_joint_qvel_addr(name)
-        linear_vel = self.sim.data.qvel[joint_id : joint_id + 3]
-        angular_vel = self.sim.data.qvel[joint_id + 3 : joint_id + 6]
+        joint_qvel_addr = self.sim.model.get_joint_qvel_addr(name)
+        linear_vel = self.sim.data.qvel[joint_qvel_addr : joint_qvel_addr + 3]
+        angular_vel = self.sim.data.qvel[joint_qvel_addr + 3 : joint_qvel_addr + 6]
         return linear_vel, angular_vel
 
     def get_obs(self) -> MjObs:
@@ -335,6 +347,24 @@ class MjModel:
         joint_id = self._joint_name2id[name]
         assert joint_id is not None, "Joint ID should not be None here."
         return self._model.jnt_dofadr[joint_id]
+    
+    def get_joint_type(self, name: str) -> int:
+        """
+        Returns the joint type for given joint.
+
+        Args:
+            name (str): name of the joint
+        """
+        if name not in self._joint_name2id:
+            # Filter out None names for display
+            available_names = [n for n in self.joint_names if n is not None]
+            raise ValueError(
+                f'No "joint" with name {name} exists. '
+                f'Available "joint" names = {available_names}.'
+            )
+        joint_id = self._joint_name2id[name]
+        assert joint_id is not None, "Joint ID should not be None here."
+        return self._model.jnt_type[joint_id]
 
     def _make_mappings(self) -> None:
         """Make some useful internal mappings that mujoco-py supported."""
