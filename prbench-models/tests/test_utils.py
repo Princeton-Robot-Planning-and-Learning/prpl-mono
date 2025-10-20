@@ -20,7 +20,7 @@ def test_prbench_parameterized_skill_env():
     prbench_env = prbench.make(
         "prbench/TidyBot3D-base_motion-o1-v0", render_mode="rgb_array"
     )
-    sim = prbench_env.unwrapped._object_centric_env  # pylint: protected-access
+    sim = prbench_env.unwrapped._object_centric_env  # pylint: disable=protected-access
     assert isinstance(sim, ObjectCentricTidyBot3DEnv)
     env_models = create_bilevel_planning_models(
         prbench_env.observation_space,
