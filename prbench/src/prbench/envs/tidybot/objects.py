@@ -14,7 +14,6 @@ from prbench.envs.tidybot.mujoco_utils import MujocoEnv
 from prbench.envs.tidybot.object_types import MujocoObjectType
 
 # Type variables for decorator type preservation
-T = TypeVar("T", bound=type)
 FixtureT = TypeVar("FixtureT", bound="MujocoFixture")
 ObjectT = TypeVar("ObjectT", bound="MujocoObject")
 
