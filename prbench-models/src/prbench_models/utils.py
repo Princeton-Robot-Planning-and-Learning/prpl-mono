@@ -1,7 +1,7 @@
 """Utilities."""
 
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, Collection, TypeVar
 
 import gymnasium
 import numpy as np
@@ -40,7 +40,7 @@ class PRBenchParameterizedSkillEnv(gymnasium.Env[_ObsType, _ActType]):
     def __init__(
         self,
         sim: ObjectCentricPRBenchEnv,
-        parameterized_skills: set[LiftedParameterizedController],
+        parameterized_skills: Collection[LiftedParameterizedController],
     ) -> None:
         super().__init__()
         self._sim = sim
