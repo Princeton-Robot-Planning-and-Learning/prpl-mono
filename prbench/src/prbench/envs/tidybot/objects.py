@@ -122,7 +122,7 @@ class MujocoObject:
         """Get the object's current orientation.
 
         Returns:
-            Orientation as quaternion [x, y, z, w] array
+            Orientation as quaternion [w, x, y, z] array
 
         Raises:
             ValueError: If environment is not set
@@ -171,7 +171,7 @@ class MujocoObject:
         """Set the object's orientation.
 
         Args:
-            quaternion: New orientation as quaternion [x, y, z, w]
+            quaternion: New orientation as quaternion [w, x, y, z]
 
         Raises:
             ValueError: If environment is not set
