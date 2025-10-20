@@ -1,7 +1,5 @@
 """Tests for dyn_obstruction2d.py."""
 
-# import imageio.v2 as iio
-
 import numpy as np
 from gymnasium.spaces import Box
 
@@ -39,7 +37,7 @@ def test_dyn_obstruction2d_action_space():
     prbench.register_all_environments()
     env = prbench.make("prbench/DynObstruction2D-o0-v0")
     obs, _ = env.reset(seed=0)
-    stable_move = np.array([0.05, 0.05, np.pi / 16, 0.0, 0.0], dtype=np.float32)
+    stable_move = np.array([0.05, 0.05, np.pi / 16, 0.0, 0.0], dtype=np.float64)
     # Check the control precision of base movements
     for s in range(5):
         obs, _ = env.reset(seed=s)
@@ -71,7 +69,7 @@ def test_dyn_obstruction2d_action_space():
         )
 
     obs, _ = env.reset(seed=0)
-    stable_move = np.array([0.0, 0.0, 0.0, 0.05, -0.02], dtype=np.float32)
+    stable_move = np.array([0.0, 0.0, 0.0, 0.05, -0.02], dtype=np.float64)
     # Check the control precision of base movements
     for s in [1, 2]:
         obs, _ = env.reset(seed=s)
@@ -124,7 +122,7 @@ def test_dyn_obstruction2d_grasping_droppping():
     reset_state.set(target_block_object, "width", 0.2)
     reset_state.set(target_block_object, "height", 0.2)
     obs, _ = env.reset(options={"init_state": reset_state})
-    stable_move = np.array([0.0, 0.0, 0.0, 0.0, -0.01], dtype=np.float32)
+    stable_move = np.array([0.0, 0.0, 0.0, 0.0, -0.01], dtype=np.float64)
     # Check the grasping behavior
     _, _, _, _, _ = env.step(stable_move)
     # Should not hold the object yet
@@ -140,7 +138,7 @@ def test_dyn_obstruction2d_grasping_droppping():
     )
     assert len(obj_centric_env.robot.held_objects) == 1
     # Check move the object with the robot
-    move_with_object = np.array([0.0, 0.05, 0.0, 0.0, 0.0], dtype=np.float32)
+    move_with_object = np.array([0.0, 0.05, 0.0, 0.0, 0.0], dtype=np.float64)
     for _ in range(3):
         state = env.observation_space.devectorize(obs)
         name_to_object = {obj.name: obj for obj in state.data}
@@ -163,7 +161,7 @@ def test_dyn_obstruction2d_grasping_droppping():
         )
         obs = obs_
 
-    move_with_object = np.array([0.0, 0.05, np.pi / 16, 0.0, 0.0], dtype=np.float32)
+    move_with_object = np.array([0.0, 0.05, np.pi / 16, 0.0, 0.0], dtype=np.float64)
     for _ in range(5):
         state = env.observation_space.devectorize(obs)
         name_to_object = {obj.name: obj for obj in state.data}
@@ -185,7 +183,7 @@ def test_dyn_obstruction2d_grasping_droppping():
         obs = obs_
 
     # Drop the object to the ground
-    stable_move = np.array([0.0, 0.0, 0.0, 0.0, 0.01], dtype=np.float32)
+    stable_move = np.array([0.0, 0.0, 0.0, 0.0, 0.01], dtype=np.float64)
     # Check the dropping behavior
     obs, _, _, _, _ = env.step(stable_move)
     state = env.observation_space.devectorize(obs)

@@ -53,10 +53,12 @@ class ObjectCentricStateSpace(Space):
         self,
         constant_objects: list[Object],
         type_features: dict[Type, list[str]],
+        dtype: Any = np.float32,
     ) -> ObjectCentricBoxSpace:
         """Create an ObjectCentricState given a fixed object list."""
         return ObjectCentricBoxSpace(
-            constant_objects, type_features, state_cls=self._state_cls
+            constant_objects, type_features, state_cls=self._state_cls,
+            dtype=dtype
         )
 
 
@@ -69,19 +71,20 @@ class ObjectCentricBoxSpace(Box):
         constant_objects: list[Object],
         type_features: dict[Type, list[str]],
         state_cls: TypingType[ObjectCentricState] = ObjectCentricState,
+        dtype: Any = np.float32,
     ) -> None:
         self.constant_objects = constant_objects
         self.type_features = type_features
         self.state_cls = state_cls
         num_dims = sum(len(type_features[o.type]) for o in constant_objects)
         shape = (num_dims,)
-        low = np.full(shape, -np.inf, dtype=np.float32)
-        high = np.full(shape, np.inf, dtype=np.float32)
-        super().__init__(low, high, shape, dtype=np.float32)
+        low = np.full(shape, -np.inf, dtype=dtype)
+        high = np.full(shape, np.inf, dtype=dtype)
+        super().__init__(low, high, shape, dtype=dtype)
 
     def vectorize(self, object_centric_state: ObjectCentricState) -> Array:
         """Create a vector in this space for the given object-centric state."""
-        return object_centric_state.vec(self.constant_objects)
+        return object_centric_state.vec(self.constant_objects, dtype=self.dtype)
 
     def devectorize(self, vec: Array) -> ObjectCentricState:
         """Create an object-centric state from a vector that is in this
