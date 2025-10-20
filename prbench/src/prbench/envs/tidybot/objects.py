@@ -12,7 +12,7 @@ from numpy.typing import NDArray
 from relational_structs import Object
 
 from prbench.envs.tidybot.mujoco_utils import MujocoEnv
-from prbench.envs.tidybot.object_types import MujocoObjectType
+from prbench.envs.tidybot.object_types import MujocoFixtureObjectType, MujocoObjectType
 
 # Type variables for decorator type preservation
 FixtureT = TypeVar("FixtureT", bound="MujocoFixture")
@@ -369,7 +369,51 @@ class MujocoFixture(abc.ABC):
         self.position = position
         self.regions = regions
 
+        # Create the corresponding Object for state representation key
+        self.object_state_type = Object(self.name, MujocoFixtureObjectType)
+
         self.xml_element: ET.Element  # To be defined in subclasses
+
+    def get_position(self) -> NDArray[np.float32]:
+        """Get the fixture's position.
+
+        Returns:
+            Position as [x, y, z] array
+        """
+        return np.array(self.position)
+
+    def get_orientation(self) -> NDArray[np.float32]:
+        """Get the fixture's orientation.
+
+        Returns:
+            Orientation as quaternion [w, x, y, z] array
+        """
+        # Fixtures are static and assumed to have no rotation by default
+        return np.array([1.0, 0.0, 0.0, 0.0])
+
+    def get_object_centric_data(self) -> dict[str, float]:
+        """Get the object's current data.
+
+        Returns:
+            dict with current position and orientation
+
+        Raises:
+            ValueError: If environment is not set
+        """
+        pos = self.get_position()
+        quat = self.get_orientation()
+
+        # Create and return the data
+        obj_data = {
+            "x": pos[0],
+            "y": pos[1],
+            "z": pos[2],
+            "qw": quat[0],
+            "qx": quat[1],
+            "qy": quat[2],
+            "qz": quat[3],
+        }
+        return obj_data
 
     @abc.abstractmethod
     def _create_xml_element(self) -> ET.Element:

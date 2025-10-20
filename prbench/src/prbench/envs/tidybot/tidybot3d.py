@@ -359,6 +359,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                 state.get(obj, "wz"),
             ]
             mujoco_object.set_velocity(linear_velocity, angular_velocity)
+        # NOTE: Fixtures are static (without joints), so we cannot set their state.
 
     def _visualize_image_in_window(
         self, image: NDArray[np.uint8], window_name: str
@@ -391,6 +392,9 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         for obj in self._objects:
             obj_data = obj.get_object_centric_data()
             state_dict[obj.object_state_type] = obj_data
+        for fixture in self._fixtures_dict.values():
+            fixture_data = fixture.get_object_centric_data()
+            state_dict[fixture.object_state_type] = fixture_data
         # Add robot into object-centric state.
         robot = Object("robot", MujocoRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
