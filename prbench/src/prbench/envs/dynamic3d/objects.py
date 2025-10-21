@@ -11,8 +11,8 @@ import numpy as np
 from numpy.typing import NDArray
 from relational_structs import Object
 
-from prbench.envs.tidybot.mujoco_utils import MujocoEnv
-from prbench.envs.tidybot.object_types import MujocoFixtureObjectType, MujocoObjectType
+from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
+from prbench.envs.dynamic3d.object_types import MujocoFixtureObjectType, MujocoObjectType
 
 # Type variables for decorator type preservation
 FixtureT = TypeVar("FixtureT", bound="MujocoFixture")

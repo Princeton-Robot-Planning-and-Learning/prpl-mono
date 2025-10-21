@@ -3,8 +3,8 @@ step, and reset."""
 
 from relational_structs import ObjectCentricState
 
-from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
-from prbench.envs.tidybot.tidybot3d import ObjectCentricTidyBot3DEnv
+from prbench.envs.dynamic3d.object_types import MujocoObjectTypeFeatures
+from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 
 
 def test_tidybot3d_observation_space():

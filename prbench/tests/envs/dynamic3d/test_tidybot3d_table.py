@@ -1,6 +1,6 @@
 """Tests for the TidyBot3D table scene: observation/action spaces, reset, and step."""
 
-from prbench.envs.tidybot.tidybot3d import ObjectCentricTidyBot3DEnv
+from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 
 
 def test_tidybot3d_table_observation_space():
