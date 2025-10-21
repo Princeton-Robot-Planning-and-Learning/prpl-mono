@@ -10,8 +10,8 @@ from relational_structs import Array, ObjectCentricState, ObjectCentricStateSpac
 from relational_structs.utils import create_state_from_dict
 
 from prbench.core import ObjectCentricPRBenchEnv, _ConfigType
-from prbench.envs.tidybot.object_types import MujocoObjectTypeFeatures
-from prbench.envs.tidybot.tidybot_robot_env import TidyBot3DRobotActionSpace
+from prbench.envs.dynamic3d.object_types import MujocoObjectTypeFeatures
+from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
 
 
 class ObjectCentricDynamic3DRobotEnv(

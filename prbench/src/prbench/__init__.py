@@ -119,8 +119,8 @@ def register_all_environments() -> None:
 
     # ******* Dynamic3D Environments *******
 
-    # TidyBot3D environments with different scenes and object counts
-    tasks_root = Path(__file__).parent / "envs" / "tidybot" / "tasks"
+    # Tasks with different scenes and object counts
+    tasks_root = Path(__file__).parent / "envs" / "dynamic3d" / "tasks"
 
     for task_config in tasks_root.iterdir():
         config_name = task_config.stem
@@ -128,7 +128,7 @@ def register_all_environments() -> None:
         num_objects = int(config_name.split("-o")[-1])
         register(
             id=f"prbench/TidyBot3D-{config_name}-v0",
-            entry_point="prbench.envs.tidybot.tidybot3d:TidyBot3DEnv",
+            entry_point="prbench.envs.dynamic3d.tidybot3d:TidyBot3DEnv",
             kwargs={
                 "scene_type": scene_type,
                 "num_objects": num_objects,

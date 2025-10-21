@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from prbench.envs.tidybot.utils import (
+from prbench.envs.dynamic3d.utils import (
     bboxes_overlap,
     get_table_bbox,
     sample_collision_free_position,
