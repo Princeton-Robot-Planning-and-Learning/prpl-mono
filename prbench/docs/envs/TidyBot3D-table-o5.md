@@ -110,6 +110,20 @@ The entries of an array in this Box space correspond to the following object fea
 | 84 | robot | vel_arm_joint6 |
 | 85 | robot | vel_arm_joint7 |
 | 86 | robot | vel_gripper |
+| 87 | table_1 | x |
+| 88 | table_1 | y |
+| 89 | table_1 | z |
+| 90 | table_1 | qw |
+| 91 | table_1 | qx |
+| 92 | table_1 | qy |
+| 93 | table_1 | qz |
+| 94 | table_2 | x |
+| 95 | table_2 | y |
+| 96 | table_2 | z |
+| 97 | table_2 | qw |
+| 98 | table_2 | qx |
+| 99 | table_2 | qy |
+| 100 | table_2 | qz |
 
 
 ### Action Space
