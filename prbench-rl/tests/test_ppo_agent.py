@@ -11,6 +11,7 @@ from gymnasium import spaces
 from gymnasium.wrappers import RecordVideo
 from omegaconf import DictConfig
 from prbench.envs.geom2d.stickbutton2d import StickButton2DEnv
+from relational_structs import Object, ObjectCentricState, Type
 
 from prbench_rl.ppo_agent import PPOAgent
 
@@ -111,8 +112,6 @@ def test_ppo_agent_training_with_fixed_environment():
             else:
                 # Handle case where observation_space is a regular Box space
                 # For testing purposes, create a mock state with required attributes
-                from relational_structs import Object, ObjectCentricState, Type
-
                 # Create types for objects
                 robot_type = Type(name="robot")
                 button_type = Type(name="button")
@@ -153,7 +152,7 @@ def test_ppo_agent_training_with_fixed_environment():
             # img = env.render()
             # iio.imwrite("debug/unit_test_fixed_env_init.png", img)
 
-        def reset(self, seed=None, options=None):
+        def reset(self, seed=None, options=None):  # pylint: disable=arguments-differ
             del seed, options  # Ignore external parameters
             self.num_env_steps = 0
             self.r = 0.0
@@ -389,9 +388,8 @@ def test_ppo_agent_storage_and_training():
     agent.values_buffer.fill_(0.5)
 
     # Set current observation for bootstrapping
-    agent._current_obs = np.random.randn(4).astype(
-        np.float32
-    )  # pylint: disable=protected-access
+    # pylint: disable=protected-access
+    agent._current_obs = np.random.randn(4).astype(np.float32)
 
     # Test policy update
     update_metrics = agent._update_policy()  # pylint: disable=protected-access
@@ -410,11 +408,12 @@ def test_ppo_agent_storage_and_training():
     for key in expected_keys:
         assert key in update_metrics
         assert isinstance(update_metrics[key], (int, float))
-        # explained_variance can be NaN when variance is 0 (which is expected in this test)
+        # explained_variance can be NaN when variance is 0
         if key != "explained_variance":
             assert np.isfinite(update_metrics[key])
         else:
-            # explained_variance can be NaN if variance is 0, which is fine
-            assert np.isfinite(update_metrics[key]) or np.isnan(update_metrics[key])
+            # Can be NaN if variance is 0, which is fine
+            is_valid = np.isfinite(update_metrics[key]) or np.isnan(update_metrics[key])
+            assert is_valid
 
     agent.close()

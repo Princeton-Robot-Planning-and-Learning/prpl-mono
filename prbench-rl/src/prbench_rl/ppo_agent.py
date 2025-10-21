@@ -175,7 +175,8 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             else:
                 tf_log_dir = cfg.get("tf_log_dir", "runs")
                 run_name = f"ppo__{int(time.time())}__{seed}"
-                self.writer = SummaryWriter(os.path.join(tf_log_dir, run_name))  # type: ignore
+                log_path = os.path.join(tf_log_dir, run_name)
+                self.writer = SummaryWriter(log_path)  # type: ignore
 
     def setup_storage(self) -> None:
         """Reset trajectory storage buffers."""
