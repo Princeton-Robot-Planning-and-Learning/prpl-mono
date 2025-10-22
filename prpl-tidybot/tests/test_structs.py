@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 import spatialmath
 
-from prpl_tidybot.structs import CAMERA_DIMS, TidyBotAction, TidyBotObservation
+from prpl_tidybot.constants import CAMERA_DIMS
+from prpl_tidybot.structs import TidyBotAction, TidyBotObservation
 
 
 def test_tidybot_observation():

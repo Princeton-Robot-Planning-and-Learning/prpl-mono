@@ -5,8 +5,7 @@ from dataclasses import dataclass
 import spatialmath
 from prpl_utils.structs import Image
 
-# Global constants.
-CAMERA_DIMS = (640, 640, 3)
+from prpl_tidybot.constants import CAMERA_DIMS
 
 
 @dataclass(frozen=True)
