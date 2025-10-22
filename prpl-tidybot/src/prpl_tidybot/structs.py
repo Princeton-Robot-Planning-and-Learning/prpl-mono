@@ -3,6 +3,10 @@
 from dataclasses import dataclass
 
 import spatialmath
+from prpl_utils.structs import Image
+
+# Global constants.
+CAMERA_DIMS = (640, 640, 3)
 
 
 @dataclass(frozen=True)
@@ -12,6 +16,13 @@ class TidyBotObservation:
     arm_conf: list[float]  # 7-DOF joints
     base_pose: spatialmath.SE2  # base pose for the robot
     gripper: float  # 1 = closed, 0 = open
+    wrist_camera: Image  # see CAMERA_DIMS
+    base_camera: Image  # see CAMERA_DIMS
+
+    def __post_init__(self) -> None:
+        # Make sure the camera dimensions are as expected.
+        assert self.wrist_camera.shape == CAMERA_DIMS
+        assert self.base_camera.shape == CAMERA_DIMS
 
 
 @dataclass(frozen=True)

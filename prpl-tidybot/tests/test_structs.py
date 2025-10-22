@@ -1,20 +1,34 @@
 """Tests for utils.py."""
 
 import numpy as np
+import pytest
 import spatialmath
 
-from prpl_tidybot.structs import TidyBotAction, TidyBotObservation
+from prpl_tidybot.structs import CAMERA_DIMS, TidyBotAction, TidyBotObservation
 
 
 def test_tidybot_observation():
     """Tests for TidyBotObservation()."""
     obs = TidyBotObservation(
-        arm_conf=[0.0] * 7, base_pose=spatialmath.SE2(x=0, y=0, theta=0), gripper=0.0
+        arm_conf=[0.0] * 7,
+        base_pose=spatialmath.SE2(x=0, y=0, theta=0),
+        gripper=0.0,
+        wrist_camera=np.zeros(CAMERA_DIMS, dtype=np.uint8),
+        base_camera=np.zeros(CAMERA_DIMS, dtype=np.uint8),
     )
     assert np.allclose(obs.arm_conf, [0.0] * 7)
     # Compare homogeneous transform matrices for the SE2 poses
     assert np.allclose(obs.base_pose.A, spatialmath.SE2(x=0, y=0, theta=0).A)
     assert np.isclose(obs.gripper, 0.0)
+    # Test with incorrect image size, should throw assertion error.
+    with pytest.raises(AssertionError):
+        TidyBotObservation(
+            arm_conf=[0.0] * 7,
+            base_pose=spatialmath.SE2(x=0, y=0, theta=0),
+            gripper=0.0,
+            wrist_camera=np.zeros((1, 1, 1), dtype=np.uint8),
+            base_camera=np.zeros(CAMERA_DIMS, dtype=np.uint8),
+        )
 
 
 def test_tidybot_action():
