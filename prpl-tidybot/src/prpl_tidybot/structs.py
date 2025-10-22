@@ -1,6 +1,7 @@
 """Data structures."""
 
 from dataclasses import dataclass
+
 import spatialmath
 
 
