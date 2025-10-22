@@ -13,10 +13,10 @@ from bilevel_planning.structs import (
 )
 from gymnasium.spaces import Space
 from numpy.typing import NDArray
-from prbench.envs.tidybot.object_types import MujocoObjectType, MujocoRobotObjectType
-from prbench.envs.tidybot.tidybot3d import ObjectCentricTidyBot3DEnv
-from prbench.envs.tidybot.tidybot_rewards import BaseMotionRewardCalculator
-from prbench.envs.tidybot.tidybot_robot_env import TidyBot3DRobotActionSpace
+from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType
+from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from prbench.envs.dynamic3d.tidybot_rewards import BaseMotionRewardCalculator
+from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
 from relational_structs import (
     Array,
     GroundAtom,

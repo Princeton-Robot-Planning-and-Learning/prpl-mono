@@ -43,5 +43,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Pytest
+        env:
+          MUJOCO_GL: "osmesa"
+          PYOPENGL_PLATFORM: ""
         run: |
           uv run ./run_in_all_packages.sh "pytest tests/"

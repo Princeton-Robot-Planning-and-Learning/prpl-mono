@@ -15,22 +15,22 @@ from relational_structs import Array, Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta, PRBenchEnvConfig
-from prbench.envs.tidybot.base_env import (
+from prbench.envs.dynamic3d.base_env import (
     ObjectCentricDynamic3DRobotEnv,
 )
-from prbench.envs.tidybot.object_types import (
+from prbench.envs.dynamic3d.object_types import (
     MujocoObjectTypeFeatures,
     MujocoRobotObjectType,
 )
-from prbench.envs.tidybot.objects import (
+from prbench.envs.dynamic3d.objects import (
     MujocoFixture,
     MujocoObject,
     get_fixture_class,
     get_object_class,
 )
-from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
-from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
-from prbench.envs.tidybot.utils import (
+from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
+from prbench.envs.dynamic3d.tidybot_robot_env import TidyBotRobotEnv
+from prbench.envs.dynamic3d.utils import (
     get_table_bbox,
     sample_collision_free_position,
     sample_pose_in_region,

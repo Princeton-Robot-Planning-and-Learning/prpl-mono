@@ -11,7 +11,7 @@ from numpy.typing import NDArray
 from relational_structs import Array
 
 from prbench.core import RobotActionSpace
-from prbench.envs.tidybot.mujoco_utils import MjObs, MujocoEnv
+from prbench.envs.dynamic3d.mujoco_utils import MjObs, MujocoEnv
 
 
 class TidyBot3DRobotActionSpace(RobotActionSpace):

@@ -41,7 +41,7 @@ class TidybotIKSolver:
         model_path = (
             Path(prbench.__file__).parent
             / "envs"
-            / "tidybot"
+            / "dynamic3d"
             / "models"
             / "kinova_gen3"
             / "gen3.xml"
