@@ -192,7 +192,7 @@ def get_triangle_vertices(
         v2 = [0, height, 0]
         vertices = [v0, v1, v2]
     else:
-        raise ValueError(f"Unknown triangle type: {type}")
+        raise ValueError(f"Unknown triangle type: {triangle_type}")
 
     return vertices
 
@@ -313,7 +313,7 @@ def create_pybullet_triangle(
             linkInertialFrameOrientations=[(1, 0, 0, 0)],
             linkParentIndices=[0],
             linkJointTypes=[p.JOINT_FIXED],
-            linkJointAxis=[(triangle_mean[0], triangle_mean[1], 0)],
+            linkJointAxis=[0, 0, 0],
             physicsClientId=physics_client_id,
         )
     else:
