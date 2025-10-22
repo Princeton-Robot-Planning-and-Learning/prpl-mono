@@ -1,15 +1,38 @@
 """Base RL agent interface for PRBench environments."""
 
 import abc
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Optional
 
+from torch import Tensor
 from gymnasium import spaces
-from gymnasium.core import Env
 from omegaconf import DictConfig
 from prpl_utils.gym_agent import Agent
+from torch.utils.tensorboard import SummaryWriter
+
+
+from prbench_rl.gym_utils import MultiEnvWrapper
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
+
+
+class Logger:
+    """Logger for RL training and evaluation.
+
+    Logs to TensorBoard and optionally to Weights & Biases.
+    """
+
+    def __init__(self, tensorboard: SummaryWriter) -> None:
+        """Initialize the logger with TensorBoard and optional Weights & Biases."""
+        self.writer = tensorboard
+
+    def add_scalar(self, tag: str, scalar_value: float | Tensor, step: int = 0) -> None:
+        """Log a scalar value to TensorBoard and optionally to Weights & Biases."""
+        self.writer.add_scalar(tag, scalar_value, step)  # type: ignore
+
+    def close(self) -> None:
+        """Close the logger."""
+        self.writer.close()  # type: ignore
 
 
 class BaseRLAgent(Agent[_O, _U]):
@@ -39,9 +62,13 @@ class BaseRLAgent(Agent[_O, _U]):
     @abc.abstractmethod
     def train_with_env(
         self,
-        env: Env,
+        env: MultiEnvWrapper,
+        eval_env: Optional[MultiEnvWrapper] = None,
     ) -> list[dict[str, Any]]:
-        """Training the agent with an interactive environment."""
+        """Training the agent with an interactive batched environment.
+        Note that evaluation env is seperated because we might want to render
+        during evaluation with fewer environments.
+        """
         del env  # Unused
         self.train()
         return []

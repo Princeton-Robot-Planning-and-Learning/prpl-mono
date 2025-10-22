@@ -16,7 +16,8 @@ dependencies = [
    "hydra-core",
    "omegaconf",
    "torch",
-   "gymnasium[classic-control]>=0.29.1",
+   "dacite",
+   "gymnasium[classic-control]==0.29.1",
 ]
 
 [project.optional-dependencies]

@@ -1,14 +1,19 @@
-"""Utilities."""
+"""General wrapper for environments supporting improvisational policies."""
 
-from __future__ import annotations
-
+import os
 from collections.abc import Callable, Sequence
-from typing import Any
+from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 import gymnasium as gym
 import numpy as np
 import torch
+from gymnasium import logger
 from gymnasium.vector.utils import batch_space
+from gymnasium.wrappers.monitoring import video_recorder
+from gymnasium.wrappers.record_video import capped_cubic_video_schedule
+
+ObsType = TypeVar("ObsType")
+ActType = TypeVar("ActType")
 
 
 class MultiEnvWrapper(gym.Env):
@@ -253,7 +258,12 @@ class MultiEnvWrapper(gym.Env):
 
             self._observations[i] = obs
             self._rewards[i] = np.float32(reward)
-            self._terminations[i] = bool(terminated)
+            if self._max_episode_steps is None:
+                self._terminations[i] = bool(terminated)
+            else:
+                # NOTE: If max_episode_steps is set, we ignore env-provided
+                # termination signal to avoid inconsistency across sub-envs.
+                self._terminations[i] = False
             if self._max_episode_steps is not None:
                 truncated = self.elapsed_steps[i].item() >= self._max_episode_steps
             self._truncations[i] = bool(truncated)
@@ -363,3 +373,202 @@ class MultiEnvWrapper(gym.Env):
     def unwrapped(self):
         """Return the underlying sub-environments list."""
         return self.envs
+
+
+class NormalizeActionMultiEnvWrapper(MultiEnvWrapper):
+    """A `MultiEnvWrapper` that normalizes the action space to [-1, 1].
+
+    It assumes the action space of the wrapped environment is a Box space.
+    """
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        assert isinstance(
+            self.single_action_space, gym.spaces.Box
+        ), "Only Box action space is supported"
+
+        # Pre-compute normalized action space parameters
+        self.action_low = self.single_action_space.low
+        self.action_high = self.single_action_space.high
+        self._action_mean = (self.action_high + self.action_low) / 2.0
+        self._action_half_range = (self.action_high - self.action_low) / 2.0
+
+        # New normalized action space
+        norm_action_space = gym.spaces.Box(
+            low=-np.ones_like(self.action_low, dtype=np.float32),
+            high=np.ones_like(self.action_high, dtype=np.float32),
+            shape=self.single_action_space.shape,
+            dtype=np.float32,
+        )
+        self.action_space = batch_space(norm_action_space, self.num_envs)
+        self.single_action_space = norm_action_space
+
+    def step(  # type: ignore[override]  # pylint: disable=arguments-renamed
+        self, actions: np.ndarray | torch.Tensor
+    ) -> tuple[
+        np.ndarray | torch.Tensor,
+        np.ndarray | torch.Tensor,
+        np.ndarray | torch.Tensor,
+        np.ndarray | torch.Tensor,
+        dict[str, Any],
+    ]:
+        """Step all sub-environments with normalized batched actions in [-1, 1]."""
+        actions_np = self._to_numpy(actions)
+        assert self.action_space.contains(actions_np), "Actions not in action space"
+        # Denormalize actions to original space
+        denorm_actions = self._action_mean + actions_np * self._action_half_range
+        return super().step(denorm_actions)
+
+
+class MultiEnvRecordVideo(gym.Wrapper):
+    """A `RecordVideo` wrapper for `MultiEnvWrapper` that records tiled rgb_array
+    renders of all sub-environments.
+
+    We need this because the standard `RecordVideo` expects a
+    boolean terminal / truncated signal from the `step()` call, but
+    `MultiEnvWrapper` returns a batch of such signals, one per
+    sub-environment.
+
+    NOTE: This wrapper currently only supports episode based recording.
+    """
+
+    def __init__(
+        self,
+        env: gym.Env,
+        video_folder: str,
+        episode_trigger: Optional[Callable[[int], bool]] = None,
+        name_prefix: str = "rl-video",
+        disable_logger: bool = False,
+    ):
+        gym.Wrapper.__init__(self, env)
+        assert isinstance(
+            env, MultiEnvWrapper
+        ), "MultiEnvRecordVideo only works with MultiEnvWrapper"
+
+        assert env.render_mode == "rgb_array", (
+            "MultiEnvRecordVideo requires the wrapped env to have "
+            'render_mode="rgb_array" for image rendering'
+        )
+        if episode_trigger is None:
+            episode_trigger = capped_cubic_video_schedule
+        self.episode_trigger = episode_trigger
+        self.video_recorder: Optional[video_recorder.VideoRecorder] = None
+        self.disable_logger = disable_logger
+
+        self.video_folder = os.path.abspath(video_folder)
+        # Create output folder if needed
+        if os.path.isdir(self.video_folder):
+            logger.warn(
+                f"Overwriting existing videos at {self.video_folder} folder "
+                f"(try specifying a different `video_folder` for the `RecordVideo` wrapper if this is not desired)"
+            )
+        os.makedirs(self.video_folder, exist_ok=True)
+
+        self.name_prefix = name_prefix
+        self.step_id = 0
+
+        self.recording = False
+        self.terminated: bool = False
+        self.truncated: bool = False
+        self.recorded_frames = 0
+        self.episode_id = 0
+
+        self.is_vector_env = True
+
+    def reset(self, **kwargs):
+        """Reset the environment using kwargs and then starts recording if video
+        enabled."""
+        observations = super().reset(**kwargs)
+        self.terminated = False
+        self.truncated = False
+        self.episode_id += 1
+        self.step_id = 0
+        if self._video_enabled():
+            # Force start recording on reset if enabled
+            self.start_video_recorder()
+        return observations
+
+    def start_video_recorder(self):
+        """Starts video recorder using :class:`video_recorder.VideoRecorder`."""
+        self.close_video_recorder()
+
+        video_name = f"{self.name_prefix}-episode-{self.episode_id}"
+        base_path = os.path.join(self.video_folder, video_name)
+        self.video_recorder = video_recorder.VideoRecorder(
+            env=self.env,
+            base_path=base_path,
+            metadata={"step_id": self.step_id, "episode_id": self.episode_id},
+            disable_logger=self.disable_logger,
+        )
+
+        self.video_recorder.capture_frame()  # type: ignore[no-untyped-call]
+        self.recorded_frames = 1
+        self.recording = True
+
+    def close_video_recorder(self):
+        """Closes the video recorder if currently recording."""
+        if self.recording:
+            assert self.video_recorder is not None
+            self.video_recorder.close()
+        self.recording = False
+        self.recorded_frames = 1
+
+    def _video_enabled(self) -> bool:  # type: ignore[no-untyped-call]
+        return self.episode_trigger(self.episode_id)  # type: ignore[no-untyped-call]
+
+    def step(  # type: ignore[override]  # pylint: disable=arguments-renamed
+        self, actions: np.ndarray | torch.Tensor
+    ) -> tuple[
+        np.ndarray | torch.Tensor,
+        np.ndarray | torch.Tensor,
+        np.ndarray | torch.Tensor,
+        np.ndarray | torch.Tensor,
+        dict[str, Any],
+    ]:
+        """Steps through the environment using actions, recording observations if
+        :attr:`self.recording`."""
+        assert isinstance(self.env, MultiEnvWrapper)
+        (
+            observations,
+            rewards,
+            terminateds,
+            truncateds,
+            infos,
+        ) = self.env.step(actions)
+        self.step_id += 1
+
+        if self.recording:
+            assert self.video_recorder is not None
+            self.video_recorder.capture_frame()  # type: ignore[no-untyped-call]
+            self.recorded_frames += 1
+        elif self._video_enabled():
+            self.start_video_recorder()  # type: ignore[no-untyped-call]
+
+        return observations, rewards, terminateds, truncateds, infos
+
+    def render(self, *args, **kwargs):
+        """Compute the render frames as specified by render_mode attribute during
+        initialization of the environment or as specified in kwargs."""
+        if self.video_recorder is None or not self.video_recorder.enabled:
+            return super().render(*args, **kwargs)
+
+        if len(self.video_recorder.render_history) > 0:
+            recorded_frames = [
+                self.video_recorder.render_history.pop()
+                for _ in range(len(self.video_recorder.render_history))
+            ]
+            if self.recording:
+                return recorded_frames
+            else:
+                return recorded_frames + super().render(*args, **kwargs)
+        else:
+            return super().render(*args, **kwargs)
+
+    def close(self):
+        """Closes the wrapper then the video recorder."""
+        super().close()
+        self.close_video_recorder()
