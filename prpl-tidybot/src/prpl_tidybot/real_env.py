@@ -5,7 +5,7 @@ from typing import Any, SupportsFloat
 import gymnasium
 from gymnasium.core import RenderFrame
 
-from prpl_tidybot.interface import Interface
+from prpl_tidybot.interfaces.interface import Interface
 from prpl_tidybot.structs import TidyBotAction, TidyBotObservation
 
 

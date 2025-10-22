@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from prpl_tidybot.interface import FakeInterface
+from prpl_tidybot.interfaces.interface import FakeInterface
 from prpl_tidybot.real_env import RealTidyBotEnv
 
 

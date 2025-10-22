@@ -6,11 +6,11 @@ the real robot.
 
 import abc
 
-import numpy as np
 import spatialmath
 from prpl_utils.structs import Image
 
-from prpl_tidybot.constants import CAMERA_DIMS, RETRACT_ARM_CONF
+from prpl_tidybot.constants import RETRACT_ARM_CONF
+from prpl_tidybot.interfaces.camera_interface import FakeCameraInterface
 from prpl_tidybot.structs import TidyBotObservation
 
 
@@ -75,8 +75,7 @@ class FakeInterface(Interface):
         self.base_state = spatialmath.SE2(x=0, y=0, theta=0)
         self.arm_state = RETRACT_ARM_CONF
         self.gripper_state = 0.0
-        self.wrist_image = np.zeros(CAMERA_DIMS, dtype=np.uint8)
-        self.base_image = np.zeros(CAMERA_DIMS, dtype=np.uint8)
+        self.camera_interface = FakeCameraInterface()
 
     def get_base_state(self) -> spatialmath.SE2:
         return self.base_state.copy()
@@ -88,7 +87,7 @@ class FakeInterface(Interface):
         return self.gripper_state
 
     def get_wrist_image(self) -> Image:
-        return self.wrist_image.copy()
+        return self.camera_interface.get_wrist_image()
 
     def get_base_image(self) -> Image:
-        return self.base_image.copy()
+        return self.camera_interface.get_base_image()
