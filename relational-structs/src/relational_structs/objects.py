@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import (
-    Optional, Set
-)
+from typing import Optional, Set
 
 from prpl_utils.utils import consistent_hash
 
@@ -36,6 +34,7 @@ class Type:
             ancestors_set.add(curr_type)
             curr_type = curr_type.parent
         return ancestors_set
+
 
 @dataclass(frozen=True, order=True, repr=False)
 class TypedEntity:
