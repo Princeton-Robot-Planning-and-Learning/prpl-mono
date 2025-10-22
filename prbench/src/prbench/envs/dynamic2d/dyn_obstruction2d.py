@@ -565,12 +565,12 @@ class ObjectCentricDynObstruction2DEnv(
         table = state.get_objects(KinRectangleType)
         table = [obj for obj in table if obj.name == "table"]
         assert len(table) == 1
-        table = table[0]
+        table_instance = table[0]
 
         is_inside_table = is_inside(
             state,
             target_surface,
-            table,
+            table_instance,
             static_object_body_cache,
         )
         return not is_inside_table
