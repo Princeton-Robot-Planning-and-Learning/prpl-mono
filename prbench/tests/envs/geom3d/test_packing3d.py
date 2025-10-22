@@ -83,9 +83,6 @@ def test_pick_place_on_rack():
     peg_height = 0.05
 
     while selected_object is not None:
-
-        print("Picking and placing object:", selected_object)
-
         x, y, z = obs.part_poses[selected_object.name].position
         dz = 0.025 + peg_height * 2  # pre-grasp height
         pre_grasp_pose = Pose.from_rpy((x, y, z + dz), (np.pi, 0, np.pi / 2))
@@ -296,11 +293,10 @@ def test_pick_place_on_rack():
 
         sim.set_state(obs)
 
-        if obs.target_object != selected_object.name:
+        if obs.target_object != selected_object:
             selected_object = obs.target_object
             x_coeffs = x_coeffs[1:]
             y_coeffs = y_coeffs[1:]
-            print("Remaining objects to place:", selected_object)
 
     assert done, "Goal not reached"
 

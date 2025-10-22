@@ -313,7 +313,7 @@ def create_pybullet_triangle(
             linkInertialFrameOrientations=[(1, 0, 0, 0)],
             linkParentIndices=[0],
             linkJointTypes=[p.JOINT_FIXED],
-            linkJointAxis=[0, 0, 0],
+            linkJointAxis=[(0, 0, 0)],
             physicsClientId=physics_client_id,
         )
     else:

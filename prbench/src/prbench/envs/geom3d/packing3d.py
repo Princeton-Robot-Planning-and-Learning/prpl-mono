@@ -56,7 +56,7 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     part_triangle_side_ub: float = 0.1  # max side length for triangle parts
 
     # Probability a part is triangular
-    part_triangular_prob: float = 0.5
+    part_triangular_prob: float = 1.0
 
     def _sample_block_on_block_pose(
         self,
