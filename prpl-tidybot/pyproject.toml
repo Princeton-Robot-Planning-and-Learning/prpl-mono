@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
    "numpy",
+   "spatialmath-python",
 ]
 
 [project.optional-dependencies]
@@ -53,6 +54,6 @@ exclude = ["venv/*", ".venv/*"]
 
 [[tool.mypy.overrides]]
 module = [
-    "matplotlib.*",
+    "spatialmath.*",
 ]
 ignore_missing_imports = true
