@@ -673,17 +673,17 @@ class MjRenderContext:
             # pylint: disable=import-outside-toplevel
             # isort: off
             if _SYSTEM == "Linux" and _MUJOCO_GL == "osmesa":
-                from prbench.envs.tidybot.renderers.context.osmesa_context import (
+                from prbench.envs.dynamic3d.renderers.context.osmesa_context import (
                     OSMesaGLContext as GLContext,)
 
                 # TODO this needs testing on a Linux machine  # pylint: disable=fixme
             elif _SYSTEM == "Linux" and _MUJOCO_GL == "egl":
-                from prbench.envs.tidybot.renderers.context.egl_context import (  # type: ignore[assignment] # pylint: disable=line-too-long
+                from prbench.envs.dynamic3d.renderers.context.egl_context import (  # type: ignore[assignment] # pylint: disable=line-too-long
                     EGLGLContext as GLContext,)
 
                 # TODO this needs testing on a Linux machine  # pylint: disable=fixme
             else:
-                from prbench.envs.tidybot.renderers.context.glfw_context import (  # type: ignore[assignment] # pylint: disable=line-too-long
+                from prbench.envs.dynamic3d.renderers.context.glfw_context import (  # type: ignore[assignment] # pylint: disable=line-too-long
                     GLFWGLContext as GLContext,)
             # isort: on
             # fmt: on

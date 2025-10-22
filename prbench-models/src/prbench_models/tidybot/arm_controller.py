@@ -13,7 +13,7 @@ from typing import Optional, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
-from prbench.envs.tidybot.motion3d import Motion3DEnvSpec
+from prbench.envs.dynamic3d.motion3d import Motion3DEnvSpec
 from ruckig import (  # pylint: disable=no-name-in-module
     InputParameter,
     OutputParameter,
