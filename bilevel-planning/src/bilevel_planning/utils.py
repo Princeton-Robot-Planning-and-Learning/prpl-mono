@@ -247,5 +247,6 @@ class RelationalControllerGenerator:
         self._operator_to_controller = {s.operator: s.controller for s in skills}
 
     def __call__(self, abstract_action: GroundOperator) -> ParameterizedController:
+        assert abstract_action.parent is not None
         lifted_controller = self._operator_to_controller[abstract_action.parent]
         return lifted_controller.ground(abstract_action.parameters)
