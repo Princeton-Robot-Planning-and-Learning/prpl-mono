@@ -7,7 +7,7 @@ A 3D packing environment where the goal is to place a set of parts into a rack w
 The robot is a Kinova Gen-3 with 7 degrees of freedom that can grasp and manipulate objects. The environment consists of:
 - A **table** with dimensions 0.400m × 0.800m × 0.500m
 - A **rack** (purple) with half-extents (0.05, 0.1, 0.05)
-- **Parts** (green) that must be packed into the rack. Parts are sampled with half-extents in (0.03, 0.03, 0.01) to (0.05, 0.05, 0.01) and a probability 1.0 of being triangle-shaped (triangles are represented as triangular prisms with depth 0.025m when used).
+- **Parts** (green) that must be packed into the rack. Parts are sampled with half-extents in (0.05, 0.05, 0.01) to (0.05, 0.05, 0.01) and a probability 0.5 of being triangle-shaped (triangles are represented as triangular prisms with depth 0.020m when used).
 
 The task requires planning to grasp and place each part into the rack while avoiding collisions and ensuring parts are supported by the rack (on the rack and not grasped) at the end.
 

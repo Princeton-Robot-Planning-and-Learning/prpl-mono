@@ -27,6 +27,7 @@ def create_pybullet_block(
     physics_client_id: int,
     mass: float = 0,
     friction: float | None = None,
+    has_peg: bool = False,
 ) -> int:
     """A generic utility for creating a new block.
 
@@ -50,15 +51,54 @@ def create_pybullet_block(
         physicsClientId=physics_client_id,
     )
 
-    # Create the body.
-    block_id = p.createMultiBody(
-        baseMass=mass,
-        baseCollisionShapeIndex=collision_id,
-        baseVisualShapeIndex=visual_id,
-        basePosition=position,
-        baseOrientation=orientation,
-        physicsClientId=physics_client_id,
-    )
+    if has_peg:
+        # Create a peg on top of the block for stacking tasks.
+        peg_height = 0.05
+        peg_radius = 0.01
+
+        peg_visual_id = p.createVisualShape(
+            p.GEOM_CYLINDER,
+            radius=peg_radius,
+            length=peg_height,
+            rgbaColor=(1, 0, 0, 1),
+            physicsClientId=physics_client_id,
+        )
+        peg_collision_id = p.createCollisionShape(
+            p.GEOM_CYLINDER,
+            radius=peg_radius,
+            height=peg_height,
+            physicsClientId=physics_client_id,
+        )
+
+    # Create the body for the block and peg if applicable.
+    if has_peg:
+        block_id = p.createMultiBody(
+            baseMass=mass,
+            baseCollisionShapeIndex=collision_id,
+            baseVisualShapeIndex=visual_id,
+            basePosition=position,
+            baseOrientation=orientation,
+            linkMasses=[0],
+            linkCollisionShapeIndices=[peg_collision_id],
+            linkVisualShapeIndices=[peg_visual_id],
+            linkPositions=[(0, 0, half_extents[2] + peg_height / 2)],
+            linkOrientations=[(1, 0, 0, 0)],
+            linkInertialFramePositions=[(0, 0, 0)],
+            linkInertialFrameOrientations=[(1, 0, 0, 0)],
+            linkParentIndices=[0],
+            linkJointTypes=[p.JOINT_FIXED],
+            linkJointAxis=[(0, 0, 0)],
+            physicsClientId=physics_client_id,
+        )
+    else:
+        block_id = p.createMultiBody(
+            baseMass=mass,
+            baseCollisionShapeIndex=collision_id,
+            baseVisualShapeIndex=visual_id,
+            basePosition=position,
+            baseOrientation=orientation,
+            physicsClientId=physics_client_id,
+        )
 
     if friction:
         p.changeDynamics(
@@ -123,14 +163,49 @@ def create_pybullet_cylinder(
     return cylinder_id
 
 
+def get_triangle_vertices(
+    triangle_type: str,
+    side_lengths: tuple[float, float],
+) -> list[list[float]]:
+    """Get the vertices of a triangle given its type and side lengths."""
+
+    vertices = []
+    if triangle_type == "equilateral":
+        side = side_lengths[0]
+        height = (np.sqrt(3) / 2) * side
+        v0 = [-side / 2, -height / 3, 0]
+        v1 = [side / 2, -height / 3, 0]
+        v2 = [0, 2 * height / 3, 0]
+        vertices = [v0, v1, v2]
+    elif triangle_type == "isosceles":
+        base = side_lengths[0]
+        height = side_lengths[1]
+        v0 = [-base / 2, 0, 0]
+        v1 = [base / 2, 0, 0]
+        v2 = [0, height, 0]
+        vertices = [v0, v1, v2]
+    elif triangle_type == "right":
+        base = side_lengths[0]
+        height = side_lengths[1]
+        v0 = [0, 0, 0]
+        v1 = [base, 0, 0]
+        v2 = [0, height, 0]
+        vertices = [v0, v1, v2]
+    else:
+        raise ValueError(f"Unknown triangle type: {type}")
+
+    return vertices
+
+
 def create_pybullet_triangle(
     color: tuple[float, float, float, float],
-    type: str,
+    triangle_type: str,
     side_lengths: tuple[float, float],
     depth: float,
     physics_client_id: int,
     mass: float = 0,
     friction: float | None = None,
+    has_peg: bool = False,
 ) -> int:
     """A generic utility for creating a triangle.
 
@@ -142,39 +217,14 @@ def create_pybullet_triangle(
     position = (0, 0, 0)
     orientation = (1, 0, 0, 0)
 
-    vertices = []
-    if type == "equilateral":
-        side = side_lengths[0]
-        height = (np.sqrt(3) / 2) * side
-        v0 = [-side / 2, -height / 3, 0]
-        v1 = [side / 2, -height / 3, 0]
-        v2 = [0, 2 * height / 3, 0]
-        vertices = [v0, v1, v2]
-    elif type == "isosceles":
-        base = side_lengths[0]
-        height = side_lengths[1]
-        v0 = [-base / 2, 0, 0]
-        v1 = [base / 2, 0, 0]
-        v2 = [0, height, 0]
-        vertices = [v0, v1, v2]
-    elif type == "right":
-        base = side_lengths[0]
-        height = side_lengths[1]
-        v0 = [0, 0, 0]
-        v1 = [base, 0, 0]
-        v2 = [0, height, 0]
-        vertices = [v0, v1, v2]
-    else:
-        raise ValueError(
-            "Unsupported triangle type. Use 'equilateral', 'isosceles', or 'right'."
-        )
+    vertices = get_triangle_vertices(triangle_type, side_lengths)
 
     # Extrude the 2D triangle to create a 3D mesh
     mesh_vertices = []
     for v in vertices:
-        mesh_vertices.append([v[0], v[1], -depth])
+        mesh_vertices.append([v[0], v[1], -depth / 2])
     for v in vertices:
-        mesh_vertices.append([v[0], v[1], depth])
+        mesh_vertices.append([v[0], v[1], depth / 2])
 
     # Define the indices for the triangular and rectangular faces
     indices = [
@@ -222,15 +272,59 @@ def create_pybullet_triangle(
         rgbaColor=color,
         physicsClientId=physics_client_id,
     )
-    # Create the body.
-    triangle_id = p.createMultiBody(
-        baseMass=mass,
-        baseCollisionShapeIndex=collision_id,
-        baseVisualShapeIndex=visual_id,
-        basePosition=position,
-        baseOrientation=orientation,
-        physicsClientId=physics_client_id,
-    )
+
+    if has_peg:
+        # Create a peg on top of the block for stacking tasks.
+        peg_height = 0.05
+        peg_radius = 0.01
+
+        peg_visual_id = p.createVisualShape(
+            p.GEOM_CYLINDER,
+            radius=peg_radius,
+            length=peg_height,
+            rgbaColor=(1, 0, 0, 1),
+            physicsClientId=physics_client_id,
+        )
+        peg_collision_id = p.createCollisionShape(
+            p.GEOM_CYLINDER,
+            radius=peg_radius,
+            height=peg_height,
+            physicsClientId=physics_client_id,
+        )
+
+    triangle_mean = np.mean(np.array(vertices), axis=0)
+
+    # Create the body for the triangle and peg if applicable.
+    if has_peg:
+        triangle_id = p.createMultiBody(
+            baseMass=mass,
+            baseCollisionShapeIndex=collision_id,
+            baseVisualShapeIndex=visual_id,
+            basePosition=position,
+            baseOrientation=orientation,
+            linkMasses=[0],
+            linkCollisionShapeIndices=[peg_collision_id],
+            linkVisualShapeIndices=[peg_visual_id],
+            linkPositions=[
+                (triangle_mean[0], triangle_mean[1], depth / 2 + peg_height / 2)
+            ],
+            linkOrientations=[(1, 0, 0, 0)],
+            linkInertialFramePositions=[(triangle_mean[0], triangle_mean[1], 0)],
+            linkInertialFrameOrientations=[(1, 0, 0, 0)],
+            linkParentIndices=[0],
+            linkJointTypes=[p.JOINT_FIXED],
+            linkJointAxis=[(triangle_mean[0], triangle_mean[1], 0)],
+            physicsClientId=physics_client_id,
+        )
+    else:
+        triangle_id = p.createMultiBody(
+            baseMass=mass,
+            baseCollisionShapeIndex=collision_id,
+            baseVisualShapeIndex=visual_id,
+            basePosition=position,
+            baseOrientation=orientation,
+            physicsClientId=physics_client_id,
+        )
 
     if friction:
         p.changeDynamics(

@@ -7,7 +7,7 @@ A 3D packing environment where the goal is to place a set of parts into a rack w
 The robot is a Kinova Gen-3 with 7 degrees of freedom that can grasp and manipulate objects. The environment consists of:
 - A **table** with dimensions 0.400m × 0.800m × 0.500m
 - A **rack** (purple) with half-extents (0.05, 0.1, 0.05)
-- **Parts** (green) that must be packed into the rack. Parts are sampled with half-extents in (0.03, 0.03, 0.01) to (0.05, 0.05, 0.01) and a probability 1.0 of being triangle-shaped (triangles are represented as triangular prisms with depth 0.025m when used).
+- **Parts** (green) that must be packed into the rack. Parts are sampled with half-extents in (0.05, 0.05, 0.01) to (0.05, 0.05, 0.01) and a probability 0.5 of being triangle-shaped (triangles are represented as triangular prisms with depth 0.020m when used).
 
 The task requires planning to grasp and place each part into the rack while avoiding collisions and ensuring parts are supported by the rack (on the rack and not grasped) at the end.
 
@@ -56,34 +56,31 @@ The entries of an array in this Box space correspond to the following object fea
 | 32 | part0 | pose_qz |
 | 33 | part0 | pose_qw |
 | 34 | part0 | grasp_active |
-| 35 | part0 | triangle_type |
-| 36 | part0 | side_a |
-| 37 | part0 | side_b |
-| 38 | part0 | depth |
-| 39 | part1 | pose_x |
-| 40 | part1 | pose_y |
-| 41 | part1 | pose_z |
-| 42 | part1 | pose_qx |
-| 43 | part1 | pose_qy |
-| 44 | part1 | pose_qz |
-| 45 | part1 | pose_qw |
-| 46 | part1 | grasp_active |
-| 47 | part1 | triangle_type |
-| 48 | part1 | side_a |
-| 49 | part1 | side_b |
-| 50 | part1 | depth |
-| 51 | part2 | pose_x |
-| 52 | part2 | pose_y |
-| 53 | part2 | pose_z |
-| 54 | part2 | pose_qx |
-| 55 | part2 | pose_qy |
-| 56 | part2 | pose_qz |
-| 57 | part2 | pose_qw |
-| 58 | part2 | grasp_active |
-| 59 | part2 | triangle_type |
-| 60 | part2 | side_a |
-| 61 | part2 | side_b |
-| 62 | part2 | depth |
+| 35 | part0 | half_extent_x |
+| 36 | part0 | half_extent_y |
+| 37 | part0 | half_extent_z |
+| 38 | part1 | pose_x |
+| 39 | part1 | pose_y |
+| 40 | part1 | pose_z |
+| 41 | part1 | pose_qx |
+| 42 | part1 | pose_qy |
+| 43 | part1 | pose_qz |
+| 44 | part1 | pose_qw |
+| 45 | part1 | grasp_active |
+| 46 | part1 | half_extent_x |
+| 47 | part1 | half_extent_y |
+| 48 | part1 | half_extent_z |
+| 49 | part2 | pose_x |
+| 50 | part2 | pose_y |
+| 51 | part2 | pose_z |
+| 52 | part2 | pose_qx |
+| 53 | part2 | pose_qy |
+| 54 | part2 | pose_qz |
+| 55 | part2 | pose_qw |
+| 56 | part2 | grasp_active |
+| 57 | part2 | half_extent_x |
+| 58 | part2 | half_extent_y |
+| 59 | part2 | half_extent_z |
 
 
 ### Action Space

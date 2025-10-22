@@ -9,7 +9,11 @@ import numpy as np
 import pybullet as p
 from pybullet_helpers.geometry import Pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
-from pybullet_helpers.utils import create_pybullet_block, create_pybullet_triangle
+from pybullet_helpers.utils import (
+    create_pybullet_block,
+    create_pybullet_triangle,
+    get_triangle_vertices,
+)
 from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
@@ -42,17 +46,17 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     rack_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
     # Parts.
-    part_half_extents_lb: tuple[float, float, float] = (0.03, 0.03, 0.01)
+    part_half_extents_lb: tuple[float, float, float] = (0.05, 0.05, 0.01)
     part_half_extents_ub: tuple[float, float, float] = (0.05, 0.05, 0.01)
     part_rgba: tuple[float, float, float, float] = (0.2, 0.6, 0.2, 1.0)
 
     # Triangle parts.
-    part_triangle_depth: float = 0.025  # fixed depth for triangle parts
-    part_triangle_side_lb: float = 0.02  # min side length for triangle parts
-    part_triangle_side_ub: float = 0.04  # max side length for triangle parts
+    part_triangle_depth: float = 0.02  # fixed depth for triangle parts
+    part_triangle_side_lb: float = 0.1  # min side length for triangle parts
+    part_triangle_side_ub: float = 0.1  # max side length for triangle parts
 
     # Probability a part is triangular
-    part_triangular_prob: float = 1.0
+    part_triangular_prob: float = 0.5
 
     def _sample_block_on_block_pose(
         self,
@@ -153,6 +157,20 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
             self.get(obj, "pose_qz"),
             self.get(obj, "pose_qw"),
         )
+
+        if obj.type == Geom3DTriangleType:
+            # For triangle objects, we need to adjust the position to match the center
+            # of the triangular prism, since the pose is defined at the centroid of the
+            # triangle base.
+            side_a, side_b, _, triangle_type = self.get_object_triangle_features(name)
+            vertices = get_triangle_vertices(
+                {0: "equilateral", 1: "isosceles", 2: "right"}[int(triangle_type)],
+                (side_a, side_b),
+            )
+            centroid_x = sum(v[0] for v in vertices) / 3.0 + self.get(obj, "pose_x")
+            centroid_y = sum(v[1] for v in vertices) / 3.0 + self.get(obj, "pose_y")
+            position = (centroid_x, centroid_y, self.get(obj, "pose_z"))
+
         return Pose(position, orientation)
 
     def get_object_half_extents(self, name: str) -> tuple[float, float, float]:
@@ -172,14 +190,17 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
             )
         )
 
-    def get_object_triangle_features(self, name: str) -> tuple[float, float, float]:
-        """Get the triangle features (side_a, side_b, side_c, depth) of a triangle
-        object."""
+    def get_object_triangle_features(
+        self, name: str
+    ) -> tuple[float, float, float, float]:
+        """Get the triangle features (side_a, side_b, depth, triangle_type) of a
+        triangle object."""
         obj = self.get_object_from_name(name)
         return (
             self.get(obj, "side_a"),
             self.get(obj, "side_b"),
             self.get(obj, "depth"),
+            self.get(obj, "triangle_type"),
         )
 
     @property
@@ -219,7 +240,10 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
     @property
     def part_features(
         self,
-    ) -> dict[str, tuple[float, float, float] | tuple[float, float, float]]:
+    ) -> dict[
+        str,
+        tuple[float, float, float],
+    ]:
         """Get the features of all parts."""
         features = {}
         for obj in self.objects:
@@ -227,7 +251,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
                 if obj.type == Geom3DCuboidType:
                     features[obj.name] = self.get_object_half_extents(obj.name)
                 elif obj.type == Geom3DTriangleType:
-                    features[obj.name] = self.get_object_triangle_features(obj.name)
+                    features[obj.name] = self.get_object_triangle_features(obj.name)[:3]
                 else:
                     raise ValueError(f"Unsupported part type: {obj.type}")
         return features
@@ -360,6 +384,7 @@ class ObjectCentricPacking3DEnv(
                     self.config.part_rgba,
                     half_extents=half_extents,
                     physics_client_id=self.physics_client_id,
+                    has_peg=True,
                 )
                 self._part_id_to_half_extents[part_id] = half_extents
                 self._part_ids[name] = part_id
@@ -425,12 +450,13 @@ class ObjectCentricPacking3DEnv(
                 )
                 part_id = create_pybullet_triangle(
                     self.config.part_rgba,
-                    type={0: "equilateral", 1: "isosceles", 2: "right"}[
+                    triangle_type={0: "equilateral", 1: "isosceles", 2: "right"}[
                         int(triangle_type)
                     ],
                     side_lengths=(side_a, side_b),
                     depth=depth,
                     physics_client_id=self.physics_client_id,
+                    has_peg=True,
                 )
                 self._part_id_to_half_extents[part_id] = half_extents
                 self._part_ids[name] = part_id
@@ -555,7 +581,7 @@ class ObjectCentricPacking3DEnv(
                     if obj_type == Geom3DCuboidType
                     else create_pybullet_triangle(
                         (0.2, 0.6, 0.2, 1.0),
-                        type={0: "equilateral", 1: "isosceles", 2: "right"}[
+                        triangle_type={0: "equilateral", 1: "isosceles", 2: "right"}[
                             int(self._part_ids_to_triangle_features[part_id][3])
                         ],
                         side_lengths=(

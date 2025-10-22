@@ -59,6 +59,10 @@ def test_pick_place_on_rack():
     sim.set_state(obs)
 
     home_pos = sim.robot.get_end_effector_pose()
+    home_pos = Pose(
+        (home_pos.position[0], home_pos.position[1], home_pos.position[2] + 0.2),
+        home_pos.orientation,
+    )
 
     # Run motion planning.
     if MAKE_VIDEOS:  # make a smooth motion plan for videos
@@ -76,10 +80,14 @@ def test_pick_place_on_rack():
     selected_object = obs.target_object
     assert selected_object is not None, "No target object selected"
 
+    peg_height = 0.05
+
     while selected_object is not None:
 
+        print("Picking and placing object:", selected_object)
+
         x, y, z = obs.part_poses[selected_object.name].position
-        dz = 0.025  # pre-grasp height
+        dz = 0.025 + peg_height * 2  # pre-grasp height
         pre_grasp_pose = Pose.from_rpy((x, y, z + dz), (np.pi, 0, np.pi / 2))
         joint_plan = run_smooth_motion_planning_to_pose(
             pre_grasp_pose,
@@ -96,6 +104,38 @@ def test_pick_place_on_rack():
             joint_plan, sim.robot, max_distance=config.max_action_mag / 2
         )
 
+        for target_joints in joint_plan[1:]:
+            delta = np.subtract(target_joints[:7], obs.joint_positions)
+            delta_lst = [wrap_angle(a) for a in delta]
+            action_lst = delta_lst + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
+            vec_obs, _, _, _, _ = env.step(action)
+            # NOTE: we should soon make this smoother.
+            oc_obs = env.observation_space.devectorize(vec_obs)
+            obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+
+        # Move down to grasp pose.
+        sim.set_state(obs)
+        current_end_effector_pose = sim.robot.get_end_effector_pose()
+        grasp_pose = Pose(
+            (
+                current_end_effector_pose.position[0],
+                current_end_effector_pose.position[1],
+                current_end_effector_pose.position[2] - peg_height * 2,
+            ),
+            current_end_effector_pose.orientation,
+        )
+        joint_plan = smoothly_follow_end_effector_path(
+            sim.robot,
+            [current_end_effector_pose, grasp_pose],
+            sim.robot.get_joint_positions(),
+            collision_ids=set(),
+            joint_distance_fn=create_joint_distance_fn(sim.robot),
+            max_smoothing_iters_per_step=max_candidate_plans,
+        )
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+        )
         for target_joints in joint_plan[1:]:
             delta = np.subtract(target_joints[:7], obs.joint_positions)
             delta_lst = [wrap_angle(a) for a in delta]
@@ -153,11 +193,13 @@ def test_pick_place_on_rack():
         # Determine placement pose and pre-placement pose.
         # Place directly in the center of the target region for this test.
         placement_padding = 1e-5  # leave some room to prevent collisions with surface
+        rack_pose = obs.rack_pose
+        rack_half_extents = obs.rack_half_extents
         block_placement_pose = Pose(
             (
-                obs.rack_pose.position[0] + x_coeffs[0] * obs.rack_half_extents[0],
-                obs.rack_pose.position[1] + y_coeffs[0] * obs.rack_half_extents[1],
-                obs.rack_pose.position[2]
+                rack_pose.position[0] + x_coeffs[0] * rack_half_extents[0],
+                rack_pose.position[1] + y_coeffs[0] * rack_half_extents[1],
+                rack_pose.position[2]
                 + obs.rack_half_extents[2]
                 + obs.get_object_half_extents(obs.grasped_object)[2]
                 + placement_padding,
@@ -253,9 +295,12 @@ def test_pick_place_on_rack():
             obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
         sim.set_state(obs)
-        selected_object = obs.target_object
-        x_coeffs = x_coeffs[1:]
-        y_coeffs = y_coeffs[1:]
+
+        if obs.target_object != selected_object.name:
+            selected_object = obs.target_object
+            x_coeffs = x_coeffs[1:]
+            y_coeffs = y_coeffs[1:]
+            print("Remaining objects to place:", selected_object)
 
     assert done, "Goal not reached"
 
