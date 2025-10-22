@@ -220,7 +220,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         assert isinstance(self.observation_space, ObjectCentricBoxSpace)
         self.observation_space.update_constant_objects(self._constant_objects)
 
-    def reset(self, *args, **kwargs) -> tuple[NDArray[np.float32], dict]:
+    def reset(self, *args, **kwargs) -> tuple[NDArray[Any], dict]:
         super().reset(*args, **kwargs)  # necessary to reset RNG if seed is given
         if (kwargs.get("options") is not None) and (
             "init_state" in kwargs.get("options", {})
@@ -242,9 +242,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, info
 
-    def step(
-        self, *args, **kwargs
-    ) -> tuple[NDArray[np.float32], float, bool, bool, dict]:
+    def step(self, *args, **kwargs) -> tuple[NDArray[Any], float, bool, bool, dict]:
         obs, reward, terminated, truncated, done = self._object_centric_env.step(
             *args, **kwargs
         )
@@ -255,8 +253,6 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
     def render(self):
         return self._object_centric_env.render()
 
-    def get_action_from_gui_input(
-        self, gui_input: dict[str, Any]
-    ) -> NDArray[np.float32]:
+    def get_action_from_gui_input(self, gui_input: dict[str, Any]) -> NDArray[Any]:
         """Get the mapping from human inputs to actions."""
         return self._object_centric_env.get_action_from_gui_input(gui_input)

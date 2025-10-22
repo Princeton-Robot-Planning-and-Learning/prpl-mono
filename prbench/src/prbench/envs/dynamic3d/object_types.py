@@ -25,6 +25,19 @@ MujocoObjectTypeFeatures[MujocoObjectType] = [
     "wz",
 ]
 
+MujocoFixtureObjectType = Type("mujoco_fixture")
+MujocoObjectTypeFeatures[MujocoFixtureObjectType] = [
+    # Position.
+    "x",
+    "y",
+    "z",
+    # Orientation (quaternion).
+    "qw",
+    "qx",
+    "qy",
+    "qz",
+]
+
 MujocoRobotObjectType = Type("mujoco_robot")
 MujocoObjectTypeFeatures[MujocoRobotObjectType] = [
     "pos_base_x",

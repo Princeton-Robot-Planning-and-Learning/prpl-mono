@@ -321,6 +321,11 @@ class ObjectCentricDynamic2DRobotEnv(
             assert self.pymunk_space is not None, "Space not initialized"
             for _ in range(self.config.sim_hz):
                 self.pymunk_space.step(dt)
+        else:
+            # reset from given state
+            assert self.pymunk_space is not None, "Space not initialized"
+            for body in list(self.pymunk_space.bodies):
+                self.pymunk_space.reindex_shapes_for_body(body)
 
         observation = self._get_obs()
         info = self._get_info()
@@ -499,9 +504,7 @@ class ObjectCentricDynamic2DRobotEnv(
             self.config.render_dpi,
         )
 
-    def get_action_from_gui_input(
-        self, gui_input: dict[str, Any]
-    ) -> NDArray[np.float32]:
+    def get_action_from_gui_input(self, gui_input: dict[str, Any]) -> NDArray[Any]:
         """Get the mapping from human inputs to actions."""
         # This will be implemented later
         assert isinstance(self.action_space, KinRobotActionSpace)

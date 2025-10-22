@@ -1,6 +1,8 @@
 """TidyBot 3D environment wrapper for PRBench."""
 
+import json
 import math
+import os
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,16 +15,26 @@ from relational_structs import Array, Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta, PRBenchEnvConfig
-from prbench.envs.tidybot.base_env import (
+from prbench.envs.dynamic3d.base_env import (
     ObjectCentricDynamic3DRobotEnv,
 )
-from prbench.envs.tidybot.object_types import (
+from prbench.envs.dynamic3d.object_types import (
     MujocoObjectTypeFeatures,
     MujocoRobotObjectType,
 )
-from prbench.envs.tidybot.objects import Cube, MujocoObject
-from prbench.envs.tidybot.tidybot_rewards import create_reward_calculator
-from prbench.envs.tidybot.tidybot_robot_env import TidyBotRobotEnv
+from prbench.envs.dynamic3d.objects import (
+    MujocoFixture,
+    MujocoObject,
+    get_fixture_class,
+    get_object_class,
+)
+from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
+from prbench.envs.dynamic3d.tidybot_robot_env import TidyBotRobotEnv
+from prbench.envs.dynamic3d.utils import (
+    get_table_bbox,
+    sample_collision_free_position,
+    sample_pose_in_region,
+)
 
 
 @dataclass(frozen=True)
@@ -35,6 +47,7 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
+    act_delta: bool = True
 
 
 class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
@@ -48,7 +61,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         seed: int | None = None,
         scene_type: str = "ground",
         num_objects: int = 3,
-        act_delta: bool = True,
+        task_config_path: str | None = None,
         render_images: bool = True,
         show_images: bool = False,
     ) -> None:
@@ -62,10 +75,22 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         self.camera_names = config.camera_names
         self.show_images = show_images
 
+        # Parse task configuration
+        if task_config_path is None:
+            # Default to tasks/scene-oN.json based on scene_type and num_objects
+            task_config_path = f"./tasks/{self.scene_type}-o{self.num_objects}.json"
+        if not os.path.isabs(task_config_path):
+            task_config_path = str(Path(__file__).parent / task_config_path)
+        assert os.path.exists(
+            task_config_path
+        ), f"task_config_path {task_config_path} does not exist."
+        with open(task_config_path, "r", encoding="utf-8") as f:
+            self.task_config = json.load(f)
+
         # Initialize TidyBot-specific components
         self._robot_env = TidyBotRobotEnv(
             control_frequency=config.control_frequency,
-            act_delta=act_delta,
+            act_delta=config.act_delta,
             horizon=config.horizon,
             camera_names=self.camera_names,
             camera_width=config.camera_width,
@@ -82,6 +107,8 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
         # Initialize empty object list
         self._objects: list[MujocoObject] = []
+        self._objects_dict: dict[str, MujocoObject] = {}
+        self._fixtures_dict: dict[str, MujocoFixture] = {}
 
         self._reward_calculator = create_reward_calculator(scene_type, num_objects)
 
@@ -114,47 +141,90 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         # Construct absolute path to model file
         absolute_model_path = model_base_path / model_file
 
-        # --- Dynamic object insertion logic ---
-        needs_dynamic_objects = self.scene_type in ["ground", "table", "base_motion"]
-        if needs_dynamic_objects:
-            tree = ET.parse(str(absolute_model_path))
-            root = tree.getroot()
-            worldbody = root.find("worldbody")
-            if worldbody is not None:
-                # Remove all existing cube bodies
+        with open(absolute_model_path, "r", encoding="utf-8") as f:
+            xml_string = f.read()
+
+        # Insert objects in scene
+        tree = ET.parse(str(absolute_model_path))
+        root = tree.getroot()
+        worldbody = root.find("worldbody")
+        if worldbody is not None:
+            # Remove all existing cube bodies
+            for body in list(worldbody):
+                if body.tag == "body" and body.attrib.get("name", "").startswith(
+                    "cube"
+                ):
+                    worldbody.remove(body)
+
+            # Add tables and objects based on task configuration
+            if self.task_config is not None:
+                # Find and remove the existing table body
                 for body in list(worldbody):
-                    if body.tag == "body" and body.attrib.get("name", "").startswith(
-                        "cube"
-                    ):
+                    if body.tag == "body" and body.attrib.get("name") == "table":
                         worldbody.remove(body)
-                # Insert new cubes
-                # For the base motion environment, make the cube small enough that the
-                # robot can roll over it without a collision.
-                cube_size = 0.01 if self.scene_type == "base_motion" else 0.02
-                for i in range(self.num_objects):
-                    name = f"cube{i+1}"
-                    # Create cube using the Cube class
-                    obj = Cube(
-                        name=name,
-                        size=cube_size,
-                        rgba=".5 .7 .5 1",
-                        mass=0.1,
-                        env=self._robot_env,
-                    )
-                    # Get the XML element from the cube
-                    body = obj.xml_element
+                        break
 
-                    worldbody.append(body)
-                    self._objects.append(obj)
+                # Insert fixtures (only tables supported for now)
+                fixtures = self.task_config.get("fixtures", {})
 
-                # Get XML string from tree
-                xml_string = ET.tostring(root, encoding="unicode")
-            else:
-                with open(absolute_model_path, "r", encoding="utf-8") as f:
-                    xml_string = f.read()
-        else:
-            with open(absolute_model_path, "r", encoding="utf-8") as f:
-                xml_string = f.read()
+                for fixture_type, fixture_configs in fixtures.items():
+
+                    # Keep track of placed fixture bounding boxes for collision detection
+                    placed_fixture_bboxes: list[list[float]] = []
+
+                    for fixture_name, fixture_config in fixture_configs.items():
+                        # Sample collision-free position for the fixture
+                        fixture_pos = sample_collision_free_position(
+                            fixture_config, placed_fixture_bboxes, self.np_random
+                        )
+
+                        # Add this fixture's bounding box to the list
+                        fixture_bbox = get_table_bbox(fixture_pos, fixture_config)
+                        placed_fixture_bboxes.append(fixture_bbox)
+
+                        # Find regions for this fixture if specified
+                        regions = {}
+                        fixture_regions = self.task_config.get("regions", {})
+                        for region_name, region_config in fixture_regions.items():
+                            if region_config["target"] == fixture_name:
+                                region_ranges = region_config["ranges"]
+                                regions[region_name] = region_ranges
+
+                        # Create new fixture with configuration dictionary
+                        fixture_cls = get_fixture_class(fixture_type)
+                        new_fixture = fixture_cls(
+                            name=fixture_name,
+                            fixture_config=fixture_config,
+                            position=fixture_pos,
+                            regions=regions,
+                            # env=self._robot_env,
+                        )
+                        self._fixtures_dict[fixture_name] = new_fixture
+                        fixture_body = new_fixture.xml_element
+                        worldbody.append(fixture_body)
+
+                # Insert objects
+                objects = self.task_config.get("objects", {})
+                for object_type, object_configs in objects.items():
+                    for object_name, object_config in object_configs.items():
+                        obj_cls = get_object_class(object_type)
+                        obj_options = {
+                            "size": object_config["size"],
+                            "rgba": " ".join(map(str, object_config["rgba"])),
+                            "mass": object_config["mass"],
+                        }
+                        obj = obj_cls(
+                            name=object_name,
+                            env=self._robot_env,
+                            options=obj_options,
+                        )
+                        body = obj.xml_element
+                        worldbody.append(body)
+                        self._objects.append(obj)
+                        self._objects_dict[object_name] = obj
+
+            # Get XML string from tree
+            xml_string = ET.tostring(root, encoding="unicode")
 
         return xml_string
 
@@ -163,36 +233,36 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
         assert self._robot_env.sim is not None, "Simulation not initialized"
 
-        for obj in self._objects:
-            pos = np.array([0.0, 0.0, 0.0])
-            if self.scene_type == "cupboard":
-                pass  # no position randomization for cupboard scene
-            elif self.scene_type == "table":
-                # Randomize position within a reasonable range
-                # for the table environment
-                x = round(self.np_random.uniform(0.2, 0.8), 3)
-                y = round(self.np_random.uniform(-0.15, 0.15), 3)
-                z = 0.44
-                pos = np.array([x, y, z])
-            else:
-                # Randomize position within a reasonable range, but make sure far
-                # enough from the robot.
-                assert self._robot_env.qpos_base is not None
-                robot_x, robot_y, _ = self._robot_env.qpos_base
-                while True:
-                    x = round(self.np_random.uniform(0.4, 0.8), 3)
-                    y = round(self.np_random.uniform(-0.3, 0.3), 3)
-                    if abs(x - robot_x) > 1e-1 or abs(y - robot_y) > 1e-1:
-                        break
-                cube_size = 0.01 if self.scene_type == "base_motion" else 0.02
-                z = cube_size
-                pos = np.array([x, y, z])
-            # Randomize orientation around Z-axis (yaw)
-            theta = self.np_random.uniform(-math.pi, math.pi)
-            quat = np.array([math.cos(theta / 2), 0, 0, math.sin(theta / 2)])
+        # Set object pose based on task configuration
+        init_predicates = self.task_config.get("initial_state", [])
+        for pred in init_predicates:
+            if pred[0] == "on":
+                obj_name = pred[1]
+                if obj_name not in self._objects_dict:
+                    raise ValueError(f"Object {obj_name} not found in environment.")
+                region_name = pred[2]
+                region_config = self.task_config["regions"][region_name]
+                region_ranges = region_config["ranges"]
 
-            # Set object pose in the environment
-            obj.set_pose(pos, quat)
+                if region_config["target"] == "ground":
+                    # Sample pose directly on the ground using utility function
+                    pos_x, pos_y, pos_z = sample_pose_in_region(
+                        region_ranges, self.np_random, z_coordinate=0.02
+                    )
+                else:
+                    # Sample pose on a fixture (table, etc.)
+                    fixture = self._fixtures_dict[region_config["target"]]
+                    pos_x, pos_y, pos_z = fixture.sample_pose_in_region(
+                        region_ranges, self.np_random
+                    )
+
+                # Randomize orientation around Z-axis (yaw)
+                theta = self.np_random.uniform(-math.pi, math.pi)
+                quat = np.array([math.cos(theta / 2), 0, 0, math.sin(theta / 2)])
+
+                # Set object pose in the environment
+                obj = self._objects_dict[obj_name]
+                obj.set_pose(np.array([pos_x, pos_y, pos_z]), quat)
 
         self._robot_env.sim.forward()
 
@@ -204,15 +274,20 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
     ) -> tuple[ObjectCentricState, dict[str, Any]]:
         """Reset the environment and return object-centric observation."""
 
+        # Reset the random seed
+        self._robot_env.seed(seed=seed)
+        self.np_random = self._robot_env.np_random
+
         # Create scene XML
         self._objects = []
+        self._objects_dict = {}
+        self._fixtures_dict = {}
         xml_string = self._create_scene_xml()
 
         # Reset the underlying TidyBot robot environment
         robot_options = options.copy() if options is not None else {}
         robot_options["xml"] = xml_string
-        self._robot_env.reset(seed=seed, options=robot_options)
-        self.np_random = self._robot_env.np_random
+        self._robot_env.reset(options=robot_options)
 
         # Initialize object poses
         self._initialize_object_poses()
@@ -284,6 +359,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                 state.get(obj, "wz"),
             ]
             mujoco_object.set_velocity(linear_velocity, angular_velocity)
+        # NOTE: Fixtures are static (without joints), so we cannot set their state.
 
     def _visualize_image_in_window(
         self, image: NDArray[np.uint8], window_name: str
@@ -316,6 +392,9 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         for obj in self._objects:
             obj_data = obj.get_object_centric_data()
             state_dict[obj.object_state_type] = obj_data
+        for fixture in self._fixtures_dict.values():
+            fixture_data = fixture.get_object_centric_data()
+            state_dict[fixture.object_state_type] = fixture_data
         # Add robot into object-centric state.
         robot = Object("robot", MujocoRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.

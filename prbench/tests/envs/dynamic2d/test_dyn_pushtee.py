@@ -32,7 +32,8 @@ def test_dyn_pusht_action_space():
         robot_y = state.get(robot_object, "y")
 
         # Command robot to move with delta action
-        delta_action = np.array([0.05, 0.05], dtype=np.float32)
+        # NOTE: Dynamic2D env has float64 action space
+        delta_action = np.array([0.05, 0.05], dtype=np.float64)
 
         # After one step, robot should move in positive x and y
         obs_, _, _, _, _ = env.step(delta_action)

@@ -1,11 +1,11 @@
-"""Unit tests for prbench.envs.tidybot.tidybot_rewards.
+"""Unit tests for prbench.envs.dynamic3d.tidybot_rewards.
 
 This test suite verifies the base behavior of TidyBotRewardCalculator and the
 create_reward_calculator factory function, including reward calculation, episode step
 tracking, and default termination logic.
 """
 
-from prbench.envs.tidybot import tidybot_rewards
+from prbench.envs.dynamic3d import tidybot_rewards
 
 
 def test_reward_calculator_base_behavior():
