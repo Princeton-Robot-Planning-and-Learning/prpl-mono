@@ -5,7 +5,8 @@ import abc
 import numpy as np
 from prpl_utils.structs import Image
 
-from prpl_tidybot.constants import CAMERA_DIMS
+from prpl_tidybot.cameras import KinovaCamera, LogitechCamera
+from prpl_tidybot.constants import BASE_CAMERA_SERIAL, CAMERA_DIMS
 
 
 class CameraInterface(abc.ABC):
@@ -37,15 +38,16 @@ class FakeCameraInterface(CameraInterface):
 class RealCameraInterface(CameraInterface):
     """Real camera interface.
 
-    Coming soon!
+    wrist camera: kinova camera
+    base camera: logitech camera
     """
 
     def __init__(self):
-        self.wrist_image = None
-        self.base_image = None
+        self.base_camera = LogitechCamera(BASE_CAMERA_SERIAL)
+        self.wrist_camera = KinovaCamera()
 
     def get_wrist_image(self) -> Image:
-        raise NotImplementedError("Real camera interface not implemented yet.")
+        return self.wrist_camera.get_image()
 
     def get_base_image(self) -> Image:
-        raise NotImplementedError("Real camera interface not implemented yet.")
+        return self.base_camera.get_image()
