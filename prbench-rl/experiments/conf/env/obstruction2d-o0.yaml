@@ -1,4 +1,0 @@
-# Obstruction2D-o0 environment configuration
-env_name: obstruction2d-o0
-make_kwargs:
-  id: prbench/Obstruction2D-o0-v0

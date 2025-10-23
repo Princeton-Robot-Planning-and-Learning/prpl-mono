@@ -1,7 +1,7 @@
 """Base RL agent interface for PRBench environments."""
 
 import abc
-from typing import Any, TypeVar, Optional
+from typing import Any, TypeVar, Dict
 
 from torch import Tensor
 from gymnasium import spaces
@@ -40,38 +40,32 @@ class BaseRLAgent(Agent[_O, _U]):
 
     def __init__(
         self,
-        observation_space: spaces.Space,
-        action_space: spaces.Space,
         seed: int,
+        env_id: str,
+        max_episode_steps: int,
         cfg: DictConfig,
     ) -> None:
         super().__init__(seed)
-        self.observation_space = observation_space
-        self.action_space = action_space
         self.cfg = cfg
-        self.action_space.seed(seed)
+        self.env_id = env_id
+        self.max_episode_steps = max_episode_steps
+        self.seed(seed)
 
     @abc.abstractmethod
     def _get_action(self) -> _U:
         """Produce an action to execute now."""
 
-    def train(self) -> None:
+    @abc.abstractmethod
+    def train(self) -> Dict[str, Any]:
         """Switch to train mode."""
         self._train_or_eval = "train"
+        return {}
 
     @abc.abstractmethod
-    def train_with_env(
-        self,
-        env: MultiEnvWrapper,
-        eval_env: Optional[MultiEnvWrapper] = None,
-    ) -> list[dict[str, Any]]:
-        """Training the agent with an interactive batched environment.
-        Note that evaluation env is seperated because we might want to render
-        during evaluation with fewer environments.
-        """
-        del env  # Unused
-        self.train()
-        return []
+    def evaluate(self, eval_episodes: int) -> Dict[str, Any]:
+        """Switch to evaluation mode."""
+        self._train_or_eval = "eval"
+        return {}
 
     def save(self, filepath: str) -> None:
         """Save agent parameters."""

@@ -1,4 +1,8 @@
-"""PPO agent implementation for PRBench environments."""
+"""PPO agent implementation for PRBench environments.
+This is heavily based on the implementation from
+cleanrl: 
+https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo_continuous_action.py
+"""
 
 from typing import TypeVar, Optional, Any
 from dataclasses import dataclass
@@ -10,6 +14,7 @@ import torch
 import dacite
 from pathlib import Path
 from gymnasium import spaces
+import gymnasium as gym
 from omegaconf import DictConfig
 from collections import defaultdict
 from torch import nn, optim
@@ -24,7 +29,6 @@ except ImportError:
     TENSORBOARD_AVAILABLE = False
 
 from prbench_rl.agent import BaseRLAgent, Logger
-from prbench_rl.gym_utils import MultiEnvWrapper
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -88,6 +92,8 @@ class PPOArgs:
     """The control mode to use for the environment."""
 
     # Algorithm specific arguments
+    hidden_size: int = 256
+    """The hidden size of the MLP networks."""
     total_timesteps: int = 10_000_000
     """Total timesteps of the experiments."""
     learning_rate: float = 3e-4
@@ -139,7 +145,6 @@ def layer_init(layer: nn.Module,
     torch.nn.init.orthogonal_(layer.weight, std)  # type: ignore
     torch.nn.init.constant_(layer.bias, bias_const)  # type: ignore
     return layer
-
 
 class Agent(nn.Module):
     """PPO actor-critic network."""
@@ -248,7 +253,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
         # Load PPO arguments
         self.args = dacite.from_dict(PPOArgs, cfg.args)
-        log_path = Path(cfg.tb_log_dir) / f"{cfg.exp_name}"
+        self.log_path = Path(cfg.tb_log_dir) / f"{cfg.exp_name}"
         writer = SummaryWriter(log_path)  # type: ignore
         writer.add_text(  # type: ignore
             "hyperparameters",
@@ -261,8 +266,27 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         )
         self.logger = Logger(tensorboard=writer)
 
-    def initialize(self, env: MultiEnvWrapper) -> None:
-        """Initialize the PPO policy with the given environment."""
+        self.agent = Agent(
+            observation_space,
+            action_space,
+            hidden_size=self.args.hidden_size,
+        ).to(self.device)
+        self.optimizer = optim.Adam(
+            self.agent.parameters(), lr=self.args.learning_rate, eps=1e-5
+        )
+
+    def _get_action(self, obs: torch.Tensor) -> torch.Tensor:
+        with torch.no_grad():
+            action = self.agent.get_action(obs, deterministic=True)
+        return action
+
+    def train_with_env(
+        self,
+        env: gym.Env,
+        eval_env: Optional[MultiEnvWrapper] = None,
+    ) -> list[dict[str, Any]]:
+        """Training the agent with an interactive batched environment."""
+        # Initialize observation normalization variables
         # update the args with the environment-specific values
         num_envs = env.num_envs
         if num_envs != self.args.num_envs:
@@ -279,58 +303,15 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         )
         self.args.num_iterations = self.args.total_timesteps // self.args.batch_size
 
-        self.agent = Agent(env).to(self.device)
-        self.optimizer = optim.Adam(
-            self.agent.parameters(), lr=self.args.learning_rate, eps=1e-5
-        )
-
         # ALGO Logic: Storage setup
-        self.obs = torch.zeros(
-            (self.args.num_steps, self.args.num_envs)
-            + (
-                tuple(env.single_observation_space.shape)
-                if env.single_observation_space.shape is not None
-                else ()
-            )
-        ).to(self.device)
-        self.actions = torch.zeros(
-            (self.args.num_steps, self.args.num_envs)
-            + (
-                tuple(env.single_action_space.shape)
-                if env.single_action_space.shape is not None
-                else ()
-            )
-        ).to(self.device)
-        self.logprobs = torch.zeros((self.args.num_steps, self.args.num_envs)).to(
-            self.device
-        )
-        self.rewards = torch.zeros((self.args.num_steps, self.args.num_envs)).to(
-            self.device
-        )
-        self.dones = torch.zeros((self.args.num_steps, self.args.num_envs)).to(
-            self.device
-        )
-        self.values = torch.zeros((self.args.num_steps, self.args.num_envs)).to(
-            self.device
-        )
-
-    def _get_action(self, obs: torch.Tensor) -> torch.Tensor:
-        with torch.no_grad():
-            action = self.agent.get_action(obs, deterministic=True)
-        return action
-
-    def train_with_env(
-        self,
-        env: MultiEnvWrapper,
-        eval_env: Optional[MultiEnvWrapper] = None,
-    ) -> list[dict[str, Any]]:
-        """Training the agent with an interactive batched environment."""
-        # Initialize observation normalization variables
-        obs_shape = env.single_observation_space.shape
-        if obs_shape is None:
-            obs_shape = ()
-        self.curr_obs_mean = torch.zeros(obs_shape, device=self.device)
-        self.curr_obs_std = torch.ones(obs_shape, device=self.device)
+        obs = torch.zeros((self.args.num_steps, self.args.num_envs) + \
+                          env.single_observation_space.shape).to(self.device)
+        actions = torch.zeros((self.args.num_steps, self.args.num_envs) + \
+                              env.single_action_space.shape).to(self.device)
+        logprobs = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
+        rewards = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
+        dones = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
+        values = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
 
         next_obs, _ = env.reset(seed=self.args.seed)
         if eval_env is not None:
@@ -362,18 +343,27 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 eval_obs, _ = eval_env.reset()
                 eval_metrics = defaultdict(list)
                 num_episodes = 0
-                for _ in range(CFG.max_rl_steps):
+                eval_steps = 0
+                terminated_or_truncated = torch.zeros(
+                    self.args.num_eval_envs, device=self.device
+                )
+                while not torch.all(terminated_or_truncated):
                     with torch.no_grad():
-                        normalized_eval_obs = self.normalize_obs(eval_obs)
-                        eval_obs, _, _, _, eval_infos = eval_env.step(
-                            clip_action(self.get_action(normalized_eval_obs))
+                        eval_obs, eval_rewards, eval_terminations, \
+                            eval_truncations, eval_infos = eval_env.step(
+                            clip_action(self._get_action(eval_obs))
                         )
+                        eval_steps += self.args.num_eval_envs
+                        eval_terminated_or_truncated = torch.logical_or(
+                            eval_terminations, eval_truncations)
+                        terminated_or_truncated |= eval_terminated_or_truncated.to(
+                            self.device)
                         if "final_info" in eval_infos:
                             mask = eval_infos["_final_info"]
                             num_episodes += mask.sum()
                             for k, v in eval_infos["final_info"]["episode"].items():
                                 eval_metrics[k].append(v)
-                evaluated_steps = CFG.max_rl_steps * self.args.num_eval_envs
+                evaluated_steps = eval_steps * self.args.num_eval_envs
                 logging.info(
                     f"Evaluated {evaluated_steps} steps resulting in {num_episodes} episodes"
                 )
@@ -386,10 +376,10 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                     break
             if self.args.save_model and iteration % self.args.eval_freq == 1:
                 model_path = (
-                    Path(CFG.rl_policy_save_dir)
-                    / f"runs/{CFG.exp_name}/ckpt_{global_step}.pt"
+                    self.log_path
+                    / f"policies/ckpt_{global_step}.pt"
                 )
-                base_path = Path(CFG.rl_policy_save_dir) / "runs" / CFG.exp_name
+                base_path = Path(self.log_path) / "policies"
                 base_path.mkdir(parents=True, exist_ok=True)
                 self.save(model_path)
                 logging.info(f"model saved to {model_path}")
@@ -403,18 +393,17 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             # ALGO LOGIC: collect data
             for step in range(0, self.args.num_steps):
                 global_step += self.args.num_envs
-                self.obs[step] = next_obs
-                self.dones[step] = next_done
+                obs[step] = next_obs
+                dones[step] = next_done
 
                 # ALGO LOGIC: action logic
                 with torch.no_grad():
-                    normalized_obs = self.normalize_obs(next_obs)
                     action, logprob, _, value = self.agent.get_action_and_value(
-                        normalized_obs
+                        next_obs
                     )
-                    self.values[step] = value.flatten()
-                self.actions[step] = action
-                self.logprobs[step] = logprob
+                    values[step] = value.flatten()
+                actions[step] = action
+                logprobs[step] = logprob
 
                 # TRY NOT TO MODIFY: execute the game and log data.
                 next_obs, reward, terminations, truncations, infos = env.step(
@@ -423,7 +412,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 next_done = torch.logical_or(terminations, truncations).to(
                     torch.float32
                 )
-                self.rewards[step] = reward.view(-1) * self.args.reward_scale
+                rewards[step] = reward.view(-1) * self.args.reward_scale
 
                 if "final_info" in infos:
                     final_info = infos["final_info"]
@@ -439,33 +428,24 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                                 done_mask
                             ],
                         ] = self.agent.get_value(
-                            self.normalize_obs(infos["final_observation"][done_mask])
+                            infos["final_observation"][done_mask]
                         ).view(
                             -1
                         )
             rollout_time = time.time() - rollout_time
 
-            # Update observation normalization statistics
-            if self.args.normalize_obs:
-                with torch.no_grad():
-                    # Calculate mean and std from current rollout observations
-                    batch_obs = self.obs.reshape(-1, *self.obs.shape[2:])
-                    self.curr_obs_mean = batch_obs.mean(dim=0)
-                    self.curr_obs_std = batch_obs.std(dim=0)
-
             # bootstrap value according to termination and truncation
             with torch.no_grad():
-                normalized_next_obs = self.normalize_obs(next_obs)
-                next_value = self.agent.get_value(normalized_next_obs).reshape(1, -1)
-                advantages = torch.zeros_like(self.rewards).to(self.device)
+                next_value = self.agent.get_value(next_obs).reshape(1, -1)
+                advantages = torch.zeros_like(rewards).to(self.device)
                 lastgaelam = 0
                 for t in reversed(range(self.args.num_steps)):
                     if t == self.args.num_steps - 1:
                         next_not_done = 1.0 - next_done
                         nextvalues = next_value
                     else:
-                        next_not_done = 1.0 - self.dones[t + 1]
-                        nextvalues = self.values[t + 1]
+                        next_not_done = 1.0 - dones[t + 1]
+                        nextvalues = values[t + 1]
                     real_next_values = (
                         next_not_done * nextvalues + final_values[t]
                     )  # t instead of t+1
@@ -490,7 +470,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                         lam_coef_sum = 1 + self.args.gae_lambda * lam_coef_sum
                         reward_term_sum = (
                             self.args.gae_lambda * self.args.gamma * reward_term_sum
-                            + lam_coef_sum * self.rewards[t]
+                            + lam_coef_sum * rewards[t]
                         )
                         value_term_sum = (
                             self.args.gae_lambda * self.args.gamma * value_term_sum
@@ -499,12 +479,12 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
                         advantages[t] = (
                             reward_term_sum + value_term_sum
-                        ) / lam_coef_sum - self.values[t]
+                        ) / lam_coef_sum - values[t]
                     else:
                         delta = (
-                            self.rewards[t]
+                            rewards[t]
                             + self.args.gamma * real_next_values
-                            - self.values[t]
+                            - values[t]
                         )
                         advantages[t] = lastgaelam = (
                             delta
@@ -513,19 +493,15 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                             * next_not_done
                             * lastgaelam
                         )  # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
-                returns = advantages + self.values
-
-            # Normalize observations before agent update
-            if self.args.normalize_obs:
-                self.obs = self.normalize_obs(self.obs)
+                returns = advantages + values
 
             # flatten the batch
-            b_obs = self.obs.reshape((-1,) + env.single_observation_space.shape)
-            b_logprobs = self.logprobs.reshape(-1)
-            b_actions = self.actions.reshape((-1,) + env.single_action_space.shape)
+            b_obs = obs.reshape((-1,) + env.single_observation_space.shape)
+            b_logprobs = logprobs.reshape(-1)
+            b_actions = actions.reshape((-1,) + env.single_action_space.shape)
             b_advantages = advantages.reshape(-1)
             b_returns = returns.reshape(-1)
-            b_values = self.values.reshape(-1)
+            b_values = values.reshape(-1)
 
             # ALGO LOGIC: update the agent with the collected data
             self.agent.train()

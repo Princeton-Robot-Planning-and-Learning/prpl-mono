@@ -2,9 +2,10 @@
 
 from typing import Any, TypeVar
 
-from gymnasium.core import Env
+import gymnasium as gym
 
 from prbench_rl.agent import BaseRLAgent
+from prbench_rl.gym_utils import make_env
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -17,11 +18,36 @@ class RandomAgent(BaseRLAgent[_O, _U]):
         """Sample a random action from the action space."""
         return self.action_space.sample()
 
-    def train_with_env(
-        self,
-        env: Env,
-    ) -> list[dict[str, Any]]:
-        """Training not applicable for random agent."""
-        del env  # Unused
-        self.train()
-        return []
+    def train(self):
+        return super().train()
+    
+    def evaluate(self, eval_episodes: int) -> dict[str, Any]:
+        """Evaluate the agent over a number of episodes."""
+        envs = gym.vector.SyncVectorEnv([make_env(self.env_id, 
+                                                  0, 
+                                                  True, 
+                                                  "random_agent_eval", 
+                                                  self.max_episode_steps)])
+
+        _, _ = envs.reset()
+        episodic_returns = []
+        step_lengths = []
+        step_length = 0
+        while len(episodic_returns) < eval_episodes:
+            actions = self._get_action()
+            _, _, _, _, infos = envs.step(actions)
+            step_length += 1
+            if "final_info" in infos:
+                for info in infos["final_info"]:
+                    if "episode" not in info:
+                        continue
+                    print(f"eval_episode={len(episodic_returns)}, episodic_return={info['episode']['r']}")
+                    episodic_returns += [info["episode"]["r"]]
+                    step_lengths += [step_length]
+                    step_length = 0
+
+        eval_metrics = {
+            "episodic_return": episodic_returns,
+            "step_length": step_lengths,
+        }
+        return eval_metrics
