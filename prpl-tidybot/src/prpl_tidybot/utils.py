@@ -1,3 +1,7 @@
+"""Utility functions for the real tidybot."""
+
+# mypy: ignore-errors
+# pylint: disable=all
 import atexit
 import os
 from pathlib import Path

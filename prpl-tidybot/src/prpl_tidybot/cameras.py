@@ -1,6 +1,9 @@
 # Author: Jimmy Wu
 # Date: October 2024
 
+# mypy: ignore-errors
+# pylint: disable=all
+
 import threading
 import time
 
