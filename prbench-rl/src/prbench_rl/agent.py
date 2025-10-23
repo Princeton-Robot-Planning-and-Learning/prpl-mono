@@ -1,16 +1,12 @@
 """Base RL agent interface for PRBench environments."""
 
 import abc
-from typing import Any, TypeVar, Dict
+from typing import Any, Dict, TypeVar
 
-from torch import Tensor
-from gymnasium import spaces
 from omegaconf import DictConfig
 from prpl_utils.gym_agent import Agent
+from torch import Tensor
 from torch.utils.tensorboard import SummaryWriter
-
-
-from prbench_rl.gym_utils import MultiEnvWrapper
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -51,18 +47,28 @@ class BaseRLAgent(Agent[_O, _U]):
         self.max_episode_steps = max_episode_steps
         self.seed(seed)
 
+        # Create temporary environment to get spaces
+        import gymnasium as gym  # pylint: disable=import-outside-toplevel
+        import prbench  # pylint: disable=import-outside-toplevel
+
+        prbench.register_all_environments()
+        temp_env = prbench.make(env_id)
+        # Apply FlattenObservation wrapper like in make_env
+        temp_env = gym.wrappers.FlattenObservation(temp_env)
+        self.observation_space = temp_env.observation_space
+        self.action_space = temp_env.action_space
+        temp_env.close()  # type: ignore
+
     @abc.abstractmethod
     def _get_action(self) -> _U:
         """Produce an action to execute now."""
 
-    @abc.abstractmethod
-    def train(self) -> Dict[str, Any]:
+    def train(self) -> Dict[str, Any]:  # type: ignore
         """Switch to train mode."""
         self._train_or_eval = "train"
         return {}
 
-    @abc.abstractmethod
-    def evaluate(self, eval_episodes: int) -> Dict[str, Any]:
+    def evaluate(self, _eval_episodes: int) -> Dict[str, Any]:  # type: ignore
         """Switch to evaluation mode."""
         self._train_or_eval = "eval"
         return {}

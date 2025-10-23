@@ -16,22 +16,25 @@ class RandomAgent(BaseRLAgent[_O, _U]):
 
     def _get_action(self) -> _U:
         """Sample a random action from the action space."""
-        return self.action_space.sample()
+        return self.action_space.sample()  # type: ignore
 
-    def train(self):
-        return super().train()
-    
+    def train(self) -> dict[str, Any]:  # type: ignore
+        """Train does nothing for random agent."""
+        return {}
+
     def evaluate(self, eval_episodes: int) -> dict[str, Any]:
         """Evaluate the agent over a number of episodes."""
-        envs = gym.vector.SyncVectorEnv([make_env(self.env_id, 
-                                                  0, 
-                                                  True, 
-                                                  "random_agent_eval", 
-                                                  self.max_episode_steps)])
+        envs = gym.vector.SyncVectorEnv(
+            [
+                make_env(
+                    self.env_id, 0, True, "random_agent_eval", self.max_episode_steps
+                )
+            ]
+        )
 
         _, _ = envs.reset()
-        episodic_returns = []
-        step_lengths = []
+        episodic_returns: list[float] = []
+        step_lengths: list[int] = []
         step_length = 0
         while len(episodic_returns) < eval_episodes:
             actions = self._get_action()
@@ -41,7 +44,9 @@ class RandomAgent(BaseRLAgent[_O, _U]):
                 for info in infos["final_info"]:
                     if "episode" not in info:
                         continue
-                    print(f"eval_episode={len(episodic_returns)}, episodic_return={info['episode']['r']}")
+                    print(
+                        f"eval_episode={len(episodic_returns)}, episodic_return={info['episode']['r']}"
+                    )
                     episodic_returns += [info["episode"]["r"]]
                     step_lengths += [step_length]
                     step_length = 0

@@ -19,9 +19,9 @@ from prbench_rl import create_rl_agents
 @hydra.main(version_base=None, config_name="config", config_path="conf/")
 def _main(cfg: DictConfig) -> None:
     logging.info(
-        f"Running agent={cfg.agent.name}, env={cfg.env_id}," \
-        f" max_episode_steps={cfg.max_episode_steps}," \
-        f" seed={cfg.seed}" \
+        f"Running agent={cfg.agent.name}, env={cfg.env_id},"
+        f" max_episode_steps={cfg.max_episode_steps},"
+        f" seed={cfg.seed}"
         f"   in mode={cfg.mode}"
     )
 
@@ -29,10 +29,7 @@ def _main(cfg: DictConfig) -> None:
     prbench.register_all_environments()
 
     # Create the agent
-    agent = create_rl_agents(cfg.agent, \
-                             cfg.env_id, \
-                             cfg.max_episode_steps,
-                             cfg.seed)
+    agent = create_rl_agents(cfg.agent, cfg.env_id, cfg.max_episode_steps, cfg.seed)
 
     if cfg.mode == "train":
         # Training pipeline

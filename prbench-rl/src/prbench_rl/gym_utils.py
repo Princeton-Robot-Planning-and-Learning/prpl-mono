@@ -1,15 +1,15 @@
-from typing import Callable
+"""Utilities for working with Gymnasium environments."""
 
 import gymnasium as gym
-import torch
 import numpy as np
+import torch
 
-def make_env(env_id: str,
-             idx: int,
-             capture_video: bool, 
-             run_name: str,
-             max_episode_steps: int):
+
+def make_env(
+    env_id: str, idx: int, capture_video: bool, run_name: str, max_episode_steps: int
+):
     """Create a single environment instance with appropriate wrappers."""
+
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array")
@@ -28,6 +28,7 @@ def make_env(env_id: str,
 
     return thunk
 
+
 def evaluate_ppo(
     env_id: str,
     eval_episodes: int,
@@ -35,14 +36,30 @@ def evaluate_ppo(
     Model: torch.nn.Module,
     device: torch.device = torch.device("cpu"),
     capture_video: bool = True,
-    gamma: float = 0.99,
-):
-    envs = gym.vector.SyncVectorEnv([make_env(env_id, 0, capture_video, run_name, gamma)])
+    max_episode_steps: int = 300,
+) -> list[float]:
+    """Evaluate a PPO agent.
+
+    Args:
+        env_id: Environment ID to evaluate on
+        eval_episodes: Number of episodes to evaluate
+        run_name: Name for the run (used for video naming)
+        Model: The PyTorch model class
+        device: Device to run on
+        capture_video: Whether to capture video
+        max_episode_steps: Maximum steps per episode
+
+    Returns:
+        List of episodic returns
+    """
+    envs = gym.vector.SyncVectorEnv(
+        [make_env(env_id, 0, capture_video, run_name, max_episode_steps)]
+    )
     agent = Model(envs).to(device)
     agent.eval()
 
     obs, _ = envs.reset()
-    episodic_returns = []
+    episodic_returns: list[float] = []
     while len(episodic_returns) < eval_episodes:
         actions, _, _, _ = agent.get_action_and_value(torch.Tensor(obs).to(device))
         next_obs, _, _, _, infos = envs.step(actions.cpu().numpy())
@@ -50,7 +67,9 @@ def evaluate_ppo(
             for info in infos["final_info"]:
                 if "episode" not in info:
                     continue
-                print(f"eval_episode={len(episodic_returns)}, episodic_return={info['episode']['r']}")
+                print(
+                    f"eval_episode={len(episodic_returns)}, episodic_return={info['episode']['r']}"
+                )
                 episodic_returns += [info["episode"]["r"]]
         obs = next_obs
 

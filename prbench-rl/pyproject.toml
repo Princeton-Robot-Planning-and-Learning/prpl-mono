@@ -18,6 +18,7 @@ dependencies = [
    "torch",
    "dacite",
    "gymnasium[classic-control]==0.29.1",
+   "tensorboard",
 ]
 
 [project.optional-dependencies]

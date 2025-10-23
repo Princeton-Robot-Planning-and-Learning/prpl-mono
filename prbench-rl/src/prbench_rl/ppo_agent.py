@@ -1,22 +1,23 @@
 """PPO agent implementation for PRBench environments.
+
 This is heavily based on the implementation from
-cleanrl: 
+cleanrl:
 https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo_continuous_action.py
 """
 
-from typing import TypeVar, Optional, Any
-from dataclasses import dataclass
-
-import time
 import logging
+import time
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Optional, TypeVar
+
+import dacite
+import gymnasium as gym
 import numpy as np
 import torch
-import dacite
-from pathlib import Path
 from gymnasium import spaces
-import gymnasium as gym
 from omegaconf import DictConfig
-from collections import defaultdict
 from torch import nn, optim
 from torch.distributions.normal import Normal
 
@@ -29,6 +30,7 @@ except ImportError:
     TENSORBOARD_AVAILABLE = False
 
 from prbench_rl.agent import BaseRLAgent, Logger
+from prbench_rl.gym_utils import make_env
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -138,13 +140,12 @@ class PPOArgs:
     """The number of iterations (computed in runtime)"""
 
 
-def layer_init(layer: nn.Module, 
-               std: float = np.sqrt(2), 
-               bias_const: float = 0.0):
+def layer_init(layer: nn.Module, std: float = np.sqrt(2), bias_const: float = 0.0):
     """Initialize a layer with orthogonal weights and constant bias."""
     torch.nn.init.orthogonal_(layer.weight, std)  # type: ignore
     torch.nn.init.constant_(layer.bias, bias_const)  # type: ignore
     return layer
+
 
 class Agent(nn.Module):
     """PPO actor-critic network."""
@@ -166,9 +167,7 @@ class Agent(nn.Module):
 
         # Critic network
         self.critic = nn.Sequential(
-            layer_init(
-                nn.Linear(np.array(obs_shape).prod(), hidden_size)
-            ),
+            layer_init(nn.Linear(np.array(obs_shape).prod(), hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
@@ -179,9 +178,7 @@ class Agent(nn.Module):
 
         # Actor network (outputs raw values that will be scaled)
         self.actor_mean = nn.Sequential(
-            layer_init(
-                nn.Linear(np.array(obs_shape).prod(), hidden_size)
-            ),
+            layer_init(nn.Linear(np.array(obs_shape).prod(), hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
@@ -239,12 +236,12 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
     def __init__(
         self,
-        observation_space: spaces.Box,
-        action_space: spaces.Box,
         seed: int,
+        env_id: str,
+        max_episode_steps: int,
         cfg: DictConfig,
     ) -> None:
-        super().__init__(observation_space, action_space, seed, cfg)
+        super().__init__(seed, env_id, max_episode_steps, cfg)
 
         # Device setup
         self.device = torch.device(
@@ -254,7 +251,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         # Load PPO arguments
         self.args = dacite.from_dict(PPOArgs, cfg.args)
         self.log_path = Path(cfg.tb_log_dir) / f"{cfg.exp_name}"
-        writer = SummaryWriter(log_path)  # type: ignore
+        writer = SummaryWriter(self.log_path)  # type: ignore
         writer.add_text(  # type: ignore
             "hyperparameters",
             "|param|value|\n|-|-|\n%s"
@@ -266,25 +263,106 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         )
         self.logger = Logger(tensorboard=writer)
 
+        # Use spaces from base class
+        assert isinstance(self.observation_space, spaces.Box)
+        assert isinstance(self.action_space, spaces.Box)
+
         self.agent = Agent(
-            observation_space,
-            action_space,
+            self.observation_space,
+            self.action_space,
             hidden_size=self.args.hidden_size,
         ).to(self.device)
         self.optimizer = optim.Adam(
             self.agent.parameters(), lr=self.args.learning_rate, eps=1e-5
         )
 
-    def _get_action(self, obs: torch.Tensor) -> torch.Tensor:
+    def _get_action(self) -> _U:  # type: ignore
+        """Get action from current observation (for base class compatibility)."""
+        # This method is here for base class compatibility
+        # In practice, we use get_action_from_obs for PPO
+        raise NotImplementedError("Use get_action_from_obs for PPO")
+
+    def get_action_from_obs(self, obs: torch.Tensor) -> torch.Tensor:
+        """Get action from observation tensor."""
         with torch.no_grad():
             action = self.agent.get_action(obs, deterministic=True)
         return action
 
+    def train(self) -> Dict[str, Any]:  # type: ignore
+        """Train the PPO agent."""
+        # Create training environment
+        import prbench  # pylint: disable=import-outside-toplevel
+
+        prbench.register_all_environments()
+        envs = gym.vector.SyncVectorEnv(
+            [
+                make_env(
+                    self.env_id,
+                    i,
+                    False,
+                    f"train_{self.cfg.exp_name}",
+                    self.max_episode_steps,
+                )
+                for i in range(self.args.num_envs)
+            ]
+        )
+
+        # Train with the environment
+        metrics = self.train_with_env(envs)
+        envs.close()  # type: ignore
+        return {"train_metrics": metrics}
+
+    def evaluate(self, eval_episodes: int) -> Dict[str, Any]:
+        """Evaluate the PPO agent."""
+        import prbench  # pylint: disable=import-outside-toplevel
+
+        prbench.register_all_environments()
+        envs = gym.vector.SyncVectorEnv(
+            [make_env(self.env_id, 0, False, "ppo_agent_eval", self.max_episode_steps)]
+        )
+
+        # Set agent to eval mode
+        self.agent.eval()
+
+        obs, _ = envs.reset()
+        episodic_returns: list[float] = []
+        step_lengths: list[int] = []
+        step_length = 0
+
+        while len(episodic_returns) < eval_episodes:
+            with torch.no_grad():
+                obs_tensor = torch.Tensor(obs).to(self.device)
+                action = self.get_action_from_obs(obs_tensor)
+                actions = action.cpu().numpy()
+
+            obs, _, _, _, infos = envs.step(actions)
+            step_length += 1
+
+            if "final_info" in infos:
+                for info in infos["final_info"]:
+                    if info is None or "episode" not in info:
+                        continue
+                    print(
+                        f"eval_episode={len(episodic_returns)}, "
+                        f"episodic_return={info['episode']['r']}"
+                    )
+                    episodic_returns.append(info["episode"]["r"])
+                    step_lengths.append(step_length)
+                    step_length = 0
+
+        envs.close()  # type: ignore
+
+        eval_metrics = {
+            "episodic_return": episodic_returns,
+            "step_length": step_lengths,
+        }
+        return eval_metrics
+
     def train_with_env(
         self,
-        env: gym.Env,
-        eval_env: Optional[MultiEnvWrapper] = None,
-    ) -> list[dict[str, Any]]:
+        env: gym.vector.VectorEnv,  # type: ignore
+        eval_env: Optional[gym.vector.VectorEnv] = None,  # type: ignore
+    ) -> Dict[str, Any]:
         """Training the agent with an interactive batched environment."""
         # Initialize observation normalization variables
         # update the args with the environment-specific values
@@ -304,11 +382,18 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         self.args.num_iterations = self.args.total_timesteps // self.args.batch_size
 
         # ALGO Logic: Storage setup
-        obs = torch.zeros((self.args.num_steps, self.args.num_envs) + \
-                          env.single_observation_space.shape).to(self.device)
-        actions = torch.zeros((self.args.num_steps, self.args.num_envs) + \
-                              env.single_action_space.shape).to(self.device)
-        logprobs = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
+        obs_shape = env.single_observation_space.shape
+        action_shape = env.single_action_space.shape
+        assert obs_shape is not None and action_shape is not None
+        obs = torch.zeros((self.args.num_steps, self.args.num_envs) + obs_shape).to(
+            self.device
+        )
+        actions = torch.zeros(
+            (self.args.num_steps, self.args.num_envs) + action_shape
+        ).to(self.device)
+        logprobs = torch.zeros((self.args.num_steps, self.args.num_envs)).to(
+            self.device
+        )
         rewards = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
         dones = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
         values = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
@@ -322,8 +407,8 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         action_space_low, action_space_high = torch.from_numpy(
             env.single_action_space.low  # type: ignore
         ).to(self.device), torch.from_numpy(
-            env.single_action_space.high
-        ).to(  # type: ignore
+            env.single_action_space.high  # type: ignore
+        ).to(
             self.device
         )
 
@@ -349,15 +434,20 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 )
                 while not torch.all(terminated_or_truncated):
                     with torch.no_grad():
-                        eval_obs, eval_rewards, eval_terminations, \
-                            eval_truncations, eval_infos = eval_env.step(
-                            clip_action(self._get_action(eval_obs))
+                        (
+                            eval_obs,
+                            _,
+                            eval_terminations,
+                            eval_truncations,
+                            eval_infos,
+                        ) = eval_env.step(
+                            clip_action(self.get_action_from_obs(eval_obs))
                         )
                         eval_steps += self.args.num_eval_envs
-                        eval_terminated_or_truncated = torch.logical_or(
-                            eval_terminations, eval_truncations)
+                        eval_terminated_or_truncated = torch.logical_or(eval_terminations, eval_truncations)  # type: ignore
                         terminated_or_truncated |= eval_terminated_or_truncated.to(
-                            self.device)
+                            self.device
+                        )
                         if "final_info" in eval_infos:
                             mask = eval_infos["_final_info"]
                             num_episodes += mask.sum()
@@ -375,13 +465,10 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 if self.args.evaluate:
                     break
             if self.args.save_model and iteration % self.args.eval_freq == 1:
-                model_path = (
-                    self.log_path
-                    / f"policies/ckpt_{global_step}.pt"
-                )
+                model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
                 base_path = Path(self.log_path) / "policies"
                 base_path.mkdir(parents=True, exist_ok=True)
-                self.save(model_path)
+                self.save(str(model_path))
                 logging.info(f"model saved to {model_path}")
             # Annealing the rate if instructed to do so.
             if self.args.anneal_lr:
@@ -409,10 +496,13 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 next_obs, reward, terminations, truncations, infos = env.step(
                     clip_action(action)
                 )
-                next_done = torch.logical_or(terminations, truncations).to(
+                next_done = torch.logical_or(terminations, truncations).to(  # type: ignore
                     torch.float32
                 )
-                rewards[step] = reward.view(-1) * self.args.reward_scale
+                rewards[step] = (
+                    torch.from_numpy(reward).view(-1).to(self.device)
+                    * self.args.reward_scale
+                )
 
                 if "final_info" in infos:
                     final_info = infos["final_info"]
@@ -482,23 +572,23 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                         ) / lam_coef_sum - values[t]
                     else:
                         delta = (
-                            rewards[t]
-                            + self.args.gamma * real_next_values
-                            - values[t]
+                            rewards[t] + self.args.gamma * real_next_values - values[t]
                         )
-                        advantages[t] = lastgaelam = (
+                        lastgaelam_value = (
                             delta
                             + self.args.gamma
                             * self.args.gae_lambda
                             * next_not_done
                             * lastgaelam
                         )  # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
+                        advantages[t] = lastgaelam_value
+                        lastgaelam = lastgaelam_value  # type: ignore
                 returns = advantages + values
 
             # flatten the batch
-            b_obs = obs.reshape((-1,) + env.single_observation_space.shape)
+            b_obs = obs.reshape((-1,) + obs_shape)
             b_logprobs = logprobs.reshape(-1)
-            b_actions = actions.reshape((-1,) + env.single_action_space.shape)
+            b_actions = actions.reshape((-1,) + action_shape)
             b_advantages = advantages.reshape(-1)
             b_returns = returns.reshape(-1)
             b_values = values.reshape(-1)
@@ -587,7 +677,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 if self.args.target_kl is not None and approx_kl > self.args.target_kl:
                     break
 
-            update_time = time.time() - update_time
+            update_time = time.time() - update_time  # type: ignore
 
             y_pred, y_true = b_values.cpu().numpy(), b_returns.cpu().numpy()
             var_y = np.var(y_true)
@@ -626,13 +716,12 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             )
         if not self.args.evaluate:
             if self.args.save_model:
-                model_path = (
-                    Path(CFG.rl_policy_save_dir) / f"runs/{CFG.exp_name}/final_ckpt.pt"
-                )
-                self.save(model_path)
+                model_path = self.log_path / "final_ckpt.pt"
+                self.save(str(model_path))
                 logging.info(f"model saved to {model_path}")
             self.logger.close()
 
+        return {}
 
     def save(self, filepath: str) -> None:
         """Save agent parameters."""
