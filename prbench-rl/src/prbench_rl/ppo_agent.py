@@ -62,11 +62,6 @@ class PPOArgs:
     """Whether to save trajectory data into the `videos` folder."""
     save_model: bool = True
     """Whether to save model into the `runs/{run_name}` folder."""
-    evaluate: bool = False
-    """If toggled, only runs evaluation with the given model checkpoint and saves the
-    evaluation trajectories."""
-    checkpoint: Optional[str] = None
-    """Path to a pretrained checkpoint file to start evaluation/training from."""
 
     # Environment specific arguments
     num_envs: int = 512
@@ -127,9 +122,6 @@ class PPOArgs:
     """The target KL divergence threshold."""
     reward_scale: float = 1.0
     """Scale the reward by this factor."""
-    finite_horizon_gae: bool = False
-    normalize_obs: bool = False
-    """Whether to normalize observations using running mean and std."""
 
     # to be filled in runtime
     batch_size: int = 0
@@ -314,11 +306,8 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
     def evaluate(self, eval_episodes: int) -> Dict[str, Any]:
         """Evaluate the PPO agent."""
-        import prbench  # pylint: disable=import-outside-toplevel
-
-        prbench.register_all_environments()
         envs = gym.vector.SyncVectorEnv(
-            [make_env(self.env_id, 0, False, "ppo_agent_eval", self.max_episode_steps)]
+            [make_env(self.env_id, 0, True, self.cfg.exp_name, self.max_episode_steps)]
         )
 
         # Set agent to eval mode
@@ -358,22 +347,17 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         }
         return eval_metrics
 
-    def train_with_env(
+    def train(
         self,
-        env: gym.vector.VectorEnv,  # type: ignore
-        eval_env: Optional[gym.vector.VectorEnv] = None,  # type: ignore
     ) -> Dict[str, Any]:
         """Training the agent with an interactive batched environment."""
         # Initialize observation normalization variables
         # update the args with the environment-specific values
-        num_envs = env.num_envs
-        if num_envs != self.args.num_envs:
-            logging.warning(
-                f"Number of environments in the provided environment ({num_envs}) "
-                f"does not match the configured number of environments ({self.args.num_envs}). "
-                f"Using {num_envs} instead."
-            )
-            self.args.num_envs = num_envs
+        # env setup
+        envs = gym.vector.SyncVectorEnv(
+            [make_env(self.env_id, i, False, self.cfg.exp_name, self.max_episode_steps) for i in range(self.args.num_envs)]
+        )
+        assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
         self.args.batch_size = int(self.args.num_envs * self.args.num_steps)
         self.args.minibatch_size = int(
@@ -382,8 +366,8 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         self.args.num_iterations = self.args.total_timesteps // self.args.batch_size
 
         # ALGO Logic: Storage setup
-        obs_shape = env.single_observation_space.shape
-        action_shape = env.single_action_space.shape
+        obs_shape = envs.single_observation_space.shape
+        action_shape = envs.single_action_space.shape
         assert obs_shape is not None and action_shape is not None
         obs = torch.zeros((self.args.num_steps, self.args.num_envs) + obs_shape).to(
             self.device
@@ -398,16 +382,14 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         dones = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
         values = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
 
-        next_obs, _ = env.reset(seed=self.args.seed)
-        if eval_env is not None:
-            eval_obs, _ = eval_env.reset(seed=self.args.seed)
+        next_obs, _ = envs.reset(seed=self.args.seed)
         next_done = torch.zeros(self.args.num_envs, device=self.device)
         global_step = 0
 
         action_space_low, action_space_high = torch.from_numpy(
-            env.single_action_space.low  # type: ignore
+            envs.single_action_space.low  # type: ignore
         ).to(self.device), torch.from_numpy(
-            env.single_action_space.high  # type: ignore
+            envs.single_action_space.high  # type: ignore
         ).to(
             self.device
         )
@@ -423,47 +405,17 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 (self.args.num_steps, self.args.num_envs), device=self.device
             )
             self.agent.eval()
-            if iteration % self.args.eval_freq == 1 and eval_env is not None:
-                logging.info("Evaluating")
-                eval_obs, _ = eval_env.reset()
-                eval_metrics = defaultdict(list)
-                num_episodes = 0
-                eval_steps = 0
-                terminated_or_truncated = torch.zeros(
-                    self.args.num_eval_envs, device=self.device
-                )
-                while not torch.all(terminated_or_truncated):
-                    with torch.no_grad():
-                        (
-                            eval_obs,
-                            _,
-                            eval_terminations,
-                            eval_truncations,
-                            eval_infos,
-                        ) = eval_env.step(
-                            clip_action(self.get_action_from_obs(eval_obs))
-                        )
-                        eval_steps += self.args.num_eval_envs
-                        eval_terminated_or_truncated = torch.logical_or(eval_terminations, eval_truncations)  # type: ignore
-                        terminated_or_truncated |= eval_terminated_or_truncated.to(
-                            self.device
-                        )
-                        if "final_info" in eval_infos:
-                            mask = eval_infos["_final_info"]
-                            num_episodes += mask.sum()
-                            for k, v in eval_infos["final_info"]["episode"].items():
-                                eval_metrics[k].append(v)
-                evaluated_steps = eval_steps * self.args.num_eval_envs
+            # Evaluate episode performance
+            if iteration % self.args.eval_freq == 0:
+                eval_metrics = self.evaluate(self.args.num_eval_envs)
                 logging.info(
-                    f"Evaluated {evaluated_steps} steps resulting in {num_episodes} episodes"
+                    f"Evaluated {self.args.num_eval_envs} episodes"
                 )
                 for k, v in eval_metrics.items():
                     mean = torch.stack(v).float().mean()
                     if self.logger is not None:
                         self.logger.add_scalar(f"eval/{k}", mean, global_step)
                     logging.info(f"eval_{k}_mean={mean}")
-                if self.args.evaluate:
-                    break
             if self.args.save_model and iteration % self.args.eval_freq == 1:
                 model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
                 base_path = Path(self.log_path) / "policies"
@@ -493,16 +445,12 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 logprobs[step] = logprob
 
                 # TRY NOT TO MODIFY: execute the game and log data.
-                next_obs, reward, terminations, truncations, infos = env.step(
+                next_obs, reward, terminations, truncations, infos = envs.step(
                     clip_action(action)
                 )
-                next_done = torch.logical_or(terminations, truncations).to(  # type: ignore
-                    torch.float32
-                )
-                rewards[step] = (
-                    torch.from_numpy(reward).view(-1).to(self.device)
-                    * self.args.reward_scale
-                )
+                next_done = np.logical_or(terminations, truncations)
+                rewards[step] = torch.tensor(reward).to(self.device).view(-1)
+                next_obs, next_done = torch.Tensor(next_obs).to(self.device), torch.Tensor(next_done).to(self.device)
 
                 if "final_info" in infos:
                     final_info = infos["final_info"]
@@ -511,78 +459,23 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                         self.logger.add_scalar(
                             f"train/{k}", v[done_mask].float().mean(), global_step
                         )
-                    with torch.no_grad():
-                        final_values[
-                            step,
-                            torch.arange(self.args.num_envs, device=self.device)[
-                                done_mask
-                            ],
-                        ] = self.agent.get_value(
-                            infos["final_observation"][done_mask]
-                        ).view(
-                            -1
-                        )
+
             rollout_time = time.time() - rollout_time
 
-            # bootstrap value according to termination and truncation
+            # bootstrap value if not done
             with torch.no_grad():
                 next_value = self.agent.get_value(next_obs).reshape(1, -1)
                 advantages = torch.zeros_like(rewards).to(self.device)
                 lastgaelam = 0
                 for t in reversed(range(self.args.num_steps)):
                     if t == self.args.num_steps - 1:
-                        next_not_done = 1.0 - next_done
+                        nextnonterminal = 1.0 - next_done
                         nextvalues = next_value
                     else:
-                        next_not_done = 1.0 - dones[t + 1]
+                        nextnonterminal = 1.0 - dones[t + 1]
                         nextvalues = values[t + 1]
-                    real_next_values = (
-                        next_not_done * nextvalues + final_values[t]
-                    )  # t instead of t+1
-                    # next_not_done means nextvalues is computed from the correct next_obs
-                    # if next_not_done is 1, final_values is always 0
-                    # if next_not_done is 0, then use final_values, which is computed according to bootstrap_at_done
-                    if self.args.finite_horizon_gae:
-                        if t == self.args.num_steps - 1:  # initialize
-                            lam_coef_sum = torch.tensor(
-                                0.0, device=self.device
-                            )  # the sum of the first term
-                            reward_term_sum = torch.tensor(
-                                0.0, device=self.device
-                            )  # the sum of the second term
-                            value_term_sum = torch.tensor(
-                                0.0, device=self.device
-                            )  # the sum of the third term
-                        lam_coef_sum = lam_coef_sum * next_not_done
-                        reward_term_sum = reward_term_sum * next_not_done
-                        value_term_sum = value_term_sum * next_not_done
-
-                        lam_coef_sum = 1 + self.args.gae_lambda * lam_coef_sum
-                        reward_term_sum = (
-                            self.args.gae_lambda * self.args.gamma * reward_term_sum
-                            + lam_coef_sum * rewards[t]
-                        )
-                        value_term_sum = (
-                            self.args.gae_lambda * self.args.gamma * value_term_sum
-                            + self.args.gamma * real_next_values
-                        )
-
-                        advantages[t] = (
-                            reward_term_sum + value_term_sum
-                        ) / lam_coef_sum - values[t]
-                    else:
-                        delta = (
-                            rewards[t] + self.args.gamma * real_next_values - values[t]
-                        )
-                        lastgaelam_value = (
-                            delta
-                            + self.args.gamma
-                            * self.args.gae_lambda
-                            * next_not_done
-                            * lastgaelam
-                        )  # Here actually we should use next_not_terminated, but we don't have lastgamlam if terminated
-                        advantages[t] = lastgaelam_value
-                        lastgaelam = lastgaelam_value  # type: ignore
+                    delta = rewards[t] + self.args.gamma * nextvalues * nextnonterminal - values[t]
+                    advantages[t] = lastgaelam = delta + self.args.gamma * self.args.gae_lambda * nextnonterminal * lastgaelam
                 returns = advantages + values
 
             # flatten the batch
@@ -625,12 +518,6 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                             .mean()
                             .item()
                         ]
-
-                    if (
-                        self.args.target_kl is not None
-                        and approx_kl > self.args.target_kl
-                    ):
-                        break
 
                     mb_advantages = b_advantages[mb_inds]
                     if self.args.norm_adv:
@@ -714,12 +601,12 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 self.args.num_envs * self.args.num_steps / rollout_time,
                 global_step,
             )
-        if not self.args.evaluate:
-            if self.args.save_model:
-                model_path = self.log_path / "final_ckpt.pt"
-                self.save(str(model_path))
-                logging.info(f"model saved to {model_path}")
-            self.logger.close()
+
+        if self.args.save_model:
+            model_path = self.log_path / "final_ckpt.pt"
+            self.save(str(model_path))
+            logging.info(f"model saved to {model_path}")
+        self.logger.close()
 
         return {}
 

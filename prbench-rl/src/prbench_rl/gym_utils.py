@@ -1,5 +1,6 @@
 """Utilities for working with Gymnasium environments."""
 
+import prbench
 import gymnasium as gym
 import numpy as np
 import torch
@@ -12,10 +13,16 @@ def make_env(
 
     def thunk():
         if capture_video and idx == 0:
-            env = gym.make(env_id, render_mode="rgb_array")
+            if "prbench" in env_id:
+                env = prbench.make(env_id, render_mode="rgb_array")
+            else:
+                env = gym.make(env_id, render_mode="rgb_array")
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = gym.make(env_id)
+            if "prbench" in env_id:
+                env = prbench.make(env_id)
+            else:
+                env = gym.make(env_id)
         env = gym.wrappers.FlattenObservation(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -23,7 +30,8 @@ def make_env(
         env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
         # NOTE: PRBench by default has infinite horizon, so we set a time limit here
-        env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
+        if "prbench" in env_id:
+            env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
         return env
 
     return thunk

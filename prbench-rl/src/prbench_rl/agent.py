@@ -8,6 +8,10 @@ from prpl_utils.gym_agent import Agent
 from torch import Tensor
 from torch.utils.tensorboard import SummaryWriter
 
+# Create temporary environment to get spaces
+import gymnasium as gym
+import prbench
+
 _O = TypeVar("_O")
 _U = TypeVar("_U")
 
@@ -47,12 +51,10 @@ class BaseRLAgent(Agent[_O, _U]):
         self.max_episode_steps = max_episode_steps
         self.seed(seed)
 
-        # Create temporary environment to get spaces
-        import gymnasium as gym  # pylint: disable=import-outside-toplevel
-        import prbench  # pylint: disable=import-outside-toplevel
-
-        prbench.register_all_environments()
-        temp_env = prbench.make(env_id)
+        if "prbench" in env_id:
+            temp_env = prbench.make(env_id)
+        else:
+            temp_env = gym.make(env_id)
         # Apply FlattenObservation wrapper like in make_env
         temp_env = gym.wrappers.FlattenObservation(temp_env)
         self.observation_space = temp_env.observation_space
@@ -68,8 +70,9 @@ class BaseRLAgent(Agent[_O, _U]):
         self._train_or_eval = "train"
         return {}
 
-    def evaluate(self, _eval_episodes: int) -> Dict[str, Any]:  # type: ignore
+    def evaluate(self, eval_episodes: int) -> Dict[str, Any]:
         """Switch to evaluation mode."""
+        del eval_episodes
         self._train_or_eval = "eval"
         return {}
 

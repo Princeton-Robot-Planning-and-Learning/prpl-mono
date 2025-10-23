@@ -1,12 +1,12 @@
 # Default configuration for RL experiments
 defaults:
-  - agent: random
-  - env_id: prbench/obstruction2d-o0
+  - agent: ppo
+  - env_id: Hopper-v4
   - max_episode_steps: 300
   - _self_
 
 # Experiment mode: "train" or "eval"
-mode: eval
+mode: train
 load_agent_path: null
 eval_episodes: 10
 
