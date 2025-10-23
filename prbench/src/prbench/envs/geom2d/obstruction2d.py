@@ -22,6 +22,7 @@ from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     SE2Pose,
     create_walls_from_world_boundaries,
+    is_inside,
     is_on,
 )
 from prbench.envs.utils import PURPLE, sample_se2_pose, state_2d_has_collision
@@ -225,6 +226,8 @@ class ObjectCentricObstruction2DEnv(
             all_objects = set(full_state)
             if state_2d_has_collision(full_state, all_objects, all_objects, {}):
                 continue
+            if self._surface_outside_table(full_state, {}):
+                continue
             return state
         raise RuntimeError(f"Failed to sample initial state after {n} attempts")
 
@@ -352,6 +355,28 @@ class ObjectCentricObstruction2DEnv(
         assert len(target_surfaces) == 1
         target_surface = target_surfaces[0]
         return is_on(state, target_object, target_surface, static_object_body_cache)
+
+    def _surface_outside_table(
+        self,
+        state: ObjectCentricState,
+        static_object_body_cache: dict[Object, MultiBody2D],
+    ) -> bool:
+        """Check if the target surface is outside the table boundaries."""
+        target_surfaces = state.get_objects(TargetSurfaceType)
+        assert len(target_surfaces) == 1
+        target_surface = target_surfaces[0]
+        table = state.get_objects(RectangleType)
+        table = [obj for obj in table if obj.name == "table"]
+        assert len(table) == 1
+        table_instance = table[0]
+
+        is_inside_table = is_inside(
+            state,
+            target_surface,
+            table_instance,
+            static_object_body_cache,
+        )
+        return not is_inside_table
 
     def _get_reward_and_done(self) -> tuple[float, bool]:
         # Terminate when target object is on the target surface. Give -1 reward

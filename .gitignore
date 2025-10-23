@@ -171,3 +171,4 @@ cython_debug/
 .vscode
 *.png
 debug
+CLAUDE.md
