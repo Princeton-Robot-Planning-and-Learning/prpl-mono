@@ -6,7 +6,11 @@ import numpy as np
 from prpl_utils.structs import Image
 
 from prpl_tidybot.cameras import KinovaCamera, LogitechCamera
-from prpl_tidybot.constants import BASE_CAMERA_SERIAL, CAMERA_DIMS
+from prpl_tidybot.constants import (
+    BASE_CAMERA_DIMS,
+    BASE_CAMERA_SERIAL,
+    WRIST_CAMERA_DIMS,
+)
 
 
 class CameraInterface(abc.ABC):
@@ -25,8 +29,8 @@ class FakeCameraInterface(CameraInterface):
     """Fake camera interface."""
 
     def __init__(self):
-        self.wrist_image = np.zeros(CAMERA_DIMS, dtype=np.uint8)
-        self.base_image = np.zeros(CAMERA_DIMS, dtype=np.uint8)
+        self.wrist_image = np.zeros(WRIST_CAMERA_DIMS, dtype=np.uint8)
+        self.base_image = np.zeros(BASE_CAMERA_DIMS, dtype=np.uint8)
 
     def get_wrist_image(self) -> Image:
         return self.wrist_image
