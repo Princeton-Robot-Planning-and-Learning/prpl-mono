@@ -9,7 +9,8 @@ import abc
 import spatialmath
 from prpl_utils.structs import Image
 
-from prpl_tidybot.constants import RETRACT_ARM_CONF
+from prpl_tidybot.interfaces.arm_interface import FakeArmInterface
+from prpl_tidybot.interfaces.base_interface import FakeBaseInterface
 from prpl_tidybot.interfaces.camera_interface import FakeCameraInterface
 from prpl_tidybot.structs import TidyBotObservation
 
@@ -72,19 +73,18 @@ class FakeInterface(Interface):
     """A fake interface that can be used for testing without a real robot."""
 
     def __init__(self):
-        self.base_state = spatialmath.SE2(x=0, y=0, theta=0)
-        self.arm_state = RETRACT_ARM_CONF
-        self.gripper_state = 0.0
+        self.arm_interface = FakeArmInterface()
+        self.base_interface = FakeBaseInterface()
         self.camera_interface = FakeCameraInterface()
 
     def get_base_state(self) -> spatialmath.SE2:
-        return self.base_state.copy()
+        return self.base_interface.get_base_state()
 
     def get_arm_state(self) -> list[float]:
-        return self.arm_state.copy()
+        return self.arm_interface.get_arm_state()
 
     def get_gripper_state(self) -> float:
-        return self.gripper_state
+        return self.arm_interface.get_gripper_state()
 
     def get_wrist_image(self) -> Image:
         return self.camera_interface.get_wrist_image()
