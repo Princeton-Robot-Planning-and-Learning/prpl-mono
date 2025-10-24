@@ -7,7 +7,6 @@ https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/ppo_continuous_action.py
 
 import logging
 import time
-from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, TypeVar
@@ -118,7 +117,7 @@ class PPOArgs:
     """Coefficient of the value function."""
     max_grad_norm: float = 0.5
     """The maximum norm for the gradient clipping."""
-    target_kl: float = 0.1
+    target_kl: float | None = None
     """The target KL divergence threshold."""
     reward_scale: float = 1.0
     """Scale the reward by this factor."""
@@ -149,47 +148,27 @@ class Agent(nn.Module):
         hidden_size: int = 256,
     ) -> None:
         super().__init__()
-        obs_shape = single_observation_space.shape
-        action_shape = single_action_space.shape
-        assert obs_shape is not None and action_shape is not None
-
-        # Store action space bounds for bounded actions
-        self.action_low = torch.tensor(single_action_space.low, dtype=torch.float32)
-        self.action_high = torch.tensor(single_action_space.high, dtype=torch.float32)
-
-        # Critic network
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(obs_shape).prod(), hidden_size)),
+            layer_init(nn.Linear(np.array(single_observation_space.shape).prod(), hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
-            layer_init(nn.Linear(hidden_size, hidden_size)),
-            nn.Tanh(),
-            layer_init(nn.Linear(hidden_size, 1)),
+            layer_init(nn.Linear(hidden_size, 1), std=1.0),
         )
-
-        # Actor network (outputs raw values that will be scaled)
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(obs_shape).prod(), hidden_size)),
+            layer_init(nn.Linear(np.array(single_observation_space.shape).prod(), hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
-            layer_init(nn.Linear(hidden_size, hidden_size)),
-            nn.Tanh(),
-            layer_init(
-                nn.Linear(hidden_size, np.prod(obs_shape)),  # type: ignore
-                std=0.01 * np.sqrt(2),
-            ),
+            layer_init(nn.Linear(hidden_size, np.prod(single_action_space.shape)), std=0.01),
         )
+        self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(single_action_space.shape)))
 
-        # Learnable log standard deviation (in scaled space)
-        self.actor_logstd = nn.Parameter(
-            torch.ones(1, np.prod(obs_shape)) * -0.5  # type: ignore
-        )
 
     def get_value(self, x: torch.Tensor) -> torch.Tensor:
         """Get state value estimate."""
         return self.critic(x)
+
 
     def get_action(self, x: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
         """Get an action from the policy."""
@@ -201,22 +180,16 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)  # type: ignore
         return probs.sample()  # type: ignore
 
-    def get_action_and_value(
-        self, x: torch.Tensor, action: Optional[torch.Tensor] = None
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Get an action and its value from the policy."""
+
+    def get_action_and_value(self, x, action=None):
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
-        probs = Normal(action_mean, action_std)  # type: ignore
+        probs = Normal(action_mean, action_std)
         if action is None:
-            action = probs.sample()  # type: ignore
-        return (
-            action,
-            probs.log_prob(action).sum(1),  # type: ignore
-            probs.entropy().sum(1),  # type: ignore
-            self.critic(x),
-        )
+            action = probs.sample()
+        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
+
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the agent."""
@@ -280,30 +253,6 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             action = self.agent.get_action(obs, deterministic=True)
         return action
 
-    def train(self) -> Dict[str, Any]:  # type: ignore
-        """Train the PPO agent."""
-        # Create training environment
-        import prbench  # pylint: disable=import-outside-toplevel
-
-        prbench.register_all_environments()
-        envs = gym.vector.SyncVectorEnv(
-            [
-                make_env(
-                    self.env_id,
-                    i,
-                    False,
-                    f"train_{self.cfg.exp_name}",
-                    self.max_episode_steps,
-                )
-                for i in range(self.args.num_envs)
-            ]
-        )
-
-        # Train with the environment
-        metrics = self.train_with_env(envs)
-        envs.close()  # type: ignore
-        return {"train_metrics": metrics}
-
     def evaluate(self, eval_episodes: int) -> Dict[str, Any]:
         """Evaluate the PPO agent."""
         envs = gym.vector.SyncVectorEnv(
@@ -338,6 +287,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                     episodic_returns.append(info["episode"]["r"])
                     step_lengths.append(step_length)
                     step_length = 0
+                obs, _ = envs.reset()
 
         envs.close()  # type: ignore
 
@@ -383,27 +333,14 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         values = torch.zeros((self.args.num_steps, self.args.num_envs)).to(self.device)
 
         next_obs, _ = envs.reset(seed=self.args.seed)
-        next_done = torch.zeros(self.args.num_envs, device=self.device)
+        next_obs = torch.Tensor(next_obs).to(self.device)
+        next_done = torch.zeros(self.args.num_envs).to(self.device)
         global_step = 0
-
-        action_space_low, action_space_high = torch.from_numpy(
-            envs.single_action_space.low  # type: ignore
-        ).to(self.device), torch.from_numpy(
-            envs.single_action_space.high  # type: ignore
-        ).to(
-            self.device
-        )
-
-        def clip_action(action: torch.Tensor):
-            return torch.clamp(action.detach(), action_space_low, action_space_high)
 
         start_time = time.time()
 
         for iteration in range(1, self.args.num_iterations + 1):
             logging.info(f"Epoch: {iteration}, global_step={global_step}")
-            final_values = torch.zeros(
-                (self.args.num_steps, self.args.num_envs), device=self.device
-            )
             self.agent.eval()
             # Evaluate episode performance
             if iteration % self.args.eval_freq == 0:
@@ -412,7 +349,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                     f"Evaluated {self.args.num_eval_envs} episodes"
                 )
                 for k, v in eval_metrics.items():
-                    mean = torch.stack(v).float().mean()
+                    mean = np.stack(v).mean()
                     if self.logger is not None:
                         self.logger.add_scalar(f"eval/{k}", mean, global_step)
                     logging.info(f"eval_{k}_mean={mean}")
@@ -446,19 +383,18 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
                 # TRY NOT TO MODIFY: execute the game and log data.
                 next_obs, reward, terminations, truncations, infos = envs.step(
-                    clip_action(action)
+                    action.cpu().numpy()
                 )
                 next_done = np.logical_or(terminations, truncations)
                 rewards[step] = torch.tensor(reward).to(self.device).view(-1)
                 next_obs, next_done = torch.Tensor(next_obs).to(self.device), torch.Tensor(next_done).to(self.device)
 
                 if "final_info" in infos:
-                    final_info = infos["final_info"]
-                    done_mask = infos["_final_info"]
-                    for k, v in final_info["episode"].items():
-                        self.logger.add_scalar(
-                            f"train/{k}", v[done_mask].float().mean(), global_step
-                        )
+                    for info in infos["final_info"]:
+                        if info and "episode" in info:
+                            print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
+                            self.logger.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+                            self.logger.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
             rollout_time = time.time() - rollout_time
 

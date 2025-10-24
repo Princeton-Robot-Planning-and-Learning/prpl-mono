@@ -20,7 +20,7 @@ args:
   ent_coef: 0.0
   vf_coef: 0.5
   max_grad_norm: 0.5
-  target_kl: None
+  target_kl: null
   reward_scale: 1.0
   # Network architecture
   hidden_size: 64
@@ -31,4 +31,4 @@ cuda: false
 
 # Logging settings
 exp_name: "debug_ppo"
-tf_log_dir: "runs"
+tb_log_dir: "runs"

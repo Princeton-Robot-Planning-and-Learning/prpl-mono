@@ -33,4 +33,4 @@ cuda: true
 
 # Logging settings
 exp_name: "debug_ppo"
-tf_log_dir: "runs"
+tb_log_dir: "runs"

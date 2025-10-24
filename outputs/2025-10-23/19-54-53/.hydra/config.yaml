@@ -1,0 +1,32 @@
+agent:
+  name: ppo
+  args:
+    total_timesteps: 1000000
+    learning_rate: 0.0003
+    num_envs: 1
+    num_eval_envs: 20
+    num_steps: 2048
+    anneal_lr: true
+    gamma: 0.99
+    gae_lambda: 0.95
+    num_minibatches: 32
+    update_epochs: 10
+    norm_adv: true
+    clip_coef: 0.2
+    clip_vloss: true
+    ent_coef: 0.0
+    vf_coef: 0.5
+    max_grad_norm: 0.5
+    target_kl: None
+    reward_scale: 1.0
+    hidden_size: 64
+  torch_deterministic: true
+  cuda: false
+  exp_name: debug_ppo
+  tf_log_dir: runs
+mode: train
+env_id: Hopper-v4
+max_episode_steps: 300
+load_agent_path: null
+eval_episodes: 10
+seed: 0
