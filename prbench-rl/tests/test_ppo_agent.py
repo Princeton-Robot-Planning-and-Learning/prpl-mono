@@ -6,7 +6,6 @@ import numpy as np
 # import imageio.v2 as iio
 import prbench
 import pytest
-import torch
 from conftest import MAKE_VIDEOS
 from gymnasium import spaces
 from gymnasium.wrappers import RecordVideo

@@ -1,7 +1,7 @@
 """Base RL agent interface for PRBench environments."""
 
 import abc
-from typing import Any, Dict, TypeVar
+from typing import Any, TypeVar
 
 # Create temporary environment to get spaces
 import gymnasium as gym
@@ -40,8 +40,7 @@ class BaseRLAgent(Agent[_O, _U]):
             self.observation_space = observation_space
             self.action_space = action_space
             # Seed the action space for reproducibility
-            if hasattr(self.action_space, "seed"):
-                self.action_space.seed(seed)  # type: ignore
+            self.action_space.seed(seed)
         elif env_id is not None:
             if "prbench" in env_id:
                 temp_env = prbench.make(env_id)
@@ -51,6 +50,8 @@ class BaseRLAgent(Agent[_O, _U]):
             temp_env = gym.wrappers.FlattenObservation(temp_env)
             self.observation_space = temp_env.observation_space
             self.action_space = temp_env.action_space
+            # Seed the action space for reproducibility
+            self.action_space.seed(seed)
             temp_env.close()  # type: ignore
         else:
             raise ValueError(
@@ -61,12 +62,12 @@ class BaseRLAgent(Agent[_O, _U]):
     def _get_action(self) -> _U:
         """Produce an action to execute now."""
 
-    def train(self) -> Dict[str, Any]:  # type: ignore
+    def train(self) -> dict[str, Any]:  # type: ignore
         """Switch to train mode."""
         self._train_or_eval = "train"
         return {}
 
-    def evaluate(self, eval_episodes: int) -> Dict[str, Any]:
+    def evaluate(self, eval_episodes: int) -> dict[str, Any]:
         """Switch to evaluation mode."""
         del eval_episodes
         self._train_or_eval = "eval"

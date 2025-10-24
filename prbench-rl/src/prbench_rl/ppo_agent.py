@@ -9,7 +9,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 import dacite
 import gymnasium as gym
@@ -289,7 +289,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             action = self.agent.get_action(obs, deterministic=True)
         return action
 
-    def evaluate(self, eval_episodes: int) -> Dict[str, Any]:
+    def evaluate(self, eval_episodes: int) -> dict[str, Any]:
         """Evaluate the PPO agent."""
         envs = gym.vector.SyncVectorEnv(
             [make_env(self.env_id, 0, True, self.cfg.exp_name, self.max_episode_steps)]
@@ -335,7 +335,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
     def train(  # type: ignore[override]
         self,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Training the agent with an interactive batched environment."""
         # Initialize observation normalization variables
         # update the args with the environment-specific values
