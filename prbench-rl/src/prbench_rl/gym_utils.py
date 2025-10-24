@@ -7,7 +7,8 @@ import torch
 
 
 def make_env(
-    env_id: str, idx: int, capture_video: bool, run_name: str, max_episode_steps: int
+    env_id: str, idx: int, capture_video: bool, run_name: str, max_episode_steps: int, 
+    gamma: float = 0.99,
 ):
     """Create a single environment instance with appropriate wrappers."""
 
@@ -28,6 +29,7 @@ def make_env(
         env = gym.wrappers.ClipAction(env)
         env = gym.wrappers.NormalizeObservation(env)
         env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
+        env = gym.wrappers.NormalizeReward(env, gamma=gamma)
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
         # NOTE: PRBench by default has infinite horizon, so we set a time limit here
         if "prbench" in env_id:

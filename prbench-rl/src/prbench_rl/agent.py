@@ -16,25 +16,6 @@ _O = TypeVar("_O")
 _U = TypeVar("_U")
 
 
-class Logger:
-    """Logger for RL training and evaluation.
-
-    Logs to TensorBoard and optionally to Weights & Biases.
-    """
-
-    def __init__(self, tensorboard: SummaryWriter) -> None:
-        """Initialize the logger with TensorBoard and optional Weights & Biases."""
-        self.writer = tensorboard
-
-    def add_scalar(self, tag: str, scalar_value: float | Tensor, step: int = 0) -> None:
-        """Log a scalar value to TensorBoard and optionally to Weights & Biases."""
-        self.writer.add_scalar(tag, scalar_value, step)  # type: ignore
-
-    def close(self) -> None:
-        """Close the logger."""
-        self.writer.close()  # type: ignore
-
-
 class BaseRLAgent(Agent[_O, _U]):
     """Base class for RL agents in PRBench environments."""
 

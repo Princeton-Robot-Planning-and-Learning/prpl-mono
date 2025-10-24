@@ -173,4 +173,5 @@ cython_debug/
 debug
 videos
 runs
+outputs
 CLAUDE.md

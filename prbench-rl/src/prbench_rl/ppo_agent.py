@@ -28,7 +28,7 @@ except ImportError:
     SummaryWriter = None  # type: ignore
     TENSORBOARD_AVAILABLE = False
 
-from prbench_rl.agent import BaseRLAgent, Logger
+from prbench_rl.agent import BaseRLAgent
 from prbench_rl.gym_utils import make_env
 
 _O = TypeVar("_O")
@@ -63,23 +63,12 @@ class PPOArgs:
     """Whether to save model into the `runs/{run_name}` folder."""
 
     # Environment specific arguments
-    num_envs: int = 512
+    num_envs: int = 1
     """The number of parallel environments."""
     num_eval_envs: int = 16
     """The number of parallel evaluation environments."""
-    partial_reset: bool = True
-    """Whether to let parallel environments reset upon termination instead of
-    truncation."""
-    eval_partial_reset: bool = False
-    """Whether to let parallel evaluation environments reset upon termination instead of
-    truncation."""
-    num_steps: int = 50
+    num_steps: int = 2048
     """The number of steps to run in each environment per policy rollout."""
-    reconfiguration_freq: Optional[int] = None
-    """How often to reconfigure the environment during training."""
-    eval_reconfiguration_freq: Optional[int] = 1
-    """For benchmarking purposes we want to reconfigure the eval environment each reset
-    to ensure objects are randomized in some tasks."""
     eval_freq: int = 25
     """Evaluation frequency in terms of iterations."""
     save_train_video_freq: Optional[int] = None
@@ -88,27 +77,27 @@ class PPOArgs:
     """The control mode to use for the environment."""
 
     # Algorithm specific arguments
-    hidden_size: int = 256
+    hidden_size: int = 64
     """The hidden size of the MLP networks."""
     total_timesteps: int = 10_000_000
     """Total timesteps of the experiments."""
     learning_rate: float = 3e-4
     """The learning rate of the optimizer."""
-    anneal_lr: bool = False
+    anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks."""
-    gamma: float = 0.8
-    """The discount factor gamma."""
-    gae_lambda: float = 0.9
+    gamma: float = 0.99
+    """the discount factor gamma"""
+    gae_lambda: float = 0.95
     """The lambda for the general advantage estimation."""
     num_minibatches: int = 32
     """The number of mini-batches."""
-    update_epochs: int = 4
+    update_epochs: int = 10
     """The K epochs to update the policy."""
     norm_adv: bool = True
     """Toggles advantages normalization."""
     clip_coef: float = 0.2
     """The surrogate clipping coefficient."""
-    clip_vloss: bool = False
+    clip_vloss: bool = True
     """Toggles whether or not to use a clipped loss for the value function, as per the
     paper."""
     ent_coef: float = 0.0
@@ -145,7 +134,7 @@ class Agent(nn.Module):
         self,
         single_observation_space: spaces.Box,
         single_action_space: spaces.Box,
-        hidden_size: int = 256,
+        hidden_size: int = 64,
     ) -> None:
         super().__init__()
         self.critic = nn.Sequential(
@@ -216,8 +205,8 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         # Load PPO arguments
         self.args = dacite.from_dict(PPOArgs, cfg.args)
         self.log_path = Path(cfg.tb_log_dir) / f"{cfg.exp_name}"
-        writer = SummaryWriter(self.log_path)  # type: ignore
-        writer.add_text(  # type: ignore
+        self.writer = SummaryWriter(self.log_path)  # type: ignore
+        self.writer.add_text(  # type: ignore
             "hyperparameters",
             "|param|value|\n|-|-|\n%s"
             % (
@@ -226,7 +215,6 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 )
             ),
         )
-        self.logger = Logger(tensorboard=writer)
 
         # Use spaces from base class
         assert isinstance(self.observation_space, spaces.Box)
@@ -341,24 +329,24 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
         for iteration in range(1, self.args.num_iterations + 1):
             logging.info(f"Epoch: {iteration}, global_step={global_step}")
-            self.agent.eval()
+            # self.agent.eval()
             # Evaluate episode performance
-            if iteration % self.args.eval_freq == 0:
-                eval_metrics = self.evaluate(self.args.num_eval_envs)
-                logging.info(
-                    f"Evaluated {self.args.num_eval_envs} episodes"
-                )
-                for k, v in eval_metrics.items():
-                    mean = np.stack(v).mean()
-                    if self.logger is not None:
-                        self.logger.add_scalar(f"eval/{k}", mean, global_step)
-                    logging.info(f"eval_{k}_mean={mean}")
-            if self.args.save_model and iteration % self.args.eval_freq == 1:
-                model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
-                base_path = Path(self.log_path) / "policies"
-                base_path.mkdir(parents=True, exist_ok=True)
-                self.save(str(model_path))
-                logging.info(f"model saved to {model_path}")
+            # if iteration % self.args.eval_freq == 0:
+            #     eval_metrics = self.evaluate(self.args.num_eval_envs)
+            #     logging.info(
+            #         f"Evaluated {self.args.num_eval_envs} episodes"
+            #     )
+            #     for k, v in eval_metrics.items():
+            #         mean = np.stack(v).mean()
+            #         if self.writer is not None:
+            #             self.writer.add_scalar(f"eval/{k}", mean, global_step)
+            #         logging.info(f"eval_{k}_mean={mean}")
+            # if self.args.save_model and iteration % self.args.eval_freq == 1:
+            #     model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
+            #     base_path = Path(self.log_path) / "policies"
+            #     base_path.mkdir(parents=True, exist_ok=True)
+            #     self.save(str(model_path))
+            #     logging.info(f"model saved to {model_path}")
             # Annealing the rate if instructed to do so.
             if self.args.anneal_lr:
                 frac = 1.0 - (iteration - 1.0) / self.args.num_iterations
@@ -393,8 +381,8 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                     for info in infos["final_info"]:
                         if info and "episode" in info:
                             print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                            self.logger.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                            self.logger.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                            self.writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
+                            self.writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
 
             rollout_time = time.time() - rollout_time
 
@@ -508,31 +496,31 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
             )
 
-            self.logger.add_scalar(
+            self.writer.add_scalar(
                 "charts/learning_rate",
                 self.optimizer.param_groups[0]["lr"],
                 global_step,
             )
-            self.logger.add_scalar("losses/value_loss", v_loss.item(), global_step)
-            self.logger.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-            self.logger.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-            self.logger.add_scalar(
+            self.writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
+            self.writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
+            self.writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
+            self.writer.add_scalar(
                 "losses/old_approx_kl", old_approx_kl.item(), global_step
             )
-            self.logger.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
+            self.writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
             clipfracs_log = float(np.mean(clipfracs))
-            self.logger.add_scalar("losses/clipfrac", clipfracs_log, global_step)
-            self.logger.add_scalar(
+            self.writer.add_scalar("losses/clipfrac", clipfracs_log, global_step)
+            self.writer.add_scalar(
                 "losses/explained_variance", explained_var, global_step
             )
             elapsed_time = time.time() - start_time
-            self.logger.add_scalar(
+            self.writer.add_scalar(
                 "charts/SPS", int(global_step / elapsed_time), global_step
             )
-            self.logger.add_scalar("time/step", global_step, global_step)
-            self.logger.add_scalar("time/update_time", update_time, global_step)
-            self.logger.add_scalar("time/rollout_time", rollout_time, global_step)
-            self.logger.add_scalar(
+            self.writer.add_scalar("time/step", global_step, global_step)
+            self.writer.add_scalar("time/update_time", update_time, global_step)
+            self.writer.add_scalar("time/rollout_time", rollout_time, global_step)
+            self.writer.add_scalar(
                 "time/rollout_fps",
                 self.args.num_envs * self.args.num_steps / rollout_time,
                 global_step,
@@ -542,7 +530,8 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             model_path = self.log_path / "final_ckpt.pt"
             self.save(str(model_path))
             logging.info(f"model saved to {model_path}")
-        self.logger.close()
+        envs.close()
+        self.writer.close()
 
         return {}
 
