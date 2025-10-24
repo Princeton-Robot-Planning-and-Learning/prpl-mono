@@ -28,7 +28,6 @@ dependencies = [
    "pygame==2.5.2",
    "spatialmath-python",
    "kortex-api",
-   "protobuf==3.20.0",
 ]
 
 [project.optional-dependencies]
@@ -42,8 +41,11 @@ develop = [
     "pytest>=7.2.2",
 ]
 
+[tool.uv]
+override-dependencies = ["protobuf==3.20.0"]
+
 [tool.uv.sources]
-kortex-api = {path = "wheels/kortex_api-2.6.0.post3-patched.whl"}
+kortex-api = {path = "wheels/kortex_api-2.6.0.post3-py3-none-any.whl"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
