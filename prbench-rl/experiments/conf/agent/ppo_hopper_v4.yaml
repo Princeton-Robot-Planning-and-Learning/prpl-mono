@@ -1,0 +1,17 @@
+# PPO agent configuration
+name: ppo
+
+# Core training parameters
+args:
+  total_timesteps: 1000000
+  num_eval_envs: 20
+  # Network architecture
+  hidden_size: 64
+
+# Training settings
+torch_deterministic: true
+cuda: false
+
+# Logging settings
+exp_name: "debug_ppo"
+tb_log_dir: "runs"

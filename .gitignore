@@ -171,4 +171,7 @@ cython_debug/
 .vscode
 *.png
 debug
+videos
+runs
+outputs
 CLAUDE.md

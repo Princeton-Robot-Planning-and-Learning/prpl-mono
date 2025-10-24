@@ -59,7 +59,12 @@ def test_random_agent_continuous_action_bounds():
     obs_space = spaces.Box(low=-10.0, high=10.0, shape=(6,))
     action_space = spaces.Box(low=-1.0, high=1.0, shape=(3,))
 
-    agent = RandomAgent(obs_space, action_space, seed=123, cfg=DictConfig({}))
+    agent = RandomAgent(
+        seed=123,
+        observation_space=obs_space,
+        action_space=action_space,
+        cfg=DictConfig({}),
+    )
     obs = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     agent.reset(obs, {})
 
@@ -81,7 +86,12 @@ def test_random_agent_asymmetric_bounds():
         low=np.array([-2.0, -1.0, 0.0]), high=np.array([3.0, 1.0, 5.0])
     )
 
-    agent = RandomAgent(obs_space, action_space, seed=111, cfg=DictConfig({}))
+    agent = RandomAgent(
+        seed=111,
+        observation_space=obs_space,
+        action_space=action_space,
+        cfg=DictConfig({}),
+    )
     obs = np.array([0.0, 0.0, 0.0])
     agent.reset(obs, {})
 
@@ -104,10 +114,16 @@ def test_random_agent_seeded_reproducibility_with_prbench():
 
     # Create two agents with same seed but separate action spaces
     agent1 = RandomAgent(
-        env.observation_space, action_space1, seed=789, cfg=DictConfig({})
+        seed=789,
+        observation_space=env.observation_space,
+        action_space=action_space1,
+        cfg=DictConfig({}),
     )
     agent2 = RandomAgent(
-        env.observation_space, action_space2, seed=789, cfg=DictConfig({})
+        seed=789,
+        observation_space=env.observation_space,
+        action_space=action_space2,
+        cfg=DictConfig({}),
     )
 
     obs, info = env.reset(seed=789)
