@@ -17,7 +17,7 @@ dependencies = [
    "mujoco==3.2.4",
    "tqdm==4.66.2", 
    "notebook==7.1.1",
-   "matplotlib==3.8.4",
+   "matplotlib=3.10.7",
    "pin==2.7.0",
    "ruckig==0.12.2",
    "flask==3.0.2",
