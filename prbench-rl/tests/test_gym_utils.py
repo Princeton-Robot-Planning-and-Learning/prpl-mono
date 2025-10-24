@@ -1,10 +1,13 @@
 """Tests for gym utilities."""
+
 import prbench
+
 from prbench_rl.gym_utils import make_env
 
 
 def test_make_env_truncation():
-    """Test that make_env properly truncates PRBench environments with max_episode_steps."""
+    """Test that make_env properly truncates PRBench environments with
+    max_episode_steps."""
 
     # Register PRBench environments
     prbench.register_all_environments()

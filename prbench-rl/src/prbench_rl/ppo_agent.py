@@ -86,7 +86,7 @@ class PPOArgs:
     anneal_lr: bool = True
     """Toggle learning rate annealing for policy and value networks."""
     gamma: float = 0.99
-    """the discount factor gamma"""
+    """The discount factor gamma."""
     gae_lambda: float = 0.95
     """The lambda for the general advantage estimation."""
     num_minibatches: int = 32
@@ -138,26 +138,37 @@ class Agent(nn.Module):
     ) -> None:
         super().__init__()
         self.critic = nn.Sequential(
-            layer_init(nn.Linear(np.array(single_observation_space.shape).prod(), hidden_size)),
+            layer_init(
+                nn.Linear(
+                    int(np.array(single_observation_space.shape).prod()), hidden_size
+                )
+            ),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, 1), std=1.0),
         )
         self.actor_mean = nn.Sequential(
-            layer_init(nn.Linear(np.array(single_observation_space.shape).prod(), hidden_size)),
+            layer_init(
+                nn.Linear(
+                    int(np.array(single_observation_space.shape).prod()), hidden_size
+                )
+            ),
             nn.Tanh(),
             layer_init(nn.Linear(hidden_size, hidden_size)),
             nn.Tanh(),
-            layer_init(nn.Linear(hidden_size, np.prod(single_action_space.shape)), std=0.01),
+            layer_init(
+                nn.Linear(hidden_size, int(np.prod(single_action_space.shape))),
+                std=0.01,
+            ),
         )
-        self.actor_logstd = nn.Parameter(torch.zeros(1, np.prod(single_action_space.shape)))
-
+        self.actor_logstd = nn.Parameter(
+            torch.zeros(1, int(np.prod(single_action_space.shape)))
+        )
 
     def get_value(self, x: torch.Tensor) -> torch.Tensor:
         """Get state value estimate."""
         return self.critic(x)
-
 
     def get_action(self, x: torch.Tensor, deterministic: bool = False) -> torch.Tensor:
         """Get an action from the policy."""
@@ -169,16 +180,22 @@ class Agent(nn.Module):
         probs = Normal(action_mean, action_std)  # type: ignore
         return probs.sample()  # type: ignore
 
-
-    def get_action_and_value(self, x, action=None):
+    def get_action_and_value(
+        self, x: torch.Tensor, action: torch.Tensor | None = None
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Get action, log probability, entropy, and value."""
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
         if action is None:
-            action = probs.sample()
-        return action, probs.log_prob(action).sum(1), probs.entropy().sum(1), self.critic(x)
-
+            action = probs.sample()  # type: ignore[no-untyped-call]
+        return (
+            action,
+            probs.log_prob(action).sum(1),  # type: ignore[no-untyped-call]
+            probs.entropy().sum(1),  # type: ignore[no-untyped-call]
+            self.critic(x),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the agent."""
@@ -191,30 +208,53 @@ class PPOAgent(BaseRLAgent[_O, _U]):
     def __init__(
         self,
         seed: int,
-        env_id: str,
-        max_episode_steps: int,
-        cfg: DictConfig,
+        env_id: str | None = None,
+        max_episode_steps: int | None = None,
+        cfg: DictConfig | None = None,
+        observation_space: spaces.Box | None = None,
+        action_space: spaces.Box | None = None,
     ) -> None:
-        super().__init__(seed, env_id, max_episode_steps, cfg)
+        super().__init__(
+            seed,
+            env_id,
+            max_episode_steps,
+            cfg,
+            observation_space,  # type: ignore
+            action_space,  # type: ignore
+        )
+
+        # Ensure cfg is not None for PPOAgent
+        if cfg is None:
+            cfg = DictConfig({})
 
         # Device setup
+        cuda_enabled = cfg.get("cuda", False)
         self.device = torch.device(
-            "cuda" if torch.cuda.is_available() and cfg.cuda else "cpu"
+            "cuda" if torch.cuda.is_available() and cuda_enabled else "cpu"
         )
 
-        # Load PPO arguments
-        self.args = dacite.from_dict(PPOArgs, cfg.args)
-        self.log_path = Path(cfg.tb_log_dir) / f"{cfg.exp_name}"
-        self.writer = SummaryWriter(self.log_path)  # type: ignore
-        self.writer.add_text(  # type: ignore
-            "hyperparameters",
-            "|param|value|\n|-|-|\n%s"
-            % (
-                "\n".join(
-                    [f"|{key}|{value}|" for key, value in vars(self.args).items()]
-                )
-            ),
-        )
+        # Load PPO arguments (with defaults if not provided)
+        args_dict = cfg.get("args", cfg) if "args" in cfg else dict(cfg)
+        self.args = dacite.from_dict(PPOArgs, args_dict)
+
+        # Setup tensorboard writer if logging is enabled
+        if cfg.get("tf_log", True):
+            exp_name = cfg.get("exp_name", "ppo_experiment")
+            tb_log_dir = cfg.get("tb_log_dir", "runs")
+            self.log_path = Path(tb_log_dir) / exp_name
+            self.writer = SummaryWriter(self.log_path)  # type: ignore
+            self.writer.add_text(  # type: ignore
+                "hyperparameters",
+                "|param|value|\n|-|-|\n%s"
+                % (
+                    "\n".join(
+                        [f"|{key}|{value}|" for key, value in vars(self.args).items()]
+                    )
+                ),
+            )
+        else:
+            self.log_path = Path("runs/ppo_experiment")
+            self.writer = None  # type: ignore
 
         # Use spaces from base class
         assert isinstance(self.observation_space, spaces.Box)
@@ -231,9 +271,17 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
     def _get_action(self) -> _U:  # type: ignore
         """Get action from current observation (for base class compatibility)."""
-        # This method is here for base class compatibility
-        # In practice, we use get_action_from_obs for PPO
-        raise NotImplementedError("Use get_action_from_obs for PPO")
+        assert self._last_observation is not None, "Must call reset() before step()"
+        obs_tensor = torch.Tensor(self._last_observation).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            action = self.agent.get_action(obs_tensor, deterministic=True)
+        action_np = action.cpu().numpy()[0]
+        # Clip action to be within action space bounds
+        assert isinstance(self.action_space, spaces.Box)
+        clipped_action = np.clip(
+            action_np, self.action_space.low, self.action_space.high
+        )
+        return clipped_action  # type: ignore
 
     def get_action_from_obs(self, obs: torch.Tensor) -> torch.Tensor:
         """Get action from observation tensor."""
@@ -285,7 +333,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         }
         return eval_metrics
 
-    def train(
+    def train(  # type: ignore[override]
         self,
     ) -> Dict[str, Any]:
         """Training the agent with an interactive batched environment."""
@@ -293,9 +341,16 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         # update the args with the environment-specific values
         # env setup
         envs = gym.vector.SyncVectorEnv(
-            [make_env(self.env_id, i, False, self.cfg.exp_name, self.max_episode_steps) for i in range(self.args.num_envs)]
+            [
+                make_env(
+                    self.env_id, i, False, self.cfg.exp_name, self.max_episode_steps
+                )
+                for i in range(self.args.num_envs)
+            ]
         )
-        assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+        assert isinstance(
+            envs.single_action_space, gym.spaces.Box
+        ), "only continuous action space is supported"
 
         self.args.batch_size = int(self.args.num_envs * self.args.num_steps)
         self.args.minibatch_size = int(
@@ -373,16 +428,31 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 next_obs, reward, terminations, truncations, infos = envs.step(
                     action.cpu().numpy()
                 )
-                next_done = np.logical_or(terminations, truncations)
+                next_done_np = np.logical_or(terminations, truncations)
                 rewards[step] = torch.tensor(reward).to(self.device).view(-1)
-                next_obs, next_done = torch.Tensor(next_obs).to(self.device), torch.Tensor(next_done).to(self.device)
+                next_obs, next_done = torch.Tensor(next_obs).to(
+                    self.device
+                ), torch.Tensor(next_done_np).to(self.device)
 
                 if "final_info" in infos:
                     for info in infos["final_info"]:
                         if info and "episode" in info:
-                            print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                            self.writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                            self.writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
+                            episode_return = info["episode"]["r"]
+                            print(
+                                f"global_step={global_step}, "
+                                f"episodic_return={episode_return}"
+                            )
+                            if self.writer is not None:
+                                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                                    "charts/episodic_return",
+                                    info["episode"]["r"],
+                                    global_step,
+                                )
+                                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                                    "charts/episodic_length",
+                                    info["episode"]["l"],
+                                    global_step,
+                                )
 
             rollout_time = time.time() - rollout_time
 
@@ -390,7 +460,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             with torch.no_grad():
                 next_value = self.agent.get_value(next_obs).reshape(1, -1)
                 advantages = torch.zeros_like(rewards).to(self.device)
-                lastgaelam = 0
+                lastgaelam: torch.Tensor | float = 0.0
                 for t in reversed(range(self.args.num_steps)):
                     if t == self.args.num_steps - 1:
                         nextnonterminal = 1.0 - next_done
@@ -398,8 +468,18 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                     else:
                         nextnonterminal = 1.0 - dones[t + 1]
                         nextvalues = values[t + 1]
-                    delta = rewards[t] + self.args.gamma * nextvalues * nextnonterminal - values[t]
-                    advantages[t] = lastgaelam = delta + self.args.gamma * self.args.gae_lambda * nextnonterminal * lastgaelam
+                    delta = (
+                        rewards[t]
+                        + self.args.gamma * nextvalues * nextnonterminal
+                        - values[t]
+                    )
+                    advantages[t] = lastgaelam = (
+                        delta
+                        + self.args.gamma
+                        * self.args.gae_lambda
+                        * nextnonterminal
+                        * lastgaelam
+                    )
                 returns = advantages + values
 
             # flatten the batch
@@ -496,42 +576,60 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
             )
 
-            self.writer.add_scalar(
-                "charts/learning_rate",
-                self.optimizer.param_groups[0]["lr"],
-                global_step,
-            )
-            self.writer.add_scalar("losses/value_loss", v_loss.item(), global_step)
-            self.writer.add_scalar("losses/policy_loss", pg_loss.item(), global_step)
-            self.writer.add_scalar("losses/entropy", entropy_loss.item(), global_step)
-            self.writer.add_scalar(
-                "losses/old_approx_kl", old_approx_kl.item(), global_step
-            )
-            self.writer.add_scalar("losses/approx_kl", approx_kl.item(), global_step)
-            clipfracs_log = float(np.mean(clipfracs))
-            self.writer.add_scalar("losses/clipfrac", clipfracs_log, global_step)
-            self.writer.add_scalar(
-                "losses/explained_variance", explained_var, global_step
-            )
-            elapsed_time = time.time() - start_time
-            self.writer.add_scalar(
-                "charts/SPS", int(global_step / elapsed_time), global_step
-            )
-            self.writer.add_scalar("time/step", global_step, global_step)
-            self.writer.add_scalar("time/update_time", update_time, global_step)
-            self.writer.add_scalar("time/rollout_time", rollout_time, global_step)
-            self.writer.add_scalar(
-                "time/rollout_fps",
-                self.args.num_envs * self.args.num_steps / rollout_time,
-                global_step,
-            )
+            if self.writer is not None:
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "charts/learning_rate",
+                    self.optimizer.param_groups[0]["lr"],
+                    global_step,
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "losses/value_loss", v_loss.item(), global_step
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "losses/policy_loss", pg_loss.item(), global_step
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "losses/entropy", entropy_loss.item(), global_step
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "losses/old_approx_kl", old_approx_kl.item(), global_step
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "losses/approx_kl", approx_kl.item(), global_step
+                )
+                clipfracs_log = float(np.mean(clipfracs))
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "losses/clipfrac", clipfracs_log, global_step
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "losses/explained_variance", explained_var, global_step
+                )
+                elapsed_time = time.time() - start_time
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "charts/SPS", int(global_step / elapsed_time), global_step
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "time/step", global_step, global_step
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "time/update_time", update_time, global_step
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "time/rollout_time", rollout_time, global_step
+                )
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "time/rollout_fps",
+                    self.args.num_envs * self.args.num_steps / rollout_time,
+                    global_step,
+                )
 
         if self.args.save_model:
             model_path = self.log_path / "final_ckpt.pt"
             self.save(str(model_path))
             logging.info(f"model saved to {model_path}")
-        envs.close()
-        self.writer.close()
+        envs.close()  # type: ignore[no-untyped-call]
+        if self.writer is not None:
+            self.writer.close()  # type: ignore[no-untyped-call]
 
         return {}
 

@@ -1,13 +1,17 @@
 """Utilities for working with Gymnasium environments."""
 
-import prbench
 import gymnasium as gym
 import numpy as np
+import prbench
 import torch
 
 
 def make_env(
-    env_id: str, idx: int, capture_video: bool, run_name: str, max_episode_steps: int, 
+    env_id: str,
+    idx: int,
+    capture_video: bool,
+    run_name: str,
+    max_episode_steps: int,
     gamma: float = 0.99,
 ):
     """Create a single environment instance with appropriate wrappers."""
@@ -77,8 +81,10 @@ def evaluate_ppo(
             for info in infos["final_info"]:
                 if "episode" not in info:
                     continue
+                episode_return = info["episode"]["r"]
                 print(
-                    f"eval_episode={len(episodic_returns)}, episodic_return={info['episode']['r']}"
+                    f"eval_episode={len(episodic_returns)}, "
+                    f"episodic_return={episode_return}"
                 )
                 episodic_returns += [info["episode"]["r"]]
         obs = next_obs

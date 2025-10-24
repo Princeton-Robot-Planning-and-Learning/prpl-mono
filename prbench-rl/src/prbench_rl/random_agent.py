@@ -44,8 +44,10 @@ class RandomAgent(BaseRLAgent[_O, _U]):
                 for info in infos["final_info"]:
                     if "episode" not in info:
                         continue
+                    episode_return = info["episode"]["r"]
                     print(
-                        f"eval_episode={len(episodic_returns)}, episodic_return={info['episode']['r']}"
+                        f"eval_episode={len(episodic_returns)}, "
+                        f"episodic_return={episode_return}"
                     )
                     episodic_returns += [info["episode"]["r"]]
                     step_lengths += [step_length]
