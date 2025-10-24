@@ -1,0 +1,22 @@
+# Default configuration for RL experiments
+defaults:
+  - agent: random
+  - env: obstruction2d-o0
+  - _self_
+
+# Experiment mode: "train" or "eval"
+mode: eval
+
+# Random seed
+seed: 0
+
+# Training parameters
+train_steps: 10000
+eval_frequency: 1000
+
+# Evaluation parameters  
+eval_episodes: 10
+max_eval_steps: 1000
+
+# Optional path to load pretrained agent (for eval mode)
+load_agent_path: null
