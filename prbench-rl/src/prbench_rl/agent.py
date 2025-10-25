@@ -62,14 +62,15 @@ class BaseRLAgent(Agent[_O, _U]):
     def _get_action(self) -> _U:
         """Produce an action to execute now."""
 
-    def train(self) -> dict[str, Any]:  # type: ignore
+    def train(self, render: bool = False) -> dict[str, Any]:  # type: ignore
         """Switch to train mode."""
+        del render
         self._train_or_eval = "train"
         return {}
 
-    def evaluate(self, eval_episodes: int) -> dict[str, Any]:
+    def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
         """Switch to evaluation mode."""
-        del eval_episodes
+        del eval_episodes, render
         self._train_or_eval = "eval"
         return {}
 

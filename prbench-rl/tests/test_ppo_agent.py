@@ -89,13 +89,13 @@ def test_ppo_agent_with_prbench_environment():
     agent.close()
 
 
-# @pytest.mark.skip(reason="Not tested yet")
 def test_ppo_agent_training_with_fixed_environment():
     """Test PPO agent can overfit on fixed environment setup."""
-    # pylint: disable=no-member
     prbench.register_all_environments()
 
     # Create a custom environment wrapper that fixes positions
+    # NOTE: This env will by default truncate after 100 steps
+    # so it is not registered with "prbench", but with gymnasium directly.
     class FixedPositionWrapper(gymnasium.Env):
         """Environment wrapper that fixes initial positions for testing."""
 
@@ -147,13 +147,14 @@ def test_ppo_agent_training_with_fixed_environment():
             state1.set(button0, "x", 2.0)
             self.reset_options = {"init_state": state1}
             self.num_env_steps = 0
+            self.max_episode_steps = 100
             self.r = 0.0
             # Debug rendering only if render_mode is set
-            if self.render_mode is not None:
-                _, _ = env.reset(seed=123, options=self.reset_options)
-                img = env.render()
-                os.makedirs("debug", exist_ok=True)
-                iio.imwrite("debug/unit_test_fixed_env_init.png", img)
+            # if self.render_mode is not None:
+            #     _, _ = env.reset(seed=123, options=self.reset_options)
+            #     img = env.render()
+            #     os.makedirs("debug", exist_ok=True)
+            #     iio.imwrite("debug/unit_test_fixed_env_init.png", img)
 
         def reset(self, seed=None, options=None):  # pylint: disable=arguments-differ
             del seed, options  # Ignore external parameters
@@ -164,7 +165,8 @@ def test_ppo_agent_training_with_fixed_environment():
 
         def step(self, action):
             self.num_env_steps += 1
-            obs, reward, terminated, truncated, info = self.env.step(action)
+            obs, reward, terminated, _, info = self.env.step(action)
+            truncated = self.num_env_steps >= self.max_episode_steps
             self.r += reward
             if terminated or truncated:
                 info["final_info"] = [
@@ -195,25 +197,25 @@ def test_ppo_agent_training_with_fixed_environment():
 
     # Register with gymnasium
     gymnasium.register(
-        id="prbench/StickButton2D-Fixed-v0",
+        id="StickButton2D-Fixed-v0",
         entry_point=make_fixed_env,
     )
 
     # Create PPO agent with small config for quick overfitting
     cfg = DictConfig(
         {
-            "total_timesteps": 3000,  # Small number for quick test
-            "learning_rate": 1e-3,  # Higher learning rate for faster learning
+            "total_timesteps": 2000,  # Use > 3000 to ensure overfitting
+            "learning_rate": 3e-3,  # Higher learning rate for faster learning
             "num_envs": 1,
-            "num_steps": 64,  # Small rollout for quick updates
+            "num_steps": 128,  # Small rollout for quick updates
             "gamma": 0.99,
             "gae_lambda": 0.95,
-            "num_minibatches": 4,
-            "update_epochs": 4,
+            "num_minibatches": 32,
+            "update_epochs": 10,
             "norm_adv": True,
             "clip_coef": 0.2,
             "clip_vloss": True,
-            "ent_coef": 0.01,  # Small entropy bonus for exploration
+            "ent_coef": 0.0,
             "vf_coef": 0.5,
             "max_grad_norm": 0.5,
             "target_kl": None,
@@ -229,15 +231,18 @@ def test_ppo_agent_training_with_fixed_environment():
     agent = PPOAgent(
         seed=123,
         cfg=cfg,
-        env_id="prbench/StickButton2D-Fixed-v0",  # Use the registered wrapper ID
+        env_id="StickButton2D-Fixed-v0",  # Use the registered wrapper ID
         max_episode_steps=100,
     )
 
-    before_train_eval = agent.evaluate(10)
+    before_train_eval = agent.evaluate(3)
+    mean_r_before = np.mean(before_train_eval["episodic_return"])
 
     # Test training
     _ = agent.train()
 
     # Test that agent can perform better after training
-    eval_metric = agent.evaluate(10)
+    eval_metric = agent.evaluate(3)
+    mean_r_after = np.mean(eval_metric["episodic_return"])
+    assert mean_r_after > mean_r_before
     agent.close()
