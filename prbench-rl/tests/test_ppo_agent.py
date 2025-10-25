@@ -1,15 +1,9 @@
 """Tests for the PPO agent."""
 
-import os
 import gymnasium
 import numpy as np
-
-import imageio.v2 as iio
 import prbench
-import pytest
-from conftest import MAKE_VIDEOS
 from gymnasium import spaces
-from gymnasium.wrappers import RecordVideo
 from omegaconf import DictConfig
 from prbench.envs.geom2d.stickbutton2d import StickButton2DEnv
 from relational_structs import Object, ObjectCentricState, Type
@@ -204,7 +198,7 @@ def test_ppo_agent_training_with_fixed_environment():
     # Create PPO agent with small config for quick overfitting
     cfg = DictConfig(
         {
-            "total_timesteps": 2000,  # Use > 3000 to ensure overfitting
+            "total_timesteps": 3000,  # Use > 3000 to ensure overfitting
             "learning_rate": 3e-3,  # Higher learning rate for faster learning
             "num_envs": 1,
             "num_steps": 128,  # Small rollout for quick updates
@@ -219,7 +213,7 @@ def test_ppo_agent_training_with_fixed_environment():
             "vf_coef": 0.5,
             "max_grad_norm": 0.5,
             "target_kl": None,
-            "hidden_size": 32,  # Small network for faster training
+            "hidden_size": 128,  # Small network for faster training
             "torch_deterministic": True,
             "cuda": False,
             "anneal_lr": False,

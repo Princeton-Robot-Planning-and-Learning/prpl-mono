@@ -292,7 +292,15 @@ class PPOAgent(BaseRLAgent[_O, _U]):
     def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
         """Evaluate the PPO agent."""
         envs = gym.vector.SyncVectorEnv(
-            [make_env(self.env_id, 0, render, self.cfg.exp_name + '_eval', self.max_episode_steps)]
+            [
+                make_env(
+                    self.env_id,
+                    0,
+                    render,
+                    self.cfg.exp_name + "_eval",
+                    self.max_episode_steps,
+                )
+            ]
         )
 
         # Set agent to eval mode
@@ -306,9 +314,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         while len(episodic_returns) < eval_episodes:
             with torch.no_grad():
                 obs_tensor = torch.Tensor(obs).to(self.device)
-                action = self.agent(
-                        obs_tensor
-                )
+                action = self.agent(obs_tensor)
                 actions = action.cpu().numpy()
 
             obs, _, _, _, infos = envs.step(actions)
@@ -343,7 +349,11 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         envs = gym.vector.SyncVectorEnv(
             [
                 make_env(
-                    self.env_id, i, render, self.cfg.exp_name + '_train', self.max_episode_steps
+                    self.env_id,
+                    i,
+                    render,
+                    self.cfg.exp_name + "_train",
+                    self.max_episode_steps,
                 )
                 for i in range(self.args.num_envs)
             ]
