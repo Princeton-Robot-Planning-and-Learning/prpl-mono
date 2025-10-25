@@ -3,7 +3,7 @@
 import gymnasium
 import numpy as np
 
-# import imageio.v2 as iio
+import imageio.v2 as iio
 import prbench
 import pytest
 from conftest import MAKE_VIDEOS
@@ -88,14 +88,11 @@ def test_ppo_agent_with_prbench_environment():
     agent.close()
 
 
-@pytest.mark.skip(reason="Not tested yet")
+# @pytest.mark.skip(reason="Not tested yet")
 def test_ppo_agent_training_with_fixed_environment():
     """Test PPO agent can overfit on fixed environment setup."""
     # pylint: disable=no-member
     prbench.register_all_environments()
-    env = prbench.make(
-        "prbench/StickButton2D-b1-v0", render_mode="rgb_array" if MAKE_VIDEOS else None
-    )
 
     # Create a custom environment wrapper that fixes positions
     class FixedPositionWrapper(gymnasium.Env):
@@ -150,9 +147,9 @@ def test_ppo_agent_training_with_fixed_environment():
             self.num_env_steps = 0
             self.r = 0.0
             # Debug
-            # _, _ = env.reset(seed=123, options=self.reset_options)
-            # img = env.render()
-            # iio.imwrite("debug/unit_test_fixed_env_init.png", img)
+            _, _ = env.reset(seed=123, options=self.reset_options)
+            img = env.render()
+            iio.imwrite("debug/unit_test_fixed_env_init.png", img)
 
         def reset(self, seed=None, options=None):  # pylint: disable=arguments-differ
             del seed, options  # Ignore external parameters
@@ -183,16 +180,25 @@ def test_ppo_agent_training_with_fixed_environment():
         def render(self):
             return self.env.render()
 
-    # Wrap environment with fixed positions
-    fixed_env = FixedPositionWrapper(env)
+    # Register the wrapped environment with a custom ID so PPO can create it
+    def make_fixed_env(render_mode=None):
+        """Factory function to create the fixed environment."""
+        base_env = prbench.make(
+            "prbench/StickButton2D-b1-v0",
+            render_mode=render_mode,
+        )
+        return FixedPositionWrapper(base_env)
 
-    if MAKE_VIDEOS:
-        fixed_env = RecordVideo(fixed_env, "unit_test_videos")
+    # Register with gymnasium
+    gymnasium.register(
+        id="prbench/StickButton2D-Fixed-v0",
+        entry_point=make_fixed_env,
+    )
 
     # Create PPO agent with small config for quick overfitting
     cfg = DictConfig(
         {
-            "total_timesteps": 2048,  # Small number for quick test
+            "total_timesteps": 3000,  # Small number for quick test
             "learning_rate": 1e-3,  # Higher learning rate for faster learning
             "num_envs": 1,
             "num_steps": 64,  # Small rollout for quick updates
@@ -211,68 +217,23 @@ def test_ppo_agent_training_with_fixed_environment():
             "torch_deterministic": True,
             "cuda": False,
             "anneal_lr": False,
-            "tf_log": True,
             "tf_log_dir": "unit_test_exp",
+            "exp_name": "ppo_fixed_env_test",
         }
     )
 
     agent = PPOAgent(
         seed=123,
         cfg=cfg,
-        env_id="prbench/StickButton2D-b1-v0",
+        env_id="prbench/StickButton2D-Fixed-v0",  # Use the registered wrapper ID
         max_episode_steps=100,
     )
+
+    before_train_eval = agent.evaluate(10)
 
     # Test training
     _ = agent.train()
 
-    # Verify training metrics are generated
-    # assert len(training_metrics) > 0
-    # assert "episodic_return" in training_metrics[0]
-    # assert "episodic_length" in training_metrics[0]
-    # assert "global_step" in training_metrics[0]
-
     # Test that agent can perform better after training
-    agent.eval()
-
-    # Test performance on the fixed environment
-    total_reward = 0.0
-    total_steps = 0
-    num_test_episodes = 3
-
-    for episode in range(num_test_episodes):
-        obs, info = fixed_env.reset(seed=123 + episode)
-        agent.reset(obs, info)
-
-        episode_reward = 0.0
-        episode_steps = 0
-
-        for _ in range(100):  # Max steps per episode
-            action = agent.step()
-            obs, reward, terminated, truncated, info = fixed_env.step(action)
-            agent.update(obs, reward, terminated or truncated, info)
-
-            episode_reward += reward
-            episode_steps += 1
-
-            if terminated or truncated:
-                break
-
-        total_reward += episode_reward
-        total_steps += episode_steps
-
-    avg_reward = total_reward / num_test_episodes
-    avg_steps = total_steps / num_test_episodes
-
-    # With fixed positions, the agent should learn to reach the button efficiently
-    # These are loose bounds since overfitting might not be perfect in a short test
-    print(f"Average reward: {avg_reward}, Average steps: {avg_steps}")
-
-    # Basic sanity checks - agent should show some learning
-    # assert avg_reward > -100, (
-    #     f"Agent performed poorly with average reward: {avg_reward}"
-    # )
-    # assert avg_steps < 100, f"Agent took too many steps on average: {avg_steps}"
-
-    fixed_env.close()
+    eval_metric = agent.evaluate(10)
     agent.close()
