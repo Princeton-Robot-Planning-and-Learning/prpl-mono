@@ -1,5 +1,6 @@
 """Tests for the PPO agent."""
 
+import os
 import gymnasium
 import numpy as np
 
@@ -104,6 +105,7 @@ def test_ppo_agent_training_with_fixed_environment():
             self.observation_space = env.observation_space
             self.action_space = env.action_space
             self.render_mode = env.render_mode
+            self.metadata = env.metadata
             obs0, _ = self.env.reset(seed=123)
             # Check if the observation space has devectorize method
             if hasattr(self.env.observation_space, "devectorize"):
@@ -146,10 +148,12 @@ def test_ppo_agent_training_with_fixed_environment():
             self.reset_options = {"init_state": state1}
             self.num_env_steps = 0
             self.r = 0.0
-            # Debug
-            _, _ = env.reset(seed=123, options=self.reset_options)
-            img = env.render()
-            iio.imwrite("debug/unit_test_fixed_env_init.png", img)
+            # Debug rendering only if render_mode is set
+            if self.render_mode is not None:
+                _, _ = env.reset(seed=123, options=self.reset_options)
+                img = env.render()
+                os.makedirs("debug", exist_ok=True)
+                iio.imwrite("debug/unit_test_fixed_env_init.png", img)
 
         def reset(self, seed=None, options=None):  # pylint: disable=arguments-differ
             del seed, options  # Ignore external parameters
