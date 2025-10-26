@@ -47,7 +47,7 @@ def get_bounding_box_shape(obj: Object) -> tuple[float, float, float]:
     if obj.is_instance(MujocoRobotObjectType):
         return (0.5, 0.5, 1.0)
     if obj.is_instance(MujocoObjectType):
-        # This really needs to be generalized soon...
+        # TODO get real sizes for cubes!
         return (0.1, 0.1, 0.1)
     raise NotImplementedError
 

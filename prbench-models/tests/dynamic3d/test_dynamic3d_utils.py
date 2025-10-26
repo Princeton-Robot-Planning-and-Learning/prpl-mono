@@ -83,7 +83,7 @@ def test_get_overhead_geom2ds():
 def test_plot_overhead_scene():
     """Tests for plot_overhead_scene()."""
 
-    env = prbench.make("prbench/TidyBot3D-ground-o3-v0")
+    env = prbench.make("prbench/TidyBot3D-ground-o3-v0", render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     obs, _ = env.reset(seed=123)
     state = env.observation_space.devectorize(obs)
@@ -98,5 +98,9 @@ def test_plot_overhead_scene():
     # plt.tight_layout()
     # img = fig2data(fig)
     # outfile = "out_plot_overhead_scene.png"
+    # iio.imsave(outfile, img)
+    # print(f"Wrote out to {outfile}")
+    # img = env.render()
+    # outfile = "actual_scene.png"
     # iio.imsave(outfile, img)
     # print(f"Wrote out to {outfile}")
