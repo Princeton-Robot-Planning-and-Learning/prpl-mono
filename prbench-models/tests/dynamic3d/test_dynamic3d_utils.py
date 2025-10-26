@@ -14,7 +14,6 @@ from prbench_models.dynamic3d.utils import (
     plot_overhead_scene,
     run_base_motion_planning,
 )
-from prpl_utils.utils import get_signed_angle_distance
 
 prbench.register_all_environments()
 
@@ -126,52 +125,63 @@ def test_run_base_motion_planning():
     )
     assert base_motion_plan is not None
 
-    # TODO
     # Uncomment to debug.
-    import imageio.v2 as iio
-    from prpl_utils.utils import fig2data
-    from prbench_models.dynamic3d.utils import get_bounding_box
+    # import imageio.v2 as iio
+    # from prpl_utils.utils import fig2data
+    # from prbench_models.dynamic3d.utils import get_bounding_box
+    # from prpl_utils.utils import get_signed_angle_distance
 
-    fig, ax = plot_overhead_scene(
-        state,
-        min_x=x_bounds[0],
-        max_x=x_bounds[1],
-        min_y=y_bounds[0],
-        max_y=y_bounds[1],
-    )
-    robot = state.get_object_from_name("robot")
-    robot_width, robot_height, _ = get_bounding_box(state, robot)
-    for pose in base_motion_plan:
-        robot_geom = Rectangle.from_center(
-            pose.x,
-            pose.y,
-            robot_width,
-            robot_height,
-            rotation_about_center=pose.theta(),
-        )
-        robot_geom.plot(ax, fc="none", ec="gray", linestyle="dashed")
-    ax.set_title("Motion Planning Example")
-    plt.tight_layout()
-    img = fig2data(fig)
-    outfile = "base_motion_planning.png"
-    iio.imsave(outfile, img)
-    print(f"Wrote out to {outfile}")
+    # fig, ax = plot_overhead_scene(
+    #     state,
+    #     min_x=x_bounds[0],
+    #     max_x=x_bounds[1],
+    #     min_y=y_bounds[0],
+    #     max_y=y_bounds[1],
+    # )
+    # robot = state.get_object_from_name("robot")
+    # robot_width, robot_height, _ = get_bounding_box(state, robot)
+    # for pose in base_motion_plan:
+    #     robot_geom = Rectangle.from_center(
+    #         pose.x,
+    #         pose.y,
+    #         robot_width,
+    #         robot_height,
+    #         rotation_about_center=pose.theta(),
+    #     )
+    #     robot_geom.plot(ax, fc="none", ec="gray", linestyle="dashed")
+    # ax.set_title("Motion Planning Example")
+    # plt.tight_layout()
+    # img = fig2data(fig)
+    # outfile = "base_motion_planning.png"
+    # iio.imsave(outfile, img)
+    # print(f"Wrote out to {outfile}")
 
-    imgs = []
-    for t in range(1, len(base_motion_plan)):
-        previous_pose = base_motion_plan[t-1]
-        pose = base_motion_plan[t]
-        dx = pose.x - previous_pose.x
-        dy = pose.y - previous_pose.y
-        drot = get_signed_angle_distance(pose.theta(), previous_pose.theta())
-        action = np.zeros(11, dtype=np.float32)
-        action[0] = dx
-        action[1] = dy
-        action[2] = drot
-        assert env.action_space.contains(action)
-        env.step(action)
-        img = env.render()
-        imgs.append(img)
-    outfile = "base_motion_planning.mp4"
-    iio.mimsave(outfile, imgs)
-    print(f"Wrote out to {outfile}")
+    # # NOTE: this does not work. We need to instead do reactive control to follow the
+    # # motion plan, possibly using the base_controller. The reason this doesn't work
+    # # is because the position control action space is unreliable.
+    # imgs = []
+    # for t in range(1, len(base_motion_plan)):
+    #     previous_pose = base_motion_plan[t - 1]
+    #     pose = base_motion_plan[t]
+    #     dx = pose.x - previous_pose.x
+    #     dy = pose.y - previous_pose.y
+    #     drot = get_signed_angle_distance(pose.theta(), previous_pose.theta())
+    #     action = np.zeros(11, dtype=np.float32)
+    #     action[0] = dx
+    #     action[1] = dy
+    #     action[2] = drot
+    #     assert env.action_space.contains(action)
+    #     obs, _, _, _, _ = env.step(action)
+    #     state = env.observation_space.devectorize(obs)
+    #     print("Expected x, y, rot:", pose.x, pose.y, pose.theta())
+    #     print(
+    #         "Actual x, y, rot:",
+    #         state.get(robot, "pos_base_x"),
+    #         state.get(robot, "pos_base_y"),
+    #         state.get(robot, "pos_base_rot"),
+    #     )
+    #     img = env.render()
+    #     imgs.append(img)
+    # outfile = "base_motion_planning.mp4"
+    # iio.mimsave(outfile, imgs)
+    # print(f"Wrote out to {outfile}")
