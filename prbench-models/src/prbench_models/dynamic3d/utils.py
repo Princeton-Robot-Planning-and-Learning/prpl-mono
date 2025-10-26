@@ -38,22 +38,31 @@ def get_overhead_robot_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
     return SE2(x, y, yaw)
 
 
+def get_bounding_box_shape(obj: Object) -> tuple[float, float, float]:
+    """Returns (x extent, y extent, z extent) for the given object.
+
+    We may want to later add something to the state that allows these values to be
+    extracted automatically.
+    """
+    if obj.is_instance(MujocoRobotObjectType):
+        return (0.5, 0.5, 1.0)
+    if obj.is_instance(MujocoObjectType):
+        # This really needs to be generalized soon...
+        return (0.1, 0.1, 0.1)
+    raise NotImplementedError
+
+
 def get_overhead_geom2ds(state: ObjectCentricState) -> dict[str, Geom2D]:
     """Get a mapping from object name to Geom2D from an overhead perspective."""
     geoms: dict[str, Geom2D] = {}
     for obj in state:
         if obj.is_instance(MujocoRobotObjectType):
             pose = get_overhead_robot_se2_pose(state, obj)
-            # TODO NEED TO GET THESE FROM SOMEWHERE
-            width = 0.5
-            height = 0.5
         elif obj.is_instance(MujocoObjectType):
             pose = get_overhead_object_se2_pose(state, obj)
-            # TODO NEED TO GET THESE FROM SOMEWHERE
-            width = 0.1
-            height = 0.1
         else:
             raise NotImplementedError
+        width, height, _ = get_bounding_box_shape(obj)
         geom = Rectangle.from_center(
             pose.x, pose.y, width, height, rotation_about_center=pose.theta()
         )

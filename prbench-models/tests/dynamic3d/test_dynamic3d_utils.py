@@ -91,7 +91,6 @@ def test_plot_overhead_scene():
     assert isinstance(fig, plt.Figure)
     assert isinstance(ax, plt.Axes)
 
-    # TODO
     # Uncomment to debug.
     # from prpl_utils.utils import fig2data
     # import imageio.v2 as iio
