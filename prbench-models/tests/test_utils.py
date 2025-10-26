@@ -2,7 +2,7 @@
 
 import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
-from prbench_bilevel_planning.env_models.tidybot3d.tidybot3d_base_motion import (
+from prbench_bilevel_planning.env_models.dynamic3d.tidybot3d_base_motion import (
     create_bilevel_planning_models,
 )
 

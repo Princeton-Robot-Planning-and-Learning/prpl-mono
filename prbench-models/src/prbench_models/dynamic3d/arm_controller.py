@@ -21,7 +21,7 @@ from ruckig import (  # pylint: disable=no-name-in-module
     Ruckig,
 )
 
-from prbench_models.tidybot.ik_solver import TidybotIKSolver
+from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 
 
 class ArmController:

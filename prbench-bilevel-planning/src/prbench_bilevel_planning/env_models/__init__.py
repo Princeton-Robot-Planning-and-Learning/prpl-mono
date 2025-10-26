@@ -19,7 +19,9 @@ def create_bilevel_planning_models(
     # Try different directories based on environment type
     possible_paths = [
         current_file.parent / "geom2d" / f"{env_name}.py",
-        current_file.parent / "tidybot3d" / f"{env_name}.py",
+        current_file.parent / "dynamic2d" / f"{env_name}.py",
+        current_file.parent / "geom3d" / f"{env_name}.py",
+        current_file.parent / "dynamic3d" / f"{env_name}.py",
     ]
 
     env_path = None
