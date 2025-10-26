@@ -13,7 +13,6 @@ from relational_structs import Object
 
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
 from prbench.envs.dynamic3d.object_types import (
-    MujocoCuboidType,
     MujocoFixtureObjectType,
     MujocoObjectType,
 )
@@ -231,6 +230,13 @@ class MujocoObject:
             self.joint_name, np.array(linear_velocity), np.array(angular_velocity)
         )
 
+    @abc.abstractmethod
+    def get_bounding_box_dimensions(self) -> tuple[float, float, float]:
+        """Get the bounding box dimensions for this object.
+
+        These bounding box dimensions are independent from the object pose.
+        """
+
     def get_object_centric_data(self) -> dict[str, float]:
         """Get the object's current data.
 
@@ -245,6 +251,7 @@ class MujocoObject:
 
         pos, quat = self.env.get_joint_pos_quat(self.joint_name)
         linear_vel, angular_vel = self.env.get_joint_vel(self.joint_name)
+        bb_x, bb_y, bb_z = self.get_bounding_box_dimensions()
 
         # Create and return the data
         obj_data = {
@@ -261,6 +268,9 @@ class MujocoObject:
             "wx": angular_vel[0],
             "wy": angular_vel[1],
             "wz": angular_vel[2],
+            "bb_x": bb_x,
+            "bb_y": bb_y,
+            "bb_z": bb_z,
         }
         return obj_data
 
@@ -289,7 +299,7 @@ class Cube(MujocoObject):
         super().__init__(name, env, options)
 
         # Override object type
-        self.symbolic_object = Object(self.name, MujocoCuboidType)
+        self.symbolic_object = Object(self.name, MujocoObjectType)
 
         # Handle size parameter
         size = self.options.get("size", 0.02)
@@ -349,13 +359,8 @@ class Cube(MujocoObject):
             f"size={self.size}, rgba='{self.rgba}', mass={self.mass})"
         )
 
-    def get_object_centric_data(self) -> dict[str, float]:
-        data = super().get_object_centric_data()
-        # Add extents.
-        data["x_extent"] = 2 * self.size[0]
-        data["y_extent"] = 2 * self.size[1]
-        data["z_extent"] = 2 * self.size[2]
-        return data
+    def get_bounding_box_dimensions(self) -> tuple[float, float, float]:
+        return (2 * self.size[0], 2 * self.size[1], 2 * self.size[2])
 
 
 class MujocoFixture(abc.ABC):

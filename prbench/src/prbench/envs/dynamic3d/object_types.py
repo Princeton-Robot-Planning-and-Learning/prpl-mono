@@ -23,6 +23,10 @@ MujocoObjectTypeFeatures[MujocoObjectType] = [
     "wx",
     "wy",
     "wz",
+    # Bounding box dimensions (full, not half).
+    "bb_x",
+    "bb_y",
+    "bb_z",
 ]
 
 MujocoFixtureObjectType = Type("mujoco_fixture")
@@ -62,14 +66,4 @@ MujocoObjectTypeFeatures[MujocoRobotObjectType] = [
     "vel_arm_joint6",
     "vel_arm_joint7",
     "vel_gripper",
-]
-
-MujocoCuboidType = Type("mujoco_cuboid", parent=MujocoObjectType)
-MujocoObjectTypeFeatures[MujocoCuboidType] = MujocoObjectTypeFeatures[
-    MujocoObjectType
-] + [
-    # Full extents in x, y, z directions.
-    "x_extent",
-    "y_extent",
-    "z_extent",
 ]
