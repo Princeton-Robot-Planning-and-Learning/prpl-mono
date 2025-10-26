@@ -2,7 +2,7 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
-from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType
+from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType, MujocoCuboidType
 from relational_structs import (
     Object,
     ObjectCentricState,
@@ -38,17 +38,17 @@ def get_overhead_robot_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
     return SE2(x, y, yaw)
 
 
-def get_bounding_box_shape(obj: Object) -> tuple[float, float, float]:
+def get_bounding_box(state: ObjectCentricState, obj: Object) -> tuple[float, float, float]:
     """Returns (x extent, y extent, z extent) for the given object.
 
     We may want to later add something to the state that allows these values to be
     extracted automatically.
     """
     if obj.is_instance(MujocoRobotObjectType):
+        # NOTE: hardcoded for now.
         return (0.5, 0.5, 1.0)
-    if obj.is_instance(MujocoObjectType):
-        # TODO get real sizes for cubes!
-        return (0.1, 0.1, 0.1)
+    if obj.is_instance(MujocoCuboidType):
+        return (state.get(obj, "x_extent"), state.get(obj, "y_extent"), state.get(obj, "z_extent"))
     raise NotImplementedError
 
 
@@ -58,11 +58,11 @@ def get_overhead_geom2ds(state: ObjectCentricState) -> dict[str, Geom2D]:
     for obj in state:
         if obj.is_instance(MujocoRobotObjectType):
             pose = get_overhead_robot_se2_pose(state, obj)
-        elif obj.is_instance(MujocoObjectType):
+        elif obj.is_instance(MujocoCuboidType):
             pose = get_overhead_object_se2_pose(state, obj)
         else:
             raise NotImplementedError
-        width, height, _ = get_bounding_box_shape(obj)
+        width, height, _ = get_bounding_box(state, obj)
         geom = Rectangle.from_center(
             pose.x, pose.y, width, height, rotation_about_center=pose.theta()
         )
