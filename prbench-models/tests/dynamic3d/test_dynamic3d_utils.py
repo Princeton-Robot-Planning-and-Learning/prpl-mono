@@ -7,7 +7,11 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench_models.dynamic3d.utils import (
     get_overhead_object_se2_pose,
     get_overhead_robot_se2_pose,
+    get_overhead_geom2ds,
+    plot_overhead_scene,
 )
+from tomsgeoms2d.structs import Rectangle
+from matplotlib import pyplot as plt
 
 prbench.register_all_environments()
 
@@ -60,3 +64,40 @@ def test_get_overhead_robot_se2_pose():
     assert np.isclose(pose1.x + 1, pose2.x)
     assert np.isclose(pose1.y, pose2.y)
     assert np.isclose(pose1.theta(), pose2.theta())
+
+
+def test_get_overhead_geom2ds():
+    """Tests for get_overhead_geom2ds()."""
+    env = prbench.make("prbench/TidyBot3D-ground-o1-v0")
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    obs, _ = env.reset(seed=123)
+    state = env.observation_space.devectorize(obs)
+    geoms = get_overhead_geom2ds(state)
+    assert len(geoms) == 2
+    robot_geom = geoms["robot"]
+    assert isinstance(robot_geom, Rectangle)
+    cube_geom = geoms["cube1"]
+    assert isinstance(cube_geom, Rectangle)
+
+
+def test_plot_overhead_scene():
+    """Tests for plot_overhead_scene()."""
+    
+    env = prbench.make("prbench/TidyBot3D-ground-o3-v0")
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    obs, _ = env.reset(seed=123)
+    state = env.observation_space.devectorize(obs)
+    fig, ax = plot_overhead_scene(state, min_x=-1.5, max_x=1.5, min_y=-1.5, max_y=1.5)
+    assert isinstance(fig, plt.Figure)
+    assert isinstance(ax, plt.Axes)
+
+    # TODO
+    # Uncomment to debug.
+    from prpl_utils.utils import fig2data
+    import imageio.v2 as iio
+    ax.set_title("Overhead Scene Example")
+    plt.tight_layout()
+    img = fig2data(fig)
+    outfile = "out_plot_overhead_scene.png"
+    iio.imsave(outfile, img)
+    print(f"Wrote out to {outfile}")

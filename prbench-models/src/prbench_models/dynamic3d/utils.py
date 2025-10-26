@@ -6,7 +6,9 @@ from relational_structs import (
     ObjectCentricState,
 )
 from spatialmath import SE2, UnitQuaternion
-from tomsgeoms2d.structs import Geom2D
+from tomsgeoms2d.structs import Geom2D, Rectangle
+from matplotlib import pyplot as plt
+import numpy as np
 
 
 def get_overhead_object_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
@@ -38,3 +40,55 @@ def get_overhead_robot_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
 
 def get_overhead_geom2ds(state: ObjectCentricState) -> dict[str, Geom2D]:
     """Get a mapping from object name to Geom2D from an overhead perspective."""
+    geoms: dict[str, Geom2D] = {}
+    for obj in state:
+        if obj.is_instance(MujocoRobotObjectType):
+            pose = get_overhead_robot_se2_pose(state, obj)
+            # TODO NEED TO GET THESE FROM SOMEWHERE
+            width = 0.5
+            height = 0.5
+        elif obj.is_instance(MujocoObjectType):
+            pose = get_overhead_object_se2_pose(state, obj)
+            # TODO NEED TO GET THESE FROM SOMEWHERE
+            width = 0.1
+            height = 0.1
+        geom = Rectangle.from_center(pose.x, pose.y, width, height,
+                                     rotation_about_center=pose.theta())
+        geoms[obj.name] = geom
+    return geoms
+
+
+def plot_overhead_scene(state: ObjectCentricState,
+                        min_x: float = -2.5,
+                        max_x: float = 2.5,
+                        min_y: float = -2.5,
+                        max_y: float = 2.5,
+                        fontsize: int = 6) -> tuple[plt.Figure, plt.Axes]:
+    """Create a matplotlib figure with a top-down scene rendering."""
+
+    fig, ax = plt.subplots()
+
+    fontdict = {
+        "fontsize": fontsize,
+        "color": "black",
+        "ha": "center",
+        "va": "center",
+        "fontweight": "medium",
+        "bbox": dict(facecolor="white", alpha=0.25, edgecolor="none", pad=2),
+    }
+
+    geoms = get_overhead_geom2ds(state)
+    for obj_name, geom in geoms.items():
+        geom.plot(ax, facecolor="white", edgecolor="black")
+        assert isinstance(geom, Rectangle)
+        x, y = geom.center
+        dx = geom.width / 1.5 * np.cos(geom.theta)
+        dy = geom.height / 1.5 * np.sin(geom.theta)
+        arrow_width = max(max_x - min_x, max_y - min_y) / 250.0
+        ax.arrow(x, y, dx, dy, color="gray", width=arrow_width)
+        ax.text(x, y, obj_name, fontdict=fontdict)
+
+    ax.set_xlim((min_x, max_x))
+    ax.set_ylim((min_y, max_y))
+
+    return fig, ax
