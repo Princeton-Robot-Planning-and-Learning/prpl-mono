@@ -289,10 +289,18 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             action = self.agent.get_action(obs, deterministic=True)
         return action
 
-    def evaluate(self, eval_episodes: int) -> dict[str, Any]:
+    def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
         """Evaluate the PPO agent."""
         envs = gym.vector.SyncVectorEnv(
-            [make_env(self.env_id, 0, True, self.cfg.exp_name, self.max_episode_steps)]
+            [
+                make_env(
+                    self.env_id,
+                    0,
+                    render,
+                    self.cfg.exp_name + "_eval",
+                    self.max_episode_steps,
+                )
+            ]
         )
 
         # Set agent to eval mode
@@ -306,7 +314,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         while len(episodic_returns) < eval_episodes:
             with torch.no_grad():
                 obs_tensor = torch.Tensor(obs).to(self.device)
-                action = self.get_action_from_obs(obs_tensor)
+                action = self.agent(obs_tensor)
                 actions = action.cpu().numpy()
 
             obs, _, _, _, infos = envs.step(actions)
@@ -333,9 +341,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         }
         return eval_metrics
 
-    def train(  # type: ignore[override]
-        self,
-    ) -> dict[str, Any]:
+    def train(self, render: bool = False) -> dict[str, Any]:  # type: ignore
         """Training the agent with an interactive batched environment."""
         # Initialize observation normalization variables
         # update the args with the environment-specific values
@@ -343,7 +349,11 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         envs = gym.vector.SyncVectorEnv(
             [
                 make_env(
-                    self.env_id, i, False, self.cfg.exp_name, self.max_episode_steps
+                    self.env_id,
+                    i,
+                    render,
+                    self.cfg.exp_name + "_train",
+                    self.max_episode_steps,
                 )
                 for i in range(self.args.num_envs)
             ]

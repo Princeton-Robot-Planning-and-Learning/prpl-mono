@@ -18,16 +18,17 @@ class RandomAgent(BaseRLAgent[_O, _U]):
         """Sample a random action from the action space."""
         return self.action_space.sample()  # type: ignore
 
-    def train(self) -> dict[str, Any]:  # type: ignore
+    def train(self, render: bool = False) -> dict[str, Any]:  # type: ignore
         """Train does nothing for random agent."""
+        del render
         return {}
 
-    def evaluate(self, eval_episodes: int) -> dict[str, Any]:
+    def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
         """Evaluate the agent over a number of episodes."""
         envs = gym.vector.SyncVectorEnv(
             [
                 make_env(
-                    self.env_id, 0, True, "random_agent_eval", self.max_episode_steps
+                    self.env_id, 0, render, "random_agent_eval", self.max_episode_steps
                 )
             ]
         )
