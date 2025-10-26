@@ -4,6 +4,7 @@ import numpy as np
 import prbench
 from matplotlib import pyplot as plt
 from relational_structs.spaces import ObjectCentricBoxSpace
+from spatialmath import SE2
 from tomsgeoms2d.structs import Rectangle
 
 from prbench_models.dynamic3d.utils import (
@@ -11,6 +12,7 @@ from prbench_models.dynamic3d.utils import (
     get_overhead_object_se2_pose,
     get_overhead_robot_se2_pose,
     plot_overhead_scene,
+    run_base_motion_planning,
 )
 
 prbench.register_all_environments()
@@ -102,5 +104,53 @@ def test_plot_overhead_scene():
     # print(f"Wrote out to {outfile}")
     # img = env.render()
     # outfile = "actual_scene.png"
+    # iio.imsave(outfile, img)
+    # print(f"Wrote out to {outfile}")
+
+
+def test_run_base_motion_planning():
+    """Tests for run_base_motion_planning()."""
+
+    env = prbench.make("prbench/TidyBot3D-ground-o3-v0", render_mode="rgb_array")
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    obs, _ = env.reset(seed=123)
+    state = env.observation_space.devectorize(obs)
+
+    target_base_pose = SE2(0.5, 0.5, 0.0)
+    x_bounds = (-1.5, 1.5)
+    y_bounds = (-1.5, 1.5)
+    seed = 123
+    base_motion_plan = run_base_motion_planning(
+        state, target_base_pose, x_bounds, y_bounds, seed
+    )
+    assert base_motion_plan is not None
+
+    # Uncomment to debug.
+    # import imageio.v2 as iio
+    # from prpl_utils.utils import fig2data
+    # from prbench_models.dynamic3d.utils import get_bounding_box
+
+    # fig, ax = plot_overhead_scene(
+    #     state,
+    #     min_x=x_bounds[0],
+    #     max_x=x_bounds[1],
+    #     min_y=y_bounds[0],
+    #     max_y=y_bounds[1],
+    # )
+    # robot = state.get_object_from_name("robot")
+    # robot_width, robot_height, _ = get_bounding_box(state, robot)
+    # for pose in base_motion_plan:
+    #     robot_geom = Rectangle.from_center(
+    #         pose.x,
+    #         pose.y,
+    #         robot_width,
+    #         robot_height,
+    #         rotation_about_center=pose.theta(),
+    #     )
+    #     robot_geom.plot(ax, fc="none", ec="gray", linestyle="dashed")
+    # ax.set_title("Motion Planning Example")
+    # plt.tight_layout()
+    # img = fig2data(fig)
+    # outfile = "base_motion_planning.png"
     # iio.imsave(outfile, img)
     # print(f"Wrote out to {outfile}")
