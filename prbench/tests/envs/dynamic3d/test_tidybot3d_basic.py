@@ -127,8 +127,8 @@ def test_tidybot3d_object_centric_data():
     for obj in env._objects:  # pylint: disable=protected-access
         data = obj.get_object_centric_data()
         assert isinstance(data, dict), "Object-centric data should be a dict"
-        object_state_type = obj.object_state_type.type
-        expected_keys = set(MujocoObjectTypeFeatures[object_state_type])
+        object_type = obj.symbolic_object.type
+        expected_keys = set(MujocoObjectTypeFeatures[object_type])
         assert expected_keys.issubset(
             data.keys()
         ), f"Data keys missing, expected at least {expected_keys}"

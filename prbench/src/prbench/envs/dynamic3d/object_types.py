@@ -63,3 +63,13 @@ MujocoObjectTypeFeatures[MujocoRobotObjectType] = [
     "vel_arm_joint7",
     "vel_gripper",
 ]
+
+MujocoCuboidType = Type("mujoco_cuboid", parent=MujocoObjectType)
+MujocoObjectTypeFeatures[MujocoCuboidType] = MujocoObjectTypeFeatures[
+    MujocoObjectType
+] + [
+    # Full extents in x, y, z directions.
+    "x_extent",
+    "y_extent",
+    "z_extent",
+]
