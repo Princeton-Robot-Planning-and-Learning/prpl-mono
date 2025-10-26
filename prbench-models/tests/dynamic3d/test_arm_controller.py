@@ -7,7 +7,7 @@ are installed.
 import numpy as np
 import pytest
 
-from prbench_models.tidybot.arm_controller import ArmController
+from prbench_models.dynamic3d.arm_controller import ArmController
 
 # pylint: disable=redefined-outer-name
 

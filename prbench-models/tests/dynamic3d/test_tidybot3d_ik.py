@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from prbench_models.tidybot.ik_solver import TidybotIKSolver
+from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 
 
 def test_ik_solver_basic():
