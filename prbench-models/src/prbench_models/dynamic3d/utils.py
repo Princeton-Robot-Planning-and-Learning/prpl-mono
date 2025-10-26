@@ -128,7 +128,7 @@ def run_base_motion_planning(
     x_bounds: tuple[float, float],
     y_bounds: tuple[float, float],
     seed: int,
-    extend_xy_magnitude: float = 0.1,
+    extend_xy_magnitude: float = 0.025,
     extend_rot_magnitude: float = np.pi / 8,
     num_attempts: int = 10,
     num_iters: int = 100,
