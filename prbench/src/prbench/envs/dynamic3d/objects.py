@@ -13,6 +13,7 @@ from relational_structs import Object
 
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
 from prbench.envs.dynamic3d.object_types import (
+    MujocoCuboidType,
     MujocoFixtureObjectType,
     MujocoObjectType,
 )
@@ -102,7 +103,7 @@ class MujocoObject:
         self.options = options if options is not None else {}
 
         # Create the corresponding Object for state representation key
-        self.object_state_type = Object(self.name, MujocoObjectType)
+        self.symbolic_object = Object(self.name, MujocoObjectType)
 
         self.xml_element: ET.Element  # To be defined in subclasses
 
@@ -287,6 +288,9 @@ class Cube(MujocoObject):
         # Initialize base class
         super().__init__(name, env, options)
 
+        # Override object type
+        self.symbolic_object = Object(self.name, MujocoCuboidType)
+
         # Handle size parameter
         size = self.options.get("size", 0.02)
         if isinstance(size, (int, float)):
@@ -345,6 +349,14 @@ class Cube(MujocoObject):
             f"size={self.size}, rgba='{self.rgba}', mass={self.mass})"
         )
 
+    def get_object_centric_data(self) -> dict[str, float]:
+        data = super().get_object_centric_data()
+        # Add extents.
+        data["x_extent"] = self.size[0]
+        data["y_extent"] = self.size[1]
+        data["z_extent"] = self.size[2]
+        return data
+
 
 class MujocoFixture(abc.ABC):
     """Base class for MuJoCo fixtures (static objects).
@@ -373,7 +385,7 @@ class MujocoFixture(abc.ABC):
         self.regions = regions
 
         # Create the corresponding Object for state representation key
-        self.object_state_type = Object(self.name, MujocoFixtureObjectType)
+        self.symbolic_object = Object(self.name, MujocoFixtureObjectType)
 
         self.xml_element: ET.Element  # To be defined in subclasses
 
