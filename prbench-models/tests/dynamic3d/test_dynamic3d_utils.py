@@ -92,15 +92,15 @@ def test_plot_overhead_scene():
     assert isinstance(ax, plt.Axes)
 
     # Uncomment to debug.
-    from prpl_utils.utils import fig2data
-    import imageio.v2 as iio
-    ax.set_title("Overhead Scene Example")
-    plt.tight_layout()
-    img = fig2data(fig)
-    outfile = "out_plot_overhead_scene.png"
-    iio.imsave(outfile, img)
-    print(f"Wrote out to {outfile}")
-    img = env.render()
-    outfile = "actual_scene.png"
-    iio.imsave(outfile, img)
-    print(f"Wrote out to {outfile}")
+    # from prpl_utils.utils import fig2data
+    # import imageio.v2 as iio
+    # ax.set_title("Overhead Scene Example")
+    # plt.tight_layout()
+    # img = fig2data(fig)
+    # outfile = "out_plot_overhead_scene.png"
+    # iio.imsave(outfile, img)
+    # print(f"Wrote out to {outfile}")
+    # img = env.render()
+    # outfile = "actual_scene.png"
+    # iio.imsave(outfile, img)
+    # print(f"Wrote out to {outfile}")

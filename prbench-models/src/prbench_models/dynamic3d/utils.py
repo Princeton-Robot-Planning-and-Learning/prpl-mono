@@ -2,7 +2,11 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
-from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType, MujocoCuboidType
+from prbench.envs.dynamic3d.object_types import (
+    MujocoCuboidType,
+    MujocoObjectType,
+    MujocoRobotObjectType,
+)
 from relational_structs import (
     Object,
     ObjectCentricState,
@@ -38,7 +42,9 @@ def get_overhead_robot_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
     return SE2(x, y, yaw)
 
 
-def get_bounding_box(state: ObjectCentricState, obj: Object) -> tuple[float, float, float]:
+def get_bounding_box(
+    state: ObjectCentricState, obj: Object
+) -> tuple[float, float, float]:
     """Returns (x extent, y extent, z extent) for the given object.
 
     We may want to later add something to the state that allows these values to be
@@ -48,7 +54,11 @@ def get_bounding_box(state: ObjectCentricState, obj: Object) -> tuple[float, flo
         # NOTE: hardcoded for now.
         return (0.5, 0.5, 1.0)
     if obj.is_instance(MujocoCuboidType):
-        return (state.get(obj, "x_extent"), state.get(obj, "y_extent"), state.get(obj, "z_extent"))
+        return (
+            state.get(obj, "x_extent"),
+            state.get(obj, "y_extent"),
+            state.get(obj, "z_extent"),
+        )
     raise NotImplementedError
 
 
