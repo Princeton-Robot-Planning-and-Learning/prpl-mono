@@ -23,6 +23,10 @@ MujocoObjectTypeFeatures[MujocoObjectType] = [
     "wx",
     "wy",
     "wz",
+    # Bounding box dimensions (full, not half).
+    "bb_x",
+    "bb_y",
+    "bb_z",
 ]
 
 MujocoFixtureObjectType = Type("mujoco_fixture")
