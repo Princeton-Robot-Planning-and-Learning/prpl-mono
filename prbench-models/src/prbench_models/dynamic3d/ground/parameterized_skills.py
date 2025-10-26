@@ -47,8 +47,7 @@ def create_lifted_controllers(
 
         def terminated(self) -> bool:
             assert self._last_state is not None
-            goal = goal_deriver(self._last_state)
-            return goal.check_state(self._last_state)
+            return False
 
         def step(self) -> Array:
             # Take one step towards the target.
