@@ -3,7 +3,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from prbench.envs.dynamic3d.object_types import (
-    MujocoCuboidType,
     MujocoObjectType,
     MujocoRobotObjectType,
 )
@@ -53,11 +52,11 @@ def get_bounding_box(
     if obj.is_instance(MujocoRobotObjectType):
         # NOTE: hardcoded for now.
         return (0.5, 0.5, 1.0)
-    if obj.is_instance(MujocoCuboidType):
+    if obj.is_instance(MujocoObjectType):
         return (
-            state.get(obj, "x_extent"),
-            state.get(obj, "y_extent"),
-            state.get(obj, "z_extent"),
+            state.get(obj, "bb_x"),
+            state.get(obj, "bb_y"),
+            state.get(obj, "bb_z"),
         )
     raise NotImplementedError
 
@@ -68,7 +67,7 @@ def get_overhead_geom2ds(state: ObjectCentricState) -> dict[str, Geom2D]:
     for obj in state:
         if obj.is_instance(MujocoRobotObjectType):
             pose = get_overhead_robot_se2_pose(state, obj)
-        elif obj.is_instance(MujocoCuboidType):
+        elif obj.is_instance(MujocoObjectType):
             pose = get_overhead_object_se2_pose(state, obj)
         else:
             raise NotImplementedError
