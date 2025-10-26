@@ -1,13 +1,14 @@
 """Tests for ground parameterized skills."""
 
-from prbench_models.dynamic3d.ground.parameterized_skills import create_lifted_controllers
-from relational_structs.spaces import ObjectCentricBoxSpace
-
+import numpy as np
 import prbench
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
-import numpy as np
+from relational_structs.spaces import ObjectCentricBoxSpace
 
+from prbench_models.dynamic3d.ground.parameterized_skills import (
+    create_lifted_controllers,
+)
 
 prbench.register_all_environments()
 
@@ -17,12 +18,14 @@ def test_move_to_target_controller_one_cube():
 
     # Create the environment.
     num_cubes = 1
-    env = prbench.make(f"prbench/TidyBot3D-ground-o{num_cubes}-v0", render_mode="rgb_array")
+    env = prbench.make(
+        f"prbench/TidyBot3D-ground-o{num_cubes}-v0", render_mode="rgb_array"
+    )
     if MAKE_VIDEOS:
         env = RecordVideo(
             env, "unit_test_videos", name_prefix=f"TidyBot3D-ground-o{num_cubes}"
         )
-    
+
     # Reset the environment and get the initial state.
     obs, _ = env.reset(seed=123)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
@@ -48,7 +51,7 @@ def test_move_to_target_controller_one_cube():
         if controller.terminated():
             break
     # else:
-        # TODO add this!
-        # assert False, "Controller did not terminate"
+    # TODO add this!
+    # assert False, "Controller did not terminate"
 
     env.close()

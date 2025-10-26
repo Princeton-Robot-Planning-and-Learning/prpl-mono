@@ -9,12 +9,13 @@ from bilevel_planning.structs import (
 )
 from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType
 from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
-from prbench_models.dynamic3d.utils import get_overhead_object_se2_pose
 from relational_structs import (
     Array,
     ObjectCentricState,
     Variable,
 )
+
+from prbench_models.dynamic3d.utils import get_overhead_object_se2_pose
 
 # Constants.
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
@@ -26,7 +27,7 @@ class MoveToTargetGroundController(
     GroundParameterizedController[ObjectCentricState, Array]
 ):
     """Controller for motion planning to reach a target.
-    
+
     The object parameters are:
         robot: The robot itself.
         object: The target object (cube).
@@ -47,9 +48,7 @@ class MoveToTargetGroundController(
         self._last_state: ObjectCentricState | None = None
         self._current_params: np.ndarray | None = None
 
-    def sample_parameters(
-        self, x: ObjectCentricState, rng: np.random.Generator
-    ) -> Any:
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
         rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
@@ -61,8 +60,9 @@ class MoveToTargetGroundController(
         # Make a motion plan.
         target = x.get_object_from_name("cube1")
         target_se2 = get_overhead_object_se2_pose(x, target)
-        import ipdb; ipdb.set_trace()
+        import ipdb
 
+        ipdb.set_trace()
 
     def terminated(self) -> bool:
         assert self._last_state is not None
