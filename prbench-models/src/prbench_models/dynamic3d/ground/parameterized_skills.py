@@ -14,6 +14,7 @@ from relational_structs import (
     ObjectCentricState,
     Variable,
 )
+from spatialmath import SE2
 
 from prbench_models.dynamic3d.utils import get_overhead_object_se2_pose
 
@@ -21,6 +22,27 @@ from prbench_models.dynamic3d.utils import get_overhead_object_se2_pose
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.1, 0.3)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi, np.pi)
+
+
+# Utility functions.
+def get_target_robot_pose_from_parameters(
+    target_object_pose: SE2, target_distance: float, target_rot: float
+) -> SE2:
+    """Determine the pose for the robot given the state and parameters.
+
+    The robot will be facing the target_object_pose position while being target_distance
+    away, and rotated w.r.t. the target_object_pose rotation by target_rot.
+    """
+    # Absolute angle of the line from the robot to the target.
+    ang = target_object_pose.theta() + target_rot
+
+    # Place the robot `target_distance` away from the target along -ang
+    tx, ty = target_object_pose.t  # target translation (x, y).
+    rx = tx - target_distance * np.cos(ang)
+    ry = ty - target_distance * np.sin(ang)
+
+    # Robot faces the target: heading points along +ang (toward the target).
+    return SE2(rx, ry, ang)
 
 
 class MoveToTargetGroundController(
@@ -57,9 +79,14 @@ class MoveToTargetGroundController(
         self._last_state = x
         assert isinstance(params, np.ndarray)
         self._current_params = params.copy()
-        # Make a motion plan.
-        target = x.get_object_from_name("cube1")
-        target_se2 = get_overhead_object_se2_pose(x, target)
+        # Derive the target pose for the robot.
+        target_distance, target_rot = self._current_params
+        target_object = x.get_object_from_name("cube1")
+        target_object_pose = get_overhead_object_se2_pose(x, target_object)
+        robot_pose = get_target_robot_pose_from_parameters(
+            target_object_pose, target_distance, target_rot
+        )
+
         import ipdb
 
         ipdb.set_trace()
