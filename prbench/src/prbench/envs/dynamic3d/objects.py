@@ -352,9 +352,9 @@ class Cube(MujocoObject):
     def get_object_centric_data(self) -> dict[str, float]:
         data = super().get_object_centric_data()
         # Add extents.
-        data["x_extent"] = self.size[0]
-        data["y_extent"] = self.size[1]
-        data["z_extent"] = self.size[2]
+        data["x_extent"] = 2 * self.size[0]
+        data["y_extent"] = 2 * self.size[1]
+        data["z_extent"] = 2 * self.size[2]
         return data
 
 
