@@ -26,7 +26,7 @@ def create_lifted_controllers(
 
     del action_space, init_constant_state  # not used
 
-    # Controllers (may later move into prbench_models).
+    # Controllers.
     class MoveToTargetGroundController(
         GroundParameterizedController[ObjectCentricState, Array]
     ):
