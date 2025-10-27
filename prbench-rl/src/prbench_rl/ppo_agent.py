@@ -324,7 +324,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 for info in infos["final_info"]:
                     if info is None or "episode" not in info:
                         continue
-                    print(
+                    logging.info(
                         f"eval_episode={len(episodic_returns)}, "
                         f"episodic_return={info['episode']['r']}"
                     )
@@ -346,6 +346,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         # Initialize observation normalization variables
         # update the args with the environment-specific values
         # env setup
+        episodic_returns = []
         envs = gym.vector.SyncVectorEnv(
             [
                 make_env(
@@ -448,10 +449,11 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                     for info in infos["final_info"]:
                         if info and "episode" in info:
                             episode_return = info["episode"]["r"]
-                            print(
+                            logging.info(
                                 f"global_step={global_step}, "
                                 f"episodic_return={episode_return}"
                             )
+                            episodic_returns.append(info["episode"]["r"])
                             if self.writer is not None:
                                 self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                     "charts/episodic_return",
@@ -641,7 +643,10 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         if self.writer is not None:
             self.writer.close()  # type: ignore[no-untyped-call]
 
-        return {}
+        train_metrics = {
+            "episodic_return": episodic_returns,
+        }
+        return train_metrics
 
     def save(self, filepath: str) -> None:
         """Save agent parameters."""

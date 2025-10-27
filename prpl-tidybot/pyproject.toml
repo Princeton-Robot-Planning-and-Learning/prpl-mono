@@ -7,10 +7,27 @@ name = "prpl_tidybot"
 version = "0.1.0"
 description = "Code for interfacing with the real TidyBot++ robot."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10.14, <3.13"
 dependencies = [
    "numpy",
+   "threadpoolctl",
+   "scipy", 
+   "opencv-python", 
+   "h5py",
+   "mujoco",
+   "tqdm", 
+   "notebook",
+   "matplotlib",
+   "pin",
+   "ruckig",
+   "flask",
+   "flask_socketio",
+   "pyzmq",
+   "redis",
+   "phoenix6",
+   "pygame",
    "spatialmath-python",
+   "kortex-api",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +40,12 @@ develop = [
     "pytest-pylint>=0.18.0",
     "pytest>=7.2.2",
 ]
+
+[tool.uv]
+override-dependencies = ["protobuf==3.20.0"]
+
+[tool.uv.sources]
+kortex-api = {path = "kortex_wheels/kortex_api-2.6.0.post3-py3-none-any.whl"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

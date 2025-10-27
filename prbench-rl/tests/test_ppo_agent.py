@@ -3,11 +3,9 @@
 import gymnasium
 import numpy as np
 import prbench
-import pytest
 from gymnasium import spaces
 from omegaconf import DictConfig
 from prbench.envs.geom2d.stickbutton2d import StickButton2DEnv
-from relational_structs import Object, ObjectCentricState, Type
 
 from prbench_rl.ppo_agent import PPOAgent
 
@@ -84,7 +82,6 @@ def test_ppo_agent_with_prbench_environment():
     agent.close()
 
 
-@pytest.mark.skip("This test is currently flaky, disabling to unblock others PRs")
 def test_ppo_agent_training_with_fixed_environment():
     """Test PPO agent can overfit on fixed environment setup."""
     prbench.register_all_environments()
@@ -104,40 +101,15 @@ def test_ppo_agent_training_with_fixed_environment():
             self.metadata = env.metadata
             obs0, _ = self.env.reset(seed=123)
             # Check if the observation space has devectorize method
-            if hasattr(self.env.observation_space, "devectorize"):
-                state0 = self.env.observation_space.devectorize(obs0)
-            else:
-                # Handle case where observation_space is a regular Box space
-                # For testing purposes, create a mock state with required attributes
-                # Create types for objects
-                robot_type = Type(name="robot")
-                button_type = Type(name="button")
+            assert hasattr(self.env.observation_space, "devectorize")
+            state0 = self.env.observation_space.devectorize(obs0)
 
-                # Create real Object instances for the mock state
-                robot = Object(name="robot", type=robot_type)
-                button0 = Object(name="button0", type=button_type)
-
-                # Create mock data dictionary with numpy arrays
-                mock_data = {
-                    robot: np.array([0.0, 0.0]),  # x, y position
-                    button0: np.array([1.0, 1.0]),  # x, y position
-                }
-
-                # Create type_features mapping
-                type_features_dict: dict[Type, list[str]] = {
-                    robot_type: ["x", "y"],
-                    button_type: ["x", "y"],
-                }
-
-                state0 = ObjectCentricState(
-                    data=mock_data, type_features=type_features_dict
-                )
             obj_name_to_obj = {o.name: o for o in list(state0.data.keys())}
             robot = obj_name_to_obj["robot"]
             button0 = obj_name_to_obj["button0"]
 
             state1 = state0.copy()
-            state1.set(robot, "x", 1.5)
+            state1.set(robot, "x", 1.8)
             state1.set(robot, "y", 1.0)
             state1.set(button0, "y", 1.0)
             state1.set(button0, "x", 2.0)
@@ -203,7 +175,7 @@ def test_ppo_agent_training_with_fixed_environment():
             "total_timesteps": 3000,  # Use > 3000 to ensure overfitting
             "learning_rate": 3e-3,  # Higher learning rate for faster learning
             "num_envs": 1,
-            "num_steps": 128,  # Small rollout for quick updates
+            "num_steps": 256,  # Small rollout for quick updates
             "gamma": 0.99,
             "gae_lambda": 0.95,
             "num_minibatches": 32,
@@ -231,14 +203,18 @@ def test_ppo_agent_training_with_fixed_environment():
         max_episode_steps=100,
     )
 
-    before_train_eval = agent.evaluate(3)
+    before_train_eval = agent.evaluate(5)
     mean_r_before = np.mean(before_train_eval["episodic_return"])
 
     # Test training
-    _ = agent.train()
+    train_metric = agent.train()
 
-    # Test that agent can perform better after training
-    eval_metric = agent.evaluate(3)
-    mean_r_after = np.mean(eval_metric["episodic_return"])
-    assert mean_r_after > mean_r_before
+    # should have episodic_return in train_metric
+    assert "episodic_return" in train_metric
+    episodic_returns = train_metric["episodic_return"]
+    assert len(episodic_returns) > 10
+    mean_r_after = np.mean(episodic_returns[-5:])  # Mean of last 5 episodes
+    assert (
+        mean_r_after > mean_r_before
+    ), f"Agent did not improve: before={mean_r_before}, after={mean_r_after}"
     agent.close()
