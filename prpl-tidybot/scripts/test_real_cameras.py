@@ -17,13 +17,13 @@ def test_real_cameras() -> None:
     wrist_camera = KinovaCamera()  # type: ignore
     base_image = base_camera.get_image()  # type: ignore
     wrist_image = wrist_camera.get_image()  # type: ignore
-    cv.imwrite(  # pylint: disable=no-member
+    cv.imwrite(
         "test_images/base_image.jpg",
-        cv.cvtColor(base_image, cv.COLOR_RGB2BGR),  # pylint: disable=no-member
+        cv.cvtColor(base_image, cv.COLOR_RGB2BGR),
     )
-    cv.imwrite(  # pylint: disable=no-member
+    cv.imwrite(
         "test_images/wrist_image.jpg",
-        cv.cvtColor(wrist_image, cv.COLOR_RGB2BGR),  # pylint: disable=no-member
+        cv.cvtColor(wrist_image, cv.COLOR_RGB2BGR),
     )
     base_camera.close()  # type: ignore
     wrist_camera.close()  # type: ignore
