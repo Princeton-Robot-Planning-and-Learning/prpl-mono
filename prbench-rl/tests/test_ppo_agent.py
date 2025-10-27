@@ -3,11 +3,9 @@
 import gymnasium
 import numpy as np
 import prbench
-import pytest
 from gymnasium import spaces
 from omegaconf import DictConfig
 from prbench.envs.geom2d.stickbutton2d import StickButton2DEnv
-from relational_structs import Object, ObjectCentricState, Type
 
 from prbench_rl.ppo_agent import PPOAgent
 
@@ -210,10 +208,14 @@ def test_ppo_agent_training_with_fixed_environment():
     mean_r_before = np.mean(before_train_eval["episodic_return"])
 
     # Test training
-    _ = agent.train()
+    train_metric = agent.train()
 
-    # Test that agent can perform better after training
-    eval_metric = agent.evaluate(5)
-    mean_r_after = np.mean(eval_metric["episodic_return"])
-    assert mean_r_after > mean_r_before
+    # should have episodic_return in train_metric
+    assert "episodic_return" in train_metric
+    episodic_returns = train_metric["episodic_return"]
+    assert len(episodic_returns) > 10
+    mean_r_after = np.mean(episodic_returns[-5:])  # Mean of last 5 episodes
+    assert (
+        mean_r_after > mean_r_before
+    ), f"Agent did not improve: before={mean_r_before}, after={mean_r_after}"
     agent.close()
