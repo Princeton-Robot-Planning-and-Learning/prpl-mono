@@ -82,7 +82,6 @@ def test_ppo_agent_with_prbench_environment():
     agent.close()
 
 
-# @pytest.mark.skip("This test is currently flaky, disabling to unblock others PRs")
 def test_ppo_agent_training_with_fixed_environment():
     """Test PPO agent can overfit on fixed environment setup."""
     prbench.register_all_environments()
