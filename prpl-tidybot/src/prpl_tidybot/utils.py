@@ -1,13 +1,12 @@
 """Utility functions for the real tidybot."""
 
-# mypy: ignore-errors
-# pylint: disable=all
 import atexit
 import os
 from pathlib import Path
 
 
 def create_pid_file(name):
+    """Utility to create a PID file."""
     # Check if PID file already exists
     pid_file_path = Path(f"/tmp/{name}.pid")
     if pid_file_path.exists():
@@ -24,7 +23,7 @@ def create_pid_file(name):
                 print(f"Removing stale PID file (PID {pid})")
                 pid_file_path.unlink()
             else:
-                raise Exception(
+                raise Exception(  # pylint: disable=broad-exception-raised
                     f"Another instance of the {name} is already running (PID {pid})"
                 )
 
@@ -38,6 +37,7 @@ def create_pid_file(name):
 
 
 def remove_pid_file(pid_file_path):
+    """Utility to remove a PID file."""
     # Remove PID file if it corresponds to the current process
     if pid_file_path.exists():
         with open(pid_file_path, "r", encoding="utf-8") as f:

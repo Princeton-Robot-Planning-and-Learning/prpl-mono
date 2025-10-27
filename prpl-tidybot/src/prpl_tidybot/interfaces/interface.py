@@ -52,7 +52,6 @@ class Interface(abc.ABC):
         )
 
 
-# TO BE IMPLEMENTED SOON!
 class RealInterface(Interface):
     """The real and sole interface to the real robot."""
 
