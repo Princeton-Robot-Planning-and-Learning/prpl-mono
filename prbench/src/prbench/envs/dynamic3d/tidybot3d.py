@@ -391,10 +391,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         state_dict = {}
         for obj in self._objects:
             obj_data = obj.get_object_centric_data()
-            state_dict[obj.object_state_type] = obj_data
+            state_dict[obj.symbolic_object] = obj_data
         for fixture in self._fixtures_dict.values():
             fixture_data = fixture.get_object_centric_data()
-            state_dict[fixture.object_state_type] = fixture_data
+            state_dict[fixture.symbolic_object] = fixture_data
         # Add robot into object-centric state.
         robot = Object("robot", MujocoRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
