@@ -32,10 +32,7 @@ class FakeArmInterface(ArmInterface):
 
 
 class RealArmInterface(ArmInterface):
-    """Real arm interface.
-
-    Coming soon!
-    """
+    """Real arm interface."""
 
     def __init__(self):
         self.arm_state = RETRACT_ARM_CONF
