@@ -10,7 +10,7 @@ import spatialmath
 from prpl_utils.structs import Image
 
 from prpl_tidybot.interfaces.arm_interface import FakeArmInterface
-from prpl_tidybot.interfaces.base_interface import FakeBaseInterface
+from prpl_tidybot.interfaces.base_interface import FakeBaseInterface, RealBaseInterface
 from prpl_tidybot.interfaces.camera_interface import (
     FakeCameraInterface,
     RealCameraInterface,
@@ -57,9 +57,10 @@ class RealInterface(Interface):
 
     def __init__(self):
         self.camera_interface = RealCameraInterface()
+        self.base_interface = RealBaseInterface()
 
     def get_base_state(self) -> spatialmath.SE2:
-        raise NotImplementedError("Not implemented yet.")
+        return self.base_interface.get_base_state()
 
     def get_arm_state(self) -> list[float]:
         raise NotImplementedError("Not implemented yet.")

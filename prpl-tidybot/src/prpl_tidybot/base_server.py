@@ -8,10 +8,13 @@
 # non-real-time process to avoid interfering with the low-level control and
 # causing latency spikes.
 
+# mypy: ignore-errors
+# pylint: disable=all
+
 import time
 from multiprocessing.managers import BaseManager as MPBaseManager
-from base_controller import Vehicle
-from constants import BASE_RPC_HOST, BASE_RPC_PORT, RPC_AUTHKEY
+from prpl_tidybot.base_controller import Vehicle
+from prpl_tidybot.constants import BASE_RPC_HOST, BASE_RPC_PORT, RPC_AUTHKEY
 
 class Base:
     def __init__(self, max_vel=(0.5, 0.5, 1.57), max_accel=(0.25, 0.25, 0.79)):

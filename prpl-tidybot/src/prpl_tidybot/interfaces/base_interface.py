@@ -1,12 +1,17 @@
 """Base interface."""
 
 import abc
-import numpy as np
 
+import numpy as np
 import spatialmath
-from prpl_tidybot.constants import POLICY_CONTROL_PERIOD
+
 from prpl_tidybot.base_server import BaseManager
-from prpl_tidybot.constants import BASE_RPC_HOST, BASE_RPC_PORT, RPC_AUTHKEY
+from prpl_tidybot.constants import (
+    BASE_RPC_HOST,
+    BASE_RPC_PORT,
+    POLICY_CONTROL_PERIOD,
+    RPC_AUTHKEY,
+)
 
 
 class BaseInterface(abc.ABC):
@@ -31,13 +36,15 @@ class RealBaseInterface(BaseInterface):
     """Real base interface."""
 
     def __init__(self):
-        self.base_manager = BaseManager(address=(BASE_RPC_HOST, BASE_RPC_PORT), authkey=RPC_AUTHKEY)
+        self.base_manager = BaseManager(
+            address=(BASE_RPC_HOST, BASE_RPC_PORT), authkey=RPC_AUTHKEY
+        )
         self.base_manager.connect()
         self.base = self.base_manager.Base()
         self.base.reset()
-        
+
     def get_base_state(self) -> spatialmath.SE2:
-        return self.base.get_state()
+        return spatialmath.SE2(self.base.get_state()[0], self.base.get_state()[1], self.base.get_state()[2])
 
     def execute_action(self, action) -> None:
         raise NotImplementedError("Real base execute_action not implemented yet.")
@@ -45,4 +52,3 @@ class RealBaseInterface(BaseInterface):
 
     def close(self) -> None:
         self.base.close()
-        self.base_manager.disconnect()

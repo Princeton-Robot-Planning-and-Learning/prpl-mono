@@ -17,6 +17,9 @@
 # References:
 # - https://github.com/google/powered-caster-vehicle
 
+# mypy: ignore-errors
+# pylint: disable=all
+
 # Tell Phoenix 6 to use hardware instead of simulation
 import os
 os.environ['CTR_TARGET'] = 'Hardware'  # pylint: disable=wrong-import-position
@@ -31,9 +34,9 @@ import phoenix6
 from phoenix6 import configs, controls, hardware
 from ruckig import InputParameter, OutputParameter, Result, Ruckig, ControlInterface
 from threadpoolctl import threadpool_limits
-from constants import h_x, h_y, ENCODER_MAGNET_OFFSETS
-from constants import POLICY_CONTROL_PERIOD
-from utils import create_pid_file
+from prpl_tidybot.constants import h_x, h_y, ENCODER_MAGNET_OFFSETS
+from prpl_tidybot.constants import POLICY_CONTROL_PERIOD
+from prpl_tidybot.utils import create_pid_file
 
 # Vehicle
 CONTROL_FREQ = 250                   # 250 Hz
