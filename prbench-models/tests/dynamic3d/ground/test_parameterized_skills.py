@@ -96,7 +96,9 @@ def test_move_to_target_controller_one_cube():
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
-    params = np.array([])  # TODO
+    target_distance = 0.5
+    target_rotation = 0.0
+    params = np.array([target_distance, target_rotation])
 
     # Reset and execute the controller until it terminates.
     controller.reset(state, params)
@@ -108,8 +110,7 @@ def test_move_to_target_controller_one_cube():
         state = next_state
         if controller.terminated():
             break
-    # else:
-    # TODO add this!
-    # assert False, "Controller did not terminate"
+    else:
+        assert False, "Controller did not terminate"
 
     env.close()

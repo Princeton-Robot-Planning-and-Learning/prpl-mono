@@ -1,12 +1,8 @@
 """Test utils for dynamic3d models."""
 
-import time
-
-import imageio.v2 as iio
 import numpy as np
 import prbench
 from matplotlib import pyplot as plt
-from prpl_utils.utils import fig2data, get_signed_angle_distance
 from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2
 from tomsgeoms2d.structs import Rectangle
@@ -137,6 +133,7 @@ def test_run_base_motion_planning():
         min_y=y_bounds[0],
         max_y=y_bounds[1],
     )
+    assert isinstance(fig, plt.Figure)
     robot = state.get_object_from_name("robot")
     robot_width, robot_height, _ = get_bounding_box(state, robot)
     for pose in base_motion_plan:
@@ -148,8 +145,9 @@ def test_run_base_motion_planning():
             rotation_about_center=pose.theta(),
         )
         robot_geom.plot(ax, fc="none", ec="gray", linestyle="dashed")
-    
+
     # Uncomment to debug.
+    # from prpl_utils.utils import fig2data, get_signed_angle_distance
     # ax.set_title("Motion Planning Example")
     # plt.tight_layout()
     # img = fig2data(fig)
