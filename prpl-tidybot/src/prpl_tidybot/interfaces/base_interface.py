@@ -2,14 +2,12 @@
 
 import abc
 
-import numpy as np
 import spatialmath
 
 from prpl_tidybot.base_server import BaseManager
 from prpl_tidybot.constants import (
     BASE_RPC_HOST,
     BASE_RPC_PORT,
-    POLICY_CONTROL_PERIOD,
     RPC_AUTHKEY,
 )
 
@@ -40,7 +38,7 @@ class RealBaseInterface(BaseInterface):
             address=(BASE_RPC_HOST, BASE_RPC_PORT), authkey=RPC_AUTHKEY
         )
         self.base_manager.connect()
-        self.base = self.base_manager.Base()
+        self.base = self.base_manager.Base()  # type: ignore # pylint: disable=no-member
         self.base.reset()
 
     def get_base_state(self) -> spatialmath.SE2:
@@ -49,8 +47,10 @@ class RealBaseInterface(BaseInterface):
         )
 
     def execute_action(self, action) -> None:
+        """Execute an action on the base."""
         raise NotImplementedError("Real base execute_action not implemented yet.")
         # self.base.execute_action(action)
 
     def close(self) -> None:
+        """Close the base interface."""
         self.base.close()

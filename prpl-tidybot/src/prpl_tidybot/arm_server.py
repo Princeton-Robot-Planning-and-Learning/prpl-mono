@@ -8,27 +8,22 @@
 # non-real-time process to avoid interfering with the low-level control and
 # causing latency spikes.
 
+# mypy: ignore-errors
+# pylint: disable=all
+
 import queue
 import time
 from multiprocessing.managers import BaseManager as MPBaseManager
-
 import numpy as np
-
 from prpl_tidybot.arm_controller import JointCompliantController
 from prpl_tidybot.constants import ARM_RPC_HOST, ARM_RPC_PORT, RPC_AUTHKEY
 from prpl_tidybot.ik_solver import IKSolver
 from prpl_tidybot.kinova import TorqueControlledArm
 
-# mypy: ignore-errors
-# pylint: disable=all
-
-
 class Arm:
     def __init__(self):
         self.arm = TorqueControlledArm()
-        self.arm.set_joint_limits(
-            speed_limits=(7 * (30,)), acceleration_limits=(7 * (80,))
-        )
+        self.arm.set_joint_limits(speed_limits=(7 * (30,)), acceleration_limits=(7 * (80,)))
         self.command_queue = queue.Queue(1)
         self.controller = None
         self.ik_solver = IKSolver(ee_offset=0.12)
@@ -55,17 +50,17 @@ class Arm:
             time.sleep(0.01)
 
     def execute_action(self, action):
-        qpos = self.ik_solver.solve(action["arm_pos"], action["arm_quat"], self.arm.q)
-        self.command_queue.put((qpos, action["gripper_pos"].item()))
+        qpos = self.ik_solver.solve(action['arm_pos'], action['arm_quat'], self.arm.q)
+        self.command_queue.put((qpos, action['gripper_pos'].item()))
 
     def get_state(self):
         arm_pos, arm_quat = self.arm.get_tool_pose()
         if arm_quat[3] < 0.0:  # Enforce quaternion uniqueness
             np.negative(arm_quat, out=arm_quat)
         state = {
-            "arm_pos": arm_pos,
-            "arm_quat": arm_quat,
-            "gripper_pos": np.array([self.arm.gripper_pos]),
+            'arm_pos': arm_pos,
+            'arm_quat': arm_quat,
+            'gripper_pos': np.array([self.arm.gripper_pos]),
         }
         return state
 
@@ -75,17 +70,15 @@ class Arm:
             self.arm.stop_cyclic()
         self.arm.disconnect()
 
-
 class ArmManager(MPBaseManager):
     pass
 
+ArmManager.register('Arm', Arm)
 
-ArmManager.register("Arm", Arm)
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     manager = ArmManager(address=(ARM_RPC_HOST, ARM_RPC_PORT), authkey=RPC_AUTHKEY)
     server = manager.get_server()
-    print(f"Arm manager server started at {ARM_RPC_HOST}:{ARM_RPC_PORT}")
+    print(f'Arm manager server started at {ARM_RPC_HOST}:{ARM_RPC_PORT}')
     server.serve_forever()
     # import numpy as np
     # from constants import POLICY_CONTROL_PERIOD

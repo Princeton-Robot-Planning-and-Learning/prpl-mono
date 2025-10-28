@@ -15,7 +15,7 @@ from prpl_tidybot.constants import (
 if __name__ == "__main__":
     manager = BaseManager(address=(BASE_RPC_HOST, BASE_RPC_PORT), authkey=RPC_AUTHKEY)
     manager.connect()
-    base = manager.Base()
+    base = manager.Base()  # type: ignore # pylint: disable=no-member
     try:
         base.reset()
         for i in range(50):
