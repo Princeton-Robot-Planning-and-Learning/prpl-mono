@@ -64,6 +64,15 @@ class Arm:
         }
         return state
 
+    def get_gripper_position(self):
+        return self.arm.gripper_pos
+    
+    def radians_clip(self, radians):
+        return (radians + np.pi) % (2 * np.pi) - np.pi
+    
+    def get_joint_angles(self):
+        return self.radians_clip(self.arm.q)
+    
     def close(self):
         if self.arm.cyclic_running:
             time.sleep(0.75)  # Wait for arm to stop moving
