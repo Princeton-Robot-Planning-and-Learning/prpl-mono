@@ -33,7 +33,7 @@ class FakeBaseInterface(BaseInterface):
 class RealBaseInterface(BaseInterface):
     """Real base interface."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.base_manager = BaseManager(
             address=(BASE_RPC_HOST, BASE_RPC_PORT), authkey=RPC_AUTHKEY
         )
@@ -43,7 +43,9 @@ class RealBaseInterface(BaseInterface):
 
     def get_base_state(self) -> spatialmath.SE2:
         return spatialmath.SE2(
-            self.base.get_state()[0], self.base.get_state()[1], self.base.get_state()[2]
+            self.base.get_state()["base_pose"][0],
+            self.base.get_state()["base_pose"][1],
+            self.base.get_state()["base_pose"][2],
         )
 
     def execute_action(self, action) -> None:
