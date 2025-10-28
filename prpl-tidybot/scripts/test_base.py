@@ -1,10 +1,16 @@
-"""test for mobile base by sending actions."""
+"""Test for mobile base by sending actions."""
 
 import time
+
 import numpy as np
-from prpl_tidybot.constants import BASE_RPC_HOST, BASE_RPC_PORT, RPC_AUTHKEY
+
 from prpl_tidybot.base_server import BaseManager
-from prpl_tidybot.constants import POLICY_CONTROL_PERIOD
+from prpl_tidybot.constants import (
+    BASE_RPC_HOST,
+    BASE_RPC_PORT,
+    POLICY_CONTROL_PERIOD,
+    RPC_AUTHKEY,
+)
 
 if __name__ == "__main__":
     manager = BaseManager(address=(BASE_RPC_HOST, BASE_RPC_PORT), authkey=RPC_AUTHKEY)

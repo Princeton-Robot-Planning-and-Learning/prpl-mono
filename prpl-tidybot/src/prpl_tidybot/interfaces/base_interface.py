@@ -44,7 +44,9 @@ class RealBaseInterface(BaseInterface):
         self.base.reset()
 
     def get_base_state(self) -> spatialmath.SE2:
-        return spatialmath.SE2(self.base.get_state()[0], self.base.get_state()[1], self.base.get_state()[2])
+        return spatialmath.SE2(
+            self.base.get_state()[0], self.base.get_state()[1], self.base.get_state()[2]
+        )
 
     def execute_action(self, action) -> None:
         raise NotImplementedError("Real base execute_action not implemented yet.")

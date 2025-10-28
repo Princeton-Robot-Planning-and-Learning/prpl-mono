@@ -13,8 +13,10 @@
 
 import time
 from multiprocessing.managers import BaseManager as MPBaseManager
+
 from prpl_tidybot.base_controller import Vehicle
 from prpl_tidybot.constants import BASE_RPC_HOST, BASE_RPC_PORT, RPC_AUTHKEY
+
 
 class Base:
     def __init__(self, max_vel=(0.5, 0.5, 1.57), max_accel=(0.25, 0.25, 0.79)):
@@ -37,10 +39,10 @@ class Base:
             time.sleep(0.01)
 
     def execute_action(self, action):
-        self.vehicle.set_target_position(action['base_pose'])
+        self.vehicle.set_target_position(action["base_pose"])
 
     def get_state(self):
-        state = {'base_pose': self.vehicle.x}
+        state = {"base_pose": self.vehicle.x}
         return state
 
     def close(self):
@@ -48,15 +50,17 @@ class Base:
             if self.vehicle.control_loop_running:
                 self.vehicle.stop_control()
 
+
 class BaseManager(MPBaseManager):
     pass
 
-BaseManager.register('Base', Base)
 
-if __name__ == '__main__':
+BaseManager.register("Base", Base)
+
+if __name__ == "__main__":
     manager = BaseManager(address=(BASE_RPC_HOST, BASE_RPC_PORT), authkey=RPC_AUTHKEY)
     server = manager.get_server()
-    print(f'Base manager server started at {BASE_RPC_HOST}:{BASE_RPC_PORT}')
+    print(f"Base manager server started at {BASE_RPC_HOST}:{BASE_RPC_PORT}")
     server.serve_forever()
     # import numpy as np
     # from constants import POLICY_CONTROL_PERIOD
