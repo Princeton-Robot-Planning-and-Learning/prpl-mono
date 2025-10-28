@@ -64,7 +64,8 @@ extend-exclude = '''
     src/prpl_tidybot/arm_server\.py |
     src/prpl_tidybot/kinova\.py |
     src/prpl_tidybot/ik_solver\.py |
-    src/prpl_tidybot/constants\.py
+    src/prpl_tidybot/constants\.py |
+    src/prpl_tidybot/gamepad_teleop\.py
 )
 '''
 
@@ -81,7 +82,8 @@ skip_glob = [
     "src/prpl_tidybot/arm_server.py",
     "src/prpl_tidybot/kinova.py",
     "src/prpl_tidybot/ik_solver.py",
-    "src/prpl_tidybot/constants.py"]
+    "src/prpl_tidybot/constants.py",
+    "src/prpl_tidybot/gamepad_teleop.py"]
 split_on_trailing_comma = true
 
 [tool.docformatter]
@@ -102,7 +104,8 @@ exclude = [
     "src/prpl_tidybot/arm_server.py",
     "src/prpl_tidybot/kinova.py",
     "src/prpl_tidybot/ik_solver.py",
-    "src/prpl_tidybot/constants.py"]
+    "src/prpl_tidybot/constants.py",
+    "src/prpl_tidybot/gamepad_teleop.py"]
 
 [[tool.mypy.overrides]]
 module = [
