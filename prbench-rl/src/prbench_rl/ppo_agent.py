@@ -46,14 +46,6 @@ class PPOArgs:
     """If toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """If toggled, cuda will be enabled by default."""
-    track: bool = False
-    """If toggled, this experiment will be tracked with Weights and Biases."""
-    wandb_project_name: str = "ManiSkill"
-    """The wandb's project name."""
-    wandb_entity: Optional[str] = None
-    """The entity (team) of wandb's project."""
-    wandb_group: str = "PPO"
-    """The group of the run for wandb."""
     capture_video: bool = True
     """Whether to capture videos of the self.agent performances (check out `videos`
     folder)"""
@@ -73,8 +65,6 @@ class PPOArgs:
     """Evaluation frequency in terms of iterations."""
     save_train_video_freq: Optional[int] = None
     """Frequency to save training videos in terms of iterations."""
-    control_mode: Optional[str] = "pd_joint_delta_pos"
-    """The control mode to use for the environment."""
 
     # Algorithm specific arguments
     hidden_size: int = 64
