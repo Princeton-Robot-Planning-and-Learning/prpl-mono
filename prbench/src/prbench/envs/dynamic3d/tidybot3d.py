@@ -28,11 +28,8 @@ from prbench.envs.dynamic3d.objects import (
     get_fixture_class,
     get_object_class,
 )
-from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBotRobotEnv
-from prbench.envs.dynamic3d.utils import (
-    get_table_bbox,
-    sample_collision_free_position,
+from prbench.envs.dynamic3d.placement_samplers import (
+    sample_collision_free_positions,
     sample_pose_in_region,
 )
 
@@ -128,16 +125,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
         # Set model path to local models directory
         model_base_path = Path(__file__).parent / "models" / "stanford_tidybot"
-        if self.scene_type == "cupboard":
-            model_file = "cupboard_scene.xml"
-        elif self.scene_type == "table":
-            model_file = "table_scene.xml"
-        elif self.scene_type == "ground":
-            model_file = "ground_scene.xml"
-        elif self.scene_type == "base_motion":
-            model_file = "base_motion.xml"
-        else:
-            raise ValueError(f"Unrecognized scene type: {self.scene_type}")
+        model_file = "ground_scene.xml"
         # Construct absolute path to model file
         absolute_model_path = model_base_path / model_file
 
@@ -167,20 +155,16 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                 # Insert fixtures (only tables supported for now)
                 fixtures = self.task_config.get("fixtures", {})
 
-                for fixture_type, fixture_configs in fixtures.items():
+                fixture_poses = sample_collision_free_positions(
+                    fixtures, self.np_random
+                )
 
-                    # Keep track of placed fixture bounding boxes for collision detection
-                    placed_fixture_bboxes: list[list[float]] = []
+                for fixture_type, fixture_configs in fixtures.items():
 
                     for fixture_name, fixture_config in fixture_configs.items():
                         # Sample collision-free position for the fixture
-                        fixture_pos = sample_collision_free_position(
-                            fixture_config, placed_fixture_bboxes, self.np_random
-                        )
-
-                        # Add this fixture's bounding box to the list
-                        fixture_bbox = get_table_bbox(fixture_pos, fixture_config)
-                        placed_fixture_bboxes.append(fixture_bbox)
+                        fixture_pos = fixture_poses[fixture_name]["position"]
+                        fixture_yaw = fixture_poses[fixture_name]["yaw"]
 
                         # Find regions for this fixture if specified
                         regions = {}
@@ -196,8 +180,8 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
                             name=fixture_name,
                             fixture_config=fixture_config,
                             position=fixture_pos,
+                            yaw=fixture_yaw,
                             regions=regions,
-                            # env=self._robot_env,
                         )
                         self._fixtures_dict[fixture_name] = new_fixture
                         fixture_body = new_fixture.xml_element
