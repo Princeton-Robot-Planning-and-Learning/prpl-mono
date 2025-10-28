@@ -41,8 +41,8 @@ def test_get_target_robot_pose_from_parameters():
     # from matplotlib import pyplot as plt
     # from prpl_utils.utils import fig2data
 
-    # from prbench_models.dynamic3d.utils import get_overhead_object_se2_pose
-    # from prbench_models.dynamic3d.utils import plot_overhead_scene
+    # from prbench_models.dynamic3d.utils import get_overhead_object_se2_pose, \
+    #     plot_overhead_scene
 
     # env = prbench.make("prbench/TidyBot3D-ground-o1-v0", render_mode="rgb_array")
     # assert isinstance(env.observation_space, ObjectCentricBoxSpace)

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import spatialmath
 from prpl_utils.structs import Image
 
-from prpl_tidybot.constants import CAMERA_DIMS
+from prpl_tidybot.constants import BASE_CAMERA_DIMS, WRIST_CAMERA_DIMS
 
 
 @dataclass(frozen=True)
@@ -15,13 +15,13 @@ class TidyBotObservation:
     arm_conf: list[float]  # 7-DOF joints
     base_pose: spatialmath.SE2  # base pose for the robot
     gripper: float  # 1 = closed, 0 = open
-    wrist_camera: Image  # see CAMERA_DIMS
-    base_camera: Image  # see CAMERA_DIMS
+    wrist_camera: Image  # see WRIST_CAMERA_DIMS
+    base_camera: Image  # see BASE_CAMERA_DIMS
 
     def __post_init__(self) -> None:
         # Make sure the camera dimensions are as expected.
-        assert self.wrist_camera.shape == CAMERA_DIMS
-        assert self.base_camera.shape == CAMERA_DIMS
+        assert self.wrist_camera.shape == WRIST_CAMERA_DIMS
+        assert self.base_camera.shape == BASE_CAMERA_DIMS
 
 
 @dataclass(frozen=True)

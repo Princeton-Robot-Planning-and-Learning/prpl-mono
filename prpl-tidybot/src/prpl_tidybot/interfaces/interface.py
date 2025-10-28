@@ -11,7 +11,10 @@ from prpl_utils.structs import Image
 
 from prpl_tidybot.interfaces.arm_interface import FakeArmInterface
 from prpl_tidybot.interfaces.base_interface import FakeBaseInterface
-from prpl_tidybot.interfaces.camera_interface import FakeCameraInterface
+from prpl_tidybot.interfaces.camera_interface import (
+    FakeCameraInterface,
+    RealCameraInterface,
+)
 from prpl_tidybot.structs import TidyBotObservation
 
 
@@ -49,24 +52,26 @@ class Interface(abc.ABC):
         )
 
 
-# TO BE IMPLEMENTED SOON!
-# class RealInterface(Interface):
-#     """The real and sole interface to the real robot."""
+class RealInterface(Interface):
+    """The real and sole interface to the real robot."""
 
-#     def get_base_state(self) -> spatialmath.SE2:
-#         import ipdb; ipdb.set_trace()
+    def __init__(self):
+        self.camera_interface = RealCameraInterface()
 
-#     def get_arm_state(self) -> list[float]:
-#         import ipdb; ipdb.set_trace()
+    def get_base_state(self) -> spatialmath.SE2:
+        raise NotImplementedError("Not implemented yet.")
 
-#     def get_gripper_state(self) -> float:
-#         import ipdb; ipdb.set_trace()
+    def get_arm_state(self) -> list[float]:
+        raise NotImplementedError("Not implemented yet.")
 
-#     def get_wrist_image(self) -> Image:
-#         import ipdb; ipdb.set_trace()
+    def get_gripper_state(self) -> float:
+        raise NotImplementedError("Not implemented yet.")
 
-#     def get_base_image(self) -> Image:
-#         import ipdb; ipdb.set_trace()
+    def get_wrist_image(self) -> Image:
+        return self.camera_interface.get_wrist_image()
+
+    def get_base_image(self) -> Image:
+        return self.camera_interface.get_base_image()
 
 
 class FakeInterface(Interface):
