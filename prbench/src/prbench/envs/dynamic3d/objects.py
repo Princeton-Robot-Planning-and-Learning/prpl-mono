@@ -777,3 +777,386 @@ class Table(MujocoFixture):
             f"height={self.table_height}, thickness={self.table_thickness}, "
             f"position={self.position}, leg_inset={self.leg_inset})"
         )
+
+
+@register_fixture
+class Cupboard(MujocoFixture):
+    """A cupboard fixture with multiple shelves."""
+
+    def __init__(
+        self,
+        name: str,
+        fixture_config: dict[str, str | float],
+        position: list[float] | NDArray[np.float32],
+        yaw: float,
+        regions: dict | None = None,
+    ) -> None:
+        """Initialize a Cupboard object.
+
+        Args:
+            name: Name of the cupboard body in the XML
+            fixture_config: Dictionary containing cupboard configuration with keys:
+                - "length": Total cupboard length in meters
+                - "depth": Total cupboard depth in meters
+                - "shelf_heights": List of distances between consecutive shelves 
+                  in meters
+                - "shelf_partitions": List of lists, each containing partition 
+                  distances from left edge
+                - "side_and_back_open": Boolean indicating if sides and back are 
+                  open
+                - "shelf_thickness": Thickness of each shelf in meters 
+                  (optional, default 0.02)
+            position: Position of the cupboard as [x, y, z]
+            yaw: Yaw orientation of the cupboard in radians
+        """
+        # Initialize base class
+        super().__init__(name, fixture_config, position, yaw, regions)
+
+        # Parse cupboard configuration
+        self.cupboard_length = float(self.fixture_config["length"])
+        self.cupboard_depth = float(self.fixture_config["depth"])
+
+        # Handle shelf_heights - convert to list of floats
+        shelf_heights_raw = self.fixture_config["shelf_heights"]
+        self.shelf_heights: list[float] = (
+            [float(h) for h in shelf_heights_raw]  # type: ignore
+            if hasattr(shelf_heights_raw, '__iter__')
+            and not isinstance(shelf_heights_raw, str)
+            else [float(shelf_heights_raw)]
+        )
+
+        # Handle shelf_partitions - convert to list of lists of floats
+        shelf_partitions_raw = self.fixture_config["shelf_partitions"]
+        self.shelf_partitions: list[list[float]] = [
+            [float(p) for p in partition_list]  # type: ignore
+            for partition_list in shelf_partitions_raw  # type: ignore
+        ]
+        self.side_and_back_open: bool = bool(
+            self.fixture_config["side_and_back_open"]
+        )
+        self.shelf_thickness: float = float(
+            self.fixture_config.get("shelf_thickness", 0.02)
+        )
+        self.panel_thickness: float = 0.01  # Thickness of side and back panels
+        # Set leg thickness: thin when panels present, thicker when open
+        self.leg_thickness: float = (
+            self.panel_thickness if not self.side_and_back_open else 0.03
+        )
+
+        # Calculate derived properties
+        self.num_shelves: int = len(self.shelf_heights) + 1  # +1 for the top shelf
+        self.cupboard_height: float = (
+            sum(self.shelf_heights) + self.shelf_thickness
+        )
+
+        # Validate configuration
+        if len(self.shelf_heights) < 1:
+            raise ValueError("Number of shelf heights must be at least 1")
+
+        if len(self.shelf_partitions) != len(self.shelf_heights):
+            raise ValueError(
+                f"shelf_partitions must have {len(self.shelf_heights)} lists, "
+                f"got {len(self.shelf_partitions)} (one list per shelf gap, "
+                f"not including top shelf)"
+            )
+
+        # Validate partition positions
+        for i, partitions in enumerate(self.shelf_partitions):
+            for partition_pos in partitions:
+                if partition_pos <= 0 or partition_pos >= self.cupboard_depth:
+                    raise ValueError(
+                        f"Partition position {partition_pos} on shelf {i} must be "
+                        f"between 0 and depth {self.cupboard_depth}"
+                    )
+
+        # Create the XML element
+        self.xml_element = self._create_xml_element()
+
+    def _create_xml_element(self) -> ET.Element:
+        """Create the XML Element for this cupboard.
+
+        Returns:
+            ET.Element representing the cupboard body
+        """
+        # Create cupboard body element
+        cupboard_body = ET.Element("body")
+        cupboard_body.set("name", self.name)
+        position_str = " ".join(str(x) for x in self.position)
+        cupboard_body.set("pos", position_str)
+        ori_quat = utils.convert_yaw_to_quaternion(self.yaw)
+        orientation_str = " ".join(str(x) for x in ori_quat)
+        cupboard_body.set("quat", orientation_str)
+
+        # Calculate dimensions
+        cupboard_half_length = self.cupboard_length / 2
+        cupboard_half_depth = self.cupboard_depth / 2
+        shelf_half_thickness = self.shelf_thickness / 2
+
+        # Calculate the height of the topmost shelf
+        top_shelf_z = shelf_half_thickness
+        for height in self.shelf_heights:
+            top_shelf_z += shelf_half_thickness + height + shelf_half_thickness
+
+        # Make legs flush with the top shelf (leg height = top shelf height)
+        leg_half_height = top_shelf_z / 2
+
+        # Calculate leg positions (at the edges)
+        leg_x_offset = cupboard_half_length - self.leg_thickness / 2
+        leg_y_offset = cupboard_half_depth - self.leg_thickness / 2
+
+        # Create vertical legs at four corners
+        leg_positions = [
+            (f"{leg_x_offset} {leg_y_offset}", f"{self.name}_leg1"),
+            (f"{-leg_x_offset} {leg_y_offset}", f"{self.name}_leg2"),
+            (f"{leg_x_offset} {-leg_y_offset}", f"{self.name}_leg3"),
+            (f"{-leg_x_offset} {-leg_y_offset}", f"{self.name}_leg4"),
+        ]
+
+        for pos, name in leg_positions:
+            leg = ET.SubElement(cupboard_body, "geom")
+            leg.set("name", name)
+            leg.set("type", "box")
+            leg.set(
+                "size",
+                f"{self.leg_thickness/2} {self.leg_thickness/2} {leg_half_height}",
+            )
+            leg.set(
+                "pos", f"{pos.split()[0]} {pos.split()[1]} {leg_half_height}"
+            )  # Position leg center at half its height
+            leg.set("rgba", "0.6 0.4 0.2 1")  # Brown color for legs
+
+        # Calculate cumulative shelf positions
+        current_z = shelf_half_thickness
+        shelf_positions = [current_z]
+
+        for height in self.shelf_heights:  # Include all heights to get the top shelf
+            current_z += shelf_half_thickness + height + shelf_half_thickness
+            shelf_positions.append(current_z)
+
+        # Create horizontal shelves (including the top shelf)
+        for i, shelf_z in enumerate(shelf_positions):
+            shelf = ET.SubElement(cupboard_body, "geom")
+            shelf.set("name", f"{self.name}_shelf{i+1}")
+            shelf.set("type", "box")
+            shelf.set(
+                "size",
+                f"{cupboard_half_length} {cupboard_half_depth} {shelf_half_thickness}",
+            )
+            shelf.set("pos", f"0 0 {shelf_z}")
+            shelf.set("rgba", "0.8 0.6 0.4 1")  # Light brown color for shelves
+
+            # Create vertical partitions for this shelf
+            # (if we have partition data for it)
+            if i < len(self.shelf_partitions):
+                partitions = self.shelf_partitions[i]
+                shelf_height = (
+                    self.shelf_heights[i]
+                    if i < len(self.shelf_heights)
+                    else self.shelf_heights[-1]
+                )
+
+                for j, partition_x in enumerate(partitions):
+                    # Convert from left edge distance to center-relative position
+                    partition_x_center = partition_x - cupboard_half_depth
+
+                    # Calculate partition dimensions
+                    partition_half_thickness = 0.005  # 1cm thick partitions
+                    partition_half_height = shelf_height / 2
+                    partition_z = shelf_z + shelf_half_thickness + partition_half_height
+
+                    partition = ET.SubElement(cupboard_body, "geom")
+                    partition.set("name", f"{self.name}_shelf{i+1}_partition{j+1}")
+                    partition.set("type", "box")
+                    partition.set(
+                        "size",
+                        f"{partition_half_thickness} {cupboard_half_depth} "
+                        f"{partition_half_height}",
+                    )
+                    partition.set("pos", f"{partition_x_center} 0 {partition_z}")
+                    partition.set(
+                        "rgba", "0.7 0.5 0.3 1"
+                    )  # Slightly different color for partitions
+
+        # Create side and back panels if not open
+        if not self.side_and_back_open:
+            panel_half_thickness = self.panel_thickness / 2
+            # Make panels flush with the top shelf (same height as legs)
+            panel_half_height = top_shelf_z / 2
+
+            # Back panel (at -Y edge)
+            back_panel = ET.SubElement(cupboard_body, "geom")
+            back_panel.set("name", f"{self.name}_back_panel")
+            back_panel.set("type", "box")
+            back_panel.set(
+                "size",
+                f"{cupboard_half_length} {panel_half_thickness} {panel_half_height}",
+            )
+            back_panel.set(
+                "pos",
+                f"0 {-cupboard_half_depth + panel_half_thickness} {panel_half_height}",
+            )
+            back_panel.set("rgba", "0.7 0.5 0.3 1")
+
+            # Left side panel (at -X edge)
+            left_panel = ET.SubElement(cupboard_body, "geom")
+            left_panel.set("name", f"{self.name}_left_panel")
+            left_panel.set("type", "box")
+            left_panel.set(
+                "size",
+                f"{panel_half_thickness} {cupboard_half_depth} {panel_half_height}",
+            )
+            left_panel.set(
+                "pos",
+                f"{-cupboard_half_length + panel_half_thickness} 0 {panel_half_height}",
+            )
+            left_panel.set("rgba", "0.7 0.5 0.3 1")
+
+            # Right side panel (at +X edge)
+            right_panel = ET.SubElement(cupboard_body, "geom")
+            right_panel.set("name", f"{self.name}_right_panel")
+            right_panel.set("type", "box")
+            right_panel.set(
+                "size",
+                f"{panel_half_thickness} {cupboard_half_depth} {panel_half_height}",
+            )
+            right_panel.set(
+                "pos",
+                f"{cupboard_half_length - panel_half_thickness} 0 {panel_half_height}",
+            )
+            right_panel.set("rgba", "0.7 0.5 0.3 1")
+
+        return cupboard_body
+
+    @staticmethod
+    def get_bounding_box_from_config(
+        pos: NDArray[np.float32], fixture_config: dict[str, str | float]
+    ) -> list[float]:
+        """Get bounding box for a cupboard given its position and config.
+
+        Args:
+            pos: Position of the cupboard as [x, y, z] array
+            fixture_config: Dictionary containing cupboard configuration with keys:
+                - "length": Total cupboard length in meters
+                - "depth": Total cupboard depth in meters
+                - "shelf_heights": List of distances between consecutive shelves
+                - "shelf_thickness": Thickness of each shelf in meters 
+                  (optional, default 0.02)
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+
+        Raises:
+            ValueError: If required keys are missing in fixture_config
+        """
+        if "length" not in fixture_config or "depth" not in fixture_config:
+            raise ValueError("fixture_config must contain 'length' and 'depth' keys")
+
+        half_length = float(fixture_config["length"]) / 2
+        half_depth = float(fixture_config["depth"]) / 2
+
+        # Calculate cupboard height from shelf configuration
+        shelf_heights_config: list[float] = (
+            fixture_config.get("shelf_heights", [])  # type: ignore
+        )
+        shelf_heights_float: list[float] = [float(h) for h in shelf_heights_config]
+        shelf_thickness = float(fixture_config.get("shelf_thickness", 0.02))
+        cupboard_height = sum(shelf_heights_float) + shelf_thickness
+
+        return [
+            pos[0] - half_length,  # x_min
+            pos[1] - half_depth,  # y_min
+            pos[2],  # z_min
+            pos[0] + half_length,  # x_max
+            pos[1] + half_depth,  # y_max
+            pos[2] + cupboard_height,  # z_max
+        ]
+
+    def sample_pose_in_region(
+        self,
+        regions: list[list[float]],
+        np_random: np.random.Generator,
+    ) -> tuple[float, float, float]:
+        """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
+
+        For cupboards, this samples on the top shelf surface.
+
+        Args:
+            regions: List of bounding boxes, where each bounding box is a list of
+                    4 floats: [x_start, y_start, x_end, y_end] in cupboard-relative
+                    coordinates
+            np_random: Random number generator
+
+        Returns:
+            Tuple of (x, y, z) coordinates in world coordinates (offset by cupboard
+            position)
+
+        Raises:
+            ValueError: If regions list is empty or if any region has invalid bounds
+        """
+        if not regions:
+            raise ValueError("Regions list cannot be empty")
+
+        # Randomly select one of the regions
+        selected_region = np_random.choice(regions)
+
+        # Validate the selected region
+        if len(selected_region) != 4:
+            raise ValueError(
+                f"Each region must have exactly 4 values "
+                f"[x_start, y_start, x_end, y_end], got {len(selected_region)}"
+            )
+
+        x_start, y_start, x_end, y_end = selected_region
+
+        # Validate bounds
+        if x_start >= x_end:
+            raise ValueError(f"x_start ({x_start}) must be less than x_end ({x_end})")
+        if y_start >= y_end:
+            raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
+
+        # Sample uniformly within the selected region
+        x = np_random.uniform(x_start, x_end)
+        y = np_random.uniform(y_start, y_end)
+
+        # Calculate the height of the top shelf
+        # Recalculate shelf positions for sampling
+        current_z = self.shelf_thickness / 2
+        for i in range(self.num_shelves - 1):
+            current_z += (
+                self.shelf_thickness / 2
+                + self.shelf_heights[i]
+                + self.shelf_thickness / 2
+            )
+
+        top_shelf_z = current_z
+        z = (
+            top_shelf_z + self.shelf_thickness / 2 + 0.1
+        )  # Slightly above the top shelf surface
+
+        # Offset by the cupboard's position to get world coordinates
+        world_x = x + self.position[0]
+        world_y = y + self.position[1]
+        world_z = z + self.position[2]
+
+        return (world_x, world_y, world_z)
+
+    def __str__(self) -> str:
+        """String representation of the cupboard."""
+        return (
+            f"Cupboard(name='{self.name}', length={self.cupboard_length}, "
+            f"depth={self.cupboard_depth}, height={self.cupboard_height}, "
+            f"num_shelves={self.num_shelves}, shelf_heights={self.shelf_heights})"
+        )
+
+    def __repr__(self) -> str:
+        """Detailed string representation of the cupboard."""
+        return (
+            f"Cupboard(name='{self.name}', "
+            f"length={self.cupboard_length}, depth={self.cupboard_depth}, "
+            f"height={self.cupboard_height}, num_shelves={self.num_shelves}, "
+            f"shelf_heights={self.shelf_heights}, "
+            f"shelf_partitions={self.shelf_partitions}, "
+            f"shelf_thickness={self.shelf_thickness}, "
+            f"side_and_back_open={self.side_and_back_open}, "
+            f"position={self.position}, leg_thickness={self.leg_thickness})"
+        )
