@@ -11,6 +11,7 @@ import numpy as np
 from numpy.typing import NDArray
 from relational_structs import Object
 
+from prbench.envs.dynamic3d import utils
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
 from prbench.envs.dynamic3d.object_types import (
     MujocoFixtureObjectType,
@@ -375,6 +376,7 @@ class MujocoFixture(abc.ABC):
         name: str,
         fixture_config: dict[str, str | float],
         position: list[float] | NDArray[np.float32],
+        yaw: float,
         regions: dict | None = None,
     ) -> None:
         """Initialize a MujocoFixture.
@@ -383,10 +385,12 @@ class MujocoFixture(abc.ABC):
             name: Name of the fixture body in the XML
             fixture_config: Dictionary containing fixture configuration
             position: Position of the fixture as [x, y, z]
+            yaw: Yaw orientation of the fixture in radians
         """
         self.name = name
         self.fixture_config = fixture_config
         self.position = position
+        self.yaw = yaw
         self.regions = regions
 
         # Create the corresponding Object for state representation key
@@ -402,14 +406,24 @@ class MujocoFixture(abc.ABC):
         """
         return np.array(self.position)
 
-    def get_orientation(self) -> NDArray[np.float32]:
+    def get_orientation(self) -> list[float]:
         """Get the fixture's orientation.
 
         Returns:
             Orientation as quaternion [w, x, y, z] array
         """
-        # Fixtures are static and assumed to have no rotation by default
-        return np.array([1.0, 0.0, 0.0, 0.0])
+        return utils.convert_yaw_to_quaternion(self.yaw)
+
+    @staticmethod
+    @abc.abstractmethod
+    def get_bounding_box_from_config(
+        pos: NDArray[np.float32], fixture_config: dict[str, str | float]
+    ) -> list[float]:
+        """Get the fixture's bounding box in world coordinates.
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max] array
+        """
 
     def get_object_centric_data(self) -> dict[str, float]:
         """Get the object's current data.
@@ -475,6 +489,7 @@ class Table(MujocoFixture):
         name: str,
         fixture_config: dict[str, str | float],
         position: list[float] | NDArray[np.float32],
+        yaw: float,
         regions: dict | None = None,
     ) -> None:
         """Initialize a Table object.
@@ -489,9 +504,10 @@ class Table(MujocoFixture):
                 - "width": Total table width in meters (for rectangle)
                 - "diameter": Diameter of circular table in meters (for circle)
             position: Position of the table as [x, y, z]
+            yaw: Yaw orientation of the table in radians
         """
         # Initialize base class
-        super().__init__(name, fixture_config, position, regions)
+        super().__init__(name, fixture_config, position, yaw, regions)
 
         # Parse table configuration
         self.table_shape = str(self.fixture_config["shape"])
@@ -530,6 +546,9 @@ class Table(MujocoFixture):
         table_body.set("name", self.name)
         position_str = " ".join(str(x) for x in self.position)
         table_body.set("pos", position_str)
+        ori_quat = utils.convert_yaw_to_quaternion(self.yaw)
+        orientation_str = " ".join(str(x) for x in ori_quat)
+        table_body.set("quat", orientation_str)
 
         if self.table_shape == "rectangle":
             assert self.table_length is not None
@@ -637,6 +656,55 @@ class Table(MujocoFixture):
             )
 
         return table_body
+
+    @staticmethod
+    def get_bounding_box_from_config(
+        pos: NDArray[np.float32], fixture_config: dict[str, str | float]
+    ) -> list[float]:
+        """Get bounding box for a table given its position and config.
+
+        Args:
+            pos: Position of the table as [x, y, z] array
+            fixture_config: Dictionary containing table configuration with keys:
+                - "shape": Shape of the table - "rectangle" or "circle"
+                - "length": Total table length in meters (for rectangle)
+                - "width": Total table width in meters (for rectangle)
+                - "diameter": Diameter of circular table in meters (for circle)
+                - "height": Table height in meters
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+
+        Raises:
+            ValueError: If table shape is not supported
+        """
+        table_height = float(fixture_config["height"])
+        z_min = pos[2]
+        z_max = pos[2] + table_height
+
+        if fixture_config["shape"] == "rectangle":
+            half_length = float(fixture_config["length"]) / 2
+            half_width = float(fixture_config["width"]) / 2
+            return [
+                pos[0] - half_length,  # x_min
+                pos[1] - half_width,  # y_min
+                pos[2],  # z_min
+                pos[0] + half_length,  # x_max
+                pos[1] + half_width,  # y_max
+                pos[2] + table_height,  # z_max
+            ]
+        if fixture_config["shape"] == "circle":
+            radius = float(fixture_config["diameter"]) / 2
+            return [
+                pos[0] - radius,  # x_min
+                pos[1] - radius,  # y_min
+                z_min,  # z_min
+                pos[0] + radius,  # x_max
+                pos[1] + radius,  # y_max
+                z_max,  # z_max
+            ]
+
+        raise ValueError(f"Unknown table shape: {fixture_config['shape']}")
 
     def sample_pose_in_region(
         self,
