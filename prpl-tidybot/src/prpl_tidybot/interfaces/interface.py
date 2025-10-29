@@ -9,9 +9,12 @@ import abc
 import spatialmath
 from prpl_utils.structs import Image
 
-from prpl_tidybot.interfaces.arm_interface import FakeArmInterface
-from prpl_tidybot.interfaces.base_interface import FakeBaseInterface
-from prpl_tidybot.interfaces.camera_interface import FakeCameraInterface
+from prpl_tidybot.interfaces.arm_interface import FakeArmInterface, RealArmInterface
+from prpl_tidybot.interfaces.base_interface import FakeBaseInterface, RealBaseInterface
+from prpl_tidybot.interfaces.camera_interface import (
+    FakeCameraInterface,
+    RealCameraInterface,
+)
 from prpl_tidybot.structs import TidyBotObservation
 
 
@@ -49,24 +52,34 @@ class Interface(abc.ABC):
         )
 
 
-# TO BE IMPLEMENTED SOON!
-# class RealInterface(Interface):
-#     """The real and sole interface to the real robot."""
+class RealInterface(Interface):
+    """The real and sole interface to the real robot."""
 
-#     def get_base_state(self) -> spatialmath.SE2:
-#         import ipdb; ipdb.set_trace()
+    def __init__(self) -> None:
+        self.camera_interface = RealCameraInterface()
+        self.base_interface = RealBaseInterface()
+        self.arm_interface = RealArmInterface()
 
-#     def get_arm_state(self) -> list[float]:
-#         import ipdb; ipdb.set_trace()
+    def get_base_state(self) -> spatialmath.SE2:
+        return self.base_interface.get_base_state()
 
-#     def get_gripper_state(self) -> float:
-#         import ipdb; ipdb.set_trace()
+    def get_arm_state(self) -> list[float]:
+        return self.arm_interface.get_arm_state()
 
-#     def get_wrist_image(self) -> Image:
-#         import ipdb; ipdb.set_trace()
+    def get_gripper_state(self) -> float:
+        return self.arm_interface.get_gripper_state()
 
-#     def get_base_image(self) -> Image:
-#         import ipdb; ipdb.set_trace()
+    def get_wrist_image(self) -> Image:
+        return self.camera_interface.get_wrist_image()
+
+    def get_base_image(self) -> Image:
+        return self.camera_interface.get_base_image()
+
+    def close(self) -> None:
+        """Close the real interface."""
+        self.base_interface.close()
+        self.arm_interface.close()
+        self.camera_interface.close()
 
 
 class FakeInterface(Interface):

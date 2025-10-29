@@ -1,16 +1,23 @@
 """Test utils for dynamic3d models."""
 
+import time
+
+import imageio.v2 as iio
 import numpy as np
 import prbench
 from matplotlib import pyplot as plt
+from prpl_utils.utils import fig2data, get_signed_angle_distance
 from relational_structs.spaces import ObjectCentricBoxSpace
+from spatialmath import SE2
 from tomsgeoms2d.structs import Rectangle
 
 from prbench_models.dynamic3d.utils import (
+    get_bounding_box,
     get_overhead_geom2ds,
     get_overhead_object_se2_pose,
     get_overhead_robot_se2_pose,
     plot_overhead_scene,
+    run_base_motion_planning,
 )
 
 prbench.register_all_environments()
@@ -104,3 +111,100 @@ def test_plot_overhead_scene():
     # outfile = "actual_scene.png"
     # iio.imsave(outfile, img)
     # print(f"Wrote out to {outfile}")
+
+
+def test_run_base_motion_planning():
+    """Tests for run_base_motion_planning()."""
+
+    env = prbench.make("prbench/TidyBot3D-ground-o3-v0", render_mode="rgb_array")
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    obs, _ = env.reset(seed=123)
+    state = env.observation_space.devectorize(obs)
+
+    target_base_pose = SE2(0.5, 0.5, 0.0)
+    x_bounds = (-1.5, 1.5)
+    y_bounds = (-1.5, 1.5)
+    seed = 123
+    base_motion_plan = run_base_motion_planning(
+        state, target_base_pose, x_bounds, y_bounds, seed
+    )
+    assert base_motion_plan is not None
+
+    fig, ax = plot_overhead_scene(
+        state,
+        min_x=x_bounds[0],
+        max_x=x_bounds[1],
+        min_y=y_bounds[0],
+        max_y=y_bounds[1],
+    )
+    robot = state.get_object_from_name("robot")
+    robot_width, robot_height, _ = get_bounding_box(state, robot)
+    for pose in base_motion_plan:
+        robot_geom = Rectangle.from_center(
+            pose.x,
+            pose.y,
+            robot_width,
+            robot_height,
+            rotation_about_center=pose.theta(),
+        )
+        robot_geom.plot(ax, fc="none", ec="gray", linestyle="dashed")
+    ax.set_title("Motion Planning Example")
+    plt.tight_layout()
+    img = fig2data(fig)
+    outfile = "base_motion_planning.png"
+    iio.imsave(outfile, img)
+    print(f"Wrote out to {outfile}")
+
+    # # NOTE: this does not work. We need to instead do reactive control to follow the
+    # # motion plan, possibly using the base_controller. The reason this doesn't work
+    # # is because the position control action space is unreliable.
+    imgs = []
+    for t in range(1, len(base_motion_plan)):
+        pose = base_motion_plan[t]
+        max_control_steps = 10
+        tolerance = 1e-2
+        control_period = 0.1  # 10hz
+        for control_step in range(max_control_steps):
+            previous_pose = SE2(
+                state.get(robot, "pos_base_x"),
+                state.get(robot, "pos_base_y"),
+                state.get(robot, "pos_base_rot"),
+            )
+            dx = pose.x - previous_pose.x
+            dy = pose.y - previous_pose.y
+            drot = get_signed_angle_distance(pose.theta(), previous_pose.theta())
+            action = np.zeros(11, dtype=np.float32)
+            action[0] = dx
+            action[1] = dy
+            action[2] = drot
+            assert env.action_space.contains(action)
+
+            obs, _, _, _, _ = env.step(action)
+            state = env.observation_space.devectorize(obs)
+            print("Expected x, y, rot:", pose.x, pose.y, pose.theta())
+            print(
+                "Actual x, y, rot:",
+                state.get(robot, "pos_base_x"),
+                state.get(robot, "pos_base_y"),
+                state.get(robot, "pos_base_rot"),
+            )
+            time.sleep(
+                control_period
+            )  # sleep for 100ms to allow the action to be executed
+            if (
+                np.isclose(state.get(robot, "pos_base_x"), pose.x, atol=tolerance)
+                and np.isclose(state.get(robot, "pos_base_y"), pose.y, atol=tolerance)
+                and np.isclose(
+                    state.get(robot, "pos_base_rot"), pose.theta(), atol=tolerance
+                )
+            ):
+                print(
+                    f"Reached target pose {pose.x}, {pose.y}, {pose.theta()} "
+                    f"in {control_step + 1} steps"
+                )
+                break
+            img = env.render()
+            imgs.append(img)
+    outfile = "base_motion_planning.mp4"
+    iio.mimsave(outfile, imgs)
+    print(f"Wrote out to {outfile}")
