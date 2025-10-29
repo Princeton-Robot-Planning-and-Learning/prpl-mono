@@ -5,6 +5,9 @@ cleanrl:
 https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/sac_continuous_action.py
 """
 
+import logging
+import random
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, TypeVar
@@ -13,9 +16,10 @@ import dacite
 import gymnasium as gym
 import numpy as np
 import torch
+import torch.nn.functional as F
 from gymnasium import spaces
 from omegaconf import DictConfig
-from torch import nn
+from torch import nn, optim
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -25,8 +29,19 @@ except ImportError:
     SummaryWriter = None  # type: ignore
     TENSORBOARD_AVAILABLE = False
 
+# Import ReplayBuffer from cleanrl
+import sys
+from pathlib import Path as PathLib
+
+# Add cleanrl to path
+cleanrl_path = PathLib(__file__).parent.parent.parent.parent / "cleanrl"
+if str(cleanrl_path) not in sys.path:
+    sys.path.insert(0, str(cleanrl_path))
+
+from cleanrl_utils.buffers import ReplayBuffer  # type: ignore
+
 from prbench_rl.agent import BaseRLAgent
-from prbench_rl.gym_utils import make_env
+from prbench_rl.gym_utils import make_env_sac
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -62,12 +77,10 @@ class SACArgs:
     """Frequency to save training videos in terms of iterations."""
 
     # Algorithm specific arguments
-    hidden_size: int = 64
+    hidden_size: int = 256
     """The hidden size of the neural networks."""
     total_timesteps: int = 1000000
     """total timesteps of the experiments"""
-    num_envs: int = 1
-    """the number of parallel game environments"""
     buffer_size: int = int(1e6)
     """the replay memory buffer size"""
     gamma: float = 0.99
@@ -76,7 +89,7 @@ class SACArgs:
     """target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
     """the batch size of sample from the reply memory"""
-    learning_starts: int = 5e3
+    learning_starts: int = int(5e3)
     """timestep to start learning"""
     policy_lr: float = 3e-4
     """the learning rate of the policy network optimizer"""
@@ -94,16 +107,22 @@ class SACArgs:
 
 # ALGO LOGIC: initialize agent here:
 class SoftQNetwork(nn.Module):
-    def __init__(self, env):
-        super().__init__()
-        self.fc1 = nn.Linear(
-            np.array(env.single_observation_space.shape).prod() + np.prod(env.single_action_space.shape),
-            256,
-        )
-        self.fc2 = nn.Linear(256, 256)
-        self.fc3 = nn.Linear(256, 1)
+    """Soft Q-Network (Critic) for SAC."""
 
-    def forward(self, x, a):
+    def __init__(
+        self,
+        observation_space: spaces.Box,
+        action_space: spaces.Box,
+        hidden_size: int = 256,
+    ):
+        super().__init__()
+        obs_dim = int(np.array(observation_space.shape).prod())
+        action_dim = int(np.prod(action_space.shape))
+        self.fc1 = nn.Linear(obs_dim + action_dim, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, 1)
+
+    def forward(self, x: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         x = torch.cat([x, a], 1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -116,46 +135,63 @@ LOG_STD_MIN = -5
 
 
 class Actor(nn.Module):
-    def __init__(self, env):
+    """Actor network (Policy) for SAC."""
+
+    def __init__(
+        self,
+        observation_space: spaces.Box,
+        action_space: spaces.Box,
+        hidden_size: int = 256,
+    ):
         super().__init__()
-        self.fc1 = nn.Linear(np.array(env.single_observation_space.shape).prod(), 256)
-        self.fc2 = nn.Linear(256, 256)
-        self.fc_mean = nn.Linear(256, np.prod(env.single_action_space.shape))
-        self.fc_logstd = nn.Linear(256, np.prod(env.single_action_space.shape))
+        obs_dim = int(np.array(observation_space.shape).prod())
+        action_dim = int(np.prod(action_space.shape))
+        self.fc1 = nn.Linear(obs_dim, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc_mean = nn.Linear(hidden_size, action_dim)
+        self.fc_logstd = nn.Linear(hidden_size, action_dim)
         # action rescaling
         self.register_buffer(
             "action_scale",
             torch.tensor(
-                (env.single_action_space.high - env.single_action_space.low) / 2.0,
+                (action_space.high - action_space.low) / 2.0,
                 dtype=torch.float32,
             ),
         )
         self.register_buffer(
             "action_bias",
             torch.tensor(
-                (env.single_action_space.high + env.single_action_space.low) / 2.0,
+                (action_space.high + action_space.low) / 2.0,
                 dtype=torch.float32,
             ),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         mean = self.fc_mean(x)
         log_std = self.fc_logstd(x)
         log_std = torch.tanh(log_std)
-        log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (log_std + 1)  # From SpinUp / Denis Yarats
+        log_std = LOG_STD_MIN + 0.5 * (LOG_STD_MAX - LOG_STD_MIN) * (
+            log_std + 1
+        )  # From SpinUp / Denis Yarats
 
         return mean, log_std
 
-    def get_action(self, x):
+    def get_action(
+        self, x: torch.Tensor, deterministic: bool = False
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         mean, log_std = self(x)
+        if deterministic:
+            # Return deterministic action (mean squashed through tanh)
+            action = torch.tanh(mean) * self.action_scale + self.action_bias
+            return action, torch.zeros_like(action), action
         std = log_std.exp()
-        normal = torch.distributions.Normal(mean, std)
-        x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))
+        normal = torch.distributions.Normal(mean, std)  # type: ignore
+        x_t = normal.rsample()  # type: ignore  # for reparameterization trick (mean + std * N(0,1))
         y_t = torch.tanh(x_t)
         action = y_t * self.action_scale + self.action_bias
-        log_prob = normal.log_prob(x_t)
+        log_prob = normal.log_prob(x_t)  # type: ignore
         # Enforcing Action Bound
         log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6)
         log_prob = log_prob.sum(1, keepdim=True)
@@ -200,7 +236,7 @@ class SACAgent(BaseRLAgent[_O, _U]):
 
         # Setup tensorboard writer if logging is enabled
         if cfg.get("tf_log", True):
-            exp_name = cfg.get("exp_name", "ppo_experiment")
+            exp_name = cfg.get("exp_name", "sac_experiment")
             tb_log_dir = cfg.get("tb_log_dir", "runs")
             self.log_path = Path(tb_log_dir) / exp_name
             self.writer = SummaryWriter(self.log_path)  # type: ignore
@@ -214,19 +250,130 @@ class SACAgent(BaseRLAgent[_O, _U]):
                 ),
             )
         else:
-            self.log_path = Path("runs/ppo_experiment")
+            self.log_path = Path("runs/sac_experiment")
             self.writer = None  # type: ignore
+
+        # Use spaces from base class
+        assert isinstance(self.observation_space, spaces.Box)
+        assert isinstance(self.action_space, spaces.Box)
+
+        # Initialize actor and critics
+        self.actor = Actor(
+            self.observation_space,
+            self.action_space,
+            hidden_size=self.args.hidden_size,
+        ).to(self.device)
+        self.qf1 = SoftQNetwork(
+            self.observation_space,
+            self.action_space,
+            hidden_size=self.args.hidden_size,
+        ).to(self.device)
+        self.qf2 = SoftQNetwork(
+            self.observation_space,
+            self.action_space,
+            hidden_size=self.args.hidden_size,
+        ).to(self.device)
+        self.qf1_target = SoftQNetwork(
+            self.observation_space,
+            self.action_space,
+            hidden_size=self.args.hidden_size,
+        ).to(self.device)
+        self.qf2_target = SoftQNetwork(
+            self.observation_space,
+            self.action_space,
+            hidden_size=self.args.hidden_size,
+        ).to(self.device)
+        self.qf1_target.load_state_dict(self.qf1.state_dict())
+        self.qf2_target.load_state_dict(self.qf2.state_dict())
+
+        # Initialize optimizers
+        self.q_optimizer = optim.Adam(
+            list(self.qf1.parameters()) + list(self.qf2.parameters()),
+            lr=self.args.q_lr,
+        )
+        self.actor_optimizer = optim.Adam(
+            list(self.actor.parameters()), lr=self.args.policy_lr
+        )
+
+        # Automatic entropy tuning
+        if self.args.autotune:
+            self.target_entropy = -torch.prod(
+                torch.Tensor(self.action_space.shape).to(self.device)
+            ).item()
+            self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
+            self.alpha = self.log_alpha.exp().item()
+            self.a_optimizer = optim.Adam([self.log_alpha], lr=self.args.q_lr)
+        else:
+            self.alpha = self.args.alpha
+
+        # Replay buffer (will be initialized in train())
+        self.rb: ReplayBuffer | None = None
 
     def _get_action(self) -> _U:  # type: ignore
         """Get action from current observation (for base class compatibility)."""
-
+        assert self._last_observation is not None, "Must call reset() before step()"
+        obs_tensor = torch.Tensor(self._last_observation).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            action, _, _ = self.actor.get_action(obs_tensor, deterministic=True)
+        action_np = action.cpu().numpy()[0]
+        # Clip action to be within action space bounds
+        assert isinstance(self.action_space, spaces.Box)
+        clipped_action = np.clip(
+            action_np, self.action_space.low, self.action_space.high
+        )
+        return clipped_action  # type: ignore
 
     def get_action_from_obs(self, obs: torch.Tensor) -> torch.Tensor:
         """Get action from observation tensor."""
+        with torch.no_grad():
+            action, _, _ = self.actor.get_action(obs, deterministic=True)
+        return action
 
     def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
         """Evaluate the SAC agent."""
+        envs = gym.vector.SyncVectorEnv(
+            [
+                make_env_sac(
+                    self.env_id,
+                    0,
+                    render,
+                    self.cfg.exp_name + "_eval",
+                    self.max_episode_steps,
+                )
+            ]
+        )
 
+        # Set agent to eval mode
+        self.actor.eval()
+
+        obs, _ = envs.reset()
+        episodic_returns: list[float] = []
+        step_lengths: list[int] = []
+        step_length = 0
+
+        while len(episodic_returns) < eval_episodes:
+            with torch.no_grad():
+                obs_tensor = torch.Tensor(obs).to(self.device)
+                action, _, _ = self.actor.get_action(obs_tensor, deterministic=True)
+                actions = action.cpu().numpy()
+
+            obs, _, _, _, infos = envs.step(actions)
+            step_length += 1
+
+            if "final_info" in infos:
+                for info in infos["final_info"]:
+                    if info is None or "episode" not in info:
+                        continue
+                    print(
+                        f"eval_episode={len(episodic_returns)}, "
+                        f"episodic_return={info['episode']['r']}"
+                    )
+                    episodic_returns.append(info["episode"]["r"])
+                    step_lengths.append(step_length)
+                    step_length = 0
+                obs, _ = envs.reset()
+
+        envs.close()  # type: ignore
 
         eval_metrics = {
             "episodic_return": episodic_returns,
@@ -236,18 +383,18 @@ class SACAgent(BaseRLAgent[_O, _U]):
 
     def train(self, render: bool = False) -> dict[str, Any]:  # type: ignore
         """Training the agent with an interactive batched environment."""
-        # Initialize observation normalization variables
-        # update the args with the environment-specific values
+        # Seeding
+        random.seed(self.args.seed)
+        np.random.seed(self.args.seed)
+        torch.manual_seed(self.args.seed)
+        torch.backends.cudnn.deterministic = self.args.torch_deterministic
+
         # env setup
-        random.seed(args.seed)
-        np.random.seed(args.seed)
-        torch.manual_seed(args.seed)
-        torch.backends.cudnn.deterministic = args.torch_deterministic
         envs = gym.vector.SyncVectorEnv(
             [
-                make_env(
+                make_env_sac(
                     self.env_id,
-                    i,
+                    self.args.seed + i,
                     render,
                     self.cfg.exp_name + "_train",
                     self.max_episode_steps,
@@ -259,9 +406,223 @@ class SACAgent(BaseRLAgent[_O, _U]):
             envs.single_action_space, gym.spaces.Box
         ), "only continuous action space is supported"
 
+        # Initialize replay buffer
+        envs.single_observation_space.dtype = np.float32  # type: ignore
+        self.rb = ReplayBuffer(
+            self.args.buffer_size,
+            envs.single_observation_space,
+            envs.single_action_space,
+            self.device,
+            n_envs=self.args.num_envs,
+            handle_timeout_termination=False,
+        )
+
+        start_time = time.time()
+
+        # TRY NOT TO MODIFY: start the game
+        obs, _ = envs.reset(seed=self.args.seed)
+        for global_step in range(self.args.total_timesteps):
+            # ALGO LOGIC: put action logic here
+            if global_step < self.args.learning_starts:
+                actions = np.array(
+                    [envs.single_action_space.sample() for _ in range(envs.num_envs)]
+                )
+            else:
+                with torch.no_grad():
+                    action_tensors, _, _ = self.actor.get_action(
+                        torch.Tensor(obs).to(self.device)
+                    )
+                    actions = action_tensors.cpu().numpy()
+
+            # TRY NOT TO MODIFY: execute the game and log data.
+            next_obs, rewards, terminations, truncations, infos = envs.step(actions)
+
+            # TRY NOT TO MODIFY: record rewards for plotting purposes
+            if "final_info" in infos:
+                for info in infos["final_info"]:
+                    if info is not None:
+                        print(
+                            f"global_step={global_step}, episodic_return={info['episode']['r']}"
+                        )
+                        if self.writer is not None:
+                            self.writer.add_scalar(  # type: ignore
+                                "charts/episodic_return",
+                                info["episode"]["r"],
+                                global_step,
+                            )
+                            self.writer.add_scalar(  # type: ignore
+                                "charts/episodic_length",
+                                info["episode"]["l"],
+                                global_step,
+                            )
+                        break
+
+            # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
+            real_next_obs = next_obs.copy()
+            for idx, trunc in enumerate(truncations):
+                if trunc:
+                    real_next_obs[idx] = infos["final_observation"][idx]
+            self.rb.add(obs, real_next_obs, actions, rewards, terminations, infos)
+
+            # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
+            obs = next_obs
+
+            # ALGO LOGIC: training.
+            if global_step > self.args.learning_starts:
+                data = self.rb.sample(self.args.batch_size)
+                with torch.no_grad():
+                    next_state_actions, next_state_log_pi, _ = self.actor.get_action(
+                        data.next_observations
+                    )
+                    qf1_next_target = self.qf1_target(
+                        data.next_observations, next_state_actions
+                    )
+                    qf2_next_target = self.qf2_target(
+                        data.next_observations, next_state_actions
+                    )
+                    min_qf_next_target = (
+                        torch.min(qf1_next_target, qf2_next_target)
+                        - self.alpha * next_state_log_pi
+                    )
+                    next_q_value = data.rewards.flatten() + (
+                        1 - data.dones.flatten()
+                    ) * self.args.gamma * (min_qf_next_target).view(-1)
+
+                qf1_a_values = self.qf1(data.observations, data.actions).view(-1)
+                qf2_a_values = self.qf2(data.observations, data.actions).view(-1)
+                qf1_loss = F.mse_loss(qf1_a_values, next_q_value)
+                qf2_loss = F.mse_loss(qf2_a_values, next_q_value)
+                qf_loss = qf1_loss + qf2_loss
+
+                # optimize the model
+                self.q_optimizer.zero_grad()
+                qf_loss.backward()  # type: ignore
+                self.q_optimizer.step()
+
+                if global_step % self.args.policy_frequency == 0:
+                    for _ in range(self.args.policy_frequency):
+                        pi, log_pi, _ = self.actor.get_action(data.observations)
+                        qf1_pi = self.qf1(data.observations, pi)
+                        qf2_pi = self.qf2(data.observations, pi)
+                        min_qf_pi = torch.min(qf1_pi, qf2_pi)
+                        actor_loss = ((self.alpha * log_pi) - min_qf_pi).mean()
+
+                        self.actor_optimizer.zero_grad()
+                        actor_loss.backward()  # type: ignore
+                        self.actor_optimizer.step()
+
+                        if self.args.autotune:
+                            with torch.no_grad():
+                                _, log_pi, _ = self.actor.get_action(data.observations)
+                            alpha_loss = (
+                                -self.log_alpha.exp() * (log_pi + self.target_entropy)
+                            ).mean()
+
+                            self.a_optimizer.zero_grad()
+                            alpha_loss.backward()  # type: ignore
+                            self.a_optimizer.step()
+                            self.alpha = self.log_alpha.exp().item()
+
+                # update the target networks
+                if global_step % self.args.target_network_frequency == 0:
+                    for param, target_param in zip(
+                        self.qf1.parameters(), self.qf1_target.parameters()
+                    ):
+                        target_param.data.copy_(
+                            self.args.tau * param.data
+                            + (1 - self.args.tau) * target_param.data
+                        )
+                    for param, target_param in zip(
+                        self.qf2.parameters(), self.qf2_target.parameters()
+                    ):
+                        target_param.data.copy_(
+                            self.args.tau * param.data
+                            + (1 - self.args.tau) * target_param.data
+                        )
+
+                if global_step % 100 == 0 and self.writer is not None:
+                    self.writer.add_scalar(  # type: ignore
+                        "losses/qf1_values", qf1_a_values.mean().item(), global_step
+                    )
+                    self.writer.add_scalar(  # type: ignore
+                        "losses/qf2_values", qf2_a_values.mean().item(), global_step
+                    )
+                    self.writer.add_scalar(  # type: ignore
+                        "losses/qf1_loss", qf1_loss.item(), global_step
+                    )
+                    self.writer.add_scalar(  # type: ignore
+                        "losses/qf2_loss", qf2_loss.item(), global_step
+                    )
+                    self.writer.add_scalar(  # type: ignore
+                        "losses/qf_loss", qf_loss.item() / 2.0, global_step
+                    )
+                    self.writer.add_scalar(  # type: ignore
+                        "losses/actor_loss", actor_loss.item(), global_step
+                    )
+                    self.writer.add_scalar("losses/alpha", self.alpha, global_step)  # type: ignore
+                    print("SPS:", int(global_step / (time.time() - start_time)))
+                    self.writer.add_scalar(  # type: ignore
+                        "charts/SPS",
+                        int(global_step / (time.time() - start_time)),
+                        global_step,
+                    )
+                    if self.args.autotune:
+                        self.writer.add_scalar(  # type: ignore
+                            "losses/alpha_loss", alpha_loss.item(), global_step
+                        )
+
+            # Evaluation
+            if (
+                self.args.eval_freq > 0
+                and global_step > 0
+                and global_step % self.args.eval_freq == 0
+            ):
+                eval_metrics = self.evaluate(self.args.num_eval_envs)
+                logging.info(f"Evaluated {self.args.num_eval_envs} episodes")
+                for k, v in eval_metrics.items():
+                    mean = np.mean(v)
+                    if self.writer is not None:
+                        self.writer.add_scalar(f"eval/{k}", mean, global_step)  # type: ignore
+                    logging.info(f"eval_{k}_mean={mean}")
+
+        if self.args.save_model:
+            model_path = self.log_path / "final_ckpt.pt"
+            self.save(str(model_path))
+            logging.info(f"model saved to {model_path}")
+
+        envs.close()  # type: ignore
+        if self.writer is not None:
+            self.writer.close()  # type: ignore
+
+        return {}
 
     def save(self, filepath: str) -> None:
         """Save agent parameters."""
+        save_dict = {
+            "actor_state_dict": self.actor.state_dict(),
+            "qf1_state_dict": self.qf1.state_dict(),
+            "qf2_state_dict": self.qf2.state_dict(),
+            "qf1_target_state_dict": self.qf1_target.state_dict(),
+            "qf2_target_state_dict": self.qf2_target.state_dict(),
+            "actor_optimizer_state_dict": self.actor_optimizer.state_dict(),
+            "q_optimizer_state_dict": self.q_optimizer.state_dict(),
+        }
+        if self.args.autotune:
+            save_dict["log_alpha"] = self.log_alpha
+            save_dict["a_optimizer_state_dict"] = self.a_optimizer.state_dict()
+        torch.save(save_dict, filepath)
 
     def load(self, filepath: str) -> None:
         """Load agent parameters."""
+        checkpoint = torch.load(filepath, map_location=self.device)
+        self.actor.load_state_dict(checkpoint["actor_state_dict"])
+        self.qf1.load_state_dict(checkpoint["qf1_state_dict"])
+        self.qf2.load_state_dict(checkpoint["qf2_state_dict"])
+        self.qf1_target.load_state_dict(checkpoint["qf1_target_state_dict"])
+        self.qf2_target.load_state_dict(checkpoint["qf2_target_state_dict"])
+        self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer_state_dict"])
+        self.q_optimizer.load_state_dict(checkpoint["q_optimizer_state_dict"])
+        if self.args.autotune and "log_alpha" in checkpoint:
+            self.log_alpha = checkpoint["log_alpha"]
+            self.a_optimizer.load_state_dict(checkpoint["a_optimizer_state_dict"])
+            self.alpha = self.log_alpha.exp().item()

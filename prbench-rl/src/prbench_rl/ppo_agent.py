@@ -29,7 +29,7 @@ except ImportError:
     TENSORBOARD_AVAILABLE = False
 
 from prbench_rl.agent import BaseRLAgent
-from prbench_rl.gym_utils import make_env
+from prbench_rl.gym_utils import make_env_ppo
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -283,7 +283,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         """Evaluate the PPO agent."""
         envs = gym.vector.SyncVectorEnv(
             [
-                make_env(
+                make_env_ppo(
                     self.env_id,
                     0,
                     render,
@@ -338,7 +338,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         # env setup
         envs = gym.vector.SyncVectorEnv(
             [
-                make_env(
+                make_env_ppo(
                     self.env_id,
                     i,
                     render,
