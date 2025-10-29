@@ -5,9 +5,9 @@ import numpy as np
 import prbench
 from gymnasium import spaces
 from omegaconf import DictConfig
-from prbench.envs.geom2d.stickbutton2d import StickButton2DEnv
 
 from prbench_rl.ppo_agent import PPOAgent
+from prbench_rl.gym_utils import make_fixed_env
 
 
 def test_ppo_agent_with_prbench_environment():
@@ -86,84 +86,7 @@ def test_ppo_agent_training_with_fixed_environment():
     """Test PPO agent can overfit on fixed environment setup."""
     prbench.register_all_environments()
 
-    # Create a custom environment wrapper that fixes positions
-    # NOTE: This env will by default truncate after 100 steps
-    # so it is not registered with "prbench", but with gymnasium directly.
-    class FixedPositionWrapper(gymnasium.Env):
-        """Environment wrapper that fixes initial positions for testing."""
-
-        def __init__(self, env: StickButton2DEnv):
-            super().__init__()
-            self.env = env
-            self.observation_space = env.observation_space
-            self.action_space = env.action_space
-            self.render_mode = env.render_mode
-            self.metadata = env.metadata
-            obs0, _ = self.env.reset(seed=123)
-            # Check if the observation space has devectorize method
-            assert hasattr(self.env.observation_space, "devectorize")
-            state0 = self.env.observation_space.devectorize(obs0)
-
-            obj_name_to_obj = {o.name: o for o in list(state0.data.keys())}
-            robot = obj_name_to_obj["robot"]
-            button0 = obj_name_to_obj["button0"]
-
-            state1 = state0.copy()
-            state1.set(robot, "x", 1.8)
-            state1.set(robot, "y", 1.0)
-            state1.set(button0, "y", 1.0)
-            state1.set(button0, "x", 2.0)
-            self.reset_options = {"init_state": state1}
-            self.num_env_steps = 0
-            self.max_episode_steps = 100
-            self.r = 0.0
-            # Debug rendering only if render_mode is set
-            # if self.render_mode is not None:
-            #     _, _ = env.reset(seed=123, options=self.reset_options)
-            #     img = env.render()
-            #     os.makedirs("debug", exist_ok=True)
-            #     iio.imwrite("debug/unit_test_fixed_env_init.png", img)
-
-        def reset(self, seed=None, options=None):  # pylint: disable=arguments-differ
-            del seed, options  # Ignore external parameters
-            self.num_env_steps = 0
-            self.r = 0.0
-            obs, info = self.env.reset(seed=123, options=self.reset_options)
-            return obs, info
-
-        def step(self, action):
-            self.num_env_steps += 1
-            obs, reward, terminated, _, info = self.env.step(action)
-            truncated = self.num_env_steps >= self.max_episode_steps
-            self.r += reward
-            if terminated or truncated:
-                info["final_info"] = [
-                    {
-                        "episode": {
-                            "r": self.r,
-                            "l": self.num_env_steps - 1,
-                        }
-                    }
-                ]
-                obs, _ = self.reset()
-            return obs, reward, terminated, truncated, info
-
-        def close(self):
-            return self.env.close()
-
-        def render(self):
-            return self.env.render()
-
-    # Register the wrapped environment with a custom ID so PPO can create it
-    def make_fixed_env(render_mode=None):
-        """Factory function to create the fixed environment."""
-        base_env = prbench.make(
-            "prbench/StickButton2D-b1-v0",
-            render_mode=render_mode,
-        )
-        return FixedPositionWrapper(base_env)
-
-    # Register with gymnasium
+    # Register trivial env with gymnasium
     gymnasium.register(
         id="StickButton2D-Fixed-v0",
         entry_point=make_fixed_env,
