@@ -61,8 +61,8 @@ Output a JSON list where each entry contains:
 
 
 def check_detection(query: Query, response: Response) -> Query | None:
-    """
-    Validate that the response `r` is a JSON list of dicts with the required fields:
+    """Validate that the response `r` is a JSON list of dicts with the required fields:
+
       - "box_2d"
       - "mask"
       - "label"

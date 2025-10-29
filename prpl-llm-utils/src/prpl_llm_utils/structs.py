@@ -37,7 +37,8 @@ class Query:
         return f"{prompt_prefix}__{unique_id}"
 
     def robust_image_hash_list(self, size=(512, 512)) -> list[str]:
-        """Compute a list of robust image hashes with preprocessing and scaling."""
+        """Compute a list of robust image hashes with preprocessing and
+        scaling."""
 
         hashed = []
         assert self.imgs is not None
