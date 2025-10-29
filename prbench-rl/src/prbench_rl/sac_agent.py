@@ -7,7 +7,6 @@ https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/sac_continuous_action.py
 
 import logging
 import random
-import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,17 +29,8 @@ except ImportError:
     SummaryWriter = None  # type: ignore
     TENSORBOARD_AVAILABLE = False
 
-# Add cleanrl to path before importing from it
-cleanrl_path = Path(__file__).parent.parent.parent.parent / "cleanrl"
-if str(cleanrl_path) not in sys.path:
-    sys.path.insert(0, str(cleanrl_path))
-
-# pylint: disable=wrong-import-position
-from cleanrl_utils.buffers import ReplayBuffer  # type: ignore
-
 from prbench_rl.agent import BaseRLAgent
-from prbench_rl.gym_utils import make_env_sac
-# pylint: enable=wrong-import-position
+from prbench_rl.gym_utils import ReplayBuffer, make_env_sac
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -467,7 +457,12 @@ class SACAgent(BaseRLAgent[_O, _U]):
             for idx, trunc in enumerate(truncations):
                 if trunc:
                     real_next_obs[idx] = infos["final_observation"][idx]
-            self.rb.add(obs, real_next_obs, actions, rewards, terminations, infos)
+            # Convert vectorized infos dict to list of per-env info dicts
+            infos_list = [
+                {"TimeLimit.truncated": bool(truncations[i])}
+                for i in range(self.args.num_envs)
+            ]
+            self.rb.add(obs, real_next_obs, actions, rewards, terminations, infos_list)
 
             # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
             obs = next_obs
