@@ -1,0 +1,67 @@
+"""Tests for ground parameterized skills."""
+
+import numpy as np
+import prbench
+from spatialmath import SE2
+
+from prbench_models.dynamic3d.ground.parameterized_skills import (
+    get_target_robot_pose_from_parameters,
+)
+
+prbench.register_all_environments()
+
+
+def test_get_target_robot_pose_from_parameters():
+    """Tests for get_target_robot_pose_from_parameters()."""
+
+    target = SE2(1.0, 0.0, 0.0)
+    robot_pose = get_target_robot_pose_from_parameters(
+        target, target_distance=1.0, target_rot=0.0
+    )
+
+    # Robot should be 1m behind the target, facing it
+    assert np.isclose(robot_pose.x, 0.0)
+    assert np.isclose(robot_pose.y, 0.0)
+    assert np.isclose(robot_pose.theta(), 0.0)
+
+    # With a rotation offset of 90 degrees (pi/2)
+    robot_pose2 = get_target_robot_pose_from_parameters(
+        target, target_distance=1.0, target_rot=np.pi / 2
+    )
+    assert np.isclose(robot_pose2.x, 1.0)
+    assert np.isclose(robot_pose2.y, -1.0)
+    assert np.isclose(robot_pose2.theta(), np.pi / 2)
+
+    # Uncomment to debug.
+    # import imageio.v2 as iio
+    # from matplotlib import pyplot as plt
+    # from prpl_utils.utils import fig2data
+
+    # from prbench_models.dynamic3d.utils import get_overhead_object_se2_pose, \
+    #     plot_overhead_scene
+
+    # env = prbench.make("prbench/TidyBot3D-ground-o1-v0", render_mode="rgb_array")
+    # assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    # obs, _ = env.reset(seed=123)
+    # state = env.observation_space.devectorize(obs)
+    # fig, ax = plot_overhead_scene(state, min_x=-1.5, max_x=1.5, min_y=-1.5, max_y=1.5)
+
+    # target_distance = 0.75
+    # target_object = state.get_object_from_name("cube1")
+    # for target_rot in np.linspace(-np.pi, np.pi, num=24):
+    #     target_object_pose = get_overhead_object_se2_pose(state, target_object)
+    #     robot_pose = get_target_robot_pose_from_parameters(
+    #         target_object_pose, target_distance, target_rot
+    #     )
+    #     th = robot_pose.theta()
+    #     ax.arrow(
+    #         robot_pose.x, robot_pose.y, 0.1 * np.cos(th), 0.1 * np.sin(th), width=0.01
+    #     )
+
+    # ax.set_title("Examples for get_target_robot_pose_from_parameters().")
+    # plt.tight_layout()
+    # plt.axis("equal")
+    # img = fig2data(fig)
+    # outfile = "get_target_robot_pose_from_parameters.png"
+    # iio.imsave(outfile, img)
+    # print(f"Wrote out to {outfile}")
