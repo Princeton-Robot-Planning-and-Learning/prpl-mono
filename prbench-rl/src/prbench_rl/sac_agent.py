@@ -7,6 +7,7 @@ https://github.com/vwxyzjn/cleanrl/blob/master/cleanrl/sac_continuous_action.py
 
 import logging
 import random
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,19 +30,17 @@ except ImportError:
     SummaryWriter = None  # type: ignore
     TENSORBOARD_AVAILABLE = False
 
-# Import ReplayBuffer from cleanrl
-import sys
-from pathlib import Path as PathLib
-
-# Add cleanrl to path
-cleanrl_path = PathLib(__file__).parent.parent.parent.parent / "cleanrl"
+# Add cleanrl to path before importing from it
+cleanrl_path = Path(__file__).parent.parent.parent.parent / "cleanrl"
 if str(cleanrl_path) not in sys.path:
     sys.path.insert(0, str(cleanrl_path))
 
+# pylint: disable=wrong-import-position
 from cleanrl_utils.buffers import ReplayBuffer  # type: ignore
 
 from prbench_rl.agent import BaseRLAgent
 from prbench_rl.gym_utils import make_env_sac
+# pylint: enable=wrong-import-position
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -80,29 +79,29 @@ class SACArgs:
     hidden_size: int = 256
     """The hidden size of the neural networks."""
     total_timesteps: int = 1000000
-    """total timesteps of the experiments"""
+    """Total timesteps of the experiments."""
     buffer_size: int = int(1e6)
-    """the replay memory buffer size"""
+    """The replay memory buffer size."""
     gamma: float = 0.99
-    """the discount factor gamma"""
+    """The discount factor gamma."""
     tau: float = 0.005
-    """target smoothing coefficient (default: 0.005)"""
+    """Target smoothing coefficient (default: 0.005)"""
     batch_size: int = 256
-    """the batch size of sample from the reply memory"""
+    """The batch size of sample from the reply memory."""
     learning_starts: int = int(5e3)
-    """timestep to start learning"""
+    """Timestep to start learning."""
     policy_lr: float = 3e-4
-    """the learning rate of the policy network optimizer"""
+    """The learning rate of the policy network optimizer."""
     q_lr: float = 1e-3
-    """the learning rate of the Q network network optimizer"""
+    """The learning rate of the Q network network optimizer."""
     policy_frequency: int = 2
-    """the frequency of training policy (delayed)"""
+    """The frequency of training policy (delayed)"""
     target_network_frequency: int = 1  # Denis Yarats' implementation delays this by 2.
-    """the frequency of updates for the target nerworks"""
+    """The frequency of updates for the target nerworks."""
     alpha: float = 0.2
     """Entropy regularization coefficient."""
     autotune: bool = True
-    """automatic tuning of the entropy coefficient"""
+    """Automatic tuning of the entropy coefficient."""
 
 
 # ALGO LOGIC: initialize agent here:
@@ -123,6 +122,7 @@ class SoftQNetwork(nn.Module):
         self.fc3 = nn.Linear(hidden_size, 1)
 
     def forward(self, x: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        """Compute Q-value for state-action pair."""
         x = torch.cat([x, a], 1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -167,6 +167,7 @@ class Actor(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute mean and log_std for action distribution."""
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         mean = self.fc_mean(x)
@@ -181,6 +182,7 @@ class Actor(nn.Module):
     def get_action(
         self, x: torch.Tensor, deterministic: bool = False
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Sample action from policy, returning action, log_prob, and mean."""
         mean, log_std = self(x)
         if deterministic:
             # Return deterministic action (mean squashed through tanh)
@@ -188,7 +190,8 @@ class Actor(nn.Module):
             return action, torch.zeros_like(action), action
         std = log_std.exp()
         normal = torch.distributions.Normal(mean, std)  # type: ignore
-        x_t = normal.rsample()  # type: ignore  # for reparameterization trick (mean + std * N(0,1))
+        # Reparameterization trick (mean + std * N(0,1))
+        x_t = normal.rsample()  # type: ignore
         y_t = torch.tanh(x_t)
         action = y_t * self.action_scale + self.action_bias
         log_prob = normal.log_prob(x_t)  # type: ignore
@@ -441,8 +444,10 @@ class SACAgent(BaseRLAgent[_O, _U]):
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info is not None:
+                        episodic_return = info["episode"]["r"]
                         print(
-                            f"global_step={global_step}, episodic_return={info['episode']['r']}"
+                            f"global_step={global_step}, "
+                            f"episodic_return={episodic_return}"
                         )
                         if self.writer is not None:
                             self.writer.add_scalar(  # type: ignore
@@ -559,7 +564,9 @@ class SACAgent(BaseRLAgent[_O, _U]):
                     self.writer.add_scalar(  # type: ignore
                         "losses/actor_loss", actor_loss.item(), global_step
                     )
-                    self.writer.add_scalar("losses/alpha", self.alpha, global_step)  # type: ignore
+                    self.writer.add_scalar(  # type: ignore
+                        "losses/alpha", self.alpha, global_step
+                    )
                     print("SPS:", int(global_step / (time.time() - start_time)))
                     self.writer.add_scalar(  # type: ignore
                         "charts/SPS",
@@ -582,7 +589,9 @@ class SACAgent(BaseRLAgent[_O, _U]):
                 for k, v in eval_metrics.items():
                     mean = np.mean(v)
                     if self.writer is not None:
-                        self.writer.add_scalar(f"eval/{k}", mean, global_step)  # type: ignore
+                        self.writer.add_scalar(  # type: ignore
+                            f"eval/{k}", mean, global_step
+                        )
                     logging.info(f"eval_{k}_mean={mean}")
 
         if self.args.save_model:

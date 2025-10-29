@@ -4,8 +4,8 @@ from omegaconf import DictConfig
 
 from prbench_rl.agent import BaseRLAgent
 from prbench_rl.ppo_agent import PPOAgent
-from prbench_rl.sac_agent import SACAgent
 from prbench_rl.random_agent import RandomAgent
+from prbench_rl.sac_agent import SACAgent
 
 __all__ = ["create_rl_agents"]
 

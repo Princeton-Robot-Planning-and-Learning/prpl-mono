@@ -3,7 +3,6 @@
 import gymnasium as gym
 import numpy as np
 import prbench
-import torch
 
 
 def make_env_ppo(
@@ -42,6 +41,7 @@ def make_env_ppo(
 
     return thunk
 
+
 def make_env_sac(
     env_id: str,
     idx: int,
@@ -70,51 +70,3 @@ def make_env_sac(
         return env
 
     return thunk
-
-def evaluate_ppo(
-    env_id: str,
-    eval_episodes: int,
-    run_name: str,
-    Model: torch.nn.Module,
-    device: torch.device = torch.device("cpu"),
-    capture_video: bool = True,
-    max_episode_steps: int = 300,
-) -> list[float]:
-    """Evaluate a PPO agent.
-
-    Args:
-        env_id: Environment ID to evaluate on
-        eval_episodes: Number of episodes to evaluate
-        run_name: Name for the run (used for video naming)
-        Model: The PyTorch model class
-        device: Device to run on
-        capture_video: Whether to capture video
-        max_episode_steps: Maximum steps per episode
-
-    Returns:
-        List of episodic returns
-    """
-    envs = gym.vector.SyncVectorEnv(
-        [make_env(env_id, 0, capture_video, run_name, max_episode_steps)]
-    )
-    agent = Model(envs).to(device)
-    agent.eval()
-
-    obs, _ = envs.reset()
-    episodic_returns: list[float] = []
-    while len(episodic_returns) < eval_episodes:
-        actions, _, _, _ = agent.get_action_and_value(torch.Tensor(obs).to(device))
-        next_obs, _, _, _, infos = envs.step(actions.cpu().numpy())
-        if "final_info" in infos:
-            for info in infos["final_info"]:
-                if "episode" not in info:
-                    continue
-                episode_return = info["episode"]["r"]
-                print(
-                    f"eval_episode={len(episodic_returns)}, "
-                    f"episodic_return={episode_return}"
-                )
-                episodic_returns += [info["episode"]["r"]]
-        obs = next_obs
-
-    return episodic_returns

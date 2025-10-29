@@ -177,7 +177,7 @@ class Agent(nn.Module):
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
-        probs = Normal(action_mean, action_std)
+        probs = Normal(action_mean, action_std)  # type: ignore
         if action is None:
             action = probs.sample()  # type: ignore[no-untyped-call]
         return (
