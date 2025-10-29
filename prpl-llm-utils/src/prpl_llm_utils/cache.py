@@ -1,12 +1,13 @@
 """Methods for saving and loading model responses."""
 
 import abc
+import csv
 import json
 import logging
+import re
 import sqlite3
 from pathlib import Path
 
-import imagehash
 
 from prpl_llm_utils.structs import Query, Response
 
@@ -35,7 +36,7 @@ class FilePretrainedLargeModelCache(PretrainedLargeModelCache):
         self._cache_dir.mkdir(exist_ok=True)
 
     def _get_cache_dir_for_query(self, query: Query, model_id: str) -> Path:
-        query_id = query.get_readable_id()
+        query_id = re.sub(r"[<>:\"/\\|?*']", "_", query.get_readable_id())
         cache_foldername = f"{model_id}_{query_id}"
         cache_folderpath = self._cache_dir / cache_foldername
         cache_folderpath.mkdir(exist_ok=True)
@@ -168,7 +169,7 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
         # Prepare the data for storage.
         images_hash = None
         if query.imgs is not None:
-            img_hash_list = [str(imagehash.phash(img)) for img in query.imgs]
+            img_hash_list = query.robust_image_hash_list()
             images_hash = json.dumps(img_hash_list)
 
         metadata_json = json.dumps(response.metadata)
@@ -198,7 +199,7 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
 
         placeholders = ["?"] * len(columns)
         sql = f"""
-            INSERT OR REPLACE INTO responses 
+            INSERT OR REPLACE INTO responses
             ({', '.join(columns)})
             VALUES ({', '.join(placeholders)})
         """
@@ -210,3 +211,23 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
         logging.debug(
             f"Saved model response to SQLite database for query hash {query_hash}."
         )
+
+    def to_csv(self, csv_path: Path) -> None:
+        """Dump the entire responses table to a CSV file."""
+        with sqlite3.connect(self._database_path) as conn:
+            cursor = conn.cursor()
+
+            # Fetch all columns
+            cursor.execute("PRAGMA table_info(responses)")
+            columns = [info[1] for info in cursor.fetchall()]
+
+            cursor.execute("SELECT * FROM responses")
+            rows = cursor.fetchall()
+
+            # Write to CSV
+            with open(csv_path, mode="w", newline="", encoding="utf-8") as csv_file:
+                writer = csv.writer(csv_file)
+                writer.writerow(columns)
+                writer.writerows(rows)
+
+        logging.info(f"Dumped SQLite responses table to CSV at {csv_path}")

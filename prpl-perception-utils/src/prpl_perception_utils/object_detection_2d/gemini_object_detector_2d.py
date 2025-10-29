@@ -4,13 +4,24 @@ import base64
 import io
 import json
 import logging
+import tempfile
+from pathlib import Path
 from string import Template
 from typing import Collection
 
 import numpy as np
-from google import genai
-from google.genai import types
 from PIL import Image
+from prpl_llm_utils.cache import (
+    PretrainedLargeModelCache,
+    SQLite3PretrainedLargeModelCache,
+)
+from prpl_llm_utils.models import GeminiModel
+from prpl_llm_utils.reprompting import (
+    FunctionalRepromptCheck,
+    create_reprompt_from_error_message,
+    query_with_reprompts,
+)
+from prpl_llm_utils.structs import Query, Response
 
 from prpl_perception_utils.object_detection_2d.base_object_detector_2d import (
     ObjectDetector2D,
@@ -38,11 +49,76 @@ Output a JSON list where each entry contains:
         to keep track of the boundaries of the figure), ensuring the entire
         object is included, even if elongated or partially occluded.
     "label": the object label (use the same labels as listed above).
-    "confidence": a calibrated confidence score between 0 and 1 indicating how
-        likely it is that the object is correctly detected in that location.
+    "confidence": a calibrated confidence score between 0.1 and 1 indicating how
+        likely it is that the object is correctly detected in that location. Set
+        confidence according to how much you would be willing to bet that the
+        object you masked is the correct one, with the correct COLOR, SHAPE, and
+        other distinctive features. Never mask an image with confidence <0.1,
+        and be confident if you know you masked the right object.
 }
 """
 )
+
+
+def check_detection(query: Query, response: Response) -> Query | None:
+    """
+    Validate that the response `r` is a JSON list of dicts with the required fields:
+      - "box_2d"
+      - "mask"
+      - "label"
+      - "confidence" in [0, 1]
+    Returns None if valid, otherwise a reprompt message.
+    """
+
+    try:
+        data = json.loads(_parse_json(response.text))
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        return create_reprompt_from_error_message(
+            query, response, f"JSON parsing error: {e}"
+        )
+
+    if not isinstance(data, list):
+        return create_reprompt_from_error_message(query, response, "Not a JSON list.")
+
+    required_keys = {"box_2d", "mask", "label", "confidence"}
+
+    for i, item in enumerate(data):
+        if not isinstance(item, dict):
+            return create_reprompt_from_error_message(
+                query, response, f"Entry {i}: Not a valid JSON object."
+            )
+
+        missing = required_keys - set(item.keys())
+        if missing:
+            return create_reprompt_from_error_message(
+                query, response, f"Entry {i}: Missing keys {', '.join(missing)}."
+            )
+
+        if not isinstance(item["box_2d"], (list, dict)):
+            return create_reprompt_from_error_message(
+                query, response, f"Entry {i}: Invalid format for box_2d."
+            )
+
+        if not isinstance(item["mask"], (str, list, dict)):
+            return create_reprompt_from_error_message(
+                query, response, f"Entry {i}: Invalid format for mask."
+            )
+
+        if not isinstance(item["label"], str):
+            return create_reprompt_from_error_message(
+                query, response, f"Entry {i}: Invalid format for label."
+            )
+
+        conf = item["confidence"]
+        if not (isinstance(conf, (int, float)) and 0 <= conf <= 1):
+            return create_reprompt_from_error_message(
+                query,
+                response,
+                f"Entry {i}: 'confidence' must be a number between 0 and 1.",
+            )
+
+    # Valid response format (no reprompt)
+    return None
 
 
 def _parse_json(json_output: str) -> str:
@@ -64,13 +140,16 @@ class GeminiObjectDetector2D(ObjectDetector2D):
         model: str = "gemini-2.5-flash",
         thumbnail_size: int = 1024,
         min_mask_value: int = 100,
+        cache: PretrainedLargeModelCache | None = None,
     ) -> None:
-        self._model = model
+
+        if cache is None:
+            logging.info("Cache does not exist, a default one will be created")
+            cache_path = Path(tempfile.gettempdir()) / "detection.db"
+            cache = SQLite3PretrainedLargeModelCache(cache_path)
+
+        self._gemini_model = GeminiModel(model, cache)
         self._thumbnail_size = thumbnail_size
-        self._client = genai.Client()
-        self._config = types.GenerateContentConfig(
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        )
         self._min_mask_value = min_mask_value
 
     def detect(
@@ -95,14 +174,11 @@ class GeminiObjectDetector2D(ObjectDetector2D):
                 (self._thumbnail_size, self._thumbnail_size), Image.Resampling.LANCZOS
             )
             # Run Gemini query.
-            # NOTE: we should probably validate and re-prompt in the future.
-            prompt_contents: list[str | Image.Image] = [prompt, im]
+            # NOTE: validates and reprompts, according to check_fn.
             logging.info("Sending query to Gemini")
-            response = self._client.models.generate_content(
-                model=self._model,
-                contents=prompt_contents,  # type: ignore
-                config=self._config,
-            )
+            query = Query(prompt, [im], {"temperature": 0.0})
+            checker = FunctionalRepromptCheck(check_detection)
+            response = query_with_reprompts(self._gemini_model, query, [checker])
             logging.info("Received response from Gemini")
             assert response.text is not None
             json_str = _parse_json(response.text)
