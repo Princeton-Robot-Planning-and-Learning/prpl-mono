@@ -206,3 +206,57 @@ def synthesize_python_function_with_llm(
     return SynthesizedPythonFunction(
         function_name, python_code, timeout=function_timeout
     )
+
+
+def find_undefined_names(source: str, *, provided_globals=None):
+    """Identify undefined variable names in the given Python source code."""
+    tree = ast.parse(source)
+    v = UndefinedVisitor(provided_globals=provided_globals or set())
+    v.visit(tree)
+    return v.issues
+
+
+class SemanticsPyStubRepromptCheck(RepromptCheck):
+    """Check whether the semantics_py_stub field contains valid, executable
+    Python code that meets the required syntax and execution constraints."""
+
+    def get_reprompt(self, query: Query, response: Response) -> Query | None:
+        print("Checking semantics_py_stub for validity...")
+
+        # Assumes 1. Resoonse is in JSON 2. JSON structure is already validated
+        llm_output = json.loads(response.text)
+        stub = llm_output["proposal"]["semantics_py_stub"]
+        stub = stub.replace("\\n", "\n")
+
+        try:
+            # Ensure the stub is valid Python code /Syntax
+            tree = ast.parse(stub)  # pylint: disable=unused-variable
+        except SyntaxError as e:
+            print(f"Syntax error in semantics_py_stub: {e}")  # Log the error
+            error_msg = (
+                f"The semantics_py_stub contains invalid Python syntax: {str(e)}"
+            )
+            return create_reprompt_from_error_message(query, response, error_msg)
+
+        # Check executability of the stub
+        try:
+            local_namespace = {}
+            # Execute in a restricted environment
+            exec(stub, {}, local_namespace)  # pylint: disable=exec-used
+        except Exception as e:  # Catching all exceptions for logging purposes
+            print(f"Execution error in semantics_py_stub: {e}")  # Log the error
+            error_msg = (
+                f"The semantics_py_stub raised an error during execution: {str(e)}"
+            )
+            return create_reprompt_from_error_message(query, response, error_msg)
+
+        # Identify undefined variable names in the semantics_py_stub using the provided local namespace.
+        undefined = find_undefined_names(stub, provided_globals=set(local_namespace))
+        if undefined:
+            error_msg = "The semantics_py_stub contains undefined names: " + ", ".join(
+                sorted(undefined)
+            )
+            print(error_msg)
+            return create_reprompt_from_error_message(query, response, error_msg)
+        print("semantics_py_stub passed all checks.")
+        return None
