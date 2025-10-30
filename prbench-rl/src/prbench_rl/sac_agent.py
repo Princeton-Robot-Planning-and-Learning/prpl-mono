@@ -605,7 +605,7 @@ class SACAgent(BaseRLAgent[_O, _U]):
 
     def save(self, filepath: str) -> None:
         """Save agent parameters."""
-        save_dict = {
+        save_dict: dict[str, Any] = {
             "actor_state_dict": self.actor.state_dict(),
             "qf1_state_dict": self.qf1.state_dict(),
             "qf2_state_dict": self.qf2.state_dict(),
