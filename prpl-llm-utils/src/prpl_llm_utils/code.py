@@ -21,6 +21,7 @@ from prpl_llm_utils.reprompting import (
     query_with_reprompts,
 )
 from prpl_llm_utils.structs import Query, Response
+from prpl_llm_utils.utils import UndefinedVisitor
 
 # This speeds up the sandbox for code synthesis by a lot.
 mp.set_start_method("fork")
@@ -216,7 +217,7 @@ def find_undefined_names(source: str, *, provided_globals=None):
     return v.issues
 
 
-class SemanticsPyStubRepromptCheck(RepromptCheck):
+class SemanticsPythonRepromptCheck(RepromptCheck):
     """Check whether the semantics_py_stub field contains valid, executable
     Python code that meets the required syntax and execution constraints."""
 
@@ -240,7 +241,7 @@ class SemanticsPyStubRepromptCheck(RepromptCheck):
 
         # Check executability of the stub
         try:
-            local_namespace = {}
+            local_namespace: dict[str, Any] = {}
             # Execute in a restricted environment
             exec(stub, {}, local_namespace)  # pylint: disable=exec-used
         except Exception as e:  # Catching all exceptions for logging purposes
@@ -250,7 +251,8 @@ class SemanticsPyStubRepromptCheck(RepromptCheck):
             )
             return create_reprompt_from_error_message(query, response, error_msg)
 
-        # Identify undefined variable names in the semantics_py_stub using the provided local namespace.
+        # Identify undefined variable names in the semantics_py_stub using
+        # the provided local namespace.
         undefined = find_undefined_names(stub, provided_globals=set(local_namespace))
         if undefined:
             error_msg = "The semantics_py_stub contains undefined names: " + ", ".join(
