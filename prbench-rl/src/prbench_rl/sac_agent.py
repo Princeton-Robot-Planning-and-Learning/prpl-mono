@@ -127,6 +127,9 @@ LOG_STD_MIN = -5
 class Actor(nn.Module):
     """Actor network (Policy) for SAC."""
 
+    action_scale: torch.Tensor
+    action_bias: torch.Tensor
+
     def __init__(
         self,
         observation_space: spaces.Box,
