@@ -13,6 +13,7 @@ def test_tidybot_observation():
     obs = TidyBotObservation(
         arm_conf=[0.0] * 7,
         base_pose=spatialmath.SE2(x=0, y=0, theta=0),
+        map_base_pose=spatialmath.SE2(x=0, y=0, theta=0),
         gripper=0.0,
         wrist_camera=np.zeros(WRIST_CAMERA_DIMS, dtype=np.uint8),
         base_camera=np.zeros(BASE_CAMERA_DIMS, dtype=np.uint8),
@@ -26,6 +27,7 @@ def test_tidybot_observation():
         TidyBotObservation(
             arm_conf=[0.0] * 7,
             base_pose=spatialmath.SE2(x=0, y=0, theta=0),
+            map_base_pose=spatialmath.SE2(x=0, y=0, theta=0),
             gripper=0.0,
             wrist_camera=np.zeros((1, 1, 1), dtype=np.uint8),
             base_camera=np.zeros(BASE_CAMERA_DIMS, dtype=np.uint8),
