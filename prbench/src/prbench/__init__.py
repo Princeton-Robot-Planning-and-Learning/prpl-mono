@@ -100,6 +100,17 @@ def register_all_environments() -> None:
         kwargs={"num_tee": 1},
     )
 
+    # DynScoopPour environment with different numbers of small objects
+    num_objects = [10, 20, 30, 50]
+    for num_object in num_objects:
+        num_circles = num_object // 2
+        num_squares = num_object - num_circles
+        _register(
+            id=f"prbench/DynScoopPour-o{num_object}-v0",
+            entry_point="prbench.envs.dynamic2d.dyn_scooppour:DynScoopPourEnv",
+            kwargs={"num_small_circles": num_circles, "num_small_squares": num_squares},
+        )
+
     # ******* Geom3D Environments *******
 
     # Motion3D environment.

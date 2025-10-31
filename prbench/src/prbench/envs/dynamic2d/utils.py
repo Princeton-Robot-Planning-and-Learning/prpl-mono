@@ -25,6 +25,7 @@ DYNAMIC_COLLISION_TYPE = 1
 ROBOT_COLLISION_TYPE = 2
 FINGER_COLLISION_TYPE = 3
 ARM_COLLISION_TYPE = 4
+NON_GRASPABLE_COLLISION_TYPE = 5  # For small objects that cannot be grasped
 
 
 class KinRobotActionSpace(RobotActionSpace):

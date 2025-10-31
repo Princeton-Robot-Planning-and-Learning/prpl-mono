@@ -19,6 +19,8 @@ from prbench.envs.dynamic2d.object_types import (
     DynRectangleType,
     KinRectangleType,
     KinRobotType,
+    SmallCircleType,
+    SmallSquareType,
 )
 from prbench.envs.dynamic2d.object_types import LObjectType as LObjectTypeDyn
 from prbench.envs.dynamic2d.object_types import (
@@ -632,6 +634,42 @@ def object_to_multibody2d(
         multibody = geom2d_lobject_to_multibody2d(obj, state)
     elif obj.is_instance(DoubleRectType):
         multibody = geom2d_double_rectangle_to_multibody2d(obj, state)
+    elif obj.is_instance(SmallCircleType):
+        # Small circle objects (for scoop-pour tasks)
+        x = state.get(obj, "x")
+        y = state.get(obj, "y")
+        radius = state.get(obj, "radius")
+        geom = Circle(x, y, radius)
+        z_order = ZOrder(int(state.get(obj, "z_order")))
+        rendering_kwargs = {
+            "facecolor": (
+                state.get(obj, "color_r"),
+                state.get(obj, "color_g"),
+                state.get(obj, "color_b"),
+            ),
+            "edgecolor": BLACK,
+        }
+        body = Body2D(geom, z_order, rendering_kwargs)
+        multibody = MultiBody2D(obj.name, [body])
+    elif obj.is_instance(SmallSquareType):
+        # Small square objects (for scoop-pour tasks)
+        x = state.get(obj, "x")
+        y = state.get(obj, "y")
+        size = state.get(obj, "size")
+        theta = state.get(obj, "theta")
+        # Use from_center for squares
+        geom = Rectangle.from_center(x, y, size, size, theta)
+        z_order = ZOrder(int(state.get(obj, "z_order")))
+        rendering_kwargs = {
+            "facecolor": (
+                state.get(obj, "color_r"),
+                state.get(obj, "color_g"),
+                state.get(obj, "color_b"),
+            ),
+            "edgecolor": BLACK,
+        }
+        body = Body2D(geom, z_order, rendering_kwargs)
+        multibody = MultiBody2D(obj.name, [body])
     else:
         raise NotImplementedError
     if is_static:
