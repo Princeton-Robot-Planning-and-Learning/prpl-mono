@@ -4,6 +4,7 @@ from pathlib import Path
 
 import imageio.v2 as iio
 import pytest
+from prpl_llm_utils.cache import SQLite3PretrainedLargeModelCache
 
 from prpl_perception_utils.object_detection_2d.gemini_object_detector_2d import (
     GeminiObjectDetector2D,
@@ -23,7 +24,8 @@ def test_real_gemini_object_detector_2d():
 
     Add --runllms to your pytest command to run.
     """
-    detector = GeminiObjectDetector2D()
+    cache = SQLite3PretrainedLargeModelCache(Path(__file__).parent / "_test_cache.db")
+    detector = GeminiObjectDetector2D(cache=cache)
 
     # Wrap the detector to visualize the results.
     detector = RenderWrapperObjectDetector2D(detector, outdir=Path("gemini_unit_test"))

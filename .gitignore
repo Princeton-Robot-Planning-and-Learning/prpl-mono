@@ -70,6 +70,7 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+_*.db
 
 # Flask stuff:
 instance/
@@ -174,4 +175,5 @@ debug
 videos
 runs
 outputs
+cleanrl
 CLAUDE.md

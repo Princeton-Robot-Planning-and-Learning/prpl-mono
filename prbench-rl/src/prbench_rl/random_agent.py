@@ -5,7 +5,7 @@ from typing import Any, TypeVar
 import gymnasium as gym
 
 from prbench_rl.agent import BaseRLAgent
-from prbench_rl.gym_utils import make_env
+from prbench_rl.gym_utils import make_env_ppo
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -27,7 +27,7 @@ class RandomAgent(BaseRLAgent[_O, _U]):
         """Evaluate the agent over a number of episodes."""
         envs = gym.vector.SyncVectorEnv(
             [
-                make_env(
+                make_env_ppo(
                     self.env_id, 0, render, "random_agent_eval", self.max_episode_steps
                 )
             ]
