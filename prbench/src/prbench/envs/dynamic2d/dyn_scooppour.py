@@ -246,7 +246,7 @@ class ObjectCentricDynScoopPourEnv(
             dt = 1.0 / self.config.sim_hz
             # Stepping physics to let things settle
             assert self.pymunk_space is not None, "Space not initialized"
-            for _ in range(5 * self.config.sim_hz):
+            for _ in range(30 * self.config.sim_hz):
                 # More steps in this env for it to settle
                 self.pymunk_space.step(dt)
         else:
