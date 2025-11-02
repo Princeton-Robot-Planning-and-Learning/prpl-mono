@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+import gymnasium
 import numpy as np
 import pymunk
 from relational_structs import Object, ObjectCentricState, Type
@@ -26,6 +27,7 @@ from prbench.envs.dynamic2d.utils import (
     NON_GRASPABLE_COLLISION_TYPE,
     ROBOT_COLLISION_TYPE,
     STATIC_COLLISION_TYPE,
+    ARM_COLLISION_TYPE,
     KinRobot,
     KinRobotActionSpace,
     create_walls_from_world_boundaries,
@@ -55,16 +57,16 @@ class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
     world_min_x: float = 0.0
-    world_max_x: float = 5.0
+    world_max_x: float = 3.5
     world_min_y: float = 0.0
     world_max_y: float = 3.0
 
     # Robot parameters
-    robot_base_radius: float = 0.15
+    robot_base_radius: float = 0.2
     robot_arm_length_max: float = 2 * robot_base_radius
     gripper_base_width: float = 0.04
-    gripper_base_height: float = 0.2
-    gripper_finger_width: float = 0.15
+    gripper_base_height: float = 0.25
+    gripper_finger_width: float = 0.12
     gripper_finger_height: float = 0.04
 
     # Action space parameters.
@@ -87,8 +89,8 @@ class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
 
     # Robot hyperparameters.
     robot_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
-        SE2Pose(0.3, 0.5, -np.pi / 6),
-        SE2Pose(0.8, 1.0, np.pi / 6),
+        SE2Pose(0.5, 2.0, -np.pi),
+        SE2Pose(3.0, 2.5, -np.pi / 2),
     )
 
     # Middle wall hyperparameters (half height of world).
@@ -101,39 +103,42 @@ class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
     # Hook hyperparameters (L-shaped tool for scooping).
     hook_rgb: tuple[float, float, float] = BROWN
     hook_shape: tuple[float, float, float] = (
-        gripper_base_height / 3,  # width
-        0.8,  # length_side1 (horizontal bar)
+        gripper_base_height / 5,  # width
+        0.5,  # length_side1 (horizontal bar)
         0.5,  # length_side2 (vertical bar)
     )
     hook_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
-        SE2Pose(0.5, 1.0, -np.pi / 8),
-        SE2Pose(1.5, 1.5, np.pi / 8),
+        SE2Pose((middle_wall_x + world_max_x) / 2 + 0.5, gripper_base_height / 5, -np.pi / 2),
+        SE2Pose(world_max_x, world_max_y / 2 - 0.8,-np.pi / 2 + 1e-3),
     )
     hook_mass: float = 0.5
 
     # Small objects hyperparameters.
     small_object_rgb_circle: tuple[float, float, float] = ORANGE
     small_object_rgb_square: tuple[float, float, float] = PURPLE
-    small_circle_radius_bounds: tuple[float, float] = (0.03, 0.05)
-    small_square_size_bounds: tuple[float, float] = (0.05, 0.08)
+    small_circle_radius_bounds: tuple[float, float] = (gripper_base_height / 4, \
+                                                       gripper_base_height / 3)
+    small_square_size_bounds: tuple[float, float] = (gripper_base_height / 3, \
+                                                       gripper_base_height / 2.8)
     small_object_mass: float = 0.1
     small_object_init_x_bounds: tuple[float, float] = (
         world_min_x + 0.2,
         middle_wall_x - 0.3,
     )
     small_object_init_y_bounds: tuple[float, float] = (
-        world_min_y + 0.2,
-        world_max_y - 0.2,
+        0.0,
+        world_max_y / 2 - 0.2,
     )
 
     # Success threshold (fraction of small objects on right side).
-    success_threshold: float = 0.7
+    # very small for now, just for testing
+    success_threshold: float = 0.3
 
     # For sampling initial states.
     max_initial_state_sampling_attempts: int = 10_000
 
     # We don't have gravity here, but we have damping.
-    gravity_y: float = 0.0
+    gravity_y: float = -1.0 # More realistic slight downward pull
     damping: float = 0.01  # Damping applied to all dynamic bodies
 
     # For rendering.
@@ -200,6 +205,61 @@ class ObjectCentricDynScoopPourEnv(
 
         return init_state_dict
 
+    def reset(
+        self, *, seed: int | None = None, options: dict | None = None
+    ) -> tuple[ObjectCentricState, dict]:
+        # Reset the random seed.
+        gymnasium.Env.reset(self, seed=seed)
+
+        # Clear existing physics space
+        if self.pymunk_space:
+            # Remove all bodies and shapes
+            for body in list(self.pymunk_space.bodies):
+                for shape in list(body.shapes):
+                    if body in self.pymunk_space.bodies:
+                        self.pymunk_space.remove(body, shape)
+            for shape in list(self.pymunk_space.shapes):
+                # Some shapes are not attached to bodies (e.g., static lines)
+                self.pymunk_space.remove(shape)
+
+        # Set up new physics space
+        self._setup_physics_space()
+        self._static_object_body_cache = {}
+        self._state_obj_to_pymunk_body = {}
+
+        # NOTE: If reset from options, we don't step the simulation
+        # to let things settle.
+        stablize_sim = True
+        # For testing purposes only, the options may specify an initial scene.
+        if options is not None and "init_state" in options:
+            self._current_state = options["init_state"].copy()
+            stablize_sim = False
+        # Otherwise, set up the initial scene here.
+        else:
+            self._current_state = self._sample_initial_state()
+
+        # Add objects to physics space
+        self._add_state_to_space(self.full_state)
+
+        # Calculate simulation parameters
+        if stablize_sim:
+            dt = 1.0 / self.config.sim_hz
+            # Stepping physics to let things settle
+            assert self.pymunk_space is not None, "Space not initialized"
+            for _ in range(5 * self.config.sim_hz):
+                # More steps in this env for it to settle
+                self.pymunk_space.step(dt)
+        else:
+            # reset from given state
+            assert self.pymunk_space is not None, "Space not initialized"
+            for body in list(self.pymunk_space.bodies):
+                self.pymunk_space.reindex_shapes_for_body(body)
+
+        observation = self._get_obs()
+        info = self._get_info()
+
+        return observation, info
+    
     def _setup_physics_space(self) -> None:
         """Set up the PyMunk physics space."""
         self.pymunk_space = pymunk.Space()
@@ -228,9 +288,22 @@ class ObjectCentricDynScoopPourEnv(
             post_solve=on_gripper_grasp,
             data=self.robot,
         )
+        # Static collisions
         self.pymunk_space.on_collision(
             STATIC_COLLISION_TYPE,
             ROBOT_COLLISION_TYPE,
+            pre_solve=on_collision_w_static,
+            data=self.robot,
+        )
+        self.pymunk_space.on_collision(
+            STATIC_COLLISION_TYPE,
+            FINGER_COLLISION_TYPE,
+            pre_solve=on_collision_w_static,
+            data=self.robot,
+        )
+        self.pymunk_space.on_collision(
+            STATIC_COLLISION_TYPE,
+            ARM_COLLISION_TYPE,
             pre_solve=on_collision_w_static,
             data=self.robot,
         )
@@ -581,6 +654,11 @@ class ObjectCentricDynScoopPourEnv(
 
                 # Only objects with theta need angle update
                 if obj.is_instance(HookType) or obj.is_instance(SmallSquareType):
+                    pymunk_angle = pymunk_body.angle
+                    if pymunk_angle > np.pi:
+                        pymunk_angle -= 2 * np.pi
+                    elif pymunk_angle < -np.pi:
+                        pymunk_angle += 2 * np.pi
                     state.set(obj, "theta", pymunk_body.angle)
 
                 # Update held status (only hook can be held)
@@ -611,7 +689,13 @@ class ObjectCentricDynScoopPourEnv(
             if obj.is_instance(SmallCircleType) or obj.is_instance(SmallSquareType):
                 total_objects += 1
                 obj_x = self._current_state.get(obj, "x")
-                if obj_x > middle_wall_x:
+                obj_vx = self._current_state.get(obj, "vx")
+                obj_vy = self._current_state.get(obj, "vy")
+                static = (obj_vx ** 2 + obj_vy ** 2) < 1e-4
+                obj_y = self._current_state.get(obj, "y")
+                if obj_x > middle_wall_x \
+                    and obj_y < self.config.world_max_y / 2\
+                    and static:
                     right_side_objects += 1
 
         # Calculate success

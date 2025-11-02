@@ -804,6 +804,8 @@ def on_gripper_grasp(
         for shape in shapes:
             copied_shape = shape.copy()
             copied_shape.body = kinematic_body
+            # Held objects are considered part of the robot for collision purposes
+            copied_shape.collision_type = ROBOT_COLLISION_TYPE
             new_shapes.append(copied_shape)
         space.add(kinematic_body, *new_shapes)
         robot.add_to_hand((kinematic_body, new_shapes), dynamic_body.mass)
