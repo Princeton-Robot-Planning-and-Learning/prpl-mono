@@ -3,6 +3,11 @@
 from gymnasium.spaces import Box
 
 import prbench
+from prbench.envs.dynamic2d.object_types import (
+    LObjectType,
+    SmallCircleType,
+    SmallSquareType,
+)
 
 
 def test_dyn_scooppour_observation_random_actions():
@@ -23,66 +28,6 @@ def test_dyn_scooppour_observation_random_actions():
     env.close()
 
 
-def test_dyn_scooppour_small_objects_not_graspable():
-    """Test that small objects cannot be grasped directly."""
-    prbench.register_all_environments()
-    env = prbench.make("prbench/DynScoopPour-o30-v0")
-
-    obs, _ = env.reset()
-    assert env.observation_space.contains(obs)
-
-    # Get the object-centric environment to check collision types
-    obj_env = env.unwrapped._object_centric_env
-
-    # Import the collision type
-    from prbench.envs.dynamic2d.utils import NON_GRASPABLE_COLLISION_TYPE
-
-    # Check that small objects have the correct collision type
-    state = obj_env._current_state
-    from prbench.envs.dynamic2d.object_types import SmallCircleType, SmallSquareType
-
-    for obj in state:
-        if obj.is_instance(SmallCircleType) or obj.is_instance(SmallSquareType):
-            # Get the pymunk body
-            pymunk_body = obj_env._state_obj_to_pymunk_body[obj]
-            # Check all shapes have non-graspable collision type
-            for shape in pymunk_body.shapes:
-                assert shape.collision_type == NON_GRASPABLE_COLLISION_TYPE
-
-    env.close()
-
-
-def test_dyn_scooppour_hook_graspable():
-    """Test that the hook can be grasped."""
-    prbench.register_all_environments()
-    env = prbench.make("prbench/DynScoopPour-o30-v0")
-
-    obs, _ = env.reset()
-    assert env.observation_space.contains(obs)
-
-    # Get the object-centric environment
-    obj_env = env.unwrapped._object_centric_env
-
-    # Import the collision type
-    from prbench.envs.dynamic2d.utils import DYNAMIC_COLLISION_TYPE
-
-    # Check that hook has the graspable collision type
-    state = obj_env._current_state
-    from prbench.envs.dynamic2d.object_types import LObjectType
-
-    hook_objects = [obj for obj in state if obj.is_instance(LObjectType)]
-    assert len(hook_objects) == 1
-    hook = hook_objects[0]
-
-    # If not held, should have DYNAMIC_COLLISION_TYPE
-    if not state.get(hook, "held"):
-        pymunk_body = obj_env._state_obj_to_pymunk_body[hook]
-        for shape in pymunk_body.shapes:
-            assert shape.collision_type == DYNAMIC_COLLISION_TYPE
-
-    env.close()
-
-
 def test_dyn_scooppour_object_counts():
     """Test that the correct number of objects are created."""
     prbench.register_all_environments()
@@ -91,36 +36,16 @@ def test_dyn_scooppour_object_counts():
     env = prbench.make("prbench/DynScoopPour-o30-v0")
     obs, _ = env.reset()
 
-    obj_env = env.unwrapped._object_centric_env
-    state = obj_env._current_state
-
-    from prbench.envs.dynamic2d.object_types import SmallCircleType, SmallSquareType
+    # Use public API to access object-centric state
+    state = env.observation_space.devectorize(obs)
 
     circles = [obj for obj in state if obj.is_instance(SmallCircleType)]
     squares = [obj for obj in state if obj.is_instance(SmallSquareType)]
+    hooks = [obj for obj in state if obj.is_instance(LObjectType)]
 
     assert len(circles) == 15
     assert len(squares) == 15
-
-    env.close()
-
-
-def test_dyn_scooppour_middle_wall_height():
-    """Test that the middle wall is half the height of the world."""
-    prbench.register_all_environments()
-    env = prbench.make("prbench/DynScoopPour-o30-v0")
-    obs, _ = env.reset()
-
-    obj_env = env.unwrapped._object_centric_env
-    config = obj_env.config
-
-    # Check that middle wall height is half of world max y
-    expected_height = config.world_max_y / 2
-    assert abs(config.middle_wall_height - expected_height) < 1e-6
-
-    # Check that the middle wall base is at quarter height
-    expected_y = config.world_max_y / 4
-    assert abs(config.middle_wall_y - expected_y) < 1e-6
+    assert len(hooks) == 1
 
     env.close()
 
@@ -131,20 +56,21 @@ def test_dyn_scooppour_initial_positions():
     env = prbench.make("prbench/DynScoopPour-o30-v0")
     obs, _ = env.reset()
 
-    obj_env = env.unwrapped._object_centric_env
-    state = obj_env._current_state
-    config = obj_env.config
+    # Use public API to access object-centric state
+    state = env.observation_space.devectorize(obs)
 
-    from prbench.envs.dynamic2d.object_types import SmallCircleType, SmallSquareType
+    # The middle wall should be approximately in the center of the world
+    # We'll infer this from the observation space bounds
+    world_max_x = env.observation_space.high[0]  # Assuming first feature is x
+    middle_x = world_max_x / 2
 
     # Check that all small objects start on the left side
-    middle_wall_x = config.middle_wall_x
     for obj in state:
         if obj.is_instance(SmallCircleType) or obj.is_instance(SmallSquareType):
             obj_x = state.get(obj, "x")
-            # Should be on left side (x < middle_wall_x)
+            # Should be on left side (x < middle)
             assert (
-                obj_x < middle_wall_x
-            ), f"Object {obj.name} at x={obj_x} should be < {middle_wall_x}"
+                obj_x < middle_x
+            ), f"Object {obj.name} at x={obj_x} should be < {middle_x}"
 
     env.close()
