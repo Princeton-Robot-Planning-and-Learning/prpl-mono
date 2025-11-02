@@ -44,8 +44,7 @@ POLICY_IMAGE_HEIGHT = 84
 
 SERVER_HOSTNAME = '192.168.0.11'
 ROBOT_HOSTNAME_PREFIX = '192.168.0.60'
-CONN_AUTHKEY = b'secret password'
-REDIS_PASSWORD = 'secret password'
+CONN_AUTHKEY = b'secret password' # shared authentication key
 
 ################################################################################
 # Arm
