@@ -26,6 +26,10 @@ class Interface(abc.ABC):
         """Get the base pose."""
 
     @abc.abstractmethod
+    def execute_base_action(self, action: dict) -> None:
+        """Execute a base action in the local frame."""
+
+    @abc.abstractmethod
     def get_map_base_state(self) -> spatialmath.SE2:
         """Get the base pose in the map frame."""
 
@@ -68,6 +72,9 @@ class RealInterface(Interface):
     def get_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_base_state()
 
+    def execute_base_action(self, action: dict) -> None:
+        return self.base_interface.execute_action(action)
+
     def get_map_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_map_base_state()
 
@@ -100,6 +107,9 @@ class FakeInterface(Interface):
 
     def get_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_base_state()
+
+    def execute_base_action(self, action: dict) -> None:
+        return self.base_interface.execute_action(action)
 
     def get_map_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_map_base_state()
