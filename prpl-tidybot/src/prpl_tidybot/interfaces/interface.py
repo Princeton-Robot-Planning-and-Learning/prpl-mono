@@ -26,6 +26,10 @@ class Interface(abc.ABC):
         """Get the base pose."""
 
     @abc.abstractmethod
+    def get_map_base_state(self) -> spatialmath.SE2:
+        """Get the base pose in the map frame."""
+
+    @abc.abstractmethod
     def get_arm_state(self) -> list[float]:
         """Get the 7-DOF joint positions."""
 
@@ -46,6 +50,7 @@ class Interface(abc.ABC):
         return TidyBotObservation(
             arm_conf=self.get_arm_state(),
             base_pose=self.get_base_state(),
+            map_base_pose=self.get_map_base_state(),
             gripper=self.get_gripper_state(),
             wrist_camera=self.get_wrist_image(),
             base_camera=self.get_base_image(),
@@ -62,6 +67,9 @@ class RealInterface(Interface):
 
     def get_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_base_state()
+
+    def get_map_base_state(self) -> spatialmath.SE2:
+        return self.base_interface.get_map_base_state()
 
     def get_arm_state(self) -> list[float]:
         return self.arm_interface.get_arm_state()
@@ -92,6 +100,9 @@ class FakeInterface(Interface):
 
     def get_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_base_state()
+
+    def get_map_base_state(self) -> spatialmath.SE2:
+        return self.base_interface.get_map_base_state()
 
     def get_arm_state(self) -> list[float]:
         return self.arm_interface.get_arm_state()

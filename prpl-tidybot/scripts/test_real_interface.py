@@ -19,6 +19,12 @@ if __name__ == "__main__":
                 observation.base_pose.y,
                 observation.base_pose.theta(),
             )
+            print(
+                "map base pose (quat):",
+                observation.map_base_pose.x,
+                observation.map_base_pose.y,
+                observation.map_base_pose.theta(),
+            )
             print("gripper:", observation.gripper)
             base_image = observation.base_camera
             wrist_image = observation.wrist_camera

@@ -14,6 +14,7 @@ class TidyBotObservation:
 
     arm_conf: list[float]  # 7-DOF joints
     base_pose: spatialmath.SE2  # base pose for the robot
+    map_base_pose: spatialmath.SE2  # base pose for the robot in the map frame
     gripper: float  # 1 = closed, 0 = open
     wrist_camera: Image  # see WRIST_CAMERA_DIMS
     base_camera: Image  # see BASE_CAMERA_DIMS
