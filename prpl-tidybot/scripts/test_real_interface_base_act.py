@@ -1,4 +1,4 @@
-"""Tests for real_env.py."""
+"""Tests for real interface base action in local coordinate frame."""
 
 import time
 

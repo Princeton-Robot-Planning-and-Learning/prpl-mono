@@ -1,4 +1,4 @@
-"""Tests for real_env.py."""
+"""Tests for real interface observation."""
 
 import time
 
