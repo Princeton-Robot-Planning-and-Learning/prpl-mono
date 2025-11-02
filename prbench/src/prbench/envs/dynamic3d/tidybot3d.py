@@ -29,7 +29,6 @@ from prbench.envs.dynamic3d.objects import (
     get_object_class,
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBotRobotEnv
 from prbench.envs.dynamic3d.utils import (
     get_table_bbox,
     sample_collision_free_position,
@@ -49,6 +48,11 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
     show_viewer: bool = False
     act_delta: bool = True
 
+    # MJX acceleration support
+    use_mjx: bool = False  # Use MJX for GPU-accelerated physics
+    device: str = 'cpu'    # Device: 'cpu', 'cuda', 'cuda:0', etc.
+    num_envs: int = 1      # Number of parallel environments (batching)
+
 
 class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     """TidyBot 3D environment with mobile manipulation tasks."""
@@ -64,7 +68,20 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         task_config_path: str | None = None,
         render_images: bool = True,
         show_images: bool = False,
+        use_mjx: bool = False,    # MJX support
+        device: str = 'cpu',       # Device for MJX
+        num_envs: int = 1,         # Parallel environments
     ) -> None:
+        # Update config with MJX parameters if provided
+        import dataclasses
+        if use_mjx or device != 'cpu' or num_envs != 1:
+            config = dataclasses.replace(
+                config,
+                use_mjx=use_mjx,
+                device=device,
+                num_envs=num_envs
+            )
+
         # Initialize ObjectCentricPRBenchEnv first
         super().__init__(config)
 
@@ -86,6 +103,12 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         ), f"task_config_path {task_config_path} does not exist."
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
+
+        # Conditionally import the appropriate TidyBotRobotEnv implementation
+        if config.use_mjx:
+            from prbench.envs.dynamic3d.tidybot_robot_env_mjx import TidyBotRobotEnv
+        else:
+            from prbench.envs.dynamic3d.tidybot_robot_env import TidyBotRobotEnv
 
         # Initialize TidyBot-specific components
         self._robot_env = TidyBotRobotEnv(

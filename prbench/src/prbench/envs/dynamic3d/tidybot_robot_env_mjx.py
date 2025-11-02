@@ -1,24 +1,45 @@
-"""This module defines the TidyBotRobotEnv class, which is the base class for the
-TidyBot robot in simulation."""
+"""This module defines the TidyBotRobotEnvMJX class, which uses MJX for GPU-accelerated
+simulation of the TidyBot robot."""
 
+import abc
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
 from numpy.typing import NDArray
+from relational_structs import Array
 
-# from prbench.envs.tidybot.mujoco_utils import MjAct, MjObs, MujocoEnv
-from prbench.envs.tidybot.mjx_utils import MjAct, MjObs, MujocoEnv
+from prbench.core import RobotActionSpace
+from prbench.envs.dynamic3d.mjx.mjx_utils import MjObs, MujocoEnv
 
 
-class TidyBotRobotEnv(MujocoEnv):
-    """This is the base class for TidyBot environments that use MuJoCo for
-    simulation."""
+class TidyBot3DRobotActionSpace(RobotActionSpace):
+    """An action in a MuJoCo environment; used to set sim.data.ctrl in MuJoCo."""
+
+    def __init__(self) -> None:
+        # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
+        low = np.array(
+            [-0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, 0.0]
+        )
+        high = np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.0])
+        super().__init__(low, high)
+
+    def create_markdown_description(self) -> str:
+        """Create a human-readable markdown description of this space."""
+        return """Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)"""
+
+
+class TidyBotRobotEnv(MujocoEnv, abc.ABC):
+    """This is the base class for TidyBot environments that use MuJoCo for sim.
+
+    It is still abstract: subclasses define rewards and add objects to the env.
+    """
 
     def __init__(
         self,
         control_frequency: float,
+        act_delta: bool = True,
         horizon: int = 1000,
         camera_names: Optional[list[str]] = None,
         camera_width: int = 640,
@@ -42,6 +63,8 @@ class TidyBotRobotEnv(MujocoEnv):
             seed=seed,
             show_viewer=show_viewer,
         )
+
+        self.act_delta = act_delta
 
         # Robot state/actuator references (initialized in _setup_robot_references)
         self.qpos_base: Optional[NDArray[np.float64]] = None
@@ -170,7 +193,8 @@ class TidyBotRobotEnv(MujocoEnv):
         self._setup_robot_references()
 
         # Randomize the base pose of the robot in the sim
-        # self._randomize_base_pose() # TODO changes for mjx
+        self._randomize_base_pose()
+        self._randomize_arm_pose()
 
         return self.get_obs(), {}
 
@@ -193,6 +217,24 @@ class TidyBotRobotEnv(MujocoEnv):
         # Set the base position and orientation in the simulation
         self.qpos_base[:] = [x, y, theta]
         self.ctrl_base[:] = [x, y, theta]
+        self.sim.forward()  # Update the simulation state
+
+    def _randomize_arm_pose(self) -> None:
+        """Randomize the arm pose of the robot within defined limits."""
+        assert (
+            self.sim is not None
+        ), "Simulation must be initialized before randomizing base pose."
+        assert self.qpos_base is not None, "Base qpos must be initialized first"
+        assert self.ctrl_base is not None, "Base ctrl must be initialized first"
+
+        # Sample random values within limits
+        assert self.qpos_arm is not None
+        assert self.ctrl_arm is not None
+        num_joints: int = self.qpos_arm.shape[0]
+        theta = self.np_random.uniform(-np.pi, np.pi, num_joints).astype(np.float64)
+        # Set the arm joint positions in the simulation
+        self.qpos_arm[:] = theta
+        self.ctrl_arm[:] = theta
         self.sim.forward()  # Update the simulation state
 
     def _insert_robot_into_xml(self, xml_string: str) -> str:
@@ -257,17 +299,21 @@ class TidyBotRobotEnv(MujocoEnv):
         # Return the merged XML as string
         return ET.tostring(input_root, encoding="unicode")
 
-    def _pre_action(self, action: MjAct) -> None:
-        """Do any preprocessing before taking an action.
-
-        Args:
-            action: Action to execute within the environment.
-        """
-
-    def step(self, action: MjAct) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
-        assert isinstance(action, dict), "Action must be a dictionary."
+    def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
+        if self.act_delta:  # Interpret action as delta.
+            # Compute absolute joint action.
+            curr_qpos = np.concatenate([self.qpos_base, self.qpos_arm], -1)
+            abs_action = curr_qpos + action[:-1]
+            # Add gripper action
+            abs_action = np.concatenate([abs_action, [action[-1]]], -1)
+            return super().step(abs_action)
+        # Use action as-is.
         return super().step(action)
 
-    def reward(self, **kwargs: Any) -> float:
-        """Compute the reward for the current state and action."""
-        return 0.0  # Placeholder reward
+    def reward(self, obs: MjObs) -> float:
+        """Compute the reward from an observation.
+
+        This is a placeholder implementation since TidyBotRobotEnv is used as a
+        component in TidyBot3DEnv which handles rewards separately.
+        """
+        return 0.0

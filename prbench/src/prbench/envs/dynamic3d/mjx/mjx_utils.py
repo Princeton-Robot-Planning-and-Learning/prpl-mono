@@ -7,7 +7,6 @@ MuJoCo simulation logic.
 
 import abc
 import ctypes
-import ctypes.util
 import gc
 import os
 import platform
@@ -545,19 +544,36 @@ class MjSim:
         )  # TODO make impl configurable
 
     def forward(self) -> None:
-        """Synchronize derived quantities."""
-        mj_data: mujoco.MjData = mujoco.MjData(
-            self.model._model
-        )  # pylint: disable=no-member
-        mujoco.mj_forward(  # pylint: disable=no-member
-            self.model._model, mj_data  # pylint: disable=protected-access
+        """Synchronize derived quantities using MJX."""
+        # Use MJX forward to update derived quantities
+        self.data = mjx.forward(  # pylint: disable=no-member
+            self.model._mjx_model, self.data  # pylint: disable=protected-access
         )
 
     def step(self) -> None:
-        """Step the simulation."""
-        mjx.step(  # pylint: disable=no-member
+        """Step the simulation using MJX."""
+        # MJX step returns new data (JAX immutability)
+        self.data = mjx.step(  # pylint: disable=no-member
             self.model._mjx_model, self.data  # pylint: disable=protected-access
         )
+
+    def _mjx_to_mj_data(self) -> mujoco.MjData:
+        """Convert MJX data to standard MuJoCo data for rendering.
+
+        Returns:
+            Standard MuJoCo MjData with state copied from JAX arrays.
+        """
+        mj_data = mujoco.MjData(self.model._model)  # pylint: disable=protected-access
+
+        # Convert JAX arrays to numpy and copy to standard MuJoCo data
+        mj_data.qpos[:] = np.array(self.data.qpos)
+        mj_data.qvel[:] = np.array(self.data.qvel)
+        mj_data.ctrl[:] = np.array(self.data.ctrl)
+
+        # Update derived quantities in standard MuJoCo
+        mujoco.mj_forward(self.model._model, mj_data)  # pylint: disable=no-member
+
+        return mj_data
 
     def render(
         self,
@@ -646,17 +662,17 @@ class MjRenderContext:
             # pylint: disable=import-outside-toplevel
             # isort: off
             if _SYSTEM == "Linux" and _MUJOCO_GL == "osmesa":
-                from prbench.envs.tidybot.renderers.context.osmesa_context import (
+                from prbench.envs.dynamic3d.renderers.context.osmesa_context import (
                     OSMesaGLContext as GLContext,)
 
                 # TODO this needs testing on a Linux machine  # pylint: disable=fixme
             elif _SYSTEM == "Linux" and _MUJOCO_GL == "egl":
-                from prbench.envs.tidybot.renderers.context.egl_context import (  # type: ignore[assignment] # pylint: disable=line-too-long
+                from prbench.envs.dynamic3d.renderers.context.egl_context import (  # type: ignore[assignment] # pylint: disable=line-too-long
                     EGLGLContext as GLContext,)
 
                 # TODO this needs testing on a Linux machine  # pylint: disable=fixme
             else:
-                from prbench.envs.tidybot.renderers.context.glfw_context import (  # type: ignore[assignment] # pylint: disable=line-too-long
+                from prbench.envs.dynamic3d.renderers.context.glfw_context import (  # type: ignore[assignment] # pylint: disable=line-too-long
                     GLFWGLContext as GLContext,)
             # isort: on
             # fmt: on
@@ -681,7 +697,9 @@ class MjRenderContext:
         self.model: mujoco.MjModel = (
             sim.model._model
         )  # pylint: disable=protected-access
-        self.data: mujoco.MjData = sim.data
+        # For MJX, create standard MuJoCo data for rendering
+        # We'll sync from JAX data before each render
+        self.data: mujoco.MjData = mujoco.MjData(self.model)  # pylint: disable=no-member
 
         # Create default scene
         # Set maxgeom to 10k to support large-scale scenes
@@ -726,6 +744,12 @@ class MjRenderContext:
         camera_id: int | None = None,
     ) -> None:
         """Render the scene."""
+        # Sync JAX data to standard MuJoCo data for rendering
+        self.data.qpos[:] = np.array(self.sim.data.qpos)
+        self.data.qvel[:] = np.array(self.sim.data.qvel)
+        self.data.ctrl[:] = np.array(self.sim.data.ctrl)
+        mujoco.mj_forward(self.model, self.data)  # pylint: disable=no-member
+
         viewport = mujoco.MjrRect(0, 0, width, height)
 
         # update width and height of rendering context if necessary
