@@ -136,13 +136,13 @@ def register_all_environments() -> None:
     for task_config in tasks_root.iterdir():
         config_name = task_config.stem
         scene_type = config_name.split("-")[0]
-        num_objects = int(config_name.split("-o")[-1])
+        num_object = int(config_name.split("-o")[-1])
         register(
             id=f"prbench/TidyBot3D-{config_name}-v0",
             entry_point="prbench.envs.dynamic3d.tidybot3d:TidyBot3DEnv",
             kwargs={
                 "scene_type": scene_type,
-                "num_objects": num_objects,
+                "num_objects": num_object,
                 "task_config_path": str(task_config),
             },
         )

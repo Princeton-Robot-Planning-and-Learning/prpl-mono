@@ -19,11 +19,11 @@ from prbench.envs.dynamic2d.object_types import (
     DynRectangleType,
     KinRectangleType,
     KinRobotType,
-    SmallCircleType,
-    SmallSquareType,
 )
 from prbench.envs.dynamic2d.object_types import LObjectType as LObjectTypeDyn
 from prbench.envs.dynamic2d.object_types import (
+    SmallCircleType,
+    SmallSquareType,
     TObjectType,
 )
 from prbench.envs.geom2d.object_types import (

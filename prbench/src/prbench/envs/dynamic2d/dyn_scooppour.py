@@ -22,12 +22,12 @@ from prbench.envs.dynamic2d.object_types import (
     SmallSquareType,
 )
 from prbench.envs.dynamic2d.utils import (
+    ARM_COLLISION_TYPE,
     DYNAMIC_COLLISION_TYPE,
     FINGER_COLLISION_TYPE,
     NON_GRASPABLE_COLLISION_TYPE,
     ROBOT_COLLISION_TYPE,
     STATIC_COLLISION_TYPE,
-    ARM_COLLISION_TYPE,
     KinRobot,
     KinRobotActionSpace,
     create_walls_from_world_boundaries,
@@ -108,18 +108,24 @@ class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
         0.5,  # length_side2 (vertical bar)
     )
     hook_init_pose_bounds: tuple[SE2Pose, SE2Pose] = (
-        SE2Pose((middle_wall_x + world_max_x) / 2 + 0.5, gripper_base_height / 5, -np.pi / 2),
-        SE2Pose(world_max_x, world_max_y / 2 - 0.8,-np.pi / 2 + 1e-3),
+        SE2Pose(
+            (middle_wall_x + world_max_x) / 2 + 0.5, gripper_base_height / 5, -np.pi / 2
+        ),
+        SE2Pose(world_max_x, world_max_y / 2 - 0.8, -np.pi / 2 + 1e-3),
     )
     hook_mass: float = 0.5
 
     # Small objects hyperparameters.
     small_object_rgb_circle: tuple[float, float, float] = ORANGE
     small_object_rgb_square: tuple[float, float, float] = PURPLE
-    small_circle_radius_bounds: tuple[float, float] = (gripper_base_height / 4, \
-                                                       gripper_base_height / 3)
-    small_square_size_bounds: tuple[float, float] = (gripper_base_height / 3, \
-                                                       gripper_base_height / 2.8)
+    small_circle_radius_bounds: tuple[float, float] = (
+        gripper_base_height / 4,
+        gripper_base_height / 3,
+    )
+    small_square_size_bounds: tuple[float, float] = (
+        gripper_base_height / 3,
+        gripper_base_height / 2.8,
+    )
     small_object_mass: float = 0.1
     small_object_init_x_bounds: tuple[float, float] = (
         world_min_x + 0.2,
@@ -138,7 +144,7 @@ class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
     max_initial_state_sampling_attempts: int = 10_000
 
     # We don't have gravity here, but we have damping.
-    gravity_y: float = -1.0 # More realistic slight downward pull
+    gravity_y: float = -1.0  # More realistic slight downward pull
     damping: float = 0.01  # Damping applied to all dynamic bodies
 
     # For rendering.
@@ -150,8 +156,8 @@ class ObjectCentricDynScoopPourEnv(
 ):
     """Object-centric dynamic 2D scoop-pour environment.
 
-    The robot must use an L-shaped hook to scoop small objects from the left side
-    of a middle wall and pour them onto the right side.
+    The robot must use an L-shaped hook to scoop small objects from the left side of a
+    middle wall and pour them onto the right side.
     """
 
     def __init__(
@@ -259,7 +265,7 @@ class ObjectCentricDynScoopPourEnv(
         info = self._get_info()
 
         return observation, info
-    
+
     def _setup_physics_space(self) -> None:
         """Set up the PyMunk physics space."""
         self.pymunk_space = pymunk.Space()
@@ -316,7 +322,9 @@ class ObjectCentricDynScoopPourEnv(
 
         # Sample hook pose
         for _ in range(n):
-            hook_pose = sample_se2_pose(self.config.hook_init_pose_bounds, self.np_random)
+            hook_pose = sample_se2_pose(
+                self.config.hook_init_pose_bounds, self.np_random
+            )
 
             # Sample small objects positions on the left side
             small_circles_data = []
@@ -572,7 +580,7 @@ class ObjectCentricDynScoopPourEnv(
 
                 moment = pymunk.moment_for_circle(mass, 0, radius)
                 body = pymunk.Body(mass, moment)
-                shape = pymunk.Circle(body, radius)
+                shape = pymunk.Circle(body, radius)  # type: ignore[assignment]
                 shape.friction = 1.0
                 shape.density = 1.0
                 shape.collision_type = NON_GRASPABLE_COLLISION_TYPE
@@ -675,8 +683,8 @@ class ObjectCentricDynScoopPourEnv(
     def _get_reward_and_done(self) -> tuple[float, bool]:
         """Calculate reward and termination based on object positions.
 
-        Success is achieved when a threshold fraction of small objects are on the
-        right side of the middle wall.
+        Success is achieved when a threshold fraction of small objects are on the right
+        side of the middle wall.
         """
         assert self._current_state is not None
 
@@ -691,11 +699,13 @@ class ObjectCentricDynScoopPourEnv(
                 obj_x = self._current_state.get(obj, "x")
                 obj_vx = self._current_state.get(obj, "vx")
                 obj_vy = self._current_state.get(obj, "vy")
-                static = (obj_vx ** 2 + obj_vy ** 2) < 1e-4
+                static = (obj_vx**2 + obj_vy**2) < 1e-4
                 obj_y = self._current_state.get(obj, "y")
-                if obj_x > middle_wall_x \
-                    and obj_y < self.config.world_max_y / 2\
-                    and static:
+                if (
+                    obj_x > middle_wall_x
+                    and obj_y < self.config.world_max_y / 2
+                    and static
+                ):
                     right_side_objects += 1
 
         # Calculate success
@@ -730,10 +740,18 @@ class DynScoopPourEnv(ConstantObjectPRBenchEnv):
     def _create_env_markdown_description(self) -> str:
         # Count small objects
         num_circles = len(
-            [obj for obj in self._constant_objects if obj.name.startswith("small_circle")]
+            [
+                obj
+                for obj in self._constant_objects
+                if obj.name.startswith("small_circle")
+            ]
         )
         num_squares = len(
-            [obj for obj in self._constant_objects if obj.name.startswith("small_square")]
+            [
+                obj
+                for obj in self._constant_objects
+                if obj.name.startswith("small_square")
+            ]
         )
         # pylint: disable=line-too-long
         return f"""A 2D physics-based tool-use environment where a robot must use an L-shaped hook to scoop small objects from the left side of a middle wall and pour them onto the right side. The middle wall is half the height of the world, allowing objects to be scooped over it.

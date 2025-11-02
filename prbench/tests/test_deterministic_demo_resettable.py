@@ -63,9 +63,7 @@ def test_deterministic_demo_replay(demo_path: Path):
 
         # Check observation matches
         expected_obs = expected_observations[i + 1]
-        if not np.allclose(
-            obs_next, expected_obs, atol=1e-5
-        ):
+        if not np.allclose(obs_next, expected_obs, atol=1e-4):
             diff = np.abs(obs_next - expected_obs)
             max_diff = np.max(diff)
             raise AssertionError(

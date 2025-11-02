@@ -143,6 +143,8 @@ def test_dyn_scooppour_initial_positions():
         if obj.is_instance(SmallCircleType) or obj.is_instance(SmallSquareType):
             obj_x = state.get(obj, "x")
             # Should be on left side (x < middle_wall_x)
-            assert obj_x < middle_wall_x, f"Object {obj.name} at x={obj_x} should be < {middle_wall_x}"
+            assert (
+                obj_x < middle_wall_x
+            ), f"Object {obj.name} at x={obj_x} should be < {middle_wall_x}"
 
     env.close()
