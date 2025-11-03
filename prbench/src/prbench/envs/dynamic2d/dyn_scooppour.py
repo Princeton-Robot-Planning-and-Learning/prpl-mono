@@ -138,7 +138,7 @@ class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
 
     # Success threshold (fraction of small objects on right side).
     # very small for now, just for testing
-    success_threshold: float = 0.3
+    success_threshold: float = 0.5
 
     # For sampling initial states.
     max_initial_state_sampling_attempts: int = 10_000
@@ -391,9 +391,12 @@ class ObjectCentricDynScoopPourEnv(
             "vx_arm": 0.0,
             "vy_arm": 0.0,
             "omega_arm": 0.0,
-            "vx_gripper": 0.0,
-            "vy_gripper": 0.0,
-            "omega_gripper": 0.0,
+            "vx_gripper_l": 0.0,
+            "vy_gripper_l": 0.0,
+            "omega_gripper_l": 0.0,
+            "vx_gripper_r": 0.0,
+            "vy_gripper_r": 0.0,
+            "omega_gripper_r": 0.0,
             "gripper_base_width": self.config.gripper_base_width,
             "gripper_base_height": self.config.gripper_base_height,
             "finger_gap": self.config.gripper_base_height,
@@ -645,9 +648,12 @@ class ObjectCentricDynScoopPourEnv(
                 state.set(robot_obj, "vy_arm", self.robot.gripper_base_vel[0].y)
                 state.set(robot_obj, "omega_arm", self.robot.gripper_base_vel[1])
                 state.set(robot_obj, "finger_gap", self.robot.curr_gripper)
-                state.set(robot_obj, "vx_gripper", self.robot.finger_vel[0].x)
-                state.set(robot_obj, "vy_gripper", self.robot.finger_vel[0].y)
-                state.set(robot_obj, "omega_gripper", self.robot.finger_vel[1])
+                state.set(robot_obj, "vx_gripper_l", self.robot.finger_vel_l[0].x)
+                state.set(robot_obj, "vy_gripper_l", self.robot.finger_vel_l[0].y)
+                state.set(robot_obj, "omega_gripper_l", self.robot.finger_vel_l[1])
+                state.set(robot_obj, "vx_gripper_r", self.robot.finger_vel_r[0].x)
+                state.set(robot_obj, "vy_gripper_r", self.robot.finger_vel_r[0].y)
+                state.set(robot_obj, "omega_gripper_r", self.robot.finger_vel_r[1])
             else:
                 # Update all other dynamic objects
                 assert (
@@ -703,7 +709,7 @@ class ObjectCentricDynScoopPourEnv(
                 obj_y = self._current_state.get(obj, "y")
                 if (
                     obj_x > middle_wall_x
-                    and obj_y < self.config.world_max_y / 2
+                    and obj_y < self.config.world_max_y / 4
                     and static
                 ):
                     right_side_objects += 1

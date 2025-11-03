@@ -210,10 +210,17 @@ class ObjectCentricDynamic2DRobotEnv(
         robot_arm_vel = (Vec2d(robot_arm_vx, robot_arm_vy), robot_arm_omega)
 
         robot_gripper = state.get(obj, "finger_gap")
-        robot_gripper_vx = state.get(obj, "vx_gripper")
-        robot_gripper_vy = state.get(obj, "vy_gripper")
-        robot_gripper_omega = state.get(obj, "omega_gripper")
-        robot_gripper_vel = (
+        robot_gripper_vx = state.get(obj, "vx_gripper_l")
+        robot_gripper_vy = state.get(obj, "vy_gripper_l")
+        robot_gripper_omega = state.get(obj, "omega_gripper_l")
+        robot_gripper_vel_l = (
+            Vec2d(robot_gripper_vx, robot_gripper_vy),
+            robot_gripper_omega,
+        )
+        robot_gripper_vx = state.get(obj, "vx_gripper_r")
+        robot_gripper_vy = state.get(obj, "vy_gripper_r")
+        robot_gripper_omega = state.get(obj, "omega_gripper_r")
+        robot_gripper_vel_r = (
             Vec2d(robot_gripper_vx, robot_gripper_vy),
             robot_gripper_omega,
         )
@@ -226,7 +233,8 @@ class ObjectCentricDynamic2DRobotEnv(
             arm_length=robot_arm,
             arm_vel=robot_arm_vel,
             gripper_gap=robot_gripper,
-            gripper_vel=robot_gripper_vel,
+            gripper_vel_l=robot_gripper_vel_l,
+            gripper_vel_r=robot_gripper_vel_r,
         )
 
     @abc.abstractmethod
@@ -382,6 +390,7 @@ class ObjectCentricDynamic2DRobotEnv(
                 base_ang_vel,
                 gripper_base_vel,
                 finger_vel_l,
+                finger_vel_r,
                 held_obj_vel,
             ) = self.pd_controller.compute_control(
                 self.robot,
@@ -398,6 +407,7 @@ class ObjectCentricDynamic2DRobotEnv(
                 base_ang_vel,
                 gripper_base_vel,
                 finger_vel_l,
+                finger_vel_r,
                 held_obj_vel,
             )
             # Step physics simulation (more fine-grained than control freq)

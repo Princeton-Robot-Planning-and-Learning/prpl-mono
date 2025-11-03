@@ -250,8 +250,8 @@ def kin_robot_to_multibody2d(obj: Object, state: ObjectCentricState) -> MultiBod
 
     # Fingers
     relative_dx = state.get(obj, "finger_width") / 2
-    relative_dy_r = -gripper_base_height / 2
-    relative_dy_l = state.get(obj, "finger_gap") - gripper_base_height / 2
+    relative_dy_r = -state.get(obj, "finger_gap") / 2
+    relative_dy_l = state.get(obj, "finger_gap") / 2
     finger_r_pose = gripper_base_pose * SE2Pose(
         x=relative_dx,
         y=relative_dy_r,
