@@ -37,10 +37,10 @@ def test_tidybot_observation():
 def test_tidybot_action():
     """Tests for TidyBotAction()."""
     arm_goal = [1.0, 0.5, -0.5, 0.0, 0.1, -0.1, 0.2]
-    base_goal = spatialmath.SE2(x=1.0, y=-2.0, theta=0.5)
+    base_local_goal = spatialmath.SE2(x=1.0, y=-2.0, theta=0.5)
     action = TidyBotAction(
-        arm_goal=arm_goal, base_local_goal=base_goal, gripper_goal=1.0
+        arm_goal=arm_goal, base_local_goal=base_local_goal, gripper_goal=1.0
     )
     assert np.allclose(action.arm_goal, arm_goal)
-    assert np.allclose(action.base_local_goal.A, base_goal.A)
+    assert np.allclose(action.base_local_goal.A, base_local_goal.A)
     assert action.gripper_goal == 1.0
