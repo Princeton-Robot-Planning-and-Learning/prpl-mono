@@ -15,7 +15,7 @@ from prpl_tidybot.interfaces.camera_interface import (
     FakeCameraInterface,
     RealCameraInterface,
 )
-from prpl_tidybot.structs import TidyBotObservation
+from prpl_tidybot.structs import TidyBotAction, TidyBotObservation
 
 
 class Interface(abc.ABC):
@@ -26,7 +26,7 @@ class Interface(abc.ABC):
         """Get the base pose."""
 
     @abc.abstractmethod
-    def execute_base_action(self, action: dict) -> None:
+    def execute_base_action(self, action: TidyBotAction) -> None:
         """Execute a base action in the local frame."""
 
     @abc.abstractmethod
@@ -72,8 +72,8 @@ class RealInterface(Interface):
     def get_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_base_state()
 
-    def execute_base_action(self, action: dict) -> None:
-        return self.base_interface.execute_action(action)
+    def execute_base_action(self, action: TidyBotAction) -> None:
+        return self.base_interface.execute_action(action.base_local_goal)
 
     def get_map_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_map_base_state()
@@ -108,8 +108,8 @@ class FakeInterface(Interface):
     def get_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_base_state()
 
-    def execute_base_action(self, action: dict) -> None:
-        return self.base_interface.execute_action(action)
+    def execute_base_action(self, action: TidyBotAction) -> None:
+        return self.base_interface.execute_action(action.base_local_goal)
 
     def get_map_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_map_base_state()

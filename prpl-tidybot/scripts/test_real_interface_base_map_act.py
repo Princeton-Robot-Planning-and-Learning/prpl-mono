@@ -9,6 +9,7 @@ from spatialmath import SE2
 from prpl_tidybot.constants import POLICY_CONTROL_PERIOD
 from prpl_tidybot.coord_converter import CoordFrameConverter
 from prpl_tidybot.interfaces.interface import RealInterface
+from prpl_tidybot.structs import TidyBotAction
 
 if __name__ == "__main__":
     interface = RealInterface()
@@ -25,7 +26,7 @@ if __name__ == "__main__":
     odom_to_map_converter.update(observation.base_pose, observation.map_base_pose)
 
     try:
-        target_map_pose = SE2(-0.5, -0.5, math.pi)
+        target_map_pose = SE2(0.5, 0.5, -math.pi / 2)
         target_odom_pose = map_to_odom_converter.convert_pose(target_map_pose)
         print(
             "target_odom_pose:",
@@ -34,17 +35,12 @@ if __name__ == "__main__":
             target_odom_pose.theta(),
         )
         for i in range(100):
-            interface.execute_base_action(
-                {
-                    "base_pose": np.array(
-                        [
-                            target_odom_pose.x,
-                            target_odom_pose.y,
-                            target_odom_pose.theta(),
-                        ]
-                    )
-                }
+            tidybot_action = TidyBotAction(
+                arm_goal=[0.0] * 7,
+                base_local_goal=target_odom_pose,
+                gripper_goal=1.0,
             )
+            interface.execute_base_action(tidybot_action)
             time.sleep(POLICY_CONTROL_PERIOD)
             observation = interface.get_observation()
             print(
