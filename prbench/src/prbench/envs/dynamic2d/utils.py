@@ -304,17 +304,15 @@ class KinRobot:
         # Body and shape references
         self.create_base()
         self.create_gripper_base()
-        (self._left_finger_body, self._left_finger_shape), \
-        (self._right_finger_body, self._right_finger_shape) = self.create_finger()
+        (self._left_finger_body, self._left_finger_shape), (
+            self._right_finger_body,
+            self._right_finger_shape,
+        ) = self.create_finger()
 
     def add_to_space(self, space: pymunk.Space) -> None:
         """Add robot components to the PyMunk space."""
         space.add(self._base_body, self._base_shape)
-        space.add(
-            self._gripper_base_body,
-            self._gripper_base_shape,
-            self._arm_shape
-        )
+        space.add(self._gripper_base_body, self._gripper_base_shape, self._arm_shape)
         space.add(self._left_finger_body, self._left_finger_shape)
         space.add(self._right_finger_body, self._right_finger_shape)
 
@@ -393,8 +391,9 @@ class KinRobot:
             self._gripper_base_body.angular_velocity,
         )
 
-    def create_finger(self) -> tuple[tuple[pymunk.Body, pymunk.Shape],
-                                     tuple[pymunk.Body, pymunk.Shape]]:
+    def create_finger(
+        self,
+    ) -> tuple[tuple[pymunk.Body, pymunk.Shape], tuple[pymunk.Body, pymunk.Shape]]:
         """Create two gripper fingers."""
         half_w = self.gripper_finger_width / 2
         half_h = self.gripper_finger_height / 2
@@ -410,9 +409,7 @@ class KinRobot:
         finger_shape_l.density = 1.0
         finger_shape_l.collision_type = self.finger_collision_type
 
-        init_rel_pos = SE2Pose(
-            x=half_w, y=self._gripper_gap / 2, theta=0.0
-        )
+        init_rel_pos = SE2Pose(x=half_w, y=self._gripper_gap / 2, theta=0.0)
         init_pose = self.gripper_base_pose * init_rel_pos
         finger_body_l.angle = init_pose.theta
         finger_body_l.position = (init_pose.x, init_pose.y)
@@ -425,9 +422,7 @@ class KinRobot:
         # collision handler, otherwise the two fingers collision will replicate.
         finger_shape_r.collision_type = self.arm_collision_type
 
-        init_rel_pos = SE2Pose(
-            x=half_w, y=-self._gripper_gap / 2, theta=0.0
-        )
+        init_rel_pos = SE2Pose(x=half_w, y=-self._gripper_gap / 2, theta=0.0)
         init_pose = self.gripper_base_pose * init_rel_pos
         finger_body_r.angle = init_pose.theta
         finger_body_r.position = (init_pose.x, init_pose.y)
@@ -450,7 +445,7 @@ class KinRobot:
             y=self._right_finger_body.position.y,
             theta=self._right_finger_body.angle,
         )
-    
+
     @property
     def finger_vel_l(self) -> tuple[Vec2d, float]:
         """Get the left finger linear and angular velocity."""
@@ -466,7 +461,7 @@ class KinRobot:
             self._right_finger_body.velocity,
             self._right_finger_body.angular_velocity,
         )
-    
+
     @property
     def held_object_vels(self) -> list[tuple[Vec2d, float]]:
         """Get the held object linear and angular velocity."""
@@ -744,7 +739,6 @@ class PDController:
         Ldot_curr = robot.gripper_base_vel[0]
 
         # If available (recommended), provide current gripper opening and its rate:
-        g_curr = robot.curr_gripper  # opening distance
         tgt_gripper_l = tgt_gripper / 2
         tgt_gripper_r = -tgt_gripper / 2
         g_curr_l = robot.curr_gripper / 2
