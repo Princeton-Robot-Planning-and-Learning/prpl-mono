@@ -33,6 +33,7 @@ from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_positions,
     sample_pose_in_region,
 )
+from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
 
 
 @dataclass(frozen=True)
