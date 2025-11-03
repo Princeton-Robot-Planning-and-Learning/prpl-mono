@@ -165,8 +165,9 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
                     for fixture_name, fixture_config in fixture_configs.items():
                         # Sample collision-free position for the fixture
-                        fixture_pos = fixture_poses[fixture_type][fixture_name]["position"]
-                        fixture_yaw = fixture_poses[fixture_type][fixture_name]["yaw"]
+                        fixture_pose = fixture_poses[fixture_type][fixture_name]
+                        fixture_pos = fixture_pose["position"]
+                        fixture_yaw = fixture_pose["yaw"]
 
                         # Find regions for this fixture if specified
                         regions = {}
