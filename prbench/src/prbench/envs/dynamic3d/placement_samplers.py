@@ -16,7 +16,7 @@ def sample_collision_free_positions(
     """Sample collision-free positions and yaws for multiple fixtures.
 
     Args:
-        fixtures: Dictionary mapping fixture types to dictionaries of fixture 
+        fixtures: Dictionary mapping fixture types to dictionaries of fixture
                  configurations (fixture_name -> fixture_config)
         np_random: Random number generator
 
@@ -26,7 +26,7 @@ def sample_collision_free_positions(
     """
     fixture_poses: dict[str, dict[str, dict[str, Any]]] = {}
     placed_bboxes: list[list[float]] = []
-    
+
     for fixture_type, fixture_configs in fixtures.items():
         fixture_poses[fixture_type] = {}
         for fixture_name, fixture_config in fixture_configs.items():
@@ -44,8 +44,8 @@ def sample_collision_free_positions(
             )
             placed_bboxes.append(list(bbox))
             fixture_poses[fixture_type][fixture_name] = {
-                "position": position, 
-                "yaw": yaw
+                "position": position,
+                "yaw": yaw,
             }
     return fixture_poses
 
@@ -61,7 +61,7 @@ def sample_collision_free_position(
     """Sample a collision-free position and yaw for a fixture.
 
     Args:
-        bounding_box_at_origin: Initial bounding box as 
+        bounding_box_at_origin: Initial bounding box as
                                [x_min, y_min, z_min, x_max, y_max, z_max]
         placed_bboxes: List of bounding boxes for already placed fixtures
         np_random: Random number generator
@@ -146,7 +146,7 @@ def sample_pose_in_region(
     """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
 
     Args:
-        regions: List of bounding boxes, where each bounding box is a list of 4 
+        regions: List of bounding boxes, where each bounding box is a list of 4
                 floats: [x_start, y_start, x_end, y_end]
         np_random: Random number generator
         z_coordinate: Z coordinate for the sampled pose (height above ground)
