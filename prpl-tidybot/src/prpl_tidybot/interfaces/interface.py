@@ -9,13 +9,13 @@ import abc
 import spatialmath
 from prpl_utils.structs import Image
 
-from prpl_tidybot.interfaces.arm_interface import FakeArmInterface
-from prpl_tidybot.interfaces.base_interface import FakeBaseInterface
+from prpl_tidybot.interfaces.arm_interface import FakeArmInterface, RealArmInterface
+from prpl_tidybot.interfaces.base_interface import FakeBaseInterface, RealBaseInterface
 from prpl_tidybot.interfaces.camera_interface import (
     FakeCameraInterface,
     RealCameraInterface,
 )
-from prpl_tidybot.structs import TidyBotObservation
+from prpl_tidybot.structs import TidyBotAction, TidyBotObservation
 
 
 class Interface(abc.ABC):
@@ -24,6 +24,14 @@ class Interface(abc.ABC):
     @abc.abstractmethod
     def get_base_state(self) -> spatialmath.SE2:
         """Get the base pose."""
+
+    @abc.abstractmethod
+    def execute_base_action(self, action: TidyBotAction) -> None:
+        """Execute a base action in the local frame."""
+
+    @abc.abstractmethod
+    def get_map_base_state(self) -> spatialmath.SE2:
+        """Get the base pose in the map frame."""
 
     @abc.abstractmethod
     def get_arm_state(self) -> list[float]:
@@ -46,6 +54,7 @@ class Interface(abc.ABC):
         return TidyBotObservation(
             arm_conf=self.get_arm_state(),
             base_pose=self.get_base_state(),
+            map_base_pose=self.get_map_base_state(),
             gripper=self.get_gripper_state(),
             wrist_camera=self.get_wrist_image(),
             base_camera=self.get_base_image(),
@@ -55,23 +64,37 @@ class Interface(abc.ABC):
 class RealInterface(Interface):
     """The real and sole interface to the real robot."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.camera_interface = RealCameraInterface()
+        self.base_interface = RealBaseInterface()
+        self.arm_interface = RealArmInterface()
 
     def get_base_state(self) -> spatialmath.SE2:
-        raise NotImplementedError("Not implemented yet.")
+        return self.base_interface.get_base_state()
+
+    def execute_base_action(self, action: TidyBotAction) -> None:
+        return self.base_interface.execute_action(action.base_local_goal)
+
+    def get_map_base_state(self) -> spatialmath.SE2:
+        return self.base_interface.get_map_base_state()
 
     def get_arm_state(self) -> list[float]:
-        raise NotImplementedError("Not implemented yet.")
+        return self.arm_interface.get_arm_state()
 
     def get_gripper_state(self) -> float:
-        raise NotImplementedError("Not implemented yet.")
+        return self.arm_interface.get_gripper_state()
 
     def get_wrist_image(self) -> Image:
         return self.camera_interface.get_wrist_image()
 
     def get_base_image(self) -> Image:
         return self.camera_interface.get_base_image()
+
+    def close(self) -> None:
+        """Close the real interface."""
+        self.base_interface.close()
+        self.arm_interface.close()
+        self.camera_interface.close()
 
 
 class FakeInterface(Interface):
@@ -84,6 +107,12 @@ class FakeInterface(Interface):
 
     def get_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_base_state()
+
+    def execute_base_action(self, action: TidyBotAction) -> None:
+        return self.base_interface.execute_action(action.base_local_goal)
+
+    def get_map_base_state(self) -> spatialmath.SE2:
+        return self.base_interface.get_map_base_state()
 
     def get_arm_state(self) -> list[float]:
         return self.arm_interface.get_arm_state()

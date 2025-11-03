@@ -56,12 +56,34 @@ prpl_tidybot = ["py.typed"]
 [tool.black]
 line-length = 88
 target-version = ["py310"]
+extend-exclude = '''
+(
+    src/prpl_tidybot/base_controller\.py |
+    src/prpl_tidybot/base_server\.py |
+    src/prpl_tidybot/arm_controller\.py |
+    src/prpl_tidybot/arm_server\.py |
+    src/prpl_tidybot/kinova\.py |
+    src/prpl_tidybot/ik_solver\.py |
+    src/prpl_tidybot/constants\.py |
+    src/prpl_tidybot/gamepad_teleop\.py
+)
+'''
 
 [tool.isort]
 py_version = 310
 profile = "black"
 multi_line_output = 2
-skip_glob = ["venv/*", ".venv/*"]
+skip_glob = [
+    "venv/*",
+    ".venv/*",
+    "src/prpl_tidybot/base_controller.py",
+    "src/prpl_tidybot/base_server.py",
+    "src/prpl_tidybot/arm_controller.py",
+    "src/prpl_tidybot/arm_server.py",
+    "src/prpl_tidybot/kinova.py",
+    "src/prpl_tidybot/ik_solver.py",
+    "src/prpl_tidybot/constants.py",
+    "src/prpl_tidybot/gamepad_teleop.py"]
 split_on_trailing_comma = true
 
 [tool.docformatter]
@@ -73,7 +95,17 @@ wrap-descriptions = 88
 strict_equality = true
 disallow_untyped_calls = true
 warn_unreachable = true
-exclude = ["venv/*", ".venv/*"]
+exclude = [
+    "venv/*",
+    ".venv/*",
+    "src/prpl_tidybot/base_controller.py",
+    "src/prpl_tidybot/base_server.py",
+    "src/prpl_tidybot/arm_controller.py",
+    "src/prpl_tidybot/arm_server.py",
+    "src/prpl_tidybot/kinova.py",
+    "src/prpl_tidybot/ik_solver.py",
+    "src/prpl_tidybot/constants.py",
+    "src/prpl_tidybot/gamepad_teleop.py"]
 
 [[tool.mypy.overrides]]
 module = [

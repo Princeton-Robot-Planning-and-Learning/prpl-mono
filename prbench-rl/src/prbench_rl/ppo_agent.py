@@ -29,7 +29,7 @@ except ImportError:
     TENSORBOARD_AVAILABLE = False
 
 from prbench_rl.agent import BaseRLAgent
-from prbench_rl.gym_utils import make_env
+from prbench_rl.gym_utils import make_env_ppo
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")
@@ -46,14 +46,6 @@ class PPOArgs:
     """If toggled, `torch.backends.cudnn.deterministic=False`"""
     cuda: bool = True
     """If toggled, cuda will be enabled by default."""
-    track: bool = False
-    """If toggled, this experiment will be tracked with Weights and Biases."""
-    wandb_project_name: str = "ManiSkill"
-    """The wandb's project name."""
-    wandb_entity: Optional[str] = None
-    """The entity (team) of wandb's project."""
-    wandb_group: str = "PPO"
-    """The group of the run for wandb."""
     capture_video: bool = True
     """Whether to capture videos of the self.agent performances (check out `videos`
     folder)"""
@@ -73,8 +65,6 @@ class PPOArgs:
     """Evaluation frequency in terms of iterations."""
     save_train_video_freq: Optional[int] = None
     """Frequency to save training videos in terms of iterations."""
-    control_mode: Optional[str] = "pd_joint_delta_pos"
-    """The control mode to use for the environment."""
 
     # Algorithm specific arguments
     hidden_size: int = 64
@@ -187,7 +177,7 @@ class Agent(nn.Module):
         action_mean = self.actor_mean(x)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
-        probs = Normal(action_mean, action_std)
+        probs = Normal(action_mean, action_std)  # type: ignore
         if action is None:
             action = probs.sample()  # type: ignore[no-untyped-call]
         return (
@@ -293,7 +283,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         """Evaluate the PPO agent."""
         envs = gym.vector.SyncVectorEnv(
             [
-                make_env(
+                make_env_ppo(
                     self.env_id,
                     0,
                     render,
@@ -349,7 +339,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         episodic_returns = []
         envs = gym.vector.SyncVectorEnv(
             [
-                make_env(
+                make_env_ppo(
                     self.env_id,
                     i,
                     render,

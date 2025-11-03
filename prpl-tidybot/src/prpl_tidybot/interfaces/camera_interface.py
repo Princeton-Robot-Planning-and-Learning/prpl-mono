@@ -46,12 +46,17 @@ class RealCameraInterface(CameraInterface):
     base camera: logitech camera
     """
 
-    def __init__(self):
-        self.base_camera = LogitechCamera(BASE_CAMERA_SERIAL)
-        self.wrist_camera = KinovaCamera()
+    def __init__(self) -> None:
+        self.base_camera = LogitechCamera(BASE_CAMERA_SERIAL)  # type: ignore
+        self.wrist_camera = KinovaCamera()  # type: ignore
 
     def get_wrist_image(self) -> Image:
-        return self.wrist_camera.get_image()
+        return self.wrist_camera.get_image()  # type: ignore
 
     def get_base_image(self) -> Image:
-        return self.base_camera.get_image()
+        return self.base_camera.get_image()  # type: ignore
+
+    def close(self) -> None:
+        """Close the camera interface."""
+        self.base_camera.close()  # type: ignore
+        self.wrist_camera.close()  # type: ignore

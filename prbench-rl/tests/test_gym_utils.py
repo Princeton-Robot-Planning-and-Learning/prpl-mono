@@ -2,7 +2,7 @@
 
 import prbench
 
-from prbench_rl.gym_utils import make_env
+from prbench_rl.gym_utils import make_env_ppo
 
 
 def test_make_env_truncation():
@@ -14,7 +14,7 @@ def test_make_env_truncation():
 
     # Create environment with max_episode_steps
     max_steps = 50
-    env_fn = make_env(
+    env_fn = make_env_ppo(
         env_id="prbench/Obstruction2D-o0-v0",
         idx=0,
         capture_video=False,
