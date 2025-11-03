@@ -798,13 +798,13 @@ class Cupboard(MujocoFixture):
             fixture_config: Dictionary containing cupboard configuration with keys:
                 - "length": Total cupboard length in meters
                 - "depth": Total cupboard depth in meters
-                - "shelf_heights": List of distances between consecutive shelves 
+                - "shelf_heights": List of distances between consecutive shelves
                   in meters
-                - "shelf_partitions": List of lists, each containing partition 
+                - "shelf_partitions": List of lists, each containing partition
                   distances from left edge
-                - "side_and_back_open": Boolean indicating if sides and back are 
+                - "side_and_back_open": Boolean indicating if sides and back are
                   open
-                - "shelf_thickness": Thickness of each shelf in meters 
+                - "shelf_thickness": Thickness of each shelf in meters
                   (optional, default 0.02)
             position: Position of the cupboard as [x, y, z]
             yaw: Yaw orientation of the cupboard in radians
@@ -820,7 +820,7 @@ class Cupboard(MujocoFixture):
         shelf_heights_raw = self.fixture_config["shelf_heights"]
         self.shelf_heights: list[float] = (
             [float(h) for h in shelf_heights_raw]  # type: ignore
-            if hasattr(shelf_heights_raw, '__iter__')
+            if hasattr(shelf_heights_raw, "__iter__")
             and not isinstance(shelf_heights_raw, str)
             else [float(shelf_heights_raw)]
         )
@@ -831,9 +831,7 @@ class Cupboard(MujocoFixture):
             [float(p) for p in partition_list]  # type: ignore
             for partition_list in shelf_partitions_raw  # type: ignore
         ]
-        self.side_and_back_open: bool = bool(
-            self.fixture_config["side_and_back_open"]
-        )
+        self.side_and_back_open: bool = bool(self.fixture_config["side_and_back_open"])
         self.shelf_thickness: float = float(
             self.fixture_config.get("shelf_thickness", 0.02)
         )
@@ -845,9 +843,7 @@ class Cupboard(MujocoFixture):
 
         # Calculate derived properties
         self.num_shelves: int = len(self.shelf_heights) + 1  # +1 for the top shelf
-        self.cupboard_height: float = (
-            sum(self.shelf_heights) + self.shelf_thickness
-        )
+        self.cupboard_height: float = sum(self.shelf_heights) + self.shelf_thickness
 
         # Validate configuration
         if len(self.shelf_heights) < 1:
@@ -1039,7 +1035,7 @@ class Cupboard(MujocoFixture):
                 - "length": Total cupboard length in meters
                 - "depth": Total cupboard depth in meters
                 - "shelf_heights": List of distances between consecutive shelves
-                - "shelf_thickness": Thickness of each shelf in meters 
+                - "shelf_thickness": Thickness of each shelf in meters
                   (optional, default 0.02)
 
         Returns:
@@ -1055,9 +1051,9 @@ class Cupboard(MujocoFixture):
         half_depth = float(fixture_config["depth"]) / 2
 
         # Calculate cupboard height from shelf configuration
-        shelf_heights_config: list[float] = (
-            fixture_config.get("shelf_heights", [])  # type: ignore
-        )
+        shelf_heights_config: list[float] = fixture_config.get(
+            "shelf_heights", []
+        )  # type: ignore
         shelf_heights_float: list[float] = [float(h) for h in shelf_heights_config]
         shelf_thickness = float(fixture_config.get("shelf_thickness", 0.02))
         cupboard_height = sum(shelf_heights_float) + shelf_thickness
