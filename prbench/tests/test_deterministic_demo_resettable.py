@@ -27,8 +27,8 @@ def test_deterministic_demo_replay(demo_path: Path):
     # Load demo data
     # NOTE: Skip ScoopPour for now, it is super weird, run this twice will
     # result in one pass one fail....
-    # if "DynScoopPour" in str(demo_path):
-    #     pytest.skip("Skipping DynScoopPour demos for now")
+    if "DynScoopPour" in str(demo_path):
+        pytest.skip("Skipping DynScoopPour demos for now")
     try:
         demo_data = load_demo(demo_path)
     except Exception as e:
