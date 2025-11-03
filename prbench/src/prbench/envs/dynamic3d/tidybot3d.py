@@ -76,8 +76,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
         # Parse task configuration
         if task_config_path is None:
-            # Default to tasks/tidybot-<scene_type>-o<num_objects>.json based on scene_type and num_objects
-            task_config_path = f"./tasks/tidybot-{self.scene_type}-o{self.num_objects}.json"
+            # Default task config based on scene_type and num_objects
+            task_config_path = (
+                f"./tasks/tidybot-{self.scene_type}-o{self.num_objects}.json"
+            )
         if not os.path.isabs(task_config_path):
             task_config_path = str(Path(__file__).parent / task_config_path)
         assert os.path.exists(
