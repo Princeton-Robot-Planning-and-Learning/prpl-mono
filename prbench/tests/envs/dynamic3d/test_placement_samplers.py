@@ -1,6 +1,3 @@
-
-
-
 """Tests for placement sampling utilities for dynamic3d environments."""
 
 import numpy as np

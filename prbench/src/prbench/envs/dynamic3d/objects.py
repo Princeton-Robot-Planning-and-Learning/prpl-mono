@@ -410,7 +410,7 @@ class MujocoFixture(abc.ABC):
         """Get the fixture's orientation.
 
         Returns:
-            Orientation as quaternion [w, x, y, z] array
+            Orientation as quaternion [w, x, y, z] list
         """
         return utils.convert_yaw_to_quaternion(self.yaw)
 
@@ -420,6 +420,10 @@ class MujocoFixture(abc.ABC):
         pos: NDArray[np.float32], fixture_config: dict[str, str | float]
     ) -> list[float]:
         """Get the fixture's bounding box in world coordinates.
+
+        Args:
+            pos: Position of the fixture as [x, y, z] array
+            fixture_config: Dictionary containing fixture configuration parameters
 
         Returns:
             Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max] array
@@ -688,20 +692,20 @@ class Table(MujocoFixture):
             return [
                 pos[0] - half_length,  # x_min
                 pos[1] - half_width,  # y_min
-                pos[2],  # z_min
+                z_min,
                 pos[0] + half_length,  # x_max
                 pos[1] + half_width,  # y_max
-                pos[2] + table_height,  # z_max
+                z_max,
             ]
         if fixture_config["shape"] == "circle":
             radius = float(fixture_config["diameter"]) / 2
             return [
                 pos[0] - radius,  # x_min
                 pos[1] - radius,  # y_min
-                z_min,  # z_min
+                z_min,
                 pos[0] + radius,  # x_max
                 pos[1] + radius,  # y_max
-                z_max,  # z_max
+                z_max,
             ]
 
         raise ValueError(f"Unknown table shape: {fixture_config['shape']}")
