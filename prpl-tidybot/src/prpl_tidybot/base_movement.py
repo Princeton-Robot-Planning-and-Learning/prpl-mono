@@ -21,18 +21,6 @@ def reach_target_pose(
 ) -> None:
     """Reaches the target pose in the map frame."""
     target_odom_pose = map_to_odom_converter.convert_pose(target_map_pose)
-    print(
-        "target_odom_pose:",
-        target_odom_pose.x,
-        target_odom_pose.y,
-        target_odom_pose.theta(),
-    )
-    print(
-        "target_map_pose:",
-        target_map_pose.x,
-        target_map_pose.y,
-        target_map_pose.theta(),
-    )
     for _ in range(max_iter):
         tidybot_action = TidyBotAction(
             arm_goal=[0.0] * 7,
@@ -53,12 +41,6 @@ def reach_target_pose(
             and abs(target_map_pose.theta() - observation.map_base_pose.theta())
             < tolerance
         ):
-            print(
-                "Reached target pose:",
-                target_map_pose.x,
-                target_map_pose.y,
-                target_map_pose.theta(),
-            )
             break
 
         target_odom_pose = map_to_odom_converter.convert_pose(target_map_pose)
