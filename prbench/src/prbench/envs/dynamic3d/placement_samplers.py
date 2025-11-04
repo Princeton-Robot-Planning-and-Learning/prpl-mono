@@ -40,7 +40,7 @@ def sample_collision_free_positions(
                 np_random=np_random,
             )
             bbox = get_fixture_class(fixture_type).get_bounding_box_from_config(
-                np.concatenate([position, np.array([0.0])]), fixture_config
+                position, fixture_config
             )
             placed_bboxes.append(list(bbox))
             fixture_poses[fixture_type][fixture_name] = {
