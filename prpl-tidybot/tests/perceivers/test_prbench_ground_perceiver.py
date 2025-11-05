@@ -51,7 +51,7 @@ def test_real_to_sim_prbench_ground():
     sim.set_state(state)
 
     # Uncomment to visualize.
-    # sim._robot_env.sim.forward()  # pylint: disable=protected-acess
+    # sim._robot_env.sim.forward()  # pylint: disable=protected-access
     # img = sim.render()
     # import imageio.v2 as iio
     # iio.imsave("real_to_sim_ground_image.png", img)
