@@ -140,7 +140,7 @@ class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
     # We don't have gravity here, but we have damping.
     gravity_y: float = -1.0  # More realistic slight downward pull
     damping: float = 0.01  # Damping applied to all dynamic bodies
-    stabilization_seconds: float = 30.0  # More steps needed for many small objects to settle
+    stabilization_seconds: float = 30.0  # More steps needed
 
     # For rendering.
     render_dpi: int = 100
