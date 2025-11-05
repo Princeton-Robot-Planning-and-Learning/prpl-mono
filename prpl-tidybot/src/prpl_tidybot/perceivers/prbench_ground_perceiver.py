@@ -22,7 +22,7 @@ class PRBenchGroundPerceiver(Perceiver[ObjectCentricState]):
         state_dict: dict[Object, dict[str, float]] = {}
 
         # Extract the robot state.
-        qpos_base = self._interface.get_base_state()
+        qpos_base = self._interface.get_map_base_state()
         qpos_arm = self._interface.get_arm_state()
         gripper_state = self._interface.get_gripper_state()
 
