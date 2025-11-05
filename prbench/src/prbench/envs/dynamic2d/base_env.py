@@ -85,6 +85,7 @@ class Dynamic2DRobotEnvConfig(PRBenchEnvConfig):
     collision_slop: float = 0.001  # Allow small interpenetration, depends on env scale
     control_hz: int = 10  # Control frequency (fps in rendering)
     sim_hz: int = 100  # Simulation frequency (dt in simulation)
+    stabilization_seconds: float = 1.0  # Duration to stabilize physics after reset
 
     # For rendering.
     render_dpi: int = 50
@@ -327,7 +328,8 @@ class ObjectCentricDynamic2DRobotEnv(
             dt = 1.0 / self.config.sim_hz
             # Stepping physics to let things settle
             assert self.pymunk_space is not None, "Space not initialized"
-            for _ in range(self.config.sim_hz):
+            num_steps = int(self.config.stabilization_seconds * self.config.sim_hz)
+            for _ in range(num_steps):
                 self.pymunk_space.step(dt)
         else:
             # reset from given state

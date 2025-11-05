@@ -439,7 +439,7 @@ class KinRobot:
 
     @property
     def finger_poses_r(self) -> SE2Pose:
-        """Get the left finger pose as SE2Pose."""
+        """Get the right finger pose as SE2Pose."""
         return SE2Pose(
             x=self._right_finger_body.position.x,
             y=self._right_finger_body.position.y,
@@ -456,7 +456,7 @@ class KinRobot:
 
     @property
     def finger_vel_r(self) -> tuple[Vec2d, float]:
-        """Get the left finger linear and angular velocity."""
+        """Get the right finger linear and angular velocity."""
         return (
             self._right_finger_body.velocity,
             self._right_finger_body.angular_velocity,
@@ -819,7 +819,7 @@ class PDController:
         a_g = kp_finger * (tgt_gripper_l - g_curr_l) + kv_finger * (0.0 - rel_gdot_curr)
         rel_gdot_next = rel_gdot_curr + a_g * dt
         # Finger world velocity, similar to gripper-base vel but with the additional
-        # primistamic part in y-dir
+        # prismatic part in y-dir
         finger_vel_l = (
             base_vel
             + finger_rot_omega_vec_base * relative_pos.length * base_ang_vel
@@ -842,7 +842,7 @@ class PDController:
         a_g = kp_finger * (tgt_gripper_r - g_curr_r) + kv_finger * (0.0 - rel_gdot_curr)
         rel_gdot_next = rel_gdot_curr + a_g * dt
         # Finger world velocity, similar to gripper-base vel but with the additional
-        # primistamic part in y-dir
+        # prismatic part in y-dir
         finger_vel_r = (
             base_vel
             + finger_rot_omega_vec_base * relative_pos.length * base_ang_vel

@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 
-import gymnasium
 import numpy as np
 import pymunk
 from relational_structs import Object, ObjectCentricState, Type
@@ -22,17 +21,12 @@ from prbench.envs.dynamic2d.object_types import (
     SmallSquareType,
 )
 from prbench.envs.dynamic2d.utils import (
-    ARM_COLLISION_TYPE,
     DYNAMIC_COLLISION_TYPE,
-    FINGER_COLLISION_TYPE,
     NON_GRASPABLE_COLLISION_TYPE,
     ROBOT_COLLISION_TYPE,
     STATIC_COLLISION_TYPE,
-    KinRobot,
     KinRobotActionSpace,
     create_walls_from_world_boundaries,
-    on_collision_w_static,
-    on_gripper_grasp,
 )
 from prbench.envs.geom2d.structs import SE2Pose, ZOrder
 from prbench.envs.utils import (
@@ -146,6 +140,7 @@ class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
     # We don't have gravity here, but we have damping.
     gravity_y: float = -1.0  # More realistic slight downward pull
     damping: float = 0.01  # Damping applied to all dynamic bodies
+    stabilization_seconds: float = 30.0  # More steps needed for many small objects to settle
 
     # For rendering.
     render_dpi: int = 100
@@ -210,109 +205,6 @@ class ObjectCentricDynScoopPourEnv(
         init_state_dict.update(wall_state_dict)
 
         return init_state_dict
-
-    def reset(
-        self, *, seed: int | None = None, options: dict | None = None
-    ) -> tuple[ObjectCentricState, dict]:
-        # Reset the random seed.
-        gymnasium.Env.reset(self, seed=seed)
-
-        # Clear existing physics space
-        if self.pymunk_space:
-            # Remove all bodies and shapes
-            for body in list(self.pymunk_space.bodies):
-                for shape in list(body.shapes):
-                    if body in self.pymunk_space.bodies:
-                        self.pymunk_space.remove(body, shape)
-            for shape in list(self.pymunk_space.shapes):
-                # Some shapes are not attached to bodies (e.g., static lines)
-                self.pymunk_space.remove(shape)
-
-        # Set up new physics space
-        self._setup_physics_space()
-        self._static_object_body_cache = {}
-        self._state_obj_to_pymunk_body = {}
-
-        # NOTE: If reset from options, we don't step the simulation
-        # to let things settle.
-        stablize_sim = True
-        # For testing purposes only, the options may specify an initial scene.
-        if options is not None and "init_state" in options:
-            self._current_state = options["init_state"].copy()
-            stablize_sim = False
-        # Otherwise, set up the initial scene here.
-        else:
-            self._current_state = self._sample_initial_state()
-
-        # Add objects to physics space
-        self._add_state_to_space(self.full_state)
-
-        # Calculate simulation parameters
-        if stablize_sim:
-            dt = 1.0 / self.config.sim_hz
-            # Stepping physics to let things settle
-            assert self.pymunk_space is not None, "Space not initialized"
-            for _ in range(30 * self.config.sim_hz):
-                # More steps in this env for it to settle
-                self.pymunk_space.step(dt)
-        else:
-            # reset from given state
-            assert self.pymunk_space is not None, "Space not initialized"
-            for body in list(self.pymunk_space.bodies):
-                self.pymunk_space.reindex_shapes_for_body(body)
-
-        observation = self._get_obs()
-        info = self._get_info()
-
-        return observation, info
-
-    def _setup_physics_space(self) -> None:
-        """Set up the PyMunk physics space."""
-        self.pymunk_space = pymunk.Space()
-        self.pymunk_space.gravity = 0, self.config.gravity_y
-        self.pymunk_space.damping = self.config.damping
-        self.pymunk_space.collision_slop = self.config.collision_slop
-
-        # Create robot
-        self.robot = KinRobot(
-            init_pos=pymunk.Vec2d(*self.config.init_robot_pos),
-            base_radius=self.config.robot_base_radius,
-            arm_length_max=self.config.robot_arm_length_max,
-            gripper_base_width=self.config.gripper_base_width,
-            gripper_base_height=self.config.gripper_base_height,
-            gripper_finger_width=self.config.gripper_finger_width,
-            gripper_finger_height=self.config.gripper_finger_height,
-        )
-        self.robot.add_to_space(self.pymunk_space)
-
-        # Set up collision handlers
-        # Only hook can be grasped (DYNAMIC_COLLISION_TYPE)
-        # Small objects use NON_GRASPABLE_COLLISION_TYPE
-        self.pymunk_space.on_collision(
-            DYNAMIC_COLLISION_TYPE,
-            FINGER_COLLISION_TYPE,
-            post_solve=on_gripper_grasp,
-            data=self.robot,
-        )
-        # Static collisions
-        self.pymunk_space.on_collision(
-            STATIC_COLLISION_TYPE,
-            ROBOT_COLLISION_TYPE,
-            pre_solve=on_collision_w_static,
-            data=self.robot,
-        )
-        self.pymunk_space.on_collision(
-            STATIC_COLLISION_TYPE,
-            FINGER_COLLISION_TYPE,
-            pre_solve=on_collision_w_static,
-            data=self.robot,
-        )
-        self.pymunk_space.on_collision(
-            STATIC_COLLISION_TYPE,
-            ARM_COLLISION_TYPE,
-            pre_solve=on_collision_w_static,
-            data=self.robot,
-        )
 
     def _sample_initial_state(self) -> ObjectCentricState:
         """Sample an initial state for the environment."""
