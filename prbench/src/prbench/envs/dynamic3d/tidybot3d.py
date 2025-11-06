@@ -310,39 +310,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         This is useful for planning baselines.
         """
         # Reset the robot.
-        robot_obj = state.get_object_from_name("robot")
-
-        # Reset the robot base position.
-        robot_base_pos = [
-            state.get(robot_obj, "pos_base_x"),
-            state.get(robot_obj, "pos_base_y"),
-            state.get(robot_obj, "pos_base_rot"),
-        ]
-        assert self._robot_env.qpos_base is not None
-        self._robot_env.qpos_base[:] = robot_base_pos
-
-        # Reset the robot arm position.
-        robot_arm_pos = [state.get(robot_obj, f"pos_arm_joint{i}") for i in range(1, 8)]
-        assert self._robot_env.qpos_arm is not None
-        self._robot_env.qpos_arm[:] = robot_arm_pos
-
-        # NOTE: gripper position not yet implemented.
-
-        # Reset the robot base velocity.
-        robot_base_vel = [
-            state.get(robot_obj, "vel_base_x"),
-            state.get(robot_obj, "vel_base_y"),
-            state.get(robot_obj, "vel_base_rot"),
-        ]
-        assert self._robot_env.qvel_base is not None
-        self._robot_env.qvel_base[:] = robot_base_vel
-
-        # Reset the robot arm velocity.
-        robot_arm_vel = [state.get(robot_obj, f"vel_arm_joint{i}") for i in range(1, 8)]
-        assert self._robot_env.qvel_arm is not None
-        self._robot_env.qvel_arm[:] = robot_arm_vel
-
-        # NOTE: gripper velocity not yet implemented.
+        self._set_robot_state(state)
 
         # Reset the objects.
         for mujoco_object in self._objects:
@@ -514,6 +482,44 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
             "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
         }
         return state_dict
+
+    def _set_robot_state(self, state: dict[str, float]) -> None:
+        """Set the robot state in the simulation."""
+
+        robot_obj = state.get_object_from_name("robot")
+
+        # Reset the robot base position.
+        robot_base_pos = [
+            state.get(robot_obj, "pos_base_x"),
+            state.get(robot_obj, "pos_base_y"),
+            state.get(robot_obj, "pos_base_rot"),
+        ]
+        assert self._robot_env.qpos_base is not None
+        self._robot_env.qpos_base[:] = robot_base_pos
+
+        # Reset the robot arm position.
+        robot_arm_pos = [state.get(robot_obj, f"pos_arm_joint{i}") for i in range(1, 8)]
+        assert self._robot_env.qpos_arm is not None
+        self._robot_env.qpos_arm[:] = robot_arm_pos
+
+        # NOTE: gripper position not yet implemented.
+
+        # Reset the robot base velocity.
+        robot_base_vel = [
+            state.get(robot_obj, "vel_base_x"),
+            state.get(robot_obj, "vel_base_y"),
+            state.get(robot_obj, "vel_base_rot"),
+        ]
+        assert self._robot_env.qvel_base is not None
+        self._robot_env.qvel_base[:] = robot_base_vel
+
+        # Reset the robot arm velocity.
+        robot_arm_vel = [state.get(robot_obj, f"vel_arm_joint{i}") for i in range(1, 8)]
+        assert self._robot_env.qvel_arm is not None
+        self._robot_env.qvel_arm[:] = robot_arm_vel
+
+        # NOTE: gripper velocity not yet implemented.
+
 
 class TidyBot3DEnv(ConstantObjectPRBenchEnv):
     """TidyBot env with a constant number of objects."""
