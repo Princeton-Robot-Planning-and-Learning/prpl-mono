@@ -350,6 +350,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
             mujoco_object.set_velocity(linear_velocity, angular_velocity)
         # NOTE: Fixtures are static (without joints), so we cannot set their state.
 
+        assert self._robot_env.sim is not None, "Simulation not initialized"
         self._robot_env.sim.forward()
 
     def _visualize_image_in_window(
