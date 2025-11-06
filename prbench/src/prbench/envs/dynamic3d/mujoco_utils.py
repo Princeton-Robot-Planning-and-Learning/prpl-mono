@@ -131,6 +131,9 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
     def reward(self, obs: MjObs) -> float:
         """Compute the reward from an observation."""
 
+    def _update_ctrl(self, action: Array) -> None:
+        self.sim.data._data.ctrl[:] = action
+
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         assert self.sim is not None, "Simulation must be initialized before stepping."
 
@@ -141,7 +144,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         # is reached
         control_timestep = 1.0 / self.control_frequency
         for _ in range(int(control_timestep / SIMULATION_TIMESTEP)):
-            self.sim.data.ctrl[:] = action
+            self._update_ctrl(action)
             self.sim.forward()
             self.sim.step()
 
@@ -168,7 +171,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
 
-        self.sim.data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = np.array(
+        self.sim.data._data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = np.array(
             [float(x) for x in pos] + [float(q) for q in quat]
         )
 
@@ -179,8 +182,8 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         assert self.sim is not None, "Simulation not initialized"
         joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
-        pos = self.sim.data.qpos[joint_qpos_addr : joint_qpos_addr + 3]
-        quat = self.sim.data.qpos[joint_qpos_addr + 3 : joint_qpos_addr + 7]
+        pos = self.sim.data._data.qpos[joint_qpos_addr : joint_qpos_addr + 3]
+        quat = self.sim.data._data.qpos[joint_qpos_addr + 3 : joint_qpos_addr + 7]
         return pos, quat
 
     def set_joint_vel(
@@ -200,7 +203,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         joint_qvel_addr = self.sim.model.get_joint_qvel_addr(name)
 
-        self.sim.data.qvel[joint_qvel_addr : joint_qvel_addr + 6] = np.array(
+        self.sim.data._data.qvel[joint_qvel_addr : joint_qvel_addr + 6] = np.array(
             [float(x) for x in linear_vel] + [float(q) for q in angular_vel]
         )
 
@@ -211,8 +214,10 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         assert self.sim is not None, "Simulation not initialized"
         joint_qvel_addr = self.sim.model.get_joint_qvel_addr(name)
-        linear_vel = self.sim.data.qvel[joint_qvel_addr : joint_qvel_addr + 3]
-        angular_vel = self.sim.data.qvel[joint_qvel_addr + 3 : joint_qvel_addr + 6]
+        linear_vel = self.sim.data._data.qvel[joint_qvel_addr : joint_qvel_addr + 3]
+        angular_vel = self.sim.data._data.qvel[
+            joint_qvel_addr + 3 : joint_qvel_addr + 6
+        ]
         return linear_vel, angular_vel
 
     def get_obs(self) -> MjObs:
@@ -221,8 +226,8 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         # Add a copy of qpos and qvel to observation
         obs_dict: dict[str, NDArray[Any]] = {
-            "qpos": np.copy(self.sim.data.qpos),
-            "qvel": np.copy(self.sim.data.qvel),
+            "qpos": np.copy(self.sim.data._data.qpos),
+            "qvel": np.copy(self.sim.data._data.qvel),
         }
 
         # Render images and update obs_dict
@@ -280,7 +285,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         if self.show_viewer:
             mujoco.viewer.launch(
                 self.sim.model._model,  # pylint: disable=protected-access
-                self.sim.data,
+                self.sim.data._data,
                 show_left_ui=False,
                 show_right_ui=False,
             )
@@ -520,6 +525,85 @@ class MjModel:
         return tuple(id2name[nid] for nid in sorted(name2id.values())), name2id, id2name
 
 
+class MjData:
+
+    # pylint: disable=no-member
+
+    def __init__(self, model: MjModel):
+        self.model = model
+        self._data = mujoco.MjData(self.model._model)
+
+    def get_body_xpos(self, name):
+        """Get cartesian position of a mujoco body using body name.
+
+        Args:
+            name (str): name of a mujoco body
+        Returns:
+            xpos (np.ndarray): xpos value of the mujoco body
+        """
+        body_id = self.model._body_name2id[name]
+        return self._data.xpos[body_id]
+
+    def get_body_xmat(self, name):
+        """Get rotation of a mujoco body as matrix using body name.
+
+        Args:
+            name (str): name of a mujoco body
+        Returns:
+            xmat (np.ndarray): xmat value of the mujoco body
+        """
+        body_id = self.model._body_name2id[name]
+        return self._data.xmat[body_id]
+
+    def get_body_jacp(self, name):
+        """Get the position jacobian of a mujoco body using body name.
+
+        Args:
+            name (str): name of a mujoco body
+        Returns:
+            jacp (np.ndarray): jacp value of the mujoco body
+        """
+        body_id = self.model._body_name2id[name]
+        jacp = np.zeros((3, self.model._model.nv))
+        mujoco.mj_jacBody(self.model._model, self._data, jacp, None, body_id)
+        return jacp
+
+    def get_body_jacr(self, name):
+        """Get the rotation jacobian of a mujoco body using body name.
+
+        Args:
+            name (str): name of a mujoco body
+        Returns:
+            jacr (np.ndarray): jacr value of the mujoco body
+        """
+        body_id = self.model._body_name2id[name]
+        jacr = np.zeros((3, self.model._model.nv))
+        mujoco.mj_jacBody(self.model._model, self._data, jacr, None, body_id)
+        return jacr
+
+    def get_body_xvelp(self, name):
+        """Get the translational velocity of a mujoco body using body name.
+
+        Args:
+            name (str): name of a mujoco body
+        Returns:
+            xvelp (np.ndarray): translational velocity of the mujoco body.
+        """
+        jacp = self.get_body_jacp(name)
+        return np.dot(jacp, self._data.qvel)
+
+    def get_body_xvelr(self, name):
+        """Get the rotational velocity of a mujoco body using body name.
+
+        Args:
+            name (str): name of a mujoco body
+        Returns:
+            xvelr (np.ndarray): rotational velocity of the mujoco body.
+        """
+        jacr = self.get_body_jacr(name)
+        return np.dot(jacr, self._data.qvel)
+
+
 class MjSim:
     """A simplified MjSim class for MuJoCo simulation."""
 
@@ -534,9 +618,7 @@ class MjSim:
         xml_string = self._set_simulation_timestep(xml_string)
 
         self.model: MjModel = MjModel(xml_string)
-        self.data: mujoco.MjData = mujoco.MjData(  # pylint: disable=no-member
-            self.model._model  # pylint: disable=protected-access
-        )
+        self.data: MjData = MjData(self.model)
 
         # Offscreen render context object
         self._render_context_offscreen: MjRenderContextOffscreen = (
@@ -572,19 +654,19 @@ class MjSim:
     def reset(self) -> None:
         """Reset the simulation."""
         mujoco.mj_resetData(  # pylint: disable=no-member
-            self.model._model, self.data  # pylint: disable=protected-access
+            self.model._model, self.data._data  # pylint: disable=protected-access
         )
 
     def forward(self) -> None:
         """Synchronize derived quantities."""
         mujoco.mj_forward(  # pylint: disable=no-member
-            self.model._model, self.data  # pylint: disable=protected-access
+            self.model._model, self.data._data  # pylint: disable=protected-access
         )
 
     def step(self) -> None:
         """Step the simulation."""
         mujoco.mj_step(  # pylint: disable=no-member
-            self.model._model, self.data  # pylint: disable=protected-access
+            self.model._model, self.data._data  # pylint: disable=protected-access
         )
 
     def render(
@@ -708,7 +790,7 @@ class MjRenderContext:
         self.model: mujoco.MjModel = (
             sim.model._model
         )  # pylint: disable=protected-access
-        self.data: mujoco.MjData = sim.data
+        self.data: mujoco.MjData = sim.data._data  # pylint: disable=protected-access
 
         # Create default scene
         # Set maxgeom to 10k to support large-scale scenes
