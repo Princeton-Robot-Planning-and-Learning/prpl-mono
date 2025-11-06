@@ -787,6 +787,9 @@ class Table(MujocoFixture):
 class Cupboard(MujocoFixture):
     """A cupboard fixture with multiple shelves."""
 
+    default_shelf_thickness: float = 0.02
+    default_partition_thickness: float = 0.01  # 1cm thick partitions
+
     def __init__(
         self,
         name: str,
@@ -837,7 +840,7 @@ class Cupboard(MujocoFixture):
         ]
         self.side_and_back_open: bool = bool(self.fixture_config["side_and_back_open"])
         self.shelf_thickness: float = float(
-            self.fixture_config.get("shelf_thickness", 0.02)
+            self.fixture_config.get("shelf_thickness", Cupboard.default_shelf_thickness)
         )
         self.panel_thickness: float = 0.01  # Thickness of side and back panels
         # Set leg thickness: thin when panels present, thicker when open
@@ -960,7 +963,7 @@ class Cupboard(MujocoFixture):
                     partition_x_center = partition_x - cupboard_half_depth
 
                     # Calculate partition dimensions
-                    partition_half_thickness = 0.005  # 1cm thick partitions
+                    partition_half_thickness = Cupboard.default_partition_thickness / 2
                     partition_half_height = shelf_height / 2
                     partition_z = shelf_z + shelf_half_thickness + partition_half_height
 
@@ -1059,7 +1062,9 @@ class Cupboard(MujocoFixture):
             "shelf_heights", []
         )  # type: ignore
         shelf_heights_float: list[float] = [float(h) for h in shelf_heights_config]
-        shelf_thickness = float(fixture_config.get("shelf_thickness", 0.02))
+        shelf_thickness = float(
+            fixture_config.get("shelf_thickness", Cupboard.default_shelf_thickness)
+        )
         cupboard_height = sum(shelf_heights_float) + shelf_thickness
 
         return [
