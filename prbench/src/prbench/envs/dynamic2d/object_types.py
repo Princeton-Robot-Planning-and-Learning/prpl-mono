@@ -61,6 +61,22 @@ Dynamic2DRobotEnvTypeFeatures[TObjectType] = Dynamic2DRobotEnvTypeFeatures[
     "length_vertical",
     "mass",
 ]
+# Small objects for scooping tasks (circles)
+SmallCircleType = Type("small_circle", parent=Dynamic2DType)
+Dynamic2DRobotEnvTypeFeatures[SmallCircleType] = Dynamic2DRobotEnvTypeFeatures[
+    Dynamic2DType
+] + [
+    "radius",
+    "mass",
+]
+# Small objects for scooping tasks (squares)
+SmallSquareType = Type("small_square", parent=Dynamic2DType)
+Dynamic2DRobotEnvTypeFeatures[SmallSquareType] = Dynamic2DRobotEnvTypeFeatures[
+    Dynamic2DType
+] + [
+    "size",  # side length of the square
+    "mass",
+]
 
 # A robot with a circle base, a rectangle gripper_base, and two rectangle grippers.
 # The (x, y, theta) are for the center of the robot base circle. The base_radius
@@ -79,9 +95,12 @@ Dynamic2DRobotEnvTypeFeatures[KinRobotType] = [
     "vx_arm",
     "vy_arm",
     "omega_arm",
-    "vx_gripper",
-    "vy_gripper",
-    "omega_gripper",
+    "vx_gripper_l",
+    "vy_gripper_l",
+    "omega_gripper_l",
+    "vx_gripper_r",
+    "vy_gripper_r",
+    "omega_gripper_r",
     "static",
     "base_radius",
     "arm_joint",
