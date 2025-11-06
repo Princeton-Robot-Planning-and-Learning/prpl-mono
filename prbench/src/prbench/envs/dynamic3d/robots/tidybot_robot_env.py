@@ -250,12 +250,6 @@ class TidyBotRobotEnv(Robot):
         tidybot_path = models_dir / "tidybot.xml"
         assets_dir = Path(__file__).parent.parent / "models" / "assets"
 
-        # Check if the input XML has an include directive for tidybot.xml
-        include_elem = input_root.find("include")  # type: ignore[union-attr]
-        if include_elem is not None and include_elem.get("file") == "tidybot.xml":
-            # Remove the include directive since we'll merge the content directly
-            input_root.remove(include_elem)  # type: ignore[union-attr]
-
         with open(tidybot_path, "r", encoding="utf-8") as f:
             tidybot_content = f.read()
 
