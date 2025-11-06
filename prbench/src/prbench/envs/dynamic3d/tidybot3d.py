@@ -99,7 +99,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             self.task_config = json.load(f)
 
         # Initialize robot environment to None; will be created on first reset
-        self._robot_env = None
+        self._robot_env: TidyBotRobotEnv | RBY1ARobotEnv | None = None
 
         self._render_camera_name: str | None = "overview"
 
@@ -360,6 +360,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
     def _get_obs(self) -> dict[str, Any]:
         """Get the current raw observation (for compatibility with reward functions)."""
+        assert self._robot_env is not None, "Robot environment not initialized"
         obs = self._robot_env.get_obs()
         vec_obs = self._vectorize_observation(obs)
         object_centric_state = self._get_object_centric_state()
@@ -385,6 +386,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     ) -> tuple[ObjectCentricState, float, bool, bool, dict[str, Any]]:
         """Step the environment and return object-centric observation."""
         # Run the action through the underlying environment
+        assert self._robot_env is not None, "Robot environment not initialized"
         self._robot_env.step(action)
 
         # Update object-centric state
@@ -419,6 +421,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the environment."""
         if self.render_mode == "rgb_array":
+            assert self._robot_env is not None, "Robot environment not initialized"
             obs = self._robot_env.get_obs()
             # If a specific camera is requested, use it.
             if self._render_camera_name:
@@ -452,6 +455,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
 
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
         assert self.task_config["robots"][0] == "tidybot"
+        assert self._robot_env is not None, "Robot environment not initialized"
         robot = Object("robot", MujocoTidyBotRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
         assert self._robot_env.qpos_base is not None
@@ -485,8 +489,9 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         }
         return state_dict
 
-    def _set_robot_state(self, state: dict[str, float]) -> None:
+    def _set_robot_state(self, state: ObjectCentricState) -> None:
         """Set the robot state in the simulation."""
+        assert self._robot_env is not None, "Robot environment not initialized"
 
         robot_obj = state.get_object_from_name("robot")
 
@@ -619,17 +624,20 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
 
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
         assert self.task_config["robots"][0] == "rby1a"
+        assert self._robot_env is not None, "Robot environment not initialized"
         robot = Object("robot", MujocoRBY1ARobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
         state_dict = {}
         state_dict[robot] = {
             "pos_base_right": self._robot_env.qpos["base"][0],
             "pos_base_left": self._robot_env.qpos["base"][1],
-        }  # TODO add more attributes
+        # TODO add more attributes
+        }
         return state_dict
 
-    def _set_robot_state(self, state: dict[str, float]) -> None:
+    def _set_robot_state(self, state: ObjectCentricState) -> None:
         """Set the robot state in the simulation."""
+        assert self._robot_env is not None, "Robot environment not initialized"
 
         robot_obj = state.get_object_from_name("robot")
 
