@@ -406,39 +406,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             fixture_data = fixture.get_object_centric_data()
             state_dict[fixture.symbolic_object] = fixture_data
         # Add robot into object-centric state.
-        if self.task_config["robots"][0] == "tidybot":
-            robot = Object("robot", MujocoTidyBotRobotObjectType)
-            # Build this super explicitly, even though verbose, to be careful.
-            assert self._robot_env.qpos_base is not None
-            assert self._robot_env.qpos_arm is not None
-            assert self._robot_env.qvel_base is not None
-            assert self._robot_env.qvel_arm is not None
-            state_dict[robot] = {
-                "pos_base_x": self._robot_env.qpos_base[0],
-                "pos_base_y": self._robot_env.qpos_base[1],
-                "pos_base_rot": self._robot_env.qpos_base[2],
-                "pos_arm_joint1": self._robot_env.qpos_arm[0],
-                "pos_arm_joint2": self._robot_env.qpos_arm[1],
-                "pos_arm_joint3": self._robot_env.qpos_arm[2],
-                "pos_arm_joint4": self._robot_env.qpos_arm[3],
-                "pos_arm_joint5": self._robot_env.qpos_arm[4],
-                "pos_arm_joint6": self._robot_env.qpos_arm[5],
-                "pos_arm_joint7": self._robot_env.qpos_arm[6],
-                "pos_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
-                "vel_base_x": self._robot_env.qvel_base[0],
-                "vel_base_y": self._robot_env.qvel_base[1],
-                "vel_base_rot": self._robot_env.qvel_base[2],
-                "vel_arm_joint1": self._robot_env.qvel_arm[0],
-                "vel_arm_joint2": self._robot_env.qvel_arm[1],
-                "vel_arm_joint3": self._robot_env.qvel_arm[2],
-                "vel_arm_joint4": self._robot_env.qvel_arm[3],
-                "vel_arm_joint5": self._robot_env.qvel_arm[4],
-                "vel_arm_joint6": self._robot_env.qvel_arm[5],
-                "vel_arm_joint7": self._robot_env.qvel_arm[6],
-                "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
-            }
-        else:
-            raise ValueError
+        robot_state_dict = self._get_object_centric_robot_data()
+        state_dict.update(robot_state_dict)
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
     def step(
@@ -511,6 +480,40 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         """Create action space for TidyBot's control interface."""
         return TidyBot3DRobotActionSpace()
 
+    def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
+        assert self.task_config["robots"][0] == "tidybot"
+        robot = Object("robot", MujocoTidyBotRobotObjectType)
+        # Build this super explicitly, even though verbose, to be careful.
+        assert self._robot_env.qpos_base is not None
+        assert self._robot_env.qpos_arm is not None
+        assert self._robot_env.qvel_base is not None
+        assert self._robot_env.qvel_arm is not None
+        state_dict = {}
+        state_dict[robot] = {
+            "pos_base_x": self._robot_env.qpos_base[0],
+            "pos_base_y": self._robot_env.qpos_base[1],
+            "pos_base_rot": self._robot_env.qpos_base[2],
+            "pos_arm_joint1": self._robot_env.qpos_arm[0],
+            "pos_arm_joint2": self._robot_env.qpos_arm[1],
+            "pos_arm_joint3": self._robot_env.qpos_arm[2],
+            "pos_arm_joint4": self._robot_env.qpos_arm[3],
+            "pos_arm_joint5": self._robot_env.qpos_arm[4],
+            "pos_arm_joint6": self._robot_env.qpos_arm[5],
+            "pos_arm_joint7": self._robot_env.qpos_arm[6],
+            "pos_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+            "vel_base_x": self._robot_env.qvel_base[0],
+            "vel_base_y": self._robot_env.qvel_base[1],
+            "vel_base_rot": self._robot_env.qvel_base[2],
+            "vel_arm_joint1": self._robot_env.qvel_arm[0],
+            "vel_arm_joint2": self._robot_env.qvel_arm[1],
+            "vel_arm_joint3": self._robot_env.qvel_arm[2],
+            "vel_arm_joint4": self._robot_env.qvel_arm[3],
+            "vel_arm_joint5": self._robot_env.qvel_arm[4],
+            "vel_arm_joint6": self._robot_env.qvel_arm[5],
+            "vel_arm_joint7": self._robot_env.qvel_arm[6],
+            "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+        }
+        return state_dict
 
 class TidyBot3DEnv(ConstantObjectPRBenchEnv):
     """TidyBot env with a constant number of objects."""
