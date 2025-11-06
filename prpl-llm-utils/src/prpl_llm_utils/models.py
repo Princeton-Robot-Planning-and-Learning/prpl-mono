@@ -7,6 +7,8 @@ from typing import Hashable
 
 import openai
 import PIL.Image
+from google import genai
+from google.genai import types
 
 from prpl_llm_utils.cache import PretrainedLargeModelCache, ResponseNotFound
 from prpl_llm_utils.structs import Query, Response
@@ -40,17 +42,19 @@ class PretrainedLargeModel(abc.ABC):
         """
         raise NotImplementedError("Override me!")
 
-    def run_query(self, query: Query) -> Response:
+    def run_query(self, query: Query, bypass_cache: bool = False) -> Response:
         """Run a built query."""
         # Try to load from the cache.
         model_id = self.get_id()
         try:
+            if bypass_cache:
+                raise ResponseNotFound()
             response = self._cache.try_load_response(query, model_id)
             logging.debug("Loaded model response from cache.")
-        except ResponseNotFound:
+        except ResponseNotFound as e:
             # No response found, so we need to query.
             if self._use_cache_only:
-                raise ValueError("No cached response found for prompt.")
+                raise ValueError("No cached response found for prompt.") from e
             logging.debug(f"Querying model {self.get_id()} with new prompt.")
             response = self._run_query(query)
             # Save the response to cache.
@@ -62,10 +66,11 @@ class PretrainedLargeModel(abc.ABC):
         prompt: str,
         imgs: list[PIL.Image.Image] | None = None,
         hyperparameters: dict[str, Hashable] | None = None,
+        bypass_cache: bool = False,
     ) -> Response:
         """Build and run a query."""
         query = Query(prompt, imgs=imgs, hyperparameters=hyperparameters)
-        return self.run_query(query)
+        return self.run_query(query, bypass_cache)
 
 
 class OpenAIModel(PretrainedLargeModel):
@@ -80,28 +85,72 @@ class OpenAIModel(PretrainedLargeModel):
         self._model_name = model_name
         assert "OPENAI_API_KEY" in os.environ, "Need to set OPENAI_API_KEY"
         super().__init__(cache, use_cache_only)
+        self._client = openai.OpenAI()
 
     def get_id(self) -> str:
         return self._model_name
 
     def _run_query(self, query: Query) -> Response:
         assert not query.imgs, "TODO"
-        client = openai.OpenAI()
         messages = [{"role": "user", "content": query.prompt, "type": "text"}]
-        if query.hyperparameters is not None:
-            kwargs = query.hyperparameters
-        else:
-            kwargs = {}
-        completion = client.chat.completions.create(  # type: ignore[call-overload]
-            messages=messages,
+        kwargs = query.hyperparameters or {}
+
+        completion = self._client.chat.completions.create(  # type: ignore[call-overload]
+            messages=messages,  # type: ignore
             model=self._model_name,
-            **kwargs,
+            **kwargs,  # type: ignore
         )
         assert len(completion.choices) == 1
         text = completion.choices[0].message.content
-        assert completion.usage is not None
-        metadata = completion.usage.to_dict()
+        metadata = completion.usage.to_dict() if completion.usage else {}
         return Response(text, metadata)
+
+
+class GeminiModel(PretrainedLargeModel):
+    """Common interface with methods for all Gemini-based models."""
+
+    def __init__(
+        self,
+        model_name: str,
+        cache: PretrainedLargeModelCache,
+        use_cache_only: bool = False,
+        thinking_budget: int = 0,
+    ) -> None:
+        self._model_name = model_name
+        assert "GEMINI_API_KEY" in os.environ, "Need to set GEMINI_API_KEY"
+        self._client = genai.Client()
+        self._config = types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
+        )
+        super().__init__(cache, use_cache_only)
+
+    def get_id(self) -> str:
+        return self._model_name
+
+    def _run_query(self, query: Query) -> Response:
+        prompt = query.prompt
+        imgs = query.imgs
+        hp = query.hyperparameters
+
+        if hp is not None:
+            temperature = hp.get("temperature", 1.0)
+            assert isinstance(temperature, float), "temperature must be float"
+            self._config.temperature = temperature
+
+        if imgs is None:
+            imgs = []
+
+        contents = [prompt] + imgs
+
+        response = self._client.models.generate_content(
+            model=self._model_name,
+            contents=contents,  # type: ignore
+            config=self._config,
+        )
+
+        assert response.text is not None
+
+        return Response(response.text, metadata={"model": self._model_name})
 
 
 class CannedResponseModel(PretrainedLargeModel):

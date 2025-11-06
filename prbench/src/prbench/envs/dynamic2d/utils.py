@@ -49,7 +49,7 @@ class KinRobotActionSpace(RobotActionSpace):
     ) -> None:
         low = np.array([min_dx, min_dy, min_dtheta, min_darm, min_dgripper])
         high = np.array([max_dx, max_dy, max_dtheta, max_darm, max_dgripper])
-        super().__init__(low, high)
+        super().__init__(low, high, dtype=np.float64)
 
     def create_markdown_description(self) -> str:
         """Create a human-readable markdown description of this space."""
@@ -91,7 +91,7 @@ class DotRobotActionSpace(RobotActionSpace):
     ) -> None:
         low = np.array([min_dx, min_dy])
         high = np.array([max_dx, max_dy])
-        super().__init__(low, high)
+        super().__init__(low, high, dtype=np.float64)
 
     def create_markdown_description(self) -> str:
         """Create a human-readable markdown description of this space."""
@@ -927,7 +927,7 @@ def create_walls_from_world_boundaries(
 
 def get_fingered_robot_action_from_gui_input(
     action_space: KinRobotActionSpace, gui_input: dict[str, Any]
-) -> NDArray[np.float32]:
+) -> NDArray[np.float64]:
     """Get the mapping from human inputs to actions, derived from action space."""
     # This will be implemented later - placeholder for now
     keys_pressed = gui_input["keys"]
@@ -969,7 +969,7 @@ def get_fingered_robot_action_from_gui_input(
 
 def get_dot_robot_action_from_gui_input(
     action_space: DotRobotActionSpace, gui_input: dict[str, Any]
-) -> NDArray[np.float32]:
+) -> NDArray[np.float64]:
     """Get the mapping from human inputs to actions, derived from action space."""
     # This will be implemented later - placeholder for now
     right_x, right_y = gui_input["right_stick"]

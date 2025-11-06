@@ -1,0 +1,40 @@
+<mujoco model="base">
+  <compiler angle="radian" meshdir="../assets"/>
+
+  <option integrator="implicitfast"/>
+
+  <default>
+    <default class="visual">
+      <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+    </default>
+    <default class="collision">
+      <geom type="mesh" group="3"/>
+    </default>
+  </default>
+
+  <asset>
+    <material name="silver" rgba="0.75294118 0.75294118 0.75294118 1"/>
+    <material name="black" rgba="0.30196078 0.30196078 0.30196078 1"/>
+    <mesh file="base/body.stl"/>
+    <mesh file="base/arm_plate.stl"/>
+  </asset>
+
+  <worldbody>
+    <body name="base_link">
+      <inertial pos="0 0 0.035" mass="60" diaginertia="0.001 0.001 0.001"/>
+      <joint name="joint_x" type="slide" axis="1 0 0"/>
+      <joint name="joint_y" type="slide" axis="0 1 0"/>
+      <joint name="joint_th"/>
+      <geom class="visual" mesh="body" material="silver"/>
+      <geom class="visual" mesh="arm_plate" material="black"/>
+      <geom class="collision" mesh="body"/>
+      <geom class="collision" mesh="arm_plate"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position name="joint_x" joint="joint_x" kp="1000000" kv="50000"/>
+    <position name="joint_y" joint="joint_y" kp="1000000" kv="50000"/>
+    <position name="joint_th" joint="joint_th" kp="50000" kv="1000"/>
+  </actuator>
+</mujoco>

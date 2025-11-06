@@ -1,0 +1,15 @@
+# SAC agent configuration
+name: sac
+
+# Core training parameters
+args:
+  total_timesteps: 1000000
+  num_eval_envs: 1
+
+# Training settings
+torch_deterministic: true
+cuda: false
+
+# Logging settings
+exp_name: "debug_sac"
+tb_log_dir: "runs"

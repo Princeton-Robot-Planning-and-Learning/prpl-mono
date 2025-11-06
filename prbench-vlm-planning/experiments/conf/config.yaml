@@ -8,24 +8,16 @@ use_image: true
 use_env_models: true
 
 # Environment configuration
-env:
-  env_name: "Motion2D-p1"
-  make_kwargs:
-    env_id: "prbench/Motion2D-p1-v0"
+env: "prbench/Motion2D-p1-v0"
 
 # Evaluation configuration
 seed: 0
 num_eval_episodes: 1
-max_eval_steps: 100
-
-# Hydra configuration
-defaults:
-  - _self_
-  - env: Motion2D-p1
+max_eval_steps: 3000
 
 hydra:
   run:
-    dir: logs/${env.env_name}/${vlm_model}/${now:%Y-%m-%d_%H-%M-%S}
+    dir: ./logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
   sweep:
-    dir: multirun/${env.env_name}/${vlm_model}/${now:%Y-%m-%d_%H-%M-%S}
-    subdir: ${hydra:job.num}
+    dir: ./logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}

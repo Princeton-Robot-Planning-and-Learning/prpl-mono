@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import (
-    Optional,
-)
+from typing import Optional, Set
 
 from prpl_utils.utils import consistent_hash
 
@@ -26,6 +24,16 @@ class Type:
 
     def __hash__(self) -> int:
         return consistent_hash(self.name)
+
+    def get_ancestors(self) -> Set[Type]:
+        """Get the set of all types that are ancestors (i.e. parents,
+        grandparents, great-grandparents, etc.) of the current type."""
+        curr_type: Optional[Type] = self
+        ancestors_set = set()
+        while curr_type is not None:
+            ancestors_set.add(curr_type)
+            curr_type = curr_type.parent
+        return ancestors_set
 
 
 @dataclass(frozen=True, order=True, repr=False)

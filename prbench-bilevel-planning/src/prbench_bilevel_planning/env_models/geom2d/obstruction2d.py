@@ -2,7 +2,6 @@
 
 import numpy as np
 from bilevel_planning.structs import (
-    LiftedParameterizedController,
     LiftedSkill,
     RelationalAbstractGoal,
     RelationalAbstractState,
@@ -22,9 +21,7 @@ from prbench.envs.geom2d.utils import (
     is_on,
 )
 from prbench_models.geom2d.envs.obstruction2d.parameterized_skills import (
-    GroundPickController,
-    GroundPlaceOnTableController,
-    GroundPlaceOnTargetController,
+    create_lifted_controllers,
 )
 from relational_structs import (
     GroundAtom,
@@ -142,43 +139,11 @@ def create_bilevel_planning_models(
         delete_effects={LiftedAtom(Holding, [robot, block])},
     )
 
-    # Create partial controller classes that include the action_space
-    class PickController(GroundPickController):
-        """Pick controller with pre-configured action space."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space)
-
-    class PlaceOnTableController(GroundPlaceOnTableController):
-        """Place on table controller with pre-configured action space."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space)
-
-    class PlaceOnTargetController(GroundPlaceOnTargetController):
-        """Place on target controller with pre-configured action space."""
-
-        def __init__(self, objects):
-            super().__init__(objects, action_space)
-
-    PickControllerLifted: LiftedParameterizedController = LiftedParameterizedController(
-        [robot, block],
-        PickController,
-    )
-
-    PlaceOnTableControllerLifted: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, block],
-            PlaceOnTableController,
-        )
-    )
-
-    PlaceOnTargetControllerLifted: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, block],
-            PlaceOnTargetController,
-        )
-    )
+    # Get lifted controllers from prbench_models
+    lifted_controllers = create_lifted_controllers(action_space)
+    PickControllerLifted = lifted_controllers["pick"]
+    PlaceOnTableControllerLifted = lifted_controllers["place_on_table"]
+    PlaceOnTargetControllerLifted = lifted_controllers["place_on_target"]
 
     # Finalize the skills.
     skills = {

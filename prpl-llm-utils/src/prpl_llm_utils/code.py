@@ -2,6 +2,7 @@
 
 import ast
 import importlib
+import logging
 import multiprocessing as mp
 import os
 import signal
@@ -20,6 +21,7 @@ from prpl_llm_utils.reprompting import (
     query_with_reprompts,
 )
 from prpl_llm_utils.structs import Query, Response
+from prpl_llm_utils.utils import UndefinedVisitor
 
 # This speeds up the sandbox for code synthesis by a lot.
 mp.set_start_method("fork")
@@ -205,3 +207,58 @@ def synthesize_python_function_with_llm(
     return SynthesizedPythonFunction(
         function_name, python_code, timeout=function_timeout
     )
+
+
+def find_undefined_names(source: str, *, provided_globals=None):
+    """Identify undefined variable names in the given Python source code."""
+    tree = ast.parse(source)
+    v = UndefinedVisitor(provided_globals=provided_globals or set())
+    v.visit(tree)
+    return v.issues
+
+
+class SemanticsPythonRepromptCheck(RepromptCheck):
+    """Check whether the python_stub field contains valid, executable Python
+    code that meets the required syntax and execution constraints."""
+
+    def get_reprompt(
+        self, query: Query, response: Response, python_stub: str | None = None
+    ) -> Query | None:
+        logging.info("Checking python_stub for validity...")
+
+        if python_stub is None:
+            error_msg = "The python_stub is missing or None."
+            logging.error(error_msg)
+            return create_reprompt_from_error_message(query, response, error_msg)
+
+        try:
+            # Ensure the stub is valid Python code /Syntax
+            tree = ast.parse(python_stub)  # pylint: disable=unused-variable
+        except SyntaxError as e:
+            logging.info(f"Syntax error in python_stub: {e}")  # Log the error
+            error_msg = f"The python_stub contains invalid Python syntax: {str(e)}"
+            return create_reprompt_from_error_message(query, response, error_msg)
+
+        # Check executability of the stub
+        try:
+            local_namespace: dict[str, Any] = {}
+            # Execute in a restricted environment
+            exec(python_stub, {}, local_namespace)  # pylint: disable=exec-used
+        except Exception as e:  # Catching all exceptions for logging purposes
+            logging.info(f"Execution error in python_stub: {e}")  # Log the error
+            error_msg = f"The python_stub raised an error during execution: {str(e)}"
+            return create_reprompt_from_error_message(query, response, error_msg)
+
+        # Identify undefined variable names in the python_stub using
+        # the provided local namespace.
+        undefined = find_undefined_names(
+            python_stub, provided_globals=set(local_namespace)
+        )
+        if undefined:
+            error_msg = "The python_stub contains undefined names: " + ", ".join(
+                sorted(undefined)
+            )
+            logging.info(error_msg)
+            return create_reprompt_from_error_message(query, response, error_msg)
+        logging.info("python_stub passed all checks.")
+        return None

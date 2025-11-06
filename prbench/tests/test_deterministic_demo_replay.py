@@ -1,29 +1,12 @@
 """Tests for deterministic demo replay across all environments."""
 
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import pytest
 
 import prbench
-from prbench.utils import load_demo
-
-
-def find_all_demo_files() -> List[Path]:
-    """Find all demo files in the demos directory."""
-    demos_dir = Path(__file__).parent.parent / "demos"
-    demo_files = list(demos_dir.glob("**/*.p"))
-    return sorted(demo_files)
-
-
-def get_env_id_from_demo_path(demo_path: Path) -> str:
-    """Extract environment ID from demo file path structure."""
-    # Demo path structure: demos/{env_name}/{instance}/{timestamp}.p
-    env_name = demo_path.parent.parent.name
-    # Convert from demo directory name to environment ID
-    env_id = f"prbench/{env_name}-v0"
-    return env_id
+from prbench.utils import find_all_demo_files, load_demo
 
 
 @pytest.mark.parametrize("demo_path", find_all_demo_files())

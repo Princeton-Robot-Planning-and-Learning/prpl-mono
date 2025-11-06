@@ -5,7 +5,9 @@ MUJOCO_LOG.TXT
 uv.lock
 logs
 llm_cache.db
+vlm_cache
 unit_test_videos
+prbench-vlm-planning/outputs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -68,6 +70,7 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+_*.db
 
 # Flask stuff:
 instance/
@@ -130,9 +133,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
-env/
 venv/
-ENV/
 env.bak/
 venv.bak/
 
@@ -171,3 +172,8 @@ cython_debug/
 .vscode
 *.png
 debug
+videos
+runs
+outputs
+cleanrl
+CLAUDE.md
