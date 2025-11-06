@@ -22,6 +22,7 @@ from prbench.envs.dynamic3d.base_env import (
 )
 from prbench.envs.dynamic3d.object_types import (
     MujocoObjectTypeFeatures,
+    MujocoRBY1ARobotObjectType,
     MujocoTidyBotRobotObjectType,
 )
 from prbench.envs.dynamic3d.objects import (
@@ -34,8 +35,9 @@ from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_positions,
     sample_pose_in_region,
 )
-
 from prbench.envs.dynamic3d.robots import (
+    RBY1ARobotActionSpace,
+    RBY1ARobotEnv,
     TidyBot3DRobotActionSpace,
     TidyBotRobotEnv,
 )
@@ -607,4 +609,117 @@ for Robot Learning
 - Conference on Robot Learning (CoRL), 2024
 
 https://github.com/tidybot2/tidybot2
+"""
+
+
+class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
+    def _create_action_space(self, config: TidyBot3DConfig) -> Space[Array]:  # type: ignore
+        """Create action space for TidyBot's control interface."""
+        return RBY1ARobotActionSpace()
+
+    def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
+        assert self.task_config["robots"][0] == "rby1a"
+        robot = Object("robot", MujocoRBY1ARobotObjectType)
+        # Build this super explicitly, even though verbose, to be careful.
+        state_dict = {}
+        state_dict[robot] = {
+            "pos_base_right": self._robot_env.qpos["base"][0],
+            "pos_base_left": self._robot_env.qpos["base"][1],
+        }  # TODO add more attributes
+        return state_dict
+
+    def _set_robot_state(self, state: dict[str, float]) -> None:
+        """Set the robot state in the simulation."""
+
+        robot_obj = state.get_object_from_name("robot")
+
+        # Reset the robot base position.
+        robot_base_pos = [
+            state.get(robot_obj, "pos_base_right"),
+            state.get(robot_obj, "pos_base_left"),
+        ]
+        self._robot_env.qpos["base"][:] = robot_base_pos
+
+        # TODO add more attributes
+
+class RBY1A3DEnv(ConstantObjectPRBenchEnv):
+    """RBY1A env with a constant number of objects."""
+
+    def _create_object_centric_env(self, *args, **kwargs) -> ObjectCentricRBY1A3DEnv:
+        return ObjectCentricRBY1A3DEnv(*args, **kwargs)
+
+    def _get_constant_object_names(
+        self, exemplar_state: ObjectCentricState
+    ) -> list[str]:
+        return [o.name for o in sorted(exemplar_state)]
+
+    def _create_env_markdown_description(self) -> str:
+        """Create environment description (policy-agnostic)."""
+        scene_description = ""
+        env = self._object_centric_env
+        assert isinstance(env, ObjectCentricRBY1A3DEnv)
+        if env.scene_type == "ground":
+            scene_description = (
+                " In the 'ground' scene, objects are placed randomly on a flat "
+                "ground plane."
+            )
+
+        return f"""A 3D mobile manipulation environment using the RBY1A platform.
+
+The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
+Scene type: {env.scene_type} with {env.num_objects} objects.{scene_description}
+
+The robot can control:
+- Base pose (x, y, theta)
+- Arm position (x, y, z)
+- Arm orientation (quaternion)
+- Gripper position (open/close)
+"""
+
+    def _create_obs_markdown_description(self) -> str:
+        """Create observation space description."""
+        return """Observation includes:
+- Robot state: base pose, arm position/orientation, gripper state
+- Object states: positions and orientations of all objects
+- Camera images: RGB images from base and wrist cameras
+- Scene-specific features: handle positions for cabinets/drawers
+"""
+
+    def _create_action_markdown_description(self) -> str:
+        """Create action space description."""
+        return """Actions control:
+- base_pose: [x, y, theta] - Mobile base position and orientation
+- arm_pos: [x, y, z] - End effector position in world coordinates
+- arm_quat: [x, y, z, w] - End effector orientation as quaternion
+- gripper_pos: [pos] - Gripper open/close position (0=closed, 1=open)
+"""
+
+    def _create_reward_markdown_description(self) -> str:
+        """Create reward description."""
+        env = self._object_centric_env
+        assert isinstance(env, ObjectCentricRobotEnv)
+        if env.scene_type == "ground":
+            return (
+                "The primary reward is for successfully placing objects at their "
+                "target locations.\n"
+                "- A reward of +1.0 is given for each object placed within a 5cm "
+                "tolerance of its target.\n"
+                "- A smaller positive reward is given for objects within a 10cm "
+                "tolerance to guide the robot.\n"
+                "- A small negative reward (-0.01) is applied at each timestep to "
+                "encourage efficiency.\n"
+                "The episode terminates when all objects are placed at their "
+                "respective targets.\n"
+            )
+        return """Reward function depends on the specific task:
+- Object stacking: Reward for successfully stacking objects
+- Drawer/cabinet tasks: Reward for opening/closing and placing objects
+- General manipulation: Reward for successful pick-and-place operations
+
+Currently returns a small negative reward (-0.01) per timestep to encourage exploration.
+"""
+
+    def _create_references_markdown_description(self) -> str:
+        """Create references description."""
+        return """TODO
 """
