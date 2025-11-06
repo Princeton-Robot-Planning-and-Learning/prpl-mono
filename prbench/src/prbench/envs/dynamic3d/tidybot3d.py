@@ -1,5 +1,6 @@
 """TidyBot 3D environment wrapper for PRBench."""
 
+import abc
 import json
 import math
 import os
@@ -10,6 +11,7 @@ from typing import Any
 
 import cv2 as cv
 import numpy as np
+from gymnasium.spaces import Space
 from numpy.typing import NDArray
 from relational_structs import Array, Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
@@ -20,7 +22,7 @@ from prbench.envs.dynamic3d.base_env import (
 )
 from prbench.envs.dynamic3d.object_types import (
     MujocoObjectTypeFeatures,
-    MujocoRobotObjectType,
+    MujocoTidyBotRobotObjectType,
 )
 from prbench.envs.dynamic3d.objects import (
     MujocoFixture,
@@ -28,10 +30,14 @@ from prbench.envs.dynamic3d.objects import (
     get_fixture_class,
     get_object_class,
 )
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBotRobotEnv
 from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_positions,
     sample_pose_in_region,
+)
+
+from prbench.envs.dynamic3d.robots import (
+    TidyBot3DRobotActionSpace,
+    TidyBotRobotEnv,
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
 
@@ -49,7 +55,7 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
     act_delta: bool = True
 
 
-class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
+class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     """TidyBot 3D environment with mobile manipulation tasks."""
 
     metadata: dict[str, Any] = {"render_modes": ["rgb_array"]}
@@ -73,6 +79,8 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         self.render_images = render_images
         self.camera_names = config.camera_names
         self.show_images = show_images
+        self.seed = seed
+        self.config = config
 
         # Parse task configuration
         if task_config_path is None:
@@ -88,17 +96,8 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
 
-        # Initialize TidyBot-specific components
-        self._robot_env = TidyBotRobotEnv(
-            control_frequency=config.control_frequency,
-            act_delta=config.act_delta,
-            horizon=config.horizon,
-            camera_names=self.camera_names,
-            camera_width=config.camera_width,
-            camera_height=config.camera_height,
-            seed=seed,
-            show_viewer=config.show_viewer,
-        )
+        # Initialize robot environment to None; will be created on first reset
+        self._robot_env = None
 
         self._render_camera_name: str | None = "overview"
 
@@ -255,6 +254,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
 
         self._robot_env.sim.forward()
 
+    @abc.abstractmethod
+    def _create_action_space(self, config: TidyBot3DConfig) -> Space[Array]:  # type: ignore
+        """Create action space for TidyBot's control interface."""
+
     def reset(
         self,
         *,
@@ -262,6 +265,21 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         options: dict[str, Any] | None = None,
     ) -> tuple[ObjectCentricState, dict[str, Any]]:
         """Reset the environment and return object-centric observation."""
+
+        if self._robot_env is None:
+            robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
+                self.task_config["robots"][0]
+            ]
+            self._robot_env = robot_cls(
+                control_frequency=self.config.control_frequency,
+                act_delta=self.config.act_delta,
+                horizon=self.config.horizon,
+                camera_names=self.camera_names,
+                camera_width=self.config.camera_width,
+                camera_height=self.config.camera_height,
+                seed=seed if seed is not None else self.seed,
+                show_viewer=self.config.show_viewer,
+            )
 
         # Reset the random seed
         self._robot_env.seed(seed=seed)
@@ -388,36 +406,39 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
             fixture_data = fixture.get_object_centric_data()
             state_dict[fixture.symbolic_object] = fixture_data
         # Add robot into object-centric state.
-        robot = Object("robot", MujocoRobotObjectType)
-        # Build this super explicitly, even though verbose, to be careful.
-        assert self._robot_env.qpos_base is not None
-        assert self._robot_env.qpos_arm is not None
-        assert self._robot_env.qvel_base is not None
-        assert self._robot_env.qvel_arm is not None
-        state_dict[robot] = {
-            "pos_base_x": self._robot_env.qpos_base[0],
-            "pos_base_y": self._robot_env.qpos_base[1],
-            "pos_base_rot": self._robot_env.qpos_base[2],
-            "pos_arm_joint1": self._robot_env.qpos_arm[0],
-            "pos_arm_joint2": self._robot_env.qpos_arm[1],
-            "pos_arm_joint3": self._robot_env.qpos_arm[2],
-            "pos_arm_joint4": self._robot_env.qpos_arm[3],
-            "pos_arm_joint5": self._robot_env.qpos_arm[4],
-            "pos_arm_joint6": self._robot_env.qpos_arm[5],
-            "pos_arm_joint7": self._robot_env.qpos_arm[6],
-            "pos_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
-            "vel_base_x": self._robot_env.qvel_base[0],
-            "vel_base_y": self._robot_env.qvel_base[1],
-            "vel_base_rot": self._robot_env.qvel_base[2],
-            "vel_arm_joint1": self._robot_env.qvel_arm[0],
-            "vel_arm_joint2": self._robot_env.qvel_arm[1],
-            "vel_arm_joint3": self._robot_env.qvel_arm[2],
-            "vel_arm_joint4": self._robot_env.qvel_arm[3],
-            "vel_arm_joint5": self._robot_env.qvel_arm[4],
-            "vel_arm_joint6": self._robot_env.qvel_arm[5],
-            "vel_arm_joint7": self._robot_env.qvel_arm[6],
-            "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
-        }
+        if self.task_config["robots"][0] == "tidybot":
+            robot = Object("robot", MujocoTidyBotRobotObjectType)
+            # Build this super explicitly, even though verbose, to be careful.
+            assert self._robot_env.qpos_base is not None
+            assert self._robot_env.qpos_arm is not None
+            assert self._robot_env.qvel_base is not None
+            assert self._robot_env.qvel_arm is not None
+            state_dict[robot] = {
+                "pos_base_x": self._robot_env.qpos_base[0],
+                "pos_base_y": self._robot_env.qpos_base[1],
+                "pos_base_rot": self._robot_env.qpos_base[2],
+                "pos_arm_joint1": self._robot_env.qpos_arm[0],
+                "pos_arm_joint2": self._robot_env.qpos_arm[1],
+                "pos_arm_joint3": self._robot_env.qpos_arm[2],
+                "pos_arm_joint4": self._robot_env.qpos_arm[3],
+                "pos_arm_joint5": self._robot_env.qpos_arm[4],
+                "pos_arm_joint6": self._robot_env.qpos_arm[5],
+                "pos_arm_joint7": self._robot_env.qpos_arm[6],
+                "pos_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+                "vel_base_x": self._robot_env.qvel_base[0],
+                "vel_base_y": self._robot_env.qvel_base[1],
+                "vel_base_rot": self._robot_env.qvel_base[2],
+                "vel_arm_joint1": self._robot_env.qvel_arm[0],
+                "vel_arm_joint2": self._robot_env.qvel_arm[1],
+                "vel_arm_joint3": self._robot_env.qvel_arm[2],
+                "vel_arm_joint4": self._robot_env.qvel_arm[3],
+                "vel_arm_joint5": self._robot_env.qvel_arm[4],
+                "vel_arm_joint6": self._robot_env.qvel_arm[5],
+                "vel_arm_joint7": self._robot_env.qvel_arm[6],
+                "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+            }
+        else:
+            raise ValueError
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
     def step(
@@ -477,11 +498,18 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig])
         if self.show_images:
             # Close OpenCV windows
             cv.destroyAllWindows()  # pylint: disable=no-member
-        self._robot_env.close()
+        if self._robot_env is not None:
+            self._robot_env.close()
 
     def set_render_camera(self, camera_name: str | None) -> None:
         """Set the camera to use for rendering."""
         self._render_camera_name = camera_name
+
+
+class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
+    def _create_action_space(self, config: TidyBot3DConfig) -> Space[Array]:  # type: ignore
+        """Create action space for TidyBot's control interface."""
+        return TidyBot3DRobotActionSpace()
 
 
 class TidyBot3DEnv(ConstantObjectPRBenchEnv):
@@ -539,7 +567,7 @@ The robot can control:
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         env = self._object_centric_env
-        assert isinstance(env, ObjectCentricTidyBot3DEnv)
+        assert isinstance(env, ObjectCentricRobotEnv)
         if env.scene_type == "ground":
             return (
                 "The primary reward is for successfully placing objects at their "

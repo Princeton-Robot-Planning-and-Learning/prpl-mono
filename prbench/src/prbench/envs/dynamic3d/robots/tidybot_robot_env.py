@@ -1,7 +1,6 @@
 """This module defines the TidyBotRobotEnv class, which is the base class for the
 TidyBot robot in simulation."""
 
-import abc
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Optional
@@ -11,7 +10,8 @@ from numpy.typing import NDArray
 from relational_structs import Array
 
 from prbench.core import RobotActionSpace
-from prbench.envs.dynamic3d.mujoco_utils import MjObs, MujocoEnv
+from prbench.envs.dynamic3d.mujoco_utils import MjObs
+from prbench.envs.dynamic3d.robots.base import Robot
 
 
 class TidyBot3DRobotActionSpace(RobotActionSpace):
@@ -30,7 +30,7 @@ class TidyBot3DRobotActionSpace(RobotActionSpace):
         return """Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)"""
 
 
-class TidyBotRobotEnv(MujocoEnv, abc.ABC):
+class TidyBotRobotEnv(Robot):
     """This is the base class for TidyBot environments that use MuJoCo for sim.
 
     It is still abstract: subclasses define rewards and add objects to the env.
@@ -158,13 +158,13 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
         )
         arm_ctrl_start, arm_ctrl_end = min(arm_ctrl_indices), max(arm_ctrl_indices) + 1
 
-        self.qpos_base = self.sim.data.qpos[base_qpos_start:base_qpos_end]
-        self.qvel_base = self.sim.data.qvel[base_qvel_start:base_qvel_end]
-        self.ctrl_base = self.sim.data.ctrl[base_ctrl_start:base_ctrl_end]
+        self.qpos_base = self.sim.data._data.qpos[base_qpos_start:base_qpos_end]
+        self.qvel_base = self.sim.data._data.qvel[base_qvel_start:base_qvel_end]
+        self.ctrl_base = self.sim.data._data.ctrl[base_ctrl_start:base_ctrl_end]
 
-        self.qpos_arm = self.sim.data.qpos[arm_qpos_start:arm_qpos_end]
-        self.qvel_arm = self.sim.data.qvel[arm_qvel_start:arm_qvel_end]
-        self.ctrl_arm = self.sim.data.ctrl[arm_ctrl_start:arm_ctrl_end]
+        self.qpos_arm = self.sim.data._data.qpos[arm_qpos_start:arm_qpos_end]
+        self.qvel_arm = self.sim.data._data.qvel[arm_qvel_start:arm_qvel_end]
+        self.ctrl_arm = self.sim.data._data.ctrl[arm_ctrl_start:arm_ctrl_end]
 
         # Buffers for gripper
         gripper_ctrl_id = (
@@ -173,7 +173,9 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
             ]
         )
         self.qpos_gripper = None
-        self.ctrl_gripper = self.sim.data.ctrl[gripper_ctrl_id : gripper_ctrl_id + 1]
+        self.ctrl_gripper = self.sim.data._data.ctrl[
+            gripper_ctrl_id : gripper_ctrl_id + 1
+        ]
 
     def reset(
         self,
@@ -244,9 +246,9 @@ class TidyBotRobotEnv(MujocoEnv, abc.ABC):
         input_root = input_tree.getroot()
 
         # Read the scene XML content
-        models_dir = Path(__file__).parent / "models" / "stanford_tidybot"
+        models_dir = Path(__file__).parent.parent / "models" / "stanford_tidybot"
         tidybot_path = models_dir / "tidybot.xml"
-        assets_dir = Path(__file__).parent / "models" / "assets"
+        assets_dir = Path(__file__).parent.parent / "models" / "assets"
 
         # Check if the input XML has an include directive for tidybot.xml
         include_elem = input_root.find("include")  # type: ignore[union-attr]
