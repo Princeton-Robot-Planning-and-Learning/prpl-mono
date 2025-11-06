@@ -100,6 +100,17 @@ def register_all_environments() -> None:
         kwargs={"num_tee": 1},
     )
 
+    # DynScoopPour environment with different numbers of small objects
+    num_objects = [10, 20, 30, 50]
+    for num_object in num_objects:
+        num_circles = num_object // 2
+        num_squares = num_object - num_circles
+        _register(
+            id=f"prbench/DynScoopPour-o{num_object}-v0",
+            entry_point="prbench.envs.dynamic2d.dyn_scooppour:DynScoopPourEnv",
+            kwargs={"num_small_circles": num_circles, "num_small_squares": num_squares},
+        )
+
     # ******* Geom3D Environments *******
 
     # Motion3D environment.
@@ -126,13 +137,13 @@ def register_all_environments() -> None:
         config_name = task_config.stem
         robot = {"tidybot": "TidyBot3D"}[config_name.split("-")[0]]
         scene_type = config_name.split("-")[1]
-        num_objects = int(config_name.split("-o")[-1])
+        num_objects_int = int(config_name.split("-o")[-1])
         register(
-            id=f"prbench/{robot}-{scene_type}-o{num_objects}-v0",
+            id=f"prbench/{robot}-{scene_type}-o{num_objects_int}-v0",
             entry_point=f"prbench.envs.dynamic3d.tidybot3d:{robot}Env",
             kwargs={
                 "scene_type": scene_type,
-                "num_objects": num_objects,
+                "num_objects": num_object,
                 "task_config_path": str(task_config),
             },
         )
