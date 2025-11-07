@@ -7,8 +7,8 @@ from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
 )
-from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
+from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoTidyBotRobotObjectType
+from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBot3DRobotActionSpace
 from prpl_utils.utils import get_signed_angle_distance
 from relational_structs import (
     Array,
@@ -165,7 +165,7 @@ def create_lifted_controllers(
 
     # Controllers.
 
-    robot = Variable("?robot", MujocoRobotObjectType)
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
     target = Variable("?target", MujocoObjectType)
 
     LiftedMoveToTargetController: LiftedParameterizedController = (
