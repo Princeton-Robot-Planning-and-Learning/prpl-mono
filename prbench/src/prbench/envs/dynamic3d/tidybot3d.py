@@ -38,6 +38,7 @@ from prbench.envs.dynamic3d.placement_samplers import (
 from prbench.envs.dynamic3d.robots import (
     RBY1ARobotActionSpace,
     RBY1ARobotEnv,
+    RobotEnv,
     TidyBot3DRobotActionSpace,
     TidyBotRobotEnv,
 )
@@ -99,7 +100,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             self.task_config = json.load(f)
 
         # Initialize robot environment to None; will be created on first reset
-        self._robot_env: TidyBotRobotEnv | RBY1ARobotEnv | None = None
+        self._robot_env: RobotEnv | None = None
 
         self._render_camera_name: str | None = "overview"
 
@@ -221,6 +222,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     def _initialize_object_poses(self) -> None:
         """Initialize object poses in the environment."""
 
+        assert self._robot_env is not None, "Robot environment not initialized"
         assert self._robot_env.sim is not None, "Simulation not initialized"
 
         # Set object pose based on task configuration
@@ -338,6 +340,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             mujoco_object.set_velocity(linear_velocity, angular_velocity)
         # NOTE: Fixtures are static (without joints), so we cannot set their state.
 
+        assert self._robot_env is not None, "Robot environment not initialized"
         assert self._robot_env.sim is not None, "Simulation not initialized"
         self._robot_env.sim.forward()
 
@@ -447,6 +450,22 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         """Set the camera to use for rendering."""
         self._render_camera_name = camera_name
 
+    @abc.abstractmethod
+    def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
+        """Get object-centric data for the robot.
+
+        This method should be implemented by subclasses to provide robot-specific state
+        data.
+        """
+
+    @abc.abstractmethod
+    def _set_robot_state(self, state: ObjectCentricState) -> None:
+        """Set the robot state in the simulation.
+
+        This method should be implemented by subclasses to set the robot's state in the
+        simulation.
+        """
+
 
 class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
     def _create_action_space(self, config: TidyBot3DConfig) -> Space[Array]:  # type: ignore
@@ -458,33 +477,31 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         assert self._robot_env is not None, "Robot environment not initialized"
         robot = Object("robot", MujocoTidyBotRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
-        assert self._robot_env.qpos_base is not None
-        assert self._robot_env.qpos_arm is not None
-        assert self._robot_env.qvel_base is not None
-        assert self._robot_env.qvel_arm is not None
+        assert self._robot_env.qpos is not None
+        assert self._robot_env.qvel is not None
         state_dict = {}
         state_dict[robot] = {
-            "pos_base_x": self._robot_env.qpos_base[0],
-            "pos_base_y": self._robot_env.qpos_base[1],
-            "pos_base_rot": self._robot_env.qpos_base[2],
-            "pos_arm_joint1": self._robot_env.qpos_arm[0],
-            "pos_arm_joint2": self._robot_env.qpos_arm[1],
-            "pos_arm_joint3": self._robot_env.qpos_arm[2],
-            "pos_arm_joint4": self._robot_env.qpos_arm[3],
-            "pos_arm_joint5": self._robot_env.qpos_arm[4],
-            "pos_arm_joint6": self._robot_env.qpos_arm[5],
-            "pos_arm_joint7": self._robot_env.qpos_arm[6],
+            "pos_base_x": self._robot_env.qpos["base"][0],
+            "pos_base_y": self._robot_env.qpos["base"][1],
+            "pos_base_rot": self._robot_env.qpos["base"][2],
+            "pos_arm_joint1": self._robot_env.qpos["arm"][0],
+            "pos_arm_joint2": self._robot_env.qpos["arm"][1],
+            "pos_arm_joint3": self._robot_env.qpos["arm"][2],
+            "pos_arm_joint4": self._robot_env.qpos["arm"][3],
+            "pos_arm_joint5": self._robot_env.qpos["arm"][4],
+            "pos_arm_joint6": self._robot_env.qpos["arm"][5],
+            "pos_arm_joint7": self._robot_env.qpos["arm"][6],
             "pos_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
-            "vel_base_x": self._robot_env.qvel_base[0],
-            "vel_base_y": self._robot_env.qvel_base[1],
-            "vel_base_rot": self._robot_env.qvel_base[2],
-            "vel_arm_joint1": self._robot_env.qvel_arm[0],
-            "vel_arm_joint2": self._robot_env.qvel_arm[1],
-            "vel_arm_joint3": self._robot_env.qvel_arm[2],
-            "vel_arm_joint4": self._robot_env.qvel_arm[3],
-            "vel_arm_joint5": self._robot_env.qvel_arm[4],
-            "vel_arm_joint6": self._robot_env.qvel_arm[5],
-            "vel_arm_joint7": self._robot_env.qvel_arm[6],
+            "vel_base_x": self._robot_env.qvel["base"][0],
+            "vel_base_y": self._robot_env.qvel["base"][1],
+            "vel_base_rot": self._robot_env.qvel["base"][2],
+            "vel_arm_joint1": self._robot_env.qvel["arm"][0],
+            "vel_arm_joint2": self._robot_env.qvel["arm"][1],
+            "vel_arm_joint3": self._robot_env.qvel["arm"][2],
+            "vel_arm_joint4": self._robot_env.qvel["arm"][3],
+            "vel_arm_joint5": self._robot_env.qvel["arm"][4],
+            "vel_arm_joint6": self._robot_env.qvel["arm"][5],
+            "vel_arm_joint7": self._robot_env.qvel["arm"][6],
             "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
         }
         return state_dict
@@ -501,13 +518,13 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
             state.get(robot_obj, "pos_base_y"),
             state.get(robot_obj, "pos_base_rot"),
         ]
-        assert self._robot_env.qpos_base is not None
-        self._robot_env.qpos_base[:] = robot_base_pos
+        assert self._robot_env.qpos is not None
+        self._robot_env.qpos["base"][:] = robot_base_pos
 
         # Reset the robot arm position.
         robot_arm_pos = [state.get(robot_obj, f"pos_arm_joint{i}") for i in range(1, 8)]
-        assert self._robot_env.qpos_arm is not None
-        self._robot_env.qpos_arm[:] = robot_arm_pos
+        assert self._robot_env.qpos is not None
+        self._robot_env.qpos["arm"][:] = robot_arm_pos
 
         # NOTE: gripper position not yet implemented.
 
@@ -517,13 +534,13 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
             state.get(robot_obj, "vel_base_y"),
             state.get(robot_obj, "vel_base_rot"),
         ]
-        assert self._robot_env.qvel_base is not None
-        self._robot_env.qvel_base[:] = robot_base_vel
+        assert self._robot_env.qvel is not None
+        self._robot_env.qvel["base"][:] = robot_base_vel
 
         # Reset the robot arm velocity.
         robot_arm_vel = [state.get(robot_obj, f"vel_arm_joint{i}") for i in range(1, 8)]
-        assert self._robot_env.qvel_arm is not None
-        self._robot_env.qvel_arm[:] = robot_arm_vel
+        assert self._robot_env.qvel is not None
+        self._robot_env.qvel["arm"][:] = robot_arm_vel
 
         # NOTE: gripper velocity not yet implemented.
 
@@ -628,10 +645,11 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         robot = Object("robot", MujocoRBY1ARobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
         state_dict = {}
+        assert self._robot_env.qpos is not None
         state_dict[robot] = {
             "pos_base_right": self._robot_env.qpos["base"][0],
             "pos_base_left": self._robot_env.qpos["base"][1],
-        # TODO add more attributes
+            # TODO add more attributes
         }
         return state_dict
 
@@ -642,6 +660,7 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         robot_obj = state.get_object_from_name("robot")
 
         # Reset the robot base position.
+        assert self._robot_env.qpos is not None
         robot_base_pos = [
             state.get(robot_obj, "pos_base_right"),
             state.get(robot_obj, "pos_base_left"),
@@ -649,6 +668,7 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         self._robot_env.qpos["base"][:] = robot_base_pos
 
         # TODO add more attributes
+
 
 class RBY1A3DEnv(ConstantObjectPRBenchEnv):
     """RBY1A env with a constant number of objects."""

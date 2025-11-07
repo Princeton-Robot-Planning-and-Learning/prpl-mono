@@ -3,12 +3,14 @@
 import abc
 from typing import Any
 
+import numpy as np
+from numpy.typing import NDArray
 from relational_structs import Array
 
 from prbench.envs.dynamic3d.mujoco_utils import MjObs, MujocoEnv
 
 
-class Robot(MujocoEnv, abc.ABC):
+class RobotEnv(MujocoEnv, abc.ABC):
     """Abstract base class for robots in dynamic3d environments."""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -19,6 +21,11 @@ class Robot(MujocoEnv, abc.ABC):
             **kwargs: Keyword arguments passed to MujocoEnv.
         """
         super().__init__(*args, **kwargs)
+
+        # Robot state/actuator references (initialized in _setup_robot_references)
+        self.qpos: dict[str, NDArray[np.float64]] | None = {}
+        self.qvel: dict[str, NDArray[np.float64]] | None = {}
+        self.ctrl: dict[str, NDArray[np.float64]] | None = {}
 
     @abc.abstractmethod
     def reset(

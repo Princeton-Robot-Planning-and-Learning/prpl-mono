@@ -12,7 +12,7 @@ from relational_structs import Array
 
 from prbench.core import RobotActionSpace
 from prbench.envs.dynamic3d.mujoco_utils import MjObs
-from prbench.envs.dynamic3d.robots.base import Robot
+from prbench.envs.dynamic3d.robots.base import RobotEnv
 
 
 class RBY1ARobotActionSpace(RobotActionSpace):
@@ -29,7 +29,7 @@ class RBY1ARobotActionSpace(RobotActionSpace):
         return """Actions: joint positions for 2 base joints, 6 torso joints, 7 right arm joints, 7 left arm joints, 2 head joints"""
 
 
-class RBY1ARobotEnv(Robot):
+class RBY1ARobotEnv(RobotEnv):
     """This is the base class for RBY-1A environments that use MuJoCo for sim.
 
     It is still abstract: subclasses define rewards and add objects to the env.
@@ -67,11 +67,6 @@ class RBY1ARobotEnv(Robot):
         )
 
         self.act_delta = act_delta
-
-        # Robot state/actuator references (initialized in _setup_robot_references)
-        self.qpos: dict[str, NDArray[np.float64]] | None = None
-        self.qvel: dict[str, NDArray[np.float64]] | None = None
-        self.ctrl: dict[str, NDArray[np.float64]] | None = None
 
     def reset(
         self,

@@ -11,7 +11,7 @@ from relational_structs import Array
 
 from prbench.core import RobotActionSpace
 from prbench.envs.dynamic3d.mujoco_utils import MjObs
-from prbench.envs.dynamic3d.robots.base import Robot
+from prbench.envs.dynamic3d.robots.base import RobotEnv
 
 
 class TidyBot3DRobotActionSpace(RobotActionSpace):
@@ -30,7 +30,7 @@ class TidyBot3DRobotActionSpace(RobotActionSpace):
         return """Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)"""
 
 
-class TidyBotRobotEnv(Robot):
+class TidyBotRobotEnv(RobotEnv):
     """This is the base class for TidyBot environments that use MuJoCo for sim.
 
     It is still abstract: subclasses define rewards and add objects to the env.
@@ -65,16 +65,6 @@ class TidyBotRobotEnv(Robot):
         )
 
         self.act_delta = act_delta
-
-        # Robot state/actuator references (initialized in _setup_robot_references)
-        self.qpos_base: Optional[NDArray[np.float64]] = None
-        self.qvel_base: Optional[NDArray[np.float64]] = None
-        self.ctrl_base: Optional[NDArray[np.float64]] = None
-        self.qpos_arm: Optional[NDArray[np.float64]] = None
-        self.qvel_arm: Optional[NDArray[np.float64]] = None
-        self.ctrl_arm: Optional[NDArray[np.float64]] = None
-        self.qpos_gripper: Optional[NDArray[np.float64]] = None
-        self.ctrl_gripper: Optional[NDArray[np.float64]] = None
 
     def _setup_robot_references(self) -> None:
         """Setup references to robot state/actuator buffers in the simulation data."""
@@ -158,13 +148,13 @@ class TidyBotRobotEnv(Robot):
         )
         arm_ctrl_start, arm_ctrl_end = min(arm_ctrl_indices), max(arm_ctrl_indices) + 1
 
-        self.qpos_base = self.sim.data._data.qpos[base_qpos_start:base_qpos_end]
-        self.qvel_base = self.sim.data._data.qvel[base_qvel_start:base_qvel_end]
-        self.ctrl_base = self.sim.data._data.ctrl[base_ctrl_start:base_ctrl_end]
+        self.qpos["base"] = self.sim.data._data.qpos[base_qpos_start:base_qpos_end]
+        self.qvel["base"] = self.sim.data._data.qvel[base_qvel_start:base_qvel_end]
+        self.ctrl["base"] = self.sim.data._data.ctrl[base_ctrl_start:base_ctrl_end]
 
-        self.qpos_arm = self.sim.data._data.qpos[arm_qpos_start:arm_qpos_end]
-        self.qvel_arm = self.sim.data._data.qvel[arm_qvel_start:arm_qvel_end]
-        self.ctrl_arm = self.sim.data._data.ctrl[arm_ctrl_start:arm_ctrl_end]
+        self.qpos["arm"] = self.sim.data._data.qpos[arm_qpos_start:arm_qpos_end]
+        self.qvel["arm"] = self.sim.data._data.qvel[arm_qvel_start:arm_qvel_end]
+        self.ctrl["arm"] = self.sim.data._data.ctrl[arm_ctrl_start:arm_ctrl_end]
 
         # Buffers for gripper
         gripper_ctrl_id = (
@@ -172,8 +162,8 @@ class TidyBotRobotEnv(Robot):
                 "fingers_actuator"
             ]
         )
-        self.qpos_gripper = None
-        self.ctrl_gripper = self.sim.data._data.ctrl[
+        self.qpos["gripper"] = None
+        self.ctrl["gripper"] = self.sim.data._data.ctrl[
             gripper_ctrl_id : gripper_ctrl_id + 1
         ]
 
@@ -205,8 +195,8 @@ class TidyBotRobotEnv(Robot):
         assert (
             self.sim is not None
         ), "Simulation must be initialized before randomizing base pose."
-        assert self.qpos_base is not None, "Base qpos must be initialized first"
-        assert self.ctrl_base is not None, "Base ctrl must be initialized first"
+        assert self.qpos is not None, "Base qpos must be initialized first"
+        assert self.ctrl is not None, "Base ctrl must be initialized first"
 
         # Define limits for x, y, and theta
         x_limit = (-1.0, 1.0)
@@ -217,8 +207,8 @@ class TidyBotRobotEnv(Robot):
         y = self.np_random.uniform(*y_limit)
         theta = self.np_random.uniform(*theta_limit)
         # Set the base position and orientation in the simulation
-        self.qpos_base[:] = [x, y, theta]
-        self.ctrl_base[:] = [x, y, theta]
+        self.qpos["base"][:] = [x, y, theta]
+        self.ctrl["base"][:] = [x, y, theta]
         self.sim.forward()  # Update the simulation state
 
     def _randomize_arm_pose(self) -> None:
@@ -226,17 +216,15 @@ class TidyBotRobotEnv(Robot):
         assert (
             self.sim is not None
         ), "Simulation must be initialized before randomizing base pose."
-        assert self.qpos_base is not None, "Base qpos must be initialized first"
-        assert self.ctrl_base is not None, "Base ctrl must be initialized first"
+        assert self.qpos is not None, "Base qpos must be initialized first"
+        assert self.ctrl is not None, "Base ctrl must be initialized first"
 
         # Sample random values within limits
-        assert self.qpos_arm is not None
-        assert self.ctrl_arm is not None
-        num_joints: int = self.qpos_arm.shape[0]
+        num_joints: int = self.qpos["arm"].shape[0]
         theta = self.np_random.uniform(-np.pi, np.pi, num_joints).astype(np.float64)
         # Set the arm joint positions in the simulation
-        self.qpos_arm[:] = theta
-        self.ctrl_arm[:] = theta
+        self.qpos["arm"][:] = theta
+        self.ctrl["arm"][:] = theta
         self.sim.forward()  # Update the simulation state
 
     def _insert_robot_into_xml(self, xml_string: str) -> str:
@@ -298,7 +286,7 @@ class TidyBotRobotEnv(Robot):
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         if self.act_delta:  # Interpret action as delta.
             # Compute absolute joint action.
-            curr_qpos = np.concatenate([self.qpos_base, self.qpos_arm], -1)
+            curr_qpos = np.concatenate([self.qpos["base"], self.qpos["arm"]], -1)
             abs_action = curr_qpos + action[:-1]
             # Add gripper action
             abs_action = np.concatenate([abs_action, [action[-1]]], -1)
