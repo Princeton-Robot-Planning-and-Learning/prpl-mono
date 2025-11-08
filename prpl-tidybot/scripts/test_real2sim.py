@@ -62,7 +62,13 @@ def test_run_base_motion_planning() -> None:
         y_bounds = (-1.5, 1.5)
         seed = 123
         base_motion_plan = run_base_motion_planning(
-            state, target_base_pose, x_bounds, y_bounds, seed, extend_xy_magnitude=0.5, extend_rot_magnitude=math.pi / 2
+            state,
+            target_base_pose,
+            x_bounds,
+            y_bounds,
+            seed,
+            extend_xy_magnitude=0.5,
+            extend_rot_magnitude=math.pi / 2,
         )
         assert base_motion_plan is not None
 
@@ -160,7 +166,11 @@ def test_run_base_motion_planning() -> None:
             print(f"Target pose: {pose.x}, {pose.y}, {pose.theta()}")
             if t != len(base_motion_plan) - 1:
                 reach_target_pose(
-                    interface, pose, map_to_odom_converter, odom_to_map_converter, tolerance=0.05
+                    interface,
+                    pose,
+                    map_to_odom_converter,
+                    odom_to_map_converter,
+                    tolerance=0.05,
                 )
             else:
                 reach_target_pose(
