@@ -27,7 +27,7 @@ from prbench.envs.dynamic2d.utils import (
     create_walls_from_world_boundaries,
 )
 from prbench.envs.geom2d.structs import MultiBody2D, SE2Pose, ZOrder
-from prbench.envs.geom2d.utils import is_on
+from prbench.envs.geom2d.utils import is_inside, is_on
 from prbench.envs.utils import PURPLE, sample_se2_pose, state_2d_has_collision
 
 # Define custom object types for the obstruction environment
@@ -288,6 +288,8 @@ class ObjectCentricDynObstruction2DEnv(
             # We use Geom2D collision checker for now, maybe need to update it.
             if state_2d_has_collision(full_state, all_objects, all_objects, {}):
                 continue
+            if self._surface_outside_table(full_state, {}):
+                continue
             return state
 
         raise RuntimeError(f"Failed to sample initial state after {n} attempts")
@@ -317,9 +319,12 @@ class ObjectCentricDynObstruction2DEnv(
             "vx_arm": 0.0,
             "vy_arm": 0.0,
             "omega_arm": 0.0,
-            "vx_gripper": 0.0,
-            "vy_gripper": 0.0,
-            "omega_gripper": 0.0,
+            "vx_gripper_l": 0.0,
+            "vy_gripper_l": 0.0,
+            "omega_gripper_l": 0.0,
+            "vx_gripper_r": 0.0,
+            "vy_gripper_r": 0.0,
+            "omega_gripper_r": 0.0,
             "static": False,
             "base_radius": self.config.robot_base_radius,
             "arm_joint": self.config.robot_base_radius,
@@ -509,9 +514,12 @@ class ObjectCentricDynObstruction2DEnv(
                 state.set(robot_obj, "vy_arm", self.robot.gripper_base_vel[0].y)
                 state.set(robot_obj, "omega_arm", self.robot.gripper_base_vel[1])
                 state.set(robot_obj, "finger_gap", self.robot.curr_gripper)
-                state.set(robot_obj, "vx_gripper", self.robot.finger_vel[0].x)
-                state.set(robot_obj, "vy_gripper", self.robot.finger_vel[0].y)
-                state.set(robot_obj, "omega_gripper", self.robot.finger_vel[1])
+                state.set(robot_obj, "vx_gripper_l", self.robot.finger_vel_l[0].x)
+                state.set(robot_obj, "vy_gripper_l", self.robot.finger_vel_l[0].y)
+                state.set(robot_obj, "omega_gripper_l", self.robot.finger_vel_l[1])
+                state.set(robot_obj, "vx_gripper_r", self.robot.finger_vel_r[0].x)
+                state.set(robot_obj, "vy_gripper_r", self.robot.finger_vel_r[0].y)
+                state.set(robot_obj, "omega_gripper_r", self.robot.finger_vel_r[1])
             else:
                 assert (
                     obj in self._state_obj_to_pymunk_body
@@ -550,6 +558,28 @@ class ObjectCentricDynObstruction2DEnv(
         assert len(target_surfaces) == 1
         target_surface = target_surfaces[0]
         return is_on(state, target_object, target_surface, static_object_body_cache)
+
+    def _surface_outside_table(
+        self,
+        state: ObjectCentricState,
+        static_object_body_cache: dict[Object, MultiBody2D],
+    ) -> bool:
+        """Check if the target surface is outside the table boundaries."""
+        target_surfaces = state.get_objects(TargetSurfaceType)
+        assert len(target_surfaces) == 1
+        target_surface = target_surfaces[0]
+        table = state.get_objects(KinRectangleType)
+        table = [obj for obj in table if obj.name == "table"]
+        assert len(table) == 1
+        table_instance = table[0]
+
+        is_inside_table = is_inside(
+            state,
+            target_surface,
+            table_instance,
+            static_object_body_cache,
+        )
+        return not is_inside_table
 
     def _get_reward_and_done(self) -> tuple[float, bool]:
         """Calculate reward and termination."""

@@ -1,48 +1,20 @@
 """Utility functions for TidyBot environments."""
 
-from typing import Any
-
 import numpy as np
 from numpy.typing import NDArray
 
 
-def get_table_bbox(
-    pos: NDArray[np.float32], table_config: dict[str, Any]
-) -> list[float]:
-    """Get bounding box for a table given its position and config.
+def convert_yaw_to_quaternion(yaw: float) -> list[float]:
+    """Convert yaw angle (in radians) to quaternion representation.
 
     Args:
-        pos: Position of the table as [x, y, z] array
-        table_config: Dictionary containing table configuration with keys:
-            - "shape": Shape of the table - "rectangle" or "circle"
-            - "length": Total table length in meters (for rectangle)
-            - "width": Total table width in meters (for rectangle)
-            - "diameter": Diameter of circular table in meters (for circle)
+        yaw: Yaw angle in radians
 
     Returns:
-        Bounding box as [x_min, y_min, x_max, y_max]
-
-    Raises:
-        ValueError: If table shape is not supported
+        Quaternion as a list [w, x, y, z]
     """
-    if table_config["shape"] == "rectangle":
-        half_length = table_config["length"] / 2
-        half_width = table_config["width"] / 2
-        return [
-            pos[0] - half_length,  # x_min
-            pos[1] - half_width,  # y_min
-            pos[0] + half_length,  # x_max
-            pos[1] + half_width,  # y_max
-        ]
-    if table_config["shape"] == "circle":
-        radius = table_config["diameter"] / 2
-        return [
-            pos[0] - radius,  # x_min
-            pos[1] - radius,  # y_min
-            pos[0] + radius,  # x_max
-            pos[1] + radius,  # y_max
-        ]
-    raise ValueError(f"Unknown table shape: {table_config['shape']}")
+    half_yaw = yaw / 2
+    return [np.cos(half_yaw), 0.0, 0.0, np.sin(half_yaw)]  # w, x, y, z
 
 
 def bboxes_overlap(bbox1: list[float], bbox2: list[float], margin: float = 0.2) -> bool:
@@ -64,111 +36,80 @@ def bboxes_overlap(bbox1: list[float], bbox2: list[float], margin: float = 0.2) 
     )  # bbox2 top + margin <= bbox1 bottom
 
 
-def sample_collision_free_position(
-    table_config: dict[str, Any],
-    placed_bboxes: list[list[float]],
-    np_random: np.random.Generator,
-    max_attempts: int = 100,
-    x_range: tuple[float, float] = (-2.0, 2.0),
-    y_range: tuple[float, float] = (0.5, 2.5),
-) -> NDArray[np.float32]:
-    """Sample a collision-free position for a table.
+def translate_bounding_box(
+    bbox: list[float], translation: NDArray[np.float32]
+) -> list[float]:
+    """Translate a bounding box by a given translation vector.
 
     Args:
-        table_config: Dictionary containing table configuration
-        placed_bboxes: List of bounding boxes for already placed tables
-        np_random: Random number generator
-        max_attempts: Maximum number of sampling attempts
-        x_range: Range for x coordinate sampling as (min, max)
-        y_range: Range for y coordinate sampling as (min, max)
+        bbox: Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+        translation: Translation vector as [dx, dy, dz] array
 
     Returns:
-        Position as [x, y, z] array where z is always 0.0
-
-    Raises:
-        None: Returns fallback position with warning if no collision-free position found
+        Translated bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
     """
-    for _ in range(max_attempts):
-        # Sample a candidate position
-        candidate_pos = np.array(
-            [
-                np_random.uniform(x_range[0], x_range[1]),  # x coordinate
-                np_random.uniform(y_range[0], y_range[1]),  # y coordinate
-                0.0,  # z coordinate (fixed at 0)
-            ]
-        )
-
-        # Get bounding box for this candidate position
-        candidate_bbox = get_table_bbox(candidate_pos, table_config)
-
-        # Check if it collides with any existing table
-        collision = False
-        for existing_bbox in placed_bboxes:
-            if bboxes_overlap(candidate_bbox, existing_bbox):
-                collision = True
-                break
-
-        # If no collision, return this position
-        if not collision:
-            return candidate_pos
-
-    # If we couldn't find a collision-free position after max_attempts,
-    # return a fallback position (this shouldn't happen often with reasonable
-    # table sizes)
-    print(
-        f"Warning: Could not find collision-free position after {max_attempts} attempts"
-    )
-    return np.array(
-        [
-            np_random.uniform(x_range[0], x_range[1]),
-            np_random.uniform(y_range[0], y_range[1]),
-            0.0,
-        ]
-    )
+    dx, dy, dz = translation
+    return [
+        bbox[0] + dx,  # x_min
+        bbox[1] + dy,  # y_min
+        bbox[2] + dz,  # z_min
+        bbox[3] + dx,  # x_max
+        bbox[4] + dy,  # y_max
+        bbox[5] + dz,  # z_max
+    ]
 
 
-def sample_pose_in_region(
-    regions: list[list[float]],
-    np_random: np.random.Generator,
-    z_coordinate: float = 0.02,
-) -> tuple[float, float, float]:
-    """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
+def rotate_bounding_box_2d(
+    bbox: list[float], yaw: float, center: tuple[float, float]
+) -> list[float]:
+    """Rotate a bounding box around a center point in 2D (yaw rotation only).
+
+    This function rotates the bounding box corners and computes the new axis-aligned
+    bounding box that contains all rotated corners.
 
     Args:
-        regions: List of bounding boxes, where each bounding box is a list of 4 floats:
-                [x_start, y_start, x_end, y_end]
-        np_random: Random number generator
-        z_coordinate: Z coordinate for the sampled pose (height above ground)
+        bbox: Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+        yaw: Rotation angle in radians (around z-axis)
+        center: Center of rotation as (cx, cy)
 
     Returns:
-        Tuple of (x, y, z) coordinates sampled from one of the regions
-
-    Raises:
-        ValueError: If regions list is empty or if any region has invalid bounds
+        Rotated bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
     """
-    if not regions:
-        raise ValueError("Regions list cannot be empty")
+    cos_yaw = np.cos(yaw)
+    sin_yaw = np.sin(yaw)
+    cx, cy = center
 
-    # Randomly select one of the regions
-    selected_region = np_random.choice(regions)
+    # Get the four corners of the original bounding box (in 2D)
+    corners = [
+        (bbox[0], bbox[1]),  # bottom-left
+        (bbox[3], bbox[1]),  # bottom-right
+        (bbox[3], bbox[4]),  # top-right
+        (bbox[0], bbox[4]),  # top-left
+    ]
 
-    # Validate the selected region
-    if len(selected_region) != 4:
-        raise ValueError(
-            f"Each region must have exactly 4 values [x_start, y_start, x_end, y_end], "
-            f"got {len(selected_region)}"
-        )
+    # Rotate each corner around the center
+    rotated_corners = []
+    for x, y in corners:
+        # Translate to origin
+        x_rel = x - cx
+        y_rel = y - cy
 
-    x_start, y_start, x_end, y_end = selected_region
+        # Rotate
+        x_rot = x_rel * cos_yaw - y_rel * sin_yaw
+        y_rot = x_rel * sin_yaw + y_rel * cos_yaw
 
-    # Validate bounds
-    if x_start >= x_end:
-        raise ValueError(f"x_start ({x_start}) must be less than x_end ({x_end})")
-    if y_start >= y_end:
-        raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
+        # Translate back
+        rotated_corners.append((x_rot + cx, y_rot + cy))
 
-    # Sample uniformly within the selected region
-    x = np_random.uniform(x_start, x_end)
-    y = np_random.uniform(y_start, y_end)
+    # Find the new axis-aligned bounding box
+    x_coords = [corner[0] for corner in rotated_corners]
+    y_coords = [corner[1] for corner in rotated_corners]
 
-    return (x, y, z_coordinate)
+    return [
+        min(x_coords),  # x_min
+        min(y_coords),  # y_min
+        bbox[2],  # z_min (unchanged)
+        max(x_coords),  # x_max
+        max(y_coords),  # y_max
+        bbox[5],  # z_max (unchanged)
+    ]

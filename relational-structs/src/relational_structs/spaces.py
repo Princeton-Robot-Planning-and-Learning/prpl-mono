@@ -57,8 +57,7 @@ class ObjectCentricStateSpace(Space):
     ) -> ObjectCentricBoxSpace:
         """Create an ObjectCentricState given a fixed object list."""
         return ObjectCentricBoxSpace(
-            constant_objects, type_features, state_cls=self._state_cls,
-            dtype=dtype
+            constant_objects, type_features, state_cls=self._state_cls, dtype=dtype
         )
 
 

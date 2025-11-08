@@ -1,70 +1,12 @@
 """Tests for TidyBot utility functions."""
 
 import numpy as np
-import pytest
 
 from prbench.envs.dynamic3d.utils import (
     bboxes_overlap,
-    get_table_bbox,
-    sample_collision_free_position,
-    sample_pose_in_region,
+    rotate_bounding_box_2d,
+    translate_bounding_box,
 )
-
-# Tests for get_table_bbox function
-
-
-def test_rectangle_table_bbox():
-    """Test bounding box calculation for rectangular table."""
-    pos = np.array([1.0, 2.0, 0.0], dtype=np.float32)
-    table_config = {"shape": "rectangle", "length": 2.0, "width": 1.0}
-
-    bbox = get_table_bbox(pos, table_config)
-
-    expected = [0.0, 1.5, 2.0, 2.5]  # [x_min, y_min, x_max, y_max]
-    assert bbox == expected
-
-
-def test_circle_table_bbox():
-    """Test bounding box calculation for circular table."""
-    pos = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-    table_config = {"shape": "circle", "diameter": 2.0}
-
-    bbox = get_table_bbox(pos, table_config)
-
-    expected = [-1.0, -1.0, 1.0, 1.0]  # [x_min, y_min, x_max, y_max]
-    assert bbox == expected
-
-
-def test_rectangle_at_origin():
-    """Test rectangular table centered at origin."""
-    pos = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-    table_config = {"shape": "rectangle", "length": 4.0, "width": 2.0}
-
-    bbox = get_table_bbox(pos, table_config)
-
-    expected = [-2.0, -1.0, 2.0, 1.0]
-    assert bbox == expected
-
-
-def test_circle_at_offset():
-    """Test circular table at offset position."""
-    pos = np.array([3.0, -1.0, 0.0], dtype=np.float32)
-    table_config = {"shape": "circle", "diameter": 1.5}
-
-    bbox = get_table_bbox(pos, table_config)
-
-    expected = [2.25, -1.75, 3.75, -0.25]
-    assert bbox == expected
-
-
-def test_get_table_bbox_invalid_shape():
-    """Test that invalid table shape raises ValueError."""
-    pos = np.array([0.0, 0.0, 0.0], dtype=np.float32)
-    table_config = {"shape": "triangle", "length": 1.0}
-
-    with pytest.raises(ValueError, match="Unknown table shape: triangle"):
-        get_table_bbox(pos, table_config)
-
 
 # Tests for bboxes_overlap function
 
@@ -136,250 +78,183 @@ def test_nested_boxes():
     assert bboxes_overlap(bbox2, bbox1)
 
 
-# Tests for sample_collision_free_position function
+# Tests for translate_bounding_box function
 
 
-def test_no_existing_tables():
-    """Test sampling when no tables are placed yet."""
-    np_random = np.random.default_rng(42)
-    table_config = {"shape": "rectangle", "length": 0.5, "width": 0.5}
-    placed_bboxes = []
+def test_translate_bounding_box_positive_translation():
+    """Test translating a bounding box with positive values."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]  # Unit cube at origin
+    translation = np.array([2.0, 3.0, 1.0])
 
-    pos = sample_collision_free_position(table_config, placed_bboxes, np_random)
+    result = translate_bounding_box(bbox, translation)
+    expected = [2.0, 3.0, 1.0, 3.0, 4.0, 2.0]
 
-    # Should return a valid position
-    assert isinstance(pos, np.ndarray)
-    assert pos.shape == (3,)
-    assert pos[2] == 0.0  # z should always be 0
+    assert result == expected
 
-    # Position should be within default ranges
-    assert -2.0 <= pos[0] <= 2.0
-    assert 0.5 <= pos[1] <= 2.5
 
+def test_translate_bounding_box_negative_translation():
+    """Test translating a bounding box with negative values."""
+    bbox = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    translation = np.array([-0.5, -1.0, -2.0])
 
-def test_with_existing_tables():
-    """Test sampling with existing tables."""
-    np_random = np.random.default_rng(42)
-    table_config = {"shape": "rectangle", "length": 0.5, "width": 0.5}
-    # Place a table in the middle of the sampling area
-    placed_bboxes = [[0.0, 1.0, 1.0, 2.0]]
+    result = translate_bounding_box(bbox, translation)
+    expected = [0.5, 1.0, 1.0, 3.5, 4.0, 4.0]
 
-    pos = sample_collision_free_position(table_config, placed_bboxes, np_random)
+    assert result == expected
 
-    # Check that the sampled position doesn't create an overlapping bbox
-    new_bbox = get_table_bbox(pos, table_config)
-    for existing_bbox in placed_bboxes:
-        assert not bboxes_overlap(new_bbox, existing_bbox)
 
+def test_translate_bounding_box_zero_translation():
+    """Test translating a bounding box with zero translation (no change)."""
+    bbox = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    translation = np.array([0.0, 0.0, 0.0])
 
-def test_custom_ranges():
-    """Test sampling with custom x and y ranges."""
-    np_random = np.random.default_rng(42)
-    table_config = {"shape": "rectangle", "length": 0.5, "width": 0.5}
-    placed_bboxes = []
-    x_range = (5.0, 6.0)
-    y_range = (10.0, 11.0)
+    result = translate_bounding_box(bbox, translation)
 
-    pos = sample_collision_free_position(
-        table_config, placed_bboxes, np_random, x_range=x_range, y_range=y_range
-    )
+    assert result == bbox
 
-    assert x_range[0] <= pos[0] <= x_range[1]
-    assert y_range[0] <= pos[1] <= y_range[1]
-    assert pos[2] == 0.0
 
+def test_translate_bounding_box_preserves_dimensions():
+    """Test that translation preserves bounding box dimensions."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 3.0, 1.0]
+    translation = np.array([1.0, 1.0, 1.0])
 
-def test_deterministic_with_seed():
-    """Test that sampling is deterministic with same seed."""
-    table_config = {"shape": "rectangle", "length": 0.5, "width": 0.5}
-    placed_bboxes = []
+    result = translate_bounding_box(bbox, translation)
 
-    # Sample with first generator
-    rng1 = np.random.default_rng(123)
-    pos1 = sample_collision_free_position(table_config, placed_bboxes, rng1)
+    # Original dimensions
+    orig_width = bbox[3] - bbox[0]
+    orig_height = bbox[4] - bbox[1]
+    orig_depth = bbox[5] - bbox[2]
 
-    # Sample with second generator with same seed
-    rng2 = np.random.default_rng(123)
-    pos2 = sample_collision_free_position(table_config, placed_bboxes, rng2)
+    # New dimensions
+    new_width = result[3] - result[0]
+    new_height = result[4] - result[1]
+    new_depth = result[5] - result[2]
 
-    np.testing.assert_array_equal(pos1, pos2)
+    assert new_width == orig_width
+    assert new_height == orig_height
+    assert new_depth == orig_depth
 
 
-def test_crowded_scenario_fallback():
-    """Test fallback behavior when space is very crowded."""
-    np_random = np.random.default_rng(42)
-    # Create a scenario where it's very hard to find collision-free space
-    large_table_config = {"shape": "rectangle", "length": 3.0, "width": 3.0}
-    placed_bboxes = [
-        [-2.0, 0.5, 0.0, 2.5],  # Left side
-        [0.0, 0.5, 2.0, 2.5],  # Right side
-    ]
+# Tests for rotate_bounding_box_2d function
 
-    # Should still return a position (though it might overlap)
-    pos = sample_collision_free_position(
-        large_table_config, placed_bboxes, np_random, max_attempts=5
-    )
 
-    assert isinstance(pos, np.ndarray)
-    assert pos.shape == (3,)
-    assert pos[2] == 0.0
+def test_rotate_bounding_box_2d_no_rotation():
+    """Test rotating a bounding box by 0 radians (no change)."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 1.0, 1.0]
+    center = (1.0, 0.5)
 
+    result = rotate_bounding_box_2d(bbox, 0.0, center)
 
-def test_circular_table():
-    """Test sampling with circular table configuration."""
-    np_random = np.random.default_rng(42)
-    circle_config = {"shape": "circle", "diameter": 0.8}
-    placed_bboxes = []
+    # Should be approximately the same (allowing for floating point precision)
+    np.testing.assert_allclose(result, bbox, rtol=1e-10)
 
-    pos = sample_collision_free_position(circle_config, placed_bboxes, np_random)
 
-    assert isinstance(pos, np.ndarray)
-    assert pos.shape == (3,)
-    assert pos[2] == 0.0
+def test_rotate_bounding_box_2d_90_degrees():
+    """Test rotating a bounding box by 90 degrees."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 1.0, 1.0]  # 2x1x1 box
+    center = (1.0, 0.5)  # Center of the box
 
+    result = rotate_bounding_box_2d(bbox, np.pi / 2, center)
 
-# Tests for sample_pose_in_region function
+    # After 90 degree rotation, the box should become 1x2x1
+    width = result[3] - result[0]
+    height = result[4] - result[1]
 
+    # Should be approximately 1x2 (rotated from 2x1)
+    assert abs(width - 1.0) < 1e-10
+    assert abs(height - 2.0) < 1e-10
 
-def test_single_region():
-    """Test sampling from a single region."""
-    np_random = np.random.default_rng(42)
-    regions = [[1.0, 2.0, 3.0, 4.0]]  # [x_start, y_start, x_end, y_end]
+    # Z coordinates should be unchanged
+    assert result[2] == bbox[2]
+    assert result[5] == bbox[5]
 
-    x, y, z = sample_pose_in_region(regions, np_random)
 
-    assert 1.0 <= x <= 3.0
-    assert 2.0 <= y <= 4.0
-    assert z == 0.02  # Default z coordinate
+def test_rotate_bounding_box_2d_180_degrees():
+    """Test rotating a bounding box by 180 degrees."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 1.0, 1.0]
+    center = (1.0, 0.5)
 
+    result = rotate_bounding_box_2d(bbox, np.pi, center)
 
-def test_multiple_regions():
-    """Test sampling from multiple regions."""
-    np_random = np.random.default_rng(42)
-    regions = [
-        [0.0, 0.0, 1.0, 1.0],  # Region 1
-        [5.0, 5.0, 6.0, 6.0],  # Region 2
-        [10.0, 10.0, 11.0, 11.0],  # Region 3
-    ]
+    # After 180 degrees, dimensions should be the same
+    width = result[3] - result[0]
+    height = result[4] - result[1]
 
-    # Sample many times to check all regions can be selected
-    sampled_regions = set()
-    for _ in range(100):
-        x, y, z = sample_pose_in_region(regions, np_random)
+    assert abs(width - 2.0) < 1e-10
+    assert abs(height - 1.0) < 1e-10
 
-        # Determine which region this sample came from
-        if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
-            sampled_regions.add(0)
-        elif 5.0 <= x <= 6.0 and 5.0 <= y <= 6.0:
-            sampled_regions.add(1)
-        elif 10.0 <= x <= 11.0 and 10.0 <= y <= 11.0:
-            sampled_regions.add(2)
+    # Box should be centered at the same point
+    result_center_x = (result[0] + result[3]) / 2
+    result_center_y = (result[1] + result[4]) / 2
 
-        assert z == 0.02
+    assert abs(result_center_x - center[0]) < 1e-10
+    assert abs(result_center_y - center[1]) < 1e-10
 
-    # Should have sampled from all regions at least once
-    assert len(sampled_regions) == 3
 
+def test_rotate_bounding_box_2d_45_degrees():
+    """Test rotating a bounding box by 45 degrees."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]  # Unit square
+    center = (0.5, 0.5)  # Center of the square
 
-def test_custom_z_coordinate():
-    """Test sampling with custom z coordinate."""
-    np_random = np.random.default_rng(42)
-    regions = [[0.0, 0.0, 1.0, 1.0]]
-    custom_z = 0.5
+    result = rotate_bounding_box_2d(bbox, np.pi / 4, center)
 
-    x, y, z = sample_pose_in_region(regions, np_random, z_coordinate=custom_z)
+    # After 45 degrees, a unit square should have dimensions sqrt(2) x sqrt(2)
+    width = result[3] - result[0]
+    height = result[4] - result[1]
+    expected_dim = np.sqrt(2)
 
-    assert 0.0 <= x <= 1.0
-    assert 0.0 <= y <= 1.0
-    assert z == custom_z
+    assert abs(width - expected_dim) < 1e-10
+    assert abs(height - expected_dim) < 1e-10
 
+    # Center should remain the same
+    result_center_x = (result[0] + result[3]) / 2
+    result_center_y = (result[1] + result[4]) / 2
 
-def test_deterministic_with_seed_pose():
-    """Test that sampling is deterministic with same seed."""
-    regions = [[0.0, 0.0, 1.0, 1.0]]
+    assert abs(result_center_x - center[0]) < 1e-10
+    assert abs(result_center_y - center[1]) < 1e-10
 
-    # Sample with first generator
-    rng1 = np.random.default_rng(123)
-    pose1 = sample_pose_in_region(regions, rng1)
 
-    # Sample with second generator with same seed
-    rng2 = np.random.default_rng(123)
-    pose2 = sample_pose_in_region(regions, rng2)
+def test_rotate_bounding_box_2d_preserves_z():
+    """Test that rotation preserves Z coordinates."""
+    bbox = [1.0, 2.0, 5.0, 3.0, 4.0, 8.0]  # Arbitrary box with z from 5 to 8
+    center = (2.0, 3.0)
 
-    assert pose1 == pose2
+    result = rotate_bounding_box_2d(bbox, np.pi / 3, center)  # 60 degrees
 
+    # Z coordinates should be unchanged
+    assert result[2] == bbox[2]  # z_min
+    assert result[5] == bbox[5]  # z_max
 
-def test_empty_regions_list():
-    """Test that empty regions list raises ValueError."""
-    np_random = np.random.default_rng(42)
-    regions = []
 
-    with pytest.raises(ValueError, match="Regions list cannot be empty"):
-        sample_pose_in_region(regions, np_random)
+def test_rotate_bounding_box_2d_different_centers():
+    """Test rotating around different center points."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
 
+    # Rotate around origin
+    result1 = rotate_bounding_box_2d(bbox, np.pi / 4, (0.0, 0.0))
 
-def test_invalid_region_format():
-    """Test that invalid region format raises ValueError."""
-    np_random = np.random.default_rng(42)
-    # Region with wrong number of elements
-    regions = [[0.0, 0.0, 1.0]]  # Missing y_end
+    # Rotate around far point
+    result2 = rotate_bounding_box_2d(bbox, np.pi / 4, (10.0, 10.0))
 
-    with pytest.raises(ValueError, match="Each region must have exactly 4 values"):
-        sample_pose_in_region(regions, np_random)
+    # Results should be different (different center points)
+    assert result1 != result2
 
+    # But dimensions should be the same
+    width1 = result1[3] - result1[0]
+    height1 = result1[4] - result1[1]
+    width2 = result2[3] - result2[0]
+    height2 = result2[4] - result2[1]
 
-def test_invalid_x_bounds():
-    """Test that invalid x bounds raise ValueError."""
-    np_random = np.random.default_rng(42)
-    regions = [[1.0, 0.0, 0.0, 1.0]]  # x_start > x_end
+    assert abs(width1 - width2) < 1e-10
+    assert abs(height1 - height2) < 1e-10
 
-    with pytest.raises(ValueError, match="x_start .* must be less than x_end"):
-        sample_pose_in_region(regions, np_random)
 
+def test_rotate_bounding_box_2d_full_rotation():
+    """Test that a full 360-degree rotation returns to original."""
+    bbox = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    center = (2.5, 3.5)
 
-def test_invalid_y_bounds():
-    """Test that invalid y bounds raise ValueError."""
-    np_random = np.random.default_rng(42)
-    regions = [[0.0, 1.0, 1.0, 0.0]]  # y_start > y_end
+    result = rotate_bounding_box_2d(bbox, 2 * np.pi, center)
 
-    with pytest.raises(ValueError, match="y_start .* must be less than y_end"):
-        sample_pose_in_region(regions, np_random)
-
-
-def test_equal_bounds():
-    """Test that equal bounds raise ValueError."""
-    np_random = np.random.default_rng(42)
-
-    # x_start == x_end
-    regions = [[1.0, 0.0, 1.0, 1.0]]
-    with pytest.raises(ValueError, match="x_start .* must be less than x_end"):
-        sample_pose_in_region(regions, np_random)
-
-    # y_start == y_end
-    regions = [[0.0, 1.0, 1.0, 1.0]]
-    with pytest.raises(ValueError, match="y_start .* must be less than y_end"):
-        sample_pose_in_region(regions, np_random)
-
-
-def test_point_region():
-    """Test sampling from a very small region."""
-    np_random = np.random.default_rng(42)
-    regions = [[0.0, 0.0, 0.001, 0.001]]  # Very small region
-
-    x, y, z = sample_pose_in_region(regions, np_random)
-
-    assert 0.0 <= x <= 0.001
-    assert 0.0 <= y <= 0.001
-    assert z == 0.02
-
-
-def test_negative_coordinates():
-    """Test sampling from regions with negative coordinates."""
-    np_random = np.random.default_rng(42)
-    regions = [[-2.0, -3.0, -1.0, -1.0]]
-
-    x, y, z = sample_pose_in_region(regions, np_random)
-
-    assert -2.0 <= x <= -1.0
-    assert -3.0 <= y <= -1.0
-    assert z == 0.02
+    # Should be approximately the same as original
+    np.testing.assert_allclose(result, bbox, rtol=1e-10)

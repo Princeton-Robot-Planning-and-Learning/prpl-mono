@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from graphlib import TopologicalSorter
@@ -11,6 +12,7 @@ from typing import (
     Dict,
     Generic,
     List,
+    Optional,
     Sequence,
     Set,
     Tuple,
@@ -180,6 +182,7 @@ class Operator(Generic[_TypedEntityTypeVar, _AtomTypeVar]):
     preconditions: Set[_AtomTypeVar]
     add_effects: Set[_AtomTypeVar]
     delete_effects: Set[_AtomTypeVar]
+    cost: Optional[int] = None
 
     def __post_init__(self) -> None:
         # Verify that all of the entities in the preconditions and effects are
@@ -209,6 +212,11 @@ class Operator(Generic[_TypedEntityTypeVar, _AtomTypeVar]):
             effects_str += "\n        ".join(
                 f"(not {atom.pddl_str})" for atom in sorted(self.delete_effects)
             )
+        # Add cost effect if cost is specified
+        if self.cost is not None:
+            if effects_str:
+                effects_str += "\n        "
+            effects_str += f"(increase (total-cost) {self.cost})"
         return f"""(:action {self.name}
     :parameters ({params_str})
     :precondition (and {preconds_str})
@@ -261,7 +269,13 @@ class LiftedOperator(Operator[Variable, LiftedAtom]):
         add_effects = {atom.ground(sub) for atom in self.add_effects}
         delete_effects = {atom.ground(sub) for atom in self.delete_effects}
         return GroundOperator(
-            self.name, list(objects), preconditions, add_effects, delete_effects, self
+            self.name,
+            list(objects),
+            preconditions,
+            add_effects,
+            delete_effects,
+            self.cost,
+            self,
         )
 
 
@@ -269,7 +283,12 @@ class LiftedOperator(Operator[Variable, LiftedAtom]):
 class GroundOperator(Operator[Object, GroundAtom]):
     """A STRIPSOperator + objects."""
 
-    parent: LiftedOperator
+    parent: Optional[LiftedOperator] = None
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.parent is None:
+            raise ValueError("GroundOperator must have a parent LiftedOperator")
 
 
 @lru_cache(maxsize=None)
@@ -280,6 +299,136 @@ def _domain_str_to_pyperplan_domain(domain_str: str) -> PyperplanDomain:
     return visitor.domain
 
 
+def _extract_action_costs_from_pddl(pddl_str: str) -> Dict[str, int]:
+    """Extract action costs from PDDL string.
+
+    Looks for patterns like:
+    (increase (total-cost) 5)
+    """
+    action_costs = {}
+    action_sections = re.split(r":action\s+(\w+)", pddl_str, flags=re.IGNORECASE)
+
+    # Skip the first element (before first action) and process pairs
+    for i in range(1, len(action_sections), 2):
+        if i + 1 < len(action_sections):
+            action_name = action_sections[i]
+            action_content = action_sections[i + 1]
+            # Look for cost increase patterns in the entire action content
+            cost_pattern = r"\(increase\s*\(\s*total-cost\s*\)\s*([0-9]+)\s*\)"
+            cost_match = re.search(cost_pattern, action_content, re.IGNORECASE)
+            if cost_match:
+                try:
+                    cost = int(cost_match.group(1))
+                    action_costs[action_name.lower()] = cost
+                except ValueError:
+                    # If we can't parse the cost as an int, skip it
+                    pass
+    return action_costs
+
+
+def _remove_action_costs_from_domain_str(domain_str: str) -> str:
+    """Remove action cost related elements from a domain string for pyperplan
+    parsing."""
+    # Remove action-costs requirement
+    domain_str = re.sub(r":action-costs\s*", "", domain_str, flags=re.IGNORECASE)
+    # Remove functions section
+    lines = domain_str.split("\n")
+    filtered_lines = []
+    in_functions = False
+    paren_count = 0
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("(:functions"):
+            in_functions = True
+            paren_count = 1  # Start counting from the opening paren
+            for char in line[line.find("(:functions") + len("(:functions") :]:
+                if char == "(":
+                    paren_count += 1
+                elif char == ")":
+                    paren_count -= 1
+                    if paren_count == 0:
+                        in_functions = False
+                        break
+            continue
+        if in_functions:
+            for char in line:
+                if char == "(":
+                    paren_count += 1
+                elif char == ")":
+                    paren_count -= 1
+                    if paren_count == 0:
+                        in_functions = False
+                        break
+            continue
+        filtered_lines.append(line)
+
+    domain_str = "\n".join(filtered_lines)
+    # Remove cost increase effects
+    domain_str = re.sub(
+        r"\(increase\s*\(\s*total-cost\s*\)\s*[0-9]+\s*\)",
+        "",
+        domain_str,
+        flags=re.IGNORECASE,
+    )
+    # Clean up any resulting empty lines or extra whitespace
+    domain_str = re.sub(r"\n\s*\n", "\n", domain_str)
+    return domain_str
+
+
+def _check_uses_action_costs(pddl_str: str) -> bool:
+    """Check if PDDL domain uses action costs."""
+    # Check for action-costs requirement
+    if re.search(r":requirements.*:action-costs", pddl_str, re.IGNORECASE | re.DOTALL):
+        return True
+    # Check for total-cost function
+    if re.search(r"total-cost", pddl_str, re.IGNORECASE):
+        return True
+    # Check for cost increase in effects
+    if re.search(r"\(increase\s*\(\s*total-cost\s*\)", pddl_str, re.IGNORECASE):
+        return True
+    return False
+
+
+def _remove_action_costs_from_problem_str(problem_str: str) -> str:
+    """Remove total-cost initializations and metric sections from a problem
+    string so pyperplan can parse it."""
+    # Remove initial total-cost assignments like (= (total-cost) 0)
+    problem_str = re.sub(
+        r"\(\s*=\s*\(\s*total-cost\s*\)\s*[0-9]+\s*\)",
+        "",
+        problem_str,
+        flags=re.IGNORECASE,
+    )
+    # Remove metric section like (:metric minimize (total-cost)) possibly
+    # spanning multiple lines.
+    problem_str = re.sub(
+        r"\(:metric\b.*?total-cost.*?\)",
+        "",
+        problem_str,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    # Clean up any resulting empty lines or extra whitespace
+    problem_str = re.sub(r"\n\s*\n", "\n", problem_str)
+    # If removals left unmatched closing parentheses, trim trailing ')' until
+    # parentheses are balanced. This avoids creating malformed Lisp for
+    # downstream parsers.
+    open_paren = problem_str.count("(")
+    close_paren = problem_str.count(")")
+    while close_paren > open_paren:
+        # strip trailing whitespace then a single trailing ')'
+        problem_str = problem_str.rstrip()
+        if problem_str.endswith(")"):
+            problem_str = problem_str[:-1]
+        else:
+            break
+        open_paren = problem_str.count("(")
+        close_paren = problem_str.count(")")
+    # Final cleanup of extra blank lines introduced by trimming.
+    problem_str = re.sub(r"\n\s*\n", "\n", problem_str)
+    return problem_str
+
+
 @dataclass(frozen=True)
 class PDDLDomain:
     """A PDDL domain."""
@@ -288,12 +437,22 @@ class PDDLDomain:
     operators: Collection[LiftedOperator]
     predicates: Collection[Predicate]
     types: Collection[Type]
+    uses_action_costs: bool = False
 
     @classmethod
     def parse(cls, pddl_str: str) -> PDDLDomain:
         """Parse a domain from a string."""
+        uses_action_costs = _check_uses_action_costs(pddl_str)
+        action_costs = (
+            _extract_action_costs_from_pddl(pddl_str) if uses_action_costs else {}
+        )
+        # Create a version of the PDDL without cost-related elements for pyperplan
+        pddl_for_parsing = pddl_str
+        if uses_action_costs:
+            pddl_for_parsing = _remove_action_costs_from_domain_str(pddl_str)
+
         # Let pyperplan do most of the heavy lifting.
-        pyperplan_domain = _domain_str_to_pyperplan_domain(pddl_str)
+        pyperplan_domain = _domain_str_to_pyperplan_domain(pddl_for_parsing)
         domain_name = pyperplan_domain.name
         pyperplan_types = pyperplan_domain.types
         pyperplan_predicates = pyperplan_domain.predicates
@@ -355,14 +514,21 @@ class PDDLDomain:
                 )
                 for a in pyper_op.effect.dellist
             }
+            # Get action cost if available
+            action_cost = action_costs.get(name.lower())
             strips_op = LiftedOperator(
-                name, parameters, preconditions, add_effects, delete_effects
+                name,
+                parameters,
+                preconditions,
+                add_effects,
+                delete_effects,
+                action_cost,
             )
             operators.add(strips_op)
         # Collect the final outputs.
         types = set(pyperplan_type_to_type.values())
         predicates = set(predicate_name_to_predicate.values())
-        return PDDLDomain(domain_name, operators, predicates, types)
+        return PDDLDomain(domain_name, operators, predicates, types, uses_action_costs)
 
     @cached_property
     def _hash(self) -> int:
@@ -413,9 +579,17 @@ class PDDLDomain:
         ops_lst = sorted(self.operators)
         preds_str = "\n    ".join(pred.pddl_str for pred in preds_lst)
         ops_strs = "\n\n  ".join(op.pddl_str for op in ops_lst)
+        # Build requirements
+        requirements = ":typing"
+        if self.uses_action_costs:
+            requirements += " :action-costs"
+        # Build functions section for action costs
+        functions_section = ""
+        if self.uses_action_costs:
+            functions_section = "\n\n    (:functions\n    (total-cost) - number\n    )"
         return f"""(define (domain {self.name})
-    (:requirements :typing)
-    (:types {types_str})
+    (:requirements {requirements})
+    (:types {types_str}){functions_section}
 
     (:predicates\n    {preds_str}
     )
@@ -440,12 +614,16 @@ class PDDLProblem:
     objects: Collection[Object]
     init_atoms: Collection[GroundAtom]
     goal: Collection[GroundAtom]
+    uses_action_costs: bool = False
 
     @classmethod
     def parse(cls, pddl_problem_str: str, pddl_domain: PDDLDomain) -> PDDLProblem:
         """Parse a problem from a string."""
         # Let pyperplan do most of the heavy lifting.
         pddl_domain_str = str(pddl_domain)
+        if pddl_domain.uses_action_costs:
+            pddl_domain_str = _remove_action_costs_from_domain_str(pddl_domain_str)
+            pddl_problem_str = _remove_action_costs_from_problem_str(pddl_problem_str)
         pyperplan_domain = _domain_str_to_pyperplan_domain(pddl_domain_str)
         # Now that we have the domain, parse the problem.
         lisp_iterator = parse_lisp_iterator(pddl_problem_str.split("\n"))
@@ -478,7 +656,14 @@ class PDDLProblem:
             )
             for a in pyperplan_problem.goal
         }
-        return PDDLProblem(pddl_domain.name, problem_name, objects, init_atoms, goal)
+        return PDDLProblem(
+            pddl_domain.name,
+            problem_name,
+            objects,
+            init_atoms,
+            goal,
+            pddl_domain.uses_action_costs,
+        )
 
     @cached_property
     def _hash(self) -> int:
@@ -492,13 +677,22 @@ class PDDLProblem:
         goal_lst = sorted(self.goal)
         objects_str = "\n    ".join(f"{o.name} - {o.type.name}" for o in objects_lst)
         init_str = "\n    ".join(atom.pddl_str for atom in init_atoms_lst)
+        # Add initial cost state if using action costs
+        if self.uses_action_costs:
+            if init_str:
+                init_str += "\n    "
+            init_str += "(= (total-cost) 0)"
         goal_str = "\n    ".join(atom.pddl_str for atom in goal_lst)
+        # Build metric section for action costs
+        metric_section = ""
+        if self.uses_action_costs:
+            metric_section = "\n    (:metric minimize (total-cost))"
         return f"""(define (problem {self.problem_name}) (:domain {self.domain_name})
     (:objects\n    {objects_str}
     )
     (:init\n    {init_str}
     )
-    (:goal (and {goal_str}))
+    (:goal (and {goal_str})){metric_section}
 )
 """
 
