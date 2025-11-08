@@ -39,71 +39,105 @@ def create_pybullet_block(
     orientation = (1, 0, 0, 0)
 
     # Create the collision shape.
-    collision_id = p.createCollisionShape(
+    block_collision_id = p.createCollisionShape(
         p.GEOM_BOX, halfExtents=half_extents, physicsClientId=physics_client_id
     )
 
     # Create the visual_shape.
-    visual_id = p.createVisualShape(
+    block_visual_id = p.createVisualShape(
         p.GEOM_BOX,
         halfExtents=half_extents,
         rgbaColor=color,
         physicsClientId=physics_client_id,
     )
 
+    # Prepare link data if has_peg
+    link_masses = []
+    link_collision_ids = []
+    link_visual_ids = []
+    link_positions = []
+    link_orientations = []
+    link_inertial_positions = []
+    link_inertial_orientations = []
+    link_parent_indices = []
+    link_joint_types = []
+    link_joint_axes = []
+
     if has_peg:
         # Create a peg on top of the block for stacking tasks.
         peg_height = 0.05
-        peg_radius = 0.01
+        peg_half_extents = (0.01, 0.01, peg_height / 2)
 
         peg_visual_id = p.createVisualShape(
-            p.GEOM_CYLINDER,
-            radius=peg_radius,
-            length=peg_height,
+            p.GEOM_BOX,
+            halfExtents=peg_half_extents,
             rgbaColor=(1, 0, 0, 1),
             physicsClientId=physics_client_id,
         )
         peg_collision_id = p.createCollisionShape(
-            p.GEOM_CYLINDER,
-            radius=peg_radius,
-            height=peg_height,
+            p.GEOM_BOX,
+            halfExtents=peg_half_extents,
             physicsClientId=physics_client_id,
         )
 
-    # Create the body for the block and peg if applicable.
-    if has_peg:
+        # Add block as first link
+        link_masses.append(mass)
+        link_collision_ids.append(block_collision_id)
+        link_visual_ids.append(block_visual_id)
+        link_positions.append((0, 0, 0))
+        link_orientations.append([0, 0, 0, 1])
+        link_inertial_positions.append([0, 0, 0])
+        link_inertial_orientations.append([0, 0, 0, 1])
+        link_parent_indices.append(0)
+        link_joint_types.append(p.JOINT_FIXED)
+        link_joint_axes.append([0, 0, 0])
+
+        # Add peg as second link
+        link_masses.append(0)
+        link_collision_ids.append(peg_collision_id)
+        link_visual_ids.append(peg_visual_id)
+        link_positions.append((0, 0, half_extents[2] + peg_height / 2))
+        link_orientations.append([0, 0, 0, 1])
+        link_inertial_positions.append([0, 0, 0])
+        link_inertial_orientations.append([0, 0, 0, 1])
+        link_parent_indices.append(0)
+        link_joint_types.append(p.JOINT_FIXED)
+        link_joint_axes.append([0, 0, 0])
+
         block_id = p.createMultiBody(
-            baseMass=mass,
-            baseCollisionShapeIndex=collision_id,
-            baseVisualShapeIndex=visual_id,
+            baseMass=0,
+            baseCollisionShapeIndex=-1,
+            baseVisualShapeIndex=-1,
             basePosition=position,
             baseOrientation=orientation,
-            linkMasses=[0],
-            linkCollisionShapeIndices=[peg_collision_id],
-            linkVisualShapeIndices=[peg_visual_id],
-            linkPositions=[(0, 0, half_extents[2] + peg_height / 2)],
-            linkOrientations=[(1, 0, 0, 0)],
-            linkInertialFramePositions=[(0, 0, 0)],
-            linkInertialFrameOrientations=[(1, 0, 0, 0)],
-            linkParentIndices=[0],
-            linkJointTypes=[p.JOINT_FIXED],
-            linkJointAxis=[(0, 0, 0)],
+            linkMasses=link_masses,
+            linkCollisionShapeIndices=link_collision_ids,
+            linkVisualShapeIndices=link_visual_ids,
+            linkPositions=link_positions,
+            linkOrientations=link_orientations,
+            linkInertialFramePositions=link_inertial_positions,
+            linkInertialFrameOrientations=link_inertial_orientations,
+            linkParentIndices=link_parent_indices,
+            linkJointTypes=link_joint_types,
+            linkJointAxis=link_joint_axes,
             physicsClientId=physics_client_id,
         )
     else:
         block_id = p.createMultiBody(
             baseMass=mass,
-            baseCollisionShapeIndex=collision_id,
-            baseVisualShapeIndex=visual_id,
+            baseCollisionShapeIndex=block_collision_id,
+            baseVisualShapeIndex=block_visual_id,
             basePosition=position,
             baseOrientation=orientation,
             physicsClientId=physics_client_id,
         )
 
     if friction:
+        # Apply friction to the block (base or first link depending on has_peg)
+        link_index = 0 if has_peg else -1
         p.changeDynamics(
             block_id,
-            linkIndex=-1,  # -1 for the base
+            linkIndex=link_index,
             lateralFriction=friction,
             physicsClientId=physics_client_id,
         )
@@ -258,14 +292,14 @@ def create_pybullet_triangle(
     ]
 
     # Create the collision shape.
-    collision_id = p.createCollisionShape(
+    triangle_collision_id = p.createCollisionShape(
         p.GEOM_MESH,
         vertices=mesh_vertices,
         indices=indices,
         physicsClientId=physics_client_id,
     )
     # Create the visual_shape.
-    visual_id = p.createVisualShape(
+    triangle_visual_id = p.createVisualShape(
         p.GEOM_MESH,
         vertices=mesh_vertices,
         indices=indices,
@@ -273,63 +307,97 @@ def create_pybullet_triangle(
         physicsClientId=physics_client_id,
     )
 
+    triangle_mean = np.mean(np.array(vertices), axis=0)
+
+    # Prepare link data if has_peg
+    link_masses = []
+    link_collision_ids = []
+    link_visual_ids = []
+    link_positions = []
+    link_orientations = []
+    link_inertial_positions = []
+    link_inertial_orientations = []
+    link_parent_indices = []
+    link_joint_types = []
+    link_joint_axes = []
+
     if has_peg:
-        # Create a peg on top of the block for stacking tasks.
+        # Create a peg on top of the triangle for stacking tasks.
         peg_height = 0.05
-        peg_radius = 0.01
+        peg_half_extents = (0.01, 0.01, peg_height / 2)
 
         peg_visual_id = p.createVisualShape(
-            p.GEOM_CYLINDER,
-            radius=peg_radius,
-            length=peg_height,
+            p.GEOM_BOX,
+            halfExtents=peg_half_extents,
             rgbaColor=(1, 0, 0, 1),
             physicsClientId=physics_client_id,
         )
         peg_collision_id = p.createCollisionShape(
-            p.GEOM_CYLINDER,
-            radius=peg_radius,
-            height=peg_height,
+            p.GEOM_BOX,
+            halfExtents=peg_half_extents,
             physicsClientId=physics_client_id,
         )
 
-    triangle_mean = np.mean(np.array(vertices), axis=0)
+        # Add triangle as first link
+        link_masses.append(mass)
+        link_collision_ids.append(triangle_collision_id)
+        link_visual_ids.append(triangle_visual_id)
+        link_positions.append((0, 0, 0))
+        link_orientations.append([0, 0, 0, 1])
+        link_inertial_positions.append([0, 0, 0])
+        link_inertial_orientations.append([0, 0, 0, 1])
+        link_parent_indices.append(0)
+        link_joint_types.append(p.JOINT_FIXED)
+        link_joint_axes.append([0, 0, 0])
 
-    # Create the body for the triangle and peg if applicable.
-    if has_peg:
+        # Add peg as second link
+        link_masses.append(0)
+        link_collision_ids.append(peg_collision_id)
+        link_visual_ids.append(peg_visual_id)
+        link_positions.append(
+            (triangle_mean[0], triangle_mean[1], depth / 2 + peg_height / 2)
+        )
+        link_orientations.append([0, 0, 0, 1])
+        link_inertial_positions.append([0, 0, 0])
+        link_inertial_orientations.append([0, 0, 0, 1])
+        link_parent_indices.append(0)
+        link_joint_types.append(p.JOINT_FIXED)
+        link_joint_axes.append([0, 0, 0])
+
         triangle_id = p.createMultiBody(
-            baseMass=mass,
-            baseCollisionShapeIndex=collision_id,
-            baseVisualShapeIndex=visual_id,
+            baseMass=0,
+            baseCollisionShapeIndex=-1,
+            baseVisualShapeIndex=-1,
             basePosition=position,
             baseOrientation=orientation,
-            linkMasses=[0],
-            linkCollisionShapeIndices=[peg_collision_id],
-            linkVisualShapeIndices=[peg_visual_id],
-            linkPositions=[
-                (triangle_mean[0], triangle_mean[1], depth / 2 + peg_height / 2)
-            ],
-            linkOrientations=[(1, 0, 0, 0)],
-            linkInertialFramePositions=[(triangle_mean[0], triangle_mean[1], 0)],
-            linkInertialFrameOrientations=[(1, 0, 0, 0)],
-            linkParentIndices=[0],
-            linkJointTypes=[p.JOINT_FIXED],
-            linkJointAxis=[(0, 0, 0)],
+            linkMasses=link_masses,
+            linkCollisionShapeIndices=link_collision_ids,
+            linkVisualShapeIndices=link_visual_ids,
+            linkPositions=link_positions,
+            linkOrientations=link_orientations,
+            linkInertialFramePositions=link_inertial_positions,
+            linkInertialFrameOrientations=link_inertial_orientations,
+            linkParentIndices=link_parent_indices,
+            linkJointTypes=link_joint_types,
+            linkJointAxis=link_joint_axes,
             physicsClientId=physics_client_id,
         )
     else:
         triangle_id = p.createMultiBody(
             baseMass=mass,
-            baseCollisionShapeIndex=collision_id,
-            baseVisualShapeIndex=visual_id,
+            baseCollisionShapeIndex=triangle_collision_id,
+            baseVisualShapeIndex=triangle_visual_id,
             basePosition=position,
             baseOrientation=orientation,
             physicsClientId=physics_client_id,
         )
 
     if friction:
+        # Apply friction to the triangle (base or first link depending on has_peg)
+        link_index = 0 if has_peg else -1
         p.changeDynamics(
             triangle_id,
-            linkIndex=-1,  # -1 for the base
+            linkIndex=link_index,
             lateralFriction=friction,
             physicsClientId=physics_client_id,
         )

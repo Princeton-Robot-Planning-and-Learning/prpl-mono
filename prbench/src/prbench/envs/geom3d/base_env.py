@@ -87,7 +87,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
             "camera_target": self.robot_base_pose.position,
             "camera_yaw": 90,
             "camera_distance": 1.5,
-            "camera_pitch": -20,
+            "camera_pitch": -80,
         }
 
 
@@ -514,12 +514,7 @@ class ObjectCentricGeom3DRobotEnv(
                     feats["grasp_active"] = 0
                 # Triangle-specific features (fallback to 0).
                 # Here we use _get_triangle_features implemented within the envs.
-                try:
-                    a, b, depth, ttype = self._get_triangle_features(object_name)
-                except AttributeError:
-                    # Fallback defaults
-                    a = b = depth = 0.0
-                    ttype = 0.0
+                a, b, depth, ttype = self._get_triangle_features(object_name)
                 feats["triangle_type"] = float(ttype)
                 feats["side_a"] = float(a)
                 feats["side_b"] = float(b)

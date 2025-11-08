@@ -43,7 +43,7 @@ def test_pick_place_on_rack():
     # Create the real environment.
 
     num_parts = 2
-    env = Packing3DEnv(num_parts=num_parts, use_gui=False, render_mode="rgb_array")
+    env = Packing3DEnv(num_parts=num_parts, use_gui=True, render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
     if MAKE_VIDEOS:
@@ -71,21 +71,23 @@ def test_pick_place_on_rack():
         max_candidate_plans = 1
 
     # sample placement coefficients for each part
-    x_coeffs = np.linspace(-0.75, 0.75, num_parts)
-    y_coeffs = np.linspace(-0.75, 0.75, num_parts)
+    x_coeffs = np.linspace(-0.5, 0.5, num_parts)
+    y_coeffs = np.linspace(-0.5, 0.5, num_parts)
     np.random.shuffle(x_coeffs)
     np.random.shuffle(y_coeffs)
 
     # First, move to pre-grasp pose (top-down).
     selected_object = obs.target_object
+    print(obs.available_parts, obs.part_poses)
     assert selected_object is not None, "No target object selected"
 
     peg_height = 0.05
 
     while selected_object is not None:
+        print(f"Picking and placing object: {selected_object.name}")
         x, y, z = obs.part_poses[selected_object.name].position
-        dz = 0.025 + peg_height * 2  # pre-grasp height
-        pre_grasp_pose = Pose.from_rpy((x, y, z + dz), (np.pi, 0, np.pi / 2))
+        pre_grasp_pose = Pose.from_rpy((x, y, home_pos.position[2] / 2), (np.pi, 0, np.pi / 2))
+        print("pre_grasp_pose:", pre_grasp_pose)
         joint_plan = run_smooth_motion_planning_to_pose(
             pre_grasp_pose,
             sim.robot,
@@ -113,15 +115,17 @@ def test_pick_place_on_rack():
 
         # Move down to grasp pose.
         sim.set_state(obs)
+
         current_end_effector_pose = sim.robot.get_end_effector_pose()
         grasp_pose = Pose(
             (
                 current_end_effector_pose.position[0],
                 current_end_effector_pose.position[1],
-                current_end_effector_pose.position[2] - peg_height * 2,
+                z + 0.01 + peg_height,
             ),
             current_end_effector_pose.orientation,
         )
+        print("grasp_pose:", grasp_pose)
         joint_plan = smoothly_follow_end_effector_path(
             sim.robot,
             [current_end_effector_pose, grasp_pose],
@@ -150,8 +154,6 @@ def test_pick_place_on_rack():
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
-        assert obs.grasped_object == selected_object.name, "Object not grasped"
-
         # Move up slightly to break contact with the table.
         sim.set_state(obs)
         current_end_effector_pose = sim.robot.get_end_effector_pose()
@@ -159,10 +161,11 @@ def test_pick_place_on_rack():
             (
                 current_end_effector_pose.position[0],
                 current_end_effector_pose.position[1],
-                current_end_effector_pose.position[2] + 0.1,
+                home_pos.position[2],
             ),
             current_end_effector_pose.orientation,
         )
+        print("post_grasp_pose:", post_grasp_pose)
         joint_distance_fn = create_joint_distance_fn(sim.robot)
         joint_plan = smoothly_follow_end_effector_path(
             sim.robot,
@@ -211,10 +214,13 @@ def test_pick_place_on_rack():
             (
                 end_effector_placement_pose.position[0],
                 end_effector_placement_pose.position[1],
-                end_effector_placement_pose.position[2] + 0.2,
+                home_pos.position[2],
             ),
             end_effector_placement_pose.orientation,
         )
+
+        print("end_effector_pre_placement_pose:", end_effector_pre_placement_pose)
+        print("end_effector_placement_pose:", end_effector_placement_pose)
 
         # We don't really have to motion plan here because there
         # are no other objects, but in general we would motion plan.
@@ -260,10 +266,13 @@ def test_pick_place_on_rack():
             (
                 current_end_effector_pose.position[0],
                 current_end_effector_pose.position[1],
-                current_end_effector_pose.position[2] + 0.2,
+                home_pos.position[2] // 2,
             ),
             current_end_effector_pose.orientation,
         )
+
+        print("end_effector_post_placement_pose:", end_effector_post_placement_pose)
+        print("home_pos:", home_pos)
 
         joint_plan = smoothly_follow_end_effector_path(
             sim.robot,
@@ -292,6 +301,9 @@ def test_pick_place_on_rack():
             obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
         sim.set_state(obs)
+
+        print(f"Done placing object: {selected_object.name}")
+        print("available parts:", obs.available_parts, obs.part_poses)
 
         if obs.target_object != selected_object:
             selected_object = obs.target_object

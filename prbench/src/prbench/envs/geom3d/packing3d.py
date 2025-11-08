@@ -32,7 +32,7 @@ from prbench.envs.geom3d.utils import Geom3DObjectCentricState, is_on_top
 from prbench.envs.utils import PURPLE
 
 
-@dataclass(frozen=True)
+# @dataclass(frozen=True)
 class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Packing3DEnv()."""
 
@@ -41,7 +41,7 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.25)
 
-    # rack (target) region.
+    # Rack (target) region.
     rack_half_extents: tuple[float, float, float] = (0.05, 0.1, 0.05)
     rack_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
@@ -57,6 +57,13 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Probability a part is triangular
     part_triangular_prob: float = 1.0
+
+    # Part IDs and features.
+    parts: dict[str, Object] = {}
+    part_ids: dict[str, int] = {}
+    part_ids_to_type: dict[int, Type] = {}
+    part_id_to_half_extents: dict[int, tuple[float, float, float]] = {}
+    part_ids_to_triangle_features: dict[int, tuple[float, float, float, float]] = {}
 
     def _sample_block_on_block_pose(
         self,
@@ -135,6 +142,36 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             base = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
             height = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
         return base, height, self.part_triangle_depth, float(triangle_type)
+
+    def recreate_part(
+        self,
+        part_id: int,
+        half_extents: tuple[float, float, float],
+        obj_type: Type,
+        physics_client_id: int,
+    ) -> int:
+        """Recreate a part with given half extents and type."""
+        if obj_type == Geom3DCuboidType:
+            part_id = create_pybullet_block(
+                self.part_rgba,
+                half_extents=half_extents,
+                physics_client_id=physics_client_id,
+                has_peg=True,
+            )
+        elif obj_type == Geom3DTriangleType:
+            part_id = create_pybullet_triangle(
+                self.part_rgba,
+                triangle_type={0: "equilateral", 1: "isosceles", 2: "right"}[
+                    int(self.part_ids_to_triangle_features[part_id][3])
+                ],
+                side_lengths=self.part_ids_to_triangle_features[part_id][:2],
+                depth=self.part_ids_to_triangle_features[part_id][2],
+                physics_client_id=physics_client_id,
+                has_peg=True,
+            )
+        else:
+            raise ValueError(f"Unsupported part type: {obj_type}")
+        return part_id
 
 
 class Packing3DObjectCentricState(Geom3DObjectCentricState):
@@ -251,6 +288,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
                 if obj.type == Geom3DCuboidType:
                     features[obj.name] = self.get_object_half_extents(obj.name)
                 elif obj.type == Geom3DTriangleType:
+                    # Only return side_a, side_b, depth (ignore triangle_type).
                     features[obj.name] = self.get_object_triangle_features(obj.name)[:3]
                 else:
                     raise ValueError(f"Unsupported part type: {obj.type}")
@@ -263,6 +301,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
         available_parts = []
         for obj in self.objects:
             if obj.name.startswith("part"):
+                print("checking part:", obj.name)
                 if self.get(obj, "grasp_active") < 0.5 and not is_on_top(
                     self.rack_pose,
                     self.rack_half_extents,
@@ -338,15 +377,6 @@ class ObjectCentricPacking3DEnv(
         )
         set_pose(self._rack_id, rack_pose, self.physics_client_id)
 
-        # Parts
-        self._parts: dict[str, Object] = {}
-        self._part_ids: dict[str, int] = {}
-        self._part_ids_to_type: dict[int, Type] = {}
-        self._part_id_to_half_extents: dict[int, tuple[float, float, float]] = {}
-        self._part_ids_to_triangle_features: dict[
-            int, tuple[float, float, float, float]
-        ] = {}
-
     @property
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
         return Packing3DObjectCentricState
@@ -357,17 +387,12 @@ class ObjectCentricPacking3DEnv(
     def _reset_objects(self) -> None:
 
         # Destroy previous parts.
-        for old_id in set(self._part_ids.values()):
+        for old_id in set(self.config.part_ids.values()):
             if old_id is not None:
                 p.removeBody(old_id, physicsClientId=self.physics_client_id)
 
         # Create parts and place them on the table with rejection sampling to avoid
-        # initial collisions. Parts are modeled as cuboids with fixed z-depth.
-        self._part_ids = {}
-        self._part_ids_to_type = {}
-        self._part_id_to_half_extents = {}
-        self._part_ids_to_triangle_features = {}
-        part_z_half_extent = 0.02  # fixed z-depth for all parts
+        # initial collisions.
         for i in range(self._num_parts):
             name = f"part{i}"
             # Type could be extended to support triangles in future.
@@ -376,7 +401,7 @@ class ObjectCentricPacking3DEnv(
                 if self.np_random.uniform() > self.config.part_triangular_prob
                 else Geom3DTriangleType
             )
-            # Sample part half extents from config.
+            # Sample part geometry and create the corresponding pybullet body.
             if part_type == Geom3DCuboidType:
                 sampled = self.config.sample_part_half_extents(self.np_random)
                 half_extents = (sampled[0], sampled[1], sampled[2])
@@ -386,59 +411,9 @@ class ObjectCentricPacking3DEnv(
                     physics_client_id=self.physics_client_id,
                     has_peg=True,
                 )
-                self._part_id_to_half_extents[part_id] = half_extents
-                self._part_ids[name] = part_id
-                self._part_ids_to_type[part_id] = Geom3DCuboidType
-
-                # Place part on table while avoiding collisions with other parts and
-                # the rack (we allow parts to start outside the rack)
-                for _ in range(100_000):
-                    # Sample a pose on the table surface.
-                    x = self.np_random.uniform(
-                        self.config.table_pose.position[0]
-                        - self.config.table_half_extents[0]
-                        + half_extents[0],
-                        self.config.table_pose.position[0]
-                        + self.config.table_half_extents[0] * 0.5
-                        - half_extents[0],
-                    )
-                    y = self.np_random.uniform(
-                        self.config.table_pose.position[1]
-                        - self.config.table_half_extents[1]
-                        + half_extents[1],
-                        self.config.table_pose.position[1]
-                        + self.config.table_half_extents[1]
-                        - half_extents[1],
-                    )
-                    z = (
-                        self.config.table_pose.position[2]
-                        + self.config.table_half_extents[2]
-                        + part_z_half_extent
-                    )
-                    set_pose(part_id, Pose((x, y, z)), self.physics_client_id)
-
-                    collision_exists = False
-                    for other_id in ({self._rack_id} | set(self._part_ids.values())) - {
-                        part_id
-                    }:
-                        if check_body_collisions(
-                            part_id, other_id, self.physics_client_id
-                        ):
-                            collision_exists = True
-                            break
-
-                        # distance = np.linalg.norm(
-                        #     np.array(p.getBasePositionAndOrientation(part_id)[0])
-                        #     - np.array(p.getBasePositionAndOrientation(other_id)[0])
-                        # )
-                        # if distance < 0.2:  # minimum distance between parts
-                        #     collision_exists = True
-                        #     break
-                    if not collision_exists:
-                        break
-                else:
-                    raise RuntimeError("Failed to sample part pose")
-
+                # Register metadata for cuboid
+                self.config.part_id_to_half_extents[part_id] = half_extents
+                self.config.part_ids_to_type[part_id] = Geom3DCuboidType
             elif part_type == Geom3DTriangleType:
                 side_a, side_b, depth, triangle_type = (
                     self.config.sample_part_triangle_features(self.np_random)
@@ -458,87 +433,75 @@ class ObjectCentricPacking3DEnv(
                     physics_client_id=self.physics_client_id,
                     has_peg=True,
                 )
-                self._part_id_to_half_extents[part_id] = half_extents
-                self._part_ids[name] = part_id
-                self._part_ids_to_type[part_id] = Geom3DTriangleType
-                self._part_ids_to_triangle_features[part_id] = (
+                # Register metadata for triangle
+                self.config.part_id_to_half_extents[part_id] = half_extents
+                self.config.part_ids_to_type[part_id] = Geom3DTriangleType
+                self.config.part_ids_to_triangle_features[part_id] = (
                     side_a,
                     side_b,
                     depth,
                     triangle_type,
                 )
-
-                # Place part on table while avoiding collisions with other parts and
-                # the rack (we allow parts to start outside the rack)
-                for _ in range(100_000):
-                    # Sample a pose on the table surface.
-                    x = self.np_random.uniform(
-                        self.config.table_pose.position[0]
-                        - self.config.table_half_extents[0]
-                        + half_extents[0],
-                        self.config.table_pose.position[0]
-                        + self.config.table_half_extents[0] * 0.5
-                        - half_extents[0],
-                    )
-                    y = self.np_random.uniform(
-                        self.config.table_pose.position[1]
-                        - self.config.table_half_extents[1]
-                        + half_extents[1],
-                        self.config.table_pose.position[1]
-                        + self.config.table_half_extents[1]
-                        - half_extents[1],
-                    )
-                    z = (
-                        self.config.table_pose.position[2]
-                        + self.config.table_half_extents[2]
-                        + part_z_half_extent
-                    )
-                    set_pose(part_id, Pose((x, y, z)), self.physics_client_id)
-
-                    collision_exists = False
-                    for other_id in ({self._rack_id} | set(self._part_ids.values())) - {
-                        part_id
-                    }:
-                        if check_body_collisions(
-                            part_id, other_id, self.physics_client_id
-                        ):
-                            collision_exists = True
-                            break
-
-                        # distance = np.linalg.norm(
-                        #     np.array(p.getBasePositionAndOrientation(part_id)[0])
-                        #     - np.array(p.getBasePositionAndOrientation(other_id)[0])
-                        # )
-                        # if distance < 0.2:  # minimum distance between parts
-                        #     collision_exists = True
-                        #     break
-
-                    if not collision_exists:
-                        break
-                else:
-                    raise RuntimeError("Failed to sample part pose")
-
             else:
                 raise ValueError(f"Unsupported part type: {part_type}")
 
+            # Register the created part name -> id mapping before placement so the
+            # rejection-sampling loop can reference existing parts.
+            self.config.part_ids[name] = part_id
+
+            # Place part on table while avoiding collisions with other parts and
+            # the rack (we allow parts to start outside the rack).
+            for _ in range(100_000):
+                # Sample a pose on the table surface.
+                x = self.np_random.uniform(
+                    self.config.table_pose.position[0]
+                    - self.config.table_half_extents[0]
+                    + half_extents[0],
+                    self.config.table_pose.position[0]
+                    + self.config.table_half_extents[0] * 0.5
+                    - half_extents[0],
+                )
+                y = self.np_random.uniform(
+                    self.config.table_pose.position[1]
+                    - self.config.table_half_extents[1]
+                    + half_extents[1],
+                    self.config.table_pose.position[1]
+                    + self.config.table_half_extents[1]
+                    - half_extents[1],
+                )
+                z = (
+                    self.config.table_pose.position[2]
+                    + self.config.table_half_extents[2]
+                    + self.config.part_triangle_depth
+                )
+                set_pose(part_id, Pose((x, y, z)), self.physics_client_id)
+
+                collision_exists = False
+                for other_id in (
+                    {self._rack_id} | set(self.config.part_ids.values())
+                ) - {part_id}:
+                    if check_body_collisions(part_id, other_id, self.physics_client_id):
+                        collision_exists = True
+                        break
+
+                if not collision_exists:
+                    break
+            else:
+                raise RuntimeError("Failed to sample part pose")
+
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
         assert isinstance(obs, Packing3DObjectCentricState)
-        # Update rack (recreate if half extents changed)
-        if self._rack_half_extents != getattr(
-            obs, "rack_half_extents", self._rack_half_extents
-        ):
-            if self._rack_id is not None:
-                p.removeBody(self._rack_id, physicsClientId=self.physics_client_id)
-            self._rack_half_extents = getattr(
-                obs, "rack_half_extents", self._rack_half_extents
-            )
-            self._rack_id = create_pybullet_block(
-                PURPLE + (0.8,),
-                half_extents=self._rack_half_extents,
-                physics_client_id=self.physics_client_id,
-            )
+
         if self._rack_id is not None:
-            # rack pose expected as a cuboid in the state
+            p.removeBody(self._rack_id, physicsClientId=self.physics_client_id)
+        self._rack_id = create_pybullet_block(
+            PURPLE + (0.8,),
+            half_extents=obs.rack_half_extents,
+            physics_client_id=self.physics_client_id,
+        )
+
+        if self._rack_id is not None:
+            # Rack pose expected as a cuboid in the state
             set_pose(self._rack_id, obs.get_object_pose("rack"), self.physics_client_id)
 
         parts = obs.part_poses
@@ -563,41 +526,25 @@ class ObjectCentricPacking3DEnv(
             part_id = self._object_name_to_pybullet_id(name)
             need_recreate = False
             need_destroy = False
-            if not self._part_ids:
+            if not self.config.part_ids:
                 need_recreate = True
             else:
-                current_half_extents = self._part_id_to_half_extents[part_id]
+                current_half_extents = self.config.part_id_to_half_extents[part_id]
                 need_recreate = current_half_extents != half_extents
                 need_destroy = need_recreate
             if need_recreate:
                 if need_destroy:
                     p.removeBody(part_id, physicsClientId=self.physics_client_id)
-                part_id = (
-                    create_pybullet_block(
-                        (0.2, 0.6, 0.2, 1.0),
-                        half_extents=half_extents,
-                        physics_client_id=self.physics_client_id,
-                    )
-                    if obj_type == Geom3DCuboidType
-                    else create_pybullet_triangle(
-                        (0.2, 0.6, 0.2, 1.0),
-                        triangle_type={0: "equilateral", 1: "isosceles", 2: "right"}[
-                            int(self._part_ids_to_triangle_features[part_id][3])
-                        ],
-                        side_lengths=(
-                            self._part_ids_to_triangle_features[part_id][0],
-                            self._part_ids_to_triangle_features[part_id][1],
-                        ),
-                        depth=self._part_ids_to_triangle_features[part_id][2],
-                        physics_client_id=self.physics_client_id,
-                    )
+                part_id = self.config.recreate_part(
+                    part_id, half_extents, obj_type, self.physics_client_id
                 )
-                self._part_ids[name] = part_id
-                self._part_id_to_half_extents[part_id] = half_extents
-                self._part_ids_to_type[part_id] = obj_type
+
+                self.config.part_ids[name] = part_id
+                self.config.part_id_to_half_extents[part_id] = half_extents
+                self.config.part_ids_to_type[part_id] = obj_type
                 if obj_type == Geom3DTriangleType:
-                    self._part_ids_to_triangle_features[part_id] = (
-                        self._part_ids_to_triangle_features[part_id]
+                    self.config.part_ids_to_triangle_features[part_id] = (
+                        self.config.part_ids_to_triangle_features[part_id]
                     )
             set_pose(part_id, pose, self.physics_client_id)
 
@@ -608,18 +555,18 @@ class ObjectCentricPacking3DEnv(
         if object_name == "table":
             return self.table_id
         if object_name.startswith("part"):
-            return self._part_ids[object_name]
+            return self.config.part_ids[object_name]
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
         ids = {self.table_id}
         if self._rack_id is not None:
             ids.add(self._rack_id)
-        ids |= set(self._part_ids.values())
+        ids |= set(self.config.part_ids.values())
         return ids
 
     def _get_movable_object_names(self) -> set[str]:
-        return set(self._part_ids.keys())
+        return set(self.config.part_ids.keys())
 
     def _get_surface_object_names(self) -> set[str]:
         # The rack and table are surfaces.
@@ -635,7 +582,7 @@ class ObjectCentricPacking3DEnv(
             return self.config.table_half_extents
         assert object_name.startswith("part")
         part_id = self._object_name_to_pybullet_id(object_name)
-        return self._part_id_to_half_extents[part_id]
+        return self.config.part_id_to_half_extents[part_id]
 
     def _get_triangle_features(
         self, object_name: str
@@ -643,15 +590,18 @@ class ObjectCentricPacking3DEnv(
         if not object_name.startswith("part"):
             raise ValueError(f"Object {object_name} is not a part")
         part_id = self._object_name_to_pybullet_id(object_name)
-        if part_id not in self._part_ids_to_triangle_features:
+        if part_id not in self.config.part_ids_to_triangle_features:
             raise ValueError(f"Object {object_name} is not a triangle")
-        return self._part_ids_to_triangle_features[part_id]
+        return self.config.part_ids_to_triangle_features[part_id]
 
     def _get_obs(self) -> Packing3DObjectCentricState:
         state_dict = self._create_state_dict(
             [("robot", Geom3DRobotType), ("rack", Geom3DCuboidType)]
             + [
-                (f"part{i}", self._part_ids_to_type[self._part_ids[f"part{i}"]])
+                (
+                    f"part{i}",
+                    self.config.part_ids_to_type[self.config.part_ids[f"part{i}"]],
+                )
                 for i in range(self._num_parts)
             ]
         )
