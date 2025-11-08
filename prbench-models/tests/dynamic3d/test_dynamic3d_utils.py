@@ -122,7 +122,13 @@ def test_run_base_motion_planning():
     y_bounds = (-1.5, 1.5)
     seed = 123
     base_motion_plan = run_base_motion_planning(
-        state, target_base_pose, x_bounds, y_bounds, seed, extend_xy_magnitude=0.5, extend_rot_magnitude=np.pi / 2,
+        state,
+        target_base_pose,
+        x_bounds,
+        y_bounds,
+        seed,
+        extend_xy_magnitude=0.5,
+        extend_rot_magnitude=np.pi / 2,
     )
     assert base_motion_plan is not None
 
