@@ -7,7 +7,10 @@ from bilevel_planning.structs import (
 )
 from gymnasium.spaces import Space
 from numpy.typing import NDArray
-from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoTidyBotRobotObjectType
+from prbench.envs.dynamic3d.object_types import (
+    MujocoObjectType,
+    MujocoTidyBotRobotObjectType,
+)
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBot3DRobotActionSpace
 from prbench_models.dynamic3d.base_motion.parameterized_skills import (
