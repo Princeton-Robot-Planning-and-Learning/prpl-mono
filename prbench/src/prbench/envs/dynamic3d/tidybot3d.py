@@ -259,9 +259,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self._robot_env.sim.forward()
 
     @abc.abstractmethod
-    def _create_action_space(
+    def _create_action_space(  # type: ignore
         self, config: TidyBot3DConfig
-    ) -> Space[Array]:  # type: ignore
+    ) -> Space[Array]:
         """Create action space for TidyBot's control interface."""
 
     def reset(
@@ -472,9 +472,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
     """TidyBot-specific implementation of object-centric robot environment."""
 
-    def _create_action_space(
+    def _create_action_space(  # type: ignore
         self, config: TidyBot3DConfig
-    ) -> Space[Array]:  # type: ignore
+    ) -> Space[Array]:
         """Create action space for TidyBot's control interface."""
         return TidyBot3DRobotActionSpace()
 
@@ -643,9 +643,9 @@ https://github.com/tidybot2/tidybot2
 class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
     """RBY1A-specific implementation of object-centric robot environment."""
 
-    def _create_action_space(
+    def _create_action_space(  # type: ignore
         self, config: TidyBot3DConfig
-    ) -> Space[Array]:  # type: ignore
+    ) -> Space[Array]:
         """Create action space for TidyBot's control interface."""
         return RBY1ARobotActionSpace()
 
