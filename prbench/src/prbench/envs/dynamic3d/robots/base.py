@@ -23,9 +23,9 @@ class RobotEnv(MujocoEnv, abc.ABC):
         super().__init__(*args, **kwargs)
 
         # Robot state/actuator references (initialized in _setup_robot_references)
-        self.qpos: dict[str, NDArray[np.float64]] | None = {}
-        self.qvel: dict[str, NDArray[np.float64]] | None = {}
-        self.ctrl: dict[str, NDArray[np.float64]] | None = {}
+        self.qpos: dict[str, NDArray[np.float64]] = {}
+        self.qvel: dict[str, NDArray[np.float64]] = {}
+        self.ctrl: dict[str, NDArray[np.float64]] = {}
 
     @abc.abstractmethod
     def reset(
@@ -55,7 +55,7 @@ class RobotEnv(MujocoEnv, abc.ABC):
         Returns:
             A tuple containing (observation, reward, terminated, truncated, info).
         """
-        super().step(action)
+        return super().step(action)
 
     @abc.abstractmethod
     def reward(self, obs: MjObs) -> float:
