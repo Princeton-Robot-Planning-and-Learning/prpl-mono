@@ -106,8 +106,6 @@ class RBY1ARobotEnv(RobotEnv):
         self._randomize_base_pose()
         self._randomize_arm_and_torso_pose()
 
-        self._setup_controllers()
-
         return self.get_obs(), {}
 
     def _insert_robot_into_xml(self, xml_string: str) -> str:
@@ -494,17 +492,6 @@ class RBY1ARobotEnv(RobotEnv):
         return self.sim.data._data.qfrc_bias[  # pylint: disable=protected-access
             self.joint_indices
         ]
-
-    def _setup_controllers(self) -> None:
-        """Set up operational space controller for the robot."""
-        from prbench_models.tidybot.osc import (  # pylint: disable=import-outside-toplevel
-            OperationalSpaceController,
-        )
-
-        assert self.sim is not None, "Simulation must be initialized"
-        self.controller = OperationalSpaceController(  # pylint: disable=attribute-defined-outside-init
-            self
-        )
 
     def _update_ctrl(self, action) -> None:
         start = 0
