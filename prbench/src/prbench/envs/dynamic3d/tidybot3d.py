@@ -259,7 +259,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self._robot_env.sim.forward()
 
     @abc.abstractmethod
-    def _create_action_space(self, config: TidyBot3DConfig) -> Space[Array]:  # type: ignore
+    def _create_action_space(
+        self, config: TidyBot3DConfig
+    ) -> Space[Array]:  # type: ignore
         """Create action space for TidyBot's control interface."""
 
     def reset(
@@ -468,7 +470,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
 
 class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
-    def _create_action_space(self, config: TidyBot3DConfig) -> Space[Array]:  # type: ignore
+    """TidyBot-specific implementation of object-centric robot environment."""
+
+    def _create_action_space(
+        self, config: TidyBot3DConfig
+    ) -> Space[Array]:  # type: ignore
         """Create action space for TidyBot's control interface."""
         return TidyBot3DRobotActionSpace()
 
@@ -635,7 +641,11 @@ https://github.com/tidybot2/tidybot2
 
 
 class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
-    def _create_action_space(self, config: TidyBot3DConfig) -> Space[Array]:  # type: ignore
+    """RBY1A-specific implementation of object-centric robot environment."""
+
+    def _create_action_space(
+        self, config: TidyBot3DConfig
+    ) -> Space[Array]:  # type: ignore
         """Create action space for TidyBot's control interface."""
         return RBY1ARobotActionSpace()
 
@@ -649,7 +659,7 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         state_dict[robot] = {
             "pos_base_right": self._robot_env.qpos["base"][0],
             "pos_base_left": self._robot_env.qpos["base"][1],
-            # TODO add more attributes
+            # TODO add more attributes  # pylint: disable=fixme
         }
         return state_dict
 
@@ -667,7 +677,7 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         ]
         self._robot_env.qpos["base"][:] = robot_base_pos
 
-        # TODO add more attributes
+        # TODO add more attributes  # pylint: disable=fixme
 
 
 class RBY1A3DEnv(ConstantObjectPRBenchEnv):
