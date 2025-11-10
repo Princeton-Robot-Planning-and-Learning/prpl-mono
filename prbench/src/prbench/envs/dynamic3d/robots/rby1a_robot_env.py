@@ -19,14 +19,18 @@ class RBY1ARobotActionSpace(RobotActionSpace):
     """An action in a MuJoCo environment; used to set sim.data.ctrl in MuJoCo."""
 
     def __init__(self) -> None:
-        # Robot actions: joint positions for 2 base joints, 6 torso joints, 7 right arm joints, 7 left arm joints, 2 head joints
+        # Robot actions: joint positions for 2 base joints, 6 torso joints,
+        # 7 right arm joints, 7 left arm joints, 2 head joints
         low = np.array([-300] * 24)
         high = np.array([300] * 24)
         super().__init__(low, high)
 
     def create_markdown_description(self) -> str:
         """Create a human-readable markdown description of this space."""
-        return """Actions: joint positions for 2 base joints, 6 torso joints, 7 right arm joints, 7 left arm joints, 2 head joints"""
+        return (
+            """Actions: joint positions for 2 base joints, 6 torso joints, """
+            """7 right arm joints, 7 left arm joints, 2 head joints"""
+        )
 
 
 class RBY1ARobotEnv(RobotEnv):
@@ -67,6 +71,11 @@ class RBY1ARobotEnv(RobotEnv):
         )
 
         self.act_delta = act_delta
+
+        # Initialize robot state attributes
+        self.joint_indices: list[int] = []
+        self.joint_indices_ctrl: list[int] = []
+        self.exclude_parts: list[str] = []
 
     def reset(
         self,
@@ -172,11 +181,13 @@ class RBY1ARobotEnv(RobotEnv):
                 input_section = input_root.find(child.tag)  # type: ignore[union-attr]
                 if input_section is not None:
                     for sub_child in list(child):
-                        # Check if the asset element has a "file" attribute and make it absolute
+                        # Check if the asset element has a "file" attribute
+                        # and make it absolute
                         if sub_child.get("file") is not None:
                             file_path = sub_child.get("file")
                             if file_path and not Path(file_path).is_absolute():
-                                # Make the file path absolute relative to the assets directory
+                                # Make the file path absolute relative to the
+                                # assets directory
                                 absolute_path = models_dir / file_path
                                 sub_child.set("file", str(absolute_path.resolve()))
                         input_section.append(sub_child)
@@ -271,7 +282,9 @@ class RBY1ARobotEnv(RobotEnv):
         # Actuators: actuator_id corresponds to ctrl index
         ctrl_indices = {
             part: [
-                self.sim.model._actuator_name2id[actuator_name]
+                self.sim.model._actuator_name2id[  # pylint: disable=protected-access
+                    actuator_name
+                ]
                 for actuator_name in actuator_names
             ]
             for part, actuator_names in robot_actuator_names.items()
@@ -309,21 +322,27 @@ class RBY1ARobotEnv(RobotEnv):
         }
 
         self.qpos = {
-            part: self.sim.data._data.qpos[start:end]
+            part: self.sim.data._data.qpos[  # pylint: disable=protected-access
+                start:end
+            ]
             for part, (start, end) in qpos_start_end.items()
         }
         self.qvel = {
-            part: self.sim.data._data.qvel[start:end]
+            part: self.sim.data._data.qvel[  # pylint: disable=protected-access
+                start:end
+            ]
             for part, (start, end) in qvel_start_end.items()
         }
         self.ctrl = {
-            part: self.sim.data._data.ctrl[start:end]
+            part: self.sim.data._data.ctrl[  # pylint: disable=protected-access
+                start:end
+            ]
             for part, (start, end) in ctrl_start_end.items()
         }
 
         # Store all joint indices (in qvel) for which joint torques will be computed.
-        self.joint_indices = []
-        self.joint_indices_ctrl = []  # This could be used to set ctrl directly
+        self.joint_indices.clear()
+        self.joint_indices_ctrl.clear()  # This could be used to set ctrl directly
         self.exclude_parts = ["base"]  # Exclude base joints from jacobian
         for part in qvel_indices:
             if part not in self.exclude_parts:  # exclude base joints from jacobian
@@ -415,7 +434,7 @@ class RBY1ARobotEnv(RobotEnv):
         self.sim.forward()  # Update the simulation state
 
     @property
-    def jacobian_mat(self) -> NDArray[float]:
+    def jacobian_mat(self) -> NDArray[np.float64]:
         """Returns the pos and ori jacobian for the robot joints."""
         body_name = "EE_BODY_R"
         jacobian_pos = self.sim.data.get_body_jacp(body_name)[
@@ -428,20 +447,32 @@ class RBY1ARobotEnv(RobotEnv):
         return jacobian
 
     @property
-    def mass_mat(self) -> NDArray[float]:
+    def mass_mat(self) -> NDArray[np.float64]:
         """Returns the mass matrix for the robot joints."""
         mass_matrix = np.ndarray(
-            shape=(self.sim.model._model.nv, self.sim.model._model.nv), dtype=np.float64
+            shape=(
+                self.sim.model._model.nv,  # pylint: disable=protected-access
+                self.sim.model._model.nv,  # pylint: disable=protected-access
+            ),
+            dtype=np.float64,
         )
-        mujoco.mj_fullM(self.sim.model._model, mass_matrix, self.sim.data._data.qM)
+        mujoco.mj_fullM(  # pylint: disable=no-member
+            self.sim.model._model,  # pylint: disable=no-member,protected-access
+            mass_matrix,
+            self.sim.data._data.qM,  # pylint: disable=no-member,protected-access
+        )
         mass_matrix = np.reshape(
-            mass_matrix, (self.sim.model._model.nv, self.sim.model._model.nv)
+            mass_matrix,
+            (
+                self.sim.model._model.nv,  # pylint: disable=protected-access
+                self.sim.model._model.nv,  # pylint: disable=protected-access
+            ),
         )
         mass_matrix = mass_matrix[self.joint_indices, :][:, self.joint_indices]
         return mass_matrix
 
     @property
-    def lambda_mat(self) -> NDArray[float]:
+    def lambda_mat(self) -> NDArray[np.float64]:
         """Returns the lambda matrix for the robot."""
 
         jacobian = self.jacobian_mat
@@ -458,14 +489,22 @@ class RBY1ARobotEnv(RobotEnv):
         return lambda_full
 
     @property
-    def torque_compensation(self) -> NDArray[float]:
-        return self.sim.data._data.qfrc_bias[self.joint_indices]
+    def torque_compensation(self) -> NDArray[np.float64]:
+        """Return torque compensation values."""
+        return self.sim.data._data.qfrc_bias[  # pylint: disable=protected-access
+            self.joint_indices
+        ]
 
     def _setup_controllers(self) -> None:
-        from prbench_models.tidybot.osc import OperationalSpaceController
+        """Set up operational space controller for the robot."""
+        from prbench_models.tidybot.osc import (  # pylint: disable=import-outside-toplevel
+            OperationalSpaceController,
+        )
 
         assert self.sim is not None, "Simulation must be initialized"
-        self.controller = OperationalSpaceController(self)
+        self.controller = OperationalSpaceController(  # pylint: disable=attribute-defined-outside-init
+            self
+        )
 
     def _update_ctrl(self, action) -> None:
         start = 0
