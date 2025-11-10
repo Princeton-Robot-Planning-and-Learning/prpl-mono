@@ -137,7 +137,7 @@ class RBY1ARobotEnv(RobotEnv):
             robot_compiler.set("meshdir", str(assets_dir.resolve()))
 
         # Helper function to recursively make include file paths absolute
-        def make_include_paths_absolute(element):
+        def make_include_paths_absolute(element: ET.Element) -> None:
             """Recursively process an element and its children to make include file
             paths absolute."""
             if element.tag == "include" and element.get("file") is not None:
@@ -434,11 +434,12 @@ class RBY1ARobotEnv(RobotEnv):
     @property
     def jacobian_mat(self) -> NDArray[np.float64]:
         """Returns the pos and ori jacobian for the robot joints."""
-        body_name = "EE_BODY_R"
-        jacobian_pos = self.sim.data.get_body_jacp(body_name)[
+        assert self.sim is not None, "Simulation must be initialized."
+        body_name = "EE_BODY_R"  # End-effector body name (using right arm only)
+        jacobian_pos = self.sim.data.get_body_jacp(body_name)[  # type: ignore[no-untyped-call]
             :, self.joint_indices
         ]  # (3, num_joints)
-        jacobian_ori = self.sim.data.get_body_jacr(body_name)[
+        jacobian_ori = self.sim.data.get_body_jacr(body_name)[  # type: ignore[no-untyped-call]
             :, self.joint_indices
         ]  # (3, num_joints)
         jacobian = np.concatenate([jacobian_pos, jacobian_ori], 0)  # (6, num_joints)
@@ -447,7 +448,8 @@ class RBY1ARobotEnv(RobotEnv):
     @property
     def mass_mat(self) -> NDArray[np.float64]:
         """Returns the mass matrix for the robot joints."""
-        mass_matrix = np.ndarray(
+        assert self.sim is not None, "Simulation must be initialized."
+        mass_matrix: NDArray[np.float64] = np.ndarray(
             shape=(
                 self.sim.model._model.nv,  # pylint: disable=protected-access
                 self.sim.model._model.nv,  # pylint: disable=protected-access
@@ -489,6 +491,7 @@ class RBY1ARobotEnv(RobotEnv):
     @property
     def torque_compensation(self) -> NDArray[np.float64]:
         """Return torque compensation values."""
+        assert self.sim is not None, "Simulation must be initialized."
         return self.sim.data._data.qfrc_bias[  # pylint: disable=protected-access
             self.joint_indices
         ]
