@@ -179,7 +179,8 @@ class TidyBotRobotEnv(RobotEnv):
                 "fingers_actuator"
             ]
         )
-        self.qpos["gripper"] = None  # type: ignore[assignment]  # gripper not implemented
+        # gripper not implemented
+        self.qpos["gripper"] = None  # type: ignore[assignment]
         self.ctrl["gripper"] = (
             self.sim.data._data.ctrl[  # pylint: disable=protected-access
                 gripper_ctrl_id : gripper_ctrl_id + 1
