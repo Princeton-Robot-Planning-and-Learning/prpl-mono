@@ -7,7 +7,10 @@ from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
 )
-from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoTidyBotRobotObjectType
+from prbench.envs.dynamic3d.object_types import (
+    MujocoObjectType,
+    MujocoTidyBotRobotObjectType,
+)
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBot3DRobotActionSpace
 from relational_structs import (
     Array,
