@@ -134,6 +134,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         """Compute the reward from an observation."""
 
     def _update_ctrl(self, action: Array) -> None:
+        assert self.sim is not None, "Simulation must be initialized."
         self.sim.data._data.ctrl[:] = action  # pylint: disable=protected-access
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
