@@ -72,5 +72,5 @@ MujocoRBY1ARobotObjectType = Type("mujoco_rby1a_robot")
 MujocoObjectTypeFeatures[MujocoRBY1ARobotObjectType] = [
     "pos_base_right",
     "pos_base_left",
-    # TODO add more attributes
+    # TODO add more attributes  # pylint: disable=fixme
 ]
