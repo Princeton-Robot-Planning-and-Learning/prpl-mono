@@ -60,6 +60,8 @@ MjObs: TypeAlias = dict[str, NDArray[Any]]
 class MujocoEnv(gymnasium.Env[MjObs, Array]):
     """This is the base class for environments that use MuJoCo for simulation."""
 
+    # pylint: disable=protected-access
+
     def __init__(
         self,
         control_frequency: float,
@@ -132,7 +134,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         """Compute the reward from an observation."""
 
     def _update_ctrl(self, action: Array) -> None:
-        self.sim.data._data.ctrl[:] = action
+        self.sim.data._data.ctrl[:] = action  # pylint: disable=protected-access
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         assert self.sim is not None, "Simulation must be initialized before stepping."
@@ -171,8 +173,10 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
 
-        self.sim.data._data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = np.array(
-            [float(x) for x in pos] + [float(q) for q in quat]
+        self.sim.data._data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = (
+            np.array(
+                [float(x) for x in pos] + [float(q) for q in quat]
+            )
         )
 
     def get_joint_pos_quat(
@@ -182,8 +186,12 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         assert self.sim is not None, "Simulation not initialized"
         joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
-        pos = self.sim.data._data.qpos[joint_qpos_addr : joint_qpos_addr + 3]
-        quat = self.sim.data._data.qpos[joint_qpos_addr + 3 : joint_qpos_addr + 7]
+        pos = self.sim.data._data.qpos[
+            joint_qpos_addr : joint_qpos_addr + 3
+        ]
+        quat = self.sim.data._data.qpos[
+            joint_qpos_addr + 3 : joint_qpos_addr + 7
+        ]
         return pos, quat
 
     def set_joint_vel(
@@ -214,7 +222,9 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         assert self.sim is not None, "Simulation not initialized"
         joint_qvel_addr = self.sim.model.get_joint_qvel_addr(name)
-        linear_vel = self.sim.data._data.qvel[joint_qvel_addr : joint_qvel_addr + 3]
+        linear_vel = self.sim.data._data.qvel[
+            joint_qvel_addr : joint_qvel_addr + 3
+        ]
         angular_vel = self.sim.data._data.qvel[
             joint_qvel_addr + 3 : joint_qvel_addr + 6
         ]
@@ -226,8 +236,12 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         # Add a copy of qpos and qvel to observation
         obs_dict: dict[str, NDArray[Any]] = {
-            "qpos": np.copy(self.sim.data._data.qpos),
-            "qvel": np.copy(self.sim.data._data.qvel),
+            "qpos": np.copy(
+                self.sim.data._data.qpos
+            ),
+            "qvel": np.copy(
+                self.sim.data._data.qvel
+            ),
         }
 
         # Render images and update obs_dict
@@ -285,7 +299,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         if self.show_viewer:
             mujoco.viewer.launch(
                 self.sim.model._model,  # pylint: disable=protected-access
-                self.sim.data._data,
+                self.sim.data._data,  # pylint: disable=protected-access
                 show_left_ui=False,
                 show_right_ui=False,
             )
@@ -526,8 +540,10 @@ class MjModel:
 
 
 class MjData:
+    """A simplified MjData class for MuJoCo data."""
 
     # pylint: disable=no-member
+    # pylint: disable=protected-access
 
     def __init__(self, model: MjModel):
         self.model = model
@@ -565,7 +581,9 @@ class MjData:
         """
         body_id = self.model._body_name2id[name]
         jacp = np.zeros((3, self.model._model.nv))
-        mujoco.mj_jacBody(self.model._model, self._data, jacp, None, body_id)
+        mujoco.mj_jacBody(
+            self.model._model, self._data, jacp, None, body_id
+        )
         return jacp
 
     def get_body_jacr(self, name):
@@ -578,7 +596,9 @@ class MjData:
         """
         body_id = self.model._body_name2id[name]
         jacr = np.zeros((3, self.model._model.nv))
-        mujoco.mj_jacBody(self.model._model, self._data, jacr, None, body_id)
+        mujoco.mj_jacBody(
+            self.model._model, self._data, jacr, None, body_id
+        )
         return jacr
 
     def get_body_xvelp(self, name):
