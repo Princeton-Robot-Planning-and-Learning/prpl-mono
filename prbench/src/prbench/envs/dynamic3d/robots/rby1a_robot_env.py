@@ -436,14 +436,16 @@ class RBY1ARobotEnv(RobotEnv):
         """Returns the pos and ori jacobian for the robot joints."""
         assert self.sim is not None, "Simulation must be initialized."
         body_name = "EE_BODY_R"  # End-effector body name (using right arm only)
-        jacobian_pos = \
-            self.sim.data.get_body_jacp(body_name)[  # type: ignore[no-untyped-call]
-                :, self.joint_indices
-            ]  # (3, num_joints)
-        jacobian_ori = \
-            self.sim.data.get_body_jacr(body_name)[  # type: ignore[no-untyped-call]
-                :, self.joint_indices
-            ]  # (3, num_joints)
+        jacobian_pos = self.sim.data.get_body_jacp(
+            body_name
+        )[  # type: ignore[no-untyped-call]
+            :, self.joint_indices
+        ]  # (3, num_joints)
+        jacobian_ori = self.sim.data.get_body_jacr(
+            body_name
+        )[  # type: ignore[no-untyped-call]
+            :, self.joint_indices
+        ]  # (3, num_joints)
         jacobian = np.concatenate([jacobian_pos, jacobian_ori], 0)  # (6, num_joints)
         return jacobian
 
