@@ -89,6 +89,10 @@ def test_run_base_motion_planning() -> None:
         reach_target_pose(interface, pose, map_to_odom_converter, odom_to_map_converter)
         time.sleep(0.1)
 
+    time.sleep(1)
+    interface.close()
+    print("Interface closed")
+
 
 if __name__ == "__main__":
     test_run_base_motion_planning()

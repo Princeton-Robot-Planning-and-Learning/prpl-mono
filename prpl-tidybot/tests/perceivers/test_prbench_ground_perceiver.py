@@ -12,7 +12,7 @@ def test_prbench_ground_perceiver():
     """Tests for PRBenchGroundPerceiver()."""
     interface = FakeInterface()
     interface.arm_interface.arm_state = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    interface.base_interface.base_state = spatialmath.SE2(x=1.0, y=0.0, theta=0.0)
+    interface.base_interface.map_base_state = spatialmath.SE2(x=1.0, y=0.0, theta=0.0)
     perceiver = PRBenchGroundPerceiver(interface)
     state = perceiver.get_state()
     robot_obj = state.get_object_from_name("robot")
