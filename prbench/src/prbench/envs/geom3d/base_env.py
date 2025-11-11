@@ -483,6 +483,7 @@ class ObjectCentricGeom3DRobotEnv(
                     half_extent_names, half_extents, strict=True
                 ):
                     feats[feat_name] = feat
+                feats["object_type"] = -1.0  # cuboid
             # Handle points.
             elif object_type == Geom3DPointType:
                 # Add position.
@@ -491,35 +492,6 @@ class ObjectCentricGeom3DRobotEnv(
                 feats["x"] = pose.position[0]
                 feats["y"] = pose.position[1]
                 feats["z"] = pose.position[2]
-            # Handle triangles.
-            elif object_type == Geom3DTriangleType:
-                body_id = self._object_name_to_pybullet_id(object_name)
-                pose = get_pose(body_id, self.physics_client_id)
-                pose_feat_names = [
-                    "pose_x",
-                    "pose_y",
-                    "pose_z",
-                    "pose_qx",
-                    "pose_qy",
-                    "pose_qz",
-                    "pose_qw",
-                ]
-                pose_feats = list(pose.position) + list(pose.orientation)
-                for feat_name, feat in zip(pose_feat_names, pose_feats, strict=True):
-                    feats[feat_name] = feat
-                # Add grasp active.
-                if self._grasped_object == object_name:
-                    feats["grasp_active"] = 1
-                else:
-                    feats["grasp_active"] = 0
-                # Triangle-specific features (fallback to 0).
-                # Here we use _get_triangle_features implemented within the envs.
-                a, b, depth, ttype = self._get_triangle_features(object_name)
-                feats["triangle_type"] = float(ttype)
-                feats["side_a"] = float(a)
-                feats["side_b"] = float(b)
-                feats["depth"] = float(depth)
-
             else:
                 raise NotImplementedError(f"Unsupported object type: {object_type}")
             # Add feats to state dict.

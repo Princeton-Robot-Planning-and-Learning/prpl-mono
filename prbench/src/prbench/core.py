@@ -212,14 +212,6 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
     def _create_references_markdown_description(self) -> str:
         """Create a markdown description of the reference (e.g. papers) for this env."""
 
-    def update_constant_objects(self, obs: ObjectCentricState) -> None:
-        """Update the constant objects in the observation space."""
-        obj_name_to_obj = {o.name: o for o in obs}
-        obj_names = self._get_constant_object_names(obs)
-        self._constant_objects = [obj_name_to_obj[o] for o in obj_names]
-        assert isinstance(self.observation_space, ObjectCentricBoxSpace)
-        self.observation_space.update_constant_objects(self._constant_objects)
-
     def reset(self, *args, **kwargs) -> tuple[NDArray[Any], dict]:
         super().reset(*args, **kwargs)  # necessary to reset RNG if seed is given
         if (kwargs.get("options") is not None) and (
@@ -237,7 +229,6 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
                 kwargs["options"]["init_state"] = obj_centric_state
         obs, info = self._object_centric_env.reset(*args, **kwargs)
         # check if args/kwargs have a flag to update constant objects
-        self.update_constant_objects(obs)
         assert isinstance(self.observation_space, ObjectCentricBoxSpace)
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, info

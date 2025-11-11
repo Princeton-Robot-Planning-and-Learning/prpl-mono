@@ -12,6 +12,7 @@ from pybullet_helpers.motion_planning import (
     smoothly_follow_end_effector_path,
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
+from relational_structs import Object
 
 from prbench.envs.geom3d.packing3d import (
     ObjectCentricPacking3DEnv,
@@ -37,13 +38,24 @@ def test_packing3d_env_basic():
 
         env.close()
 
+def get_target_object_from_obs(
+    obs: Packing3DObjectCentricState,
+) -> Object | None:
+    """Get the target object from the observation."""
+    available_parts = obs.available_parts
+    if not available_parts:
+        return None
+    # For simplicity, just choose the first available part.
+    target_part_name = available_parts[0]
+    return obs.get_object_from_name(target_part_name)
+
 
 def test_pick_place_on_rack():
     """Test that picking and placing can be executed for any object."""
     # Create the real environment.
 
     num_parts = 2
-    env = Packing3DEnv(num_parts=num_parts, use_gui=True, render_mode="rgb_array")
+    env = Packing3DEnv(num_parts=num_parts, use_gui=False, render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
     if MAKE_VIDEOS:
@@ -71,13 +83,13 @@ def test_pick_place_on_rack():
         max_candidate_plans = 1
 
     # sample placement coefficients for each part
-    x_coeffs = np.linspace(0.7, -0.7, num_parts)
-    y_coeffs = np.linspace(0.7, -0.7, num_parts)
+    x_coeffs = np.linspace(0.5, -0.5, num_parts)
+    y_coeffs = np.linspace(0.5, -0.5, num_parts)
     # np.random.shuffle(x_coeffs)
     # np.random.shuffle(y_coeffs)
 
     # First, move to pre-grasp pose (top-down).
-    selected_object = obs.target_object
+    selected_object = get_target_object_from_obs(obs)
     assert selected_object is not None, "No target object selected"
 
     peg_height = 0.05
@@ -293,8 +305,10 @@ def test_pick_place_on_rack():
 
         sim.set_state(obs)
 
-        if obs.target_object != selected_object:
-            selected_object = obs.target_object
+        target_object = get_target_object_from_obs(obs)
+
+        if target_object != selected_object:
+            selected_object = target_object
             x_coeffs = x_coeffs[1:]
             y_coeffs = y_coeffs[1:]
 

@@ -38,6 +38,7 @@ Geom3DEnvTypeFeatures[Geom3DCuboidType] = [
     "pose_qz",
     "pose_qw",
     "grasp_active",
+    "object_type",  # encoded as an int or small float category just like triangle_type to make things uniform
     "half_extent_x",
     "half_extent_y",
     "half_extent_z",
