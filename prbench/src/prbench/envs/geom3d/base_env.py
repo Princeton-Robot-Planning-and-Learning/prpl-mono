@@ -87,7 +87,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
             "camera_target": self.robot_base_pose.position,
             "camera_yaw": 90,
             "camera_distance": 1.5,
-            "camera_pitch": -80,
+            "camera_pitch": -20,
         }
 
 
