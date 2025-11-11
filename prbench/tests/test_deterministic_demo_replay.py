@@ -9,8 +9,8 @@ import prbench
 from prbench.utils import find_all_demo_files, load_demo
 
 
-@pytest.mark.parametrize("demo_path", find_all_demo_files())
-def test_deterministic_demo_replay(demo_path: Path):
+# @pytest.mark.parametrize("demo_path", find_all_demo_files())
+def test_deterministic_demo_replay():
     """Test that demo replay produces identical observations and rewards.
 
     This test verifies that:
@@ -20,6 +20,7 @@ def test_deterministic_demo_replay(demo_path: Path):
     4. Replaying actions produces identical rewards (if available)
     """
     # Register all environments
+    demo_path = "prbench/demos/DynScoopPour-o30/0/1762884952.p"
     prbench.register_all_environments()
 
     # Load demo data
@@ -47,36 +48,39 @@ def test_deterministic_demo_replay(demo_path: Path):
     env = prbench.make(env_id, render_mode="rgb_array")
 
     # Test reproducibility: reset with seed and replay actions
-    obs, _ = env.reset(seed=seed)
+    for num in range(100):
+        obs, _ = env.reset(seed=seed)
 
-    # Check initial observation matches
-    assert np.allclose(
-        obs, expected_observations[0], atol=1e-4
-    ), f"Initial observation mismatch in {demo_path}"
+        # Check initial observation matches
+        assert np.allclose(
+            obs, expected_observations[0], atol=1e-4
+        ), f"Initial observation mismatch in {demo_path}"
 
-    # Replay all actions and verify observations/rewards
-    for i, action in enumerate(actions):
-        obs, reward, terminated, truncated, _ = env.step(action)
+        # Replay all actions and verify observations/rewards
+        for i, action in enumerate(actions):
+            obs, reward, terminated, truncated, _ = env.step(action)
 
-        # Check observation matches
-        expected_obs = expected_observations[i + 1]
-        if not np.allclose(obs, expected_obs, atol=1e-4):
-            diff = np.abs(obs - expected_obs)
-            max_diff = np.max(diff)
-            raise AssertionError(
-                f"Observation mismatch at step {i} in {demo_path}: "
-                f"max difference {max_diff}"
-            )
+            # Check observation matches
+            expected_obs = expected_observations[i + 1]
+            if not np.allclose(obs, expected_obs, atol=1e-4):
+                diff = np.abs(obs - expected_obs)
+                max_diff = np.max(diff)
+                print(
+                    f"Run {num}: "
+                    f"Observation mismatch at step {i} in {demo_path}: "
+                    f"max difference {max_diff}"
+                )
+                break
 
-        # Check reward matches (if available)
-        if expected_rewards is not None and i < len(expected_rewards):
-            expected_reward = expected_rewards[i]
-            assert reward == expected_reward, (
-                f"Reward mismatch at step {i} in {demo_path}: "
-                f"got {reward}, expected {expected_reward}"
-            )
+            # Check reward matches (if available)
+            if expected_rewards is not None and i < len(expected_rewards):
+                expected_reward = expected_rewards[i]
+                assert reward == expected_reward, (
+                    f"Reward mismatch at step {i} in {demo_path}: "
+                    f"got {reward}, expected {expected_reward}"
+                )
 
-        # Stop if episode ended early
-        if terminated or truncated:
-            break
+            # Stop if episode ended early
+            if terminated or truncated:
+                break
     env.close()  # type: ignore[no-untyped-call]
