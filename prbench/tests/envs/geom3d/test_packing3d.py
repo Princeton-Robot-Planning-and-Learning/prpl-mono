@@ -11,8 +11,8 @@ from pybullet_helpers.motion_planning import (
     run_smooth_motion_planning_to_pose,
     smoothly_follow_end_effector_path,
 )
-from relational_structs.spaces import ObjectCentricBoxSpace
 from relational_structs import Object
+from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench.envs.geom3d.packing3d import (
     ObjectCentricPacking3DEnv,
@@ -37,6 +37,7 @@ def test_packing3d_env_basic():
             obs, _, _, _, _ = env.step(act)
 
         env.close()
+
 
 def get_target_object_from_obs(
     obs: Packing3DObjectCentricState,
@@ -85,7 +86,7 @@ def test_pick_place_on_rack():
     # sample placement coefficients for each part
     x_coeffs = np.linspace(0.5, -0.5, num_parts)
     y_coeffs = np.linspace(0.5, -0.5, num_parts)
-    
+
     # First, move to pre-grasp pose (top-down).
     selected_object = get_target_object_from_obs(obs)
     assert selected_object is not None, "No target object selected"
@@ -160,7 +161,7 @@ def test_pick_place_on_rack():
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
-        assert obs.grasped_object== selected_object.name, "Object not grasped"
+        assert obs.grasped_object == selected_object.name, "Object not grasped"
 
         # Move up slightly to break contact with the table.
         sim.set_state(obs)

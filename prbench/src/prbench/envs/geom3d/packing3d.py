@@ -7,7 +7,7 @@ from typing import Type as TypingType
 
 import numpy as np
 import pybullet as p
-from pybullet_helpers.geometry import Pose, set_pose, get_pose
+from pybullet_helpers.geometry import Pose, get_pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import (
     create_pybullet_block,
@@ -26,11 +26,15 @@ from prbench.envs.geom3d.base_env import (
 from prbench.envs.geom3d.object_types import (
     Geom3DCuboidType,
     Geom3DEnvTypeFeatures,
+    Geom3DPointType,
     Geom3DRobotType,
     Geom3DTriangleType,
-    Geom3DPointType
 )
-from prbench.envs.geom3d.utils import Geom3DObjectCentricState, is_on_top, remove_fingers_from_extended_joints
+from prbench.envs.geom3d.utils import (
+    Geom3DObjectCentricState,
+    is_on_top,
+    remove_fingers_from_extended_joints,
+)
 from prbench.envs.utils import PURPLE
 
 
@@ -81,7 +85,7 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             + top_block_half_extents[1],
             bottom_block_pose.position[2]
             + bottom_block_half_extents[2]
-            + top_block_half_extents[2]
+            + top_block_half_extents[2],
         )
 
         ub = (
@@ -93,7 +97,7 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             - top_block_half_extents[1],
             bottom_block_pose.position[2]
             + bottom_block_half_extents[2]
-            + top_block_half_extents[2]
+            + top_block_half_extents[2],
         )
 
         x, y, z = rng.uniform(lb, ub)
@@ -183,14 +187,14 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
                 self.get(obj, "half_extent_x"),
                 self.get(obj, "half_extent_y"),
                 self.get(obj, "half_extent_z"),
-                -1
+                -1,
             )
             if obj.type == Geom3DCuboidType
             else (
                 max(self.get_object_triangle_features(name)[:2]) / 2,
                 max(self.get_object_triangle_features(name)[:2]) / 2,
                 self.get_object_triangle_features(name)[2] / 2,
-                self.get_object_triangle_features(name)[3]
+                self.get_object_triangle_features(name)[3],
             )
         )
 
@@ -344,7 +348,7 @@ class ObjectCentricPacking3DEnv(
     @property
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
         return Packing3DObjectCentricState
-    
+
     def _create_state_dict(
         self, objects: list[tuple[str, Type]]
     ) -> dict[Object, dict[str, float]]:
@@ -474,7 +478,9 @@ class ObjectCentricPacking3DEnv(
         self._part_ids_to_type = {}
         self._part_id_to_half_extents = {}
         self._part_ids_to_triangle_features = {}
-        part_z_half_extent = self.config.part_half_extents_ub[2]  # fixed z-depth for all parts
+        part_z_half_extent = self.config.part_half_extents_ub[
+            2
+        ]  # fixed z-depth for all parts
         for i in range(self._num_parts):
             name = f"part{i}"
             part_type = (
@@ -518,7 +524,7 @@ class ObjectCentricPacking3DEnv(
                     ],
                     side_lengths=(side_a, side_b),
                     depth=depth,
-                    physics_client_id=self.physics_client_id
+                    physics_client_id=self.physics_client_id,
                 )
                 self._part_id_to_half_extents[part_id] = half_extents
                 self._part_ids[name] = part_id
@@ -561,9 +567,7 @@ class ObjectCentricPacking3DEnv(
                 for other_id in ({self._rack_id} | set(self._part_ids.values())) - {
                     part_id
                 }:
-                    if check_body_collisions(
-                        part_id, other_id, self.physics_client_id
-                    ):
+                    if check_body_collisions(part_id, other_id, self.physics_client_id):
                         collision_exists = True
                         break
 
@@ -647,7 +651,12 @@ class ObjectCentricPacking3DEnv(
         state_dict = self._create_state_dict(
             [("robot", Geom3DRobotType), ("rack", Geom3DCuboidType)]
             + [
-                (f"part{i}", self._part_ids_to_type[self._object_name_to_pybullet_id(f"part{i}")])
+                (
+                    f"part{i}",
+                    self._part_ids_to_type[
+                        self._object_name_to_pybullet_id(f"part{i}")
+                    ],
+                )
                 for i in range(self._num_parts)
             ]
         )

@@ -28,12 +28,12 @@ from prbench.envs.dynamic3d.objects import (
     get_fixture_class,
     get_object_class,
 )
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBotRobotEnv
 from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_positions,
     sample_pose_in_region,
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
+from prbench.envs.dynamic3d.tidybot_robot_env import TidyBotRobotEnv
 
 
 @dataclass(frozen=True)
