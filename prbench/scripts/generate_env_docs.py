@@ -196,7 +196,7 @@ def _main() -> None:
         total_envs += 1
         env = prbench.make(env_id, render_mode="rgb_array")
 
-        if args.force or is_env_changed(env, changed_files):
+        if "Packing3D" in env_id : # and (args.force or is_env_changed(env, changed_files)):
             print(f"  Regenerating {env_id}...")
             has_random_gif = create_random_action_gif(env_id, env)
             has_initial_gif = create_initial_state_gif(env_id, env)

@@ -85,9 +85,7 @@ def test_pick_place_on_rack():
     # sample placement coefficients for each part
     x_coeffs = np.linspace(0.5, -0.5, num_parts)
     y_coeffs = np.linspace(0.5, -0.5, num_parts)
-    # np.random.shuffle(x_coeffs)
-    # np.random.shuffle(y_coeffs)
-
+    
     # First, move to pre-grasp pose (top-down).
     selected_object = get_target_object_from_obs(obs)
     assert selected_object is not None, "No target object selected"

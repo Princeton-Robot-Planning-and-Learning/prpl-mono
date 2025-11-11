@@ -564,7 +564,6 @@ class ObjectCentricPacking3DEnv(
                     if check_body_collisions(
                         part_id, other_id, self.physics_client_id
                     ):
-                        print("Collision detected during part placement", i, part_id, other_id)
                         collision_exists = True
                         break
 

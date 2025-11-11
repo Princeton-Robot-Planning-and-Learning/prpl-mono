@@ -1,5 +1,5 @@
 # prbench/Packing3D-p3-v0
-![random action GIF](assets/random_action_gifs/Packing3D-p3.gif)
+*(Random action GIF could not be generated due to rendering issues)*
 
 ### Description
 A 3D packing environment where the goal is to place a set of parts into a rack without collisions.
@@ -7,12 +7,12 @@ A 3D packing environment where the goal is to place a set of parts into a rack w
 The robot is a Kinova Gen-3 with 7 degrees of freedom that can grasp and manipulate objects. The environment consists of:
 - A **table** with dimensions 0.400m × 0.800m × 0.500m
 - A **rack** (purple) with half-extents (0.05, 0.1, 0.05)
-- **Parts** (green) that must be packed into the rack. Parts are sampled with half-extents in (0.05, 0.05, 0.01) to (0.05, 0.05, 0.01) and a probability 0.5 of being triangle-shaped (triangles are represented as triangular prisms with depth 0.020m when used).
+- **Parts** (green) that must be packed into the rack. Parts are sampled with half-extents in (0.05, 0.05, 0.01, 0) to (0.05, 0.05, 0.01, 0) and a probability 0.5 of being triangle-shaped (triangles are represented as triangular prisms with depth 0.020m when used).
 
 The task requires planning to grasp and place each part into the rack while avoiding collisions and ensuring parts are supported by the rack (on the rack and not grasped) at the end.
 
 ### Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/Packing3D-p3.gif)
+*(Initial state GIF could not be generated due to rendering issues)*
 
 ### Example Demonstration
 *(No demonstration GIFs available)*
@@ -45,42 +45,46 @@ The entries of an array in this Box space correspond to the following object fea
 | 21 | rack | pose_qz |
 | 22 | rack | pose_qw |
 | 23 | rack | grasp_active |
-| 24 | rack | half_extent_x |
-| 25 | rack | half_extent_y |
-| 26 | rack | half_extent_z |
-| 27 | part0 | pose_x |
-| 28 | part0 | pose_y |
-| 29 | part0 | pose_z |
-| 30 | part0 | pose_qx |
-| 31 | part0 | pose_qy |
-| 32 | part0 | pose_qz |
-| 33 | part0 | pose_qw |
-| 34 | part0 | grasp_active |
-| 35 | part0 | half_extent_x |
-| 36 | part0 | half_extent_y |
-| 37 | part0 | half_extent_z |
-| 38 | part1 | pose_x |
-| 39 | part1 | pose_y |
-| 40 | part1 | pose_z |
-| 41 | part1 | pose_qx |
-| 42 | part1 | pose_qy |
-| 43 | part1 | pose_qz |
-| 44 | part1 | pose_qw |
-| 45 | part1 | grasp_active |
-| 46 | part1 | half_extent_x |
-| 47 | part1 | half_extent_y |
-| 48 | part1 | half_extent_z |
-| 49 | part2 | pose_x |
-| 50 | part2 | pose_y |
-| 51 | part2 | pose_z |
-| 52 | part2 | pose_qx |
-| 53 | part2 | pose_qy |
-| 54 | part2 | pose_qz |
-| 55 | part2 | pose_qw |
-| 56 | part2 | grasp_active |
-| 57 | part2 | half_extent_x |
-| 58 | part2 | half_extent_y |
-| 59 | part2 | half_extent_z |
+| 24 | rack | object_type |
+| 25 | rack | half_extent_x |
+| 26 | rack | half_extent_y |
+| 27 | rack | half_extent_z |
+| 28 | part0 | pose_x |
+| 29 | part0 | pose_y |
+| 30 | part0 | pose_z |
+| 31 | part0 | pose_qx |
+| 32 | part0 | pose_qy |
+| 33 | part0 | pose_qz |
+| 34 | part0 | pose_qw |
+| 35 | part0 | grasp_active |
+| 36 | part0 | triangle_type |
+| 37 | part0 | side_a |
+| 38 | part0 | side_b |
+| 39 | part0 | depth |
+| 40 | part1 | pose_x |
+| 41 | part1 | pose_y |
+| 42 | part1 | pose_z |
+| 43 | part1 | pose_qx |
+| 44 | part1 | pose_qy |
+| 45 | part1 | pose_qz |
+| 46 | part1 | pose_qw |
+| 47 | part1 | grasp_active |
+| 48 | part1 | object_type |
+| 49 | part1 | half_extent_x |
+| 50 | part1 | half_extent_y |
+| 51 | part1 | half_extent_z |
+| 52 | part2 | pose_x |
+| 53 | part2 | pose_y |
+| 54 | part2 | pose_z |
+| 55 | part2 | pose_qx |
+| 56 | part2 | pose_qy |
+| 57 | part2 | pose_qz |
+| 58 | part2 | pose_qw |
+| 59 | part2 | grasp_active |
+| 60 | part2 | triangle_type |
+| 61 | part2 | side_a |
+| 62 | part2 | side_b |
+| 63 | part2 | depth |
 
 
 ### Action Space
