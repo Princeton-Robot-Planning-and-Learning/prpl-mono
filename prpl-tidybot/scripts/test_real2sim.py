@@ -57,12 +57,18 @@ def test_run_base_motion_planning() -> None:
         # iio.imsave("real_to_sim_ground_image.png", img)
 
         state = sim._get_object_centric_state()  # pylint: disable=protected-access
-        target_base_pose = SE2(0, 0.5, math.pi / 2)
+        target_base_pose = SE2(-0.5, -0.5, math.pi / 2)
         x_bounds = (-1.5, 1.5)
         y_bounds = (-1.5, 1.5)
         seed = 123
         base_motion_plan = run_base_motion_planning(
-            state, target_base_pose, x_bounds, y_bounds, seed
+            state,
+            target_base_pose,
+            x_bounds,
+            y_bounds,
+            seed,
+            extend_xy_magnitude=0.5,
+            extend_rot_magnitude=math.pi / 2,
         )
         assert base_motion_plan is not None
 
@@ -120,7 +126,6 @@ def test_run_base_motion_planning() -> None:
         #         action[0] = dx
         #         action[1] = dy
         #         action[2] = drot
-        #         assert env.action_space.contains(action)
 
         #         obs, _, _, _, _ = env.step(action)
         #         state = env.observation_space.devectorize(obs)
@@ -159,9 +164,18 @@ def test_run_base_motion_planning() -> None:
         for t in range(1, len(base_motion_plan)):
             pose = base_motion_plan[t]
             print(f"Target pose: {pose.x}, {pose.y}, {pose.theta()}")
-            reach_target_pose(
-                interface, pose, map_to_odom_converter, odom_to_map_converter
-            )
+            if t != len(base_motion_plan) - 1:
+                reach_target_pose(
+                    interface,
+                    pose,
+                    map_to_odom_converter,
+                    odom_to_map_converter,
+                    tolerance=0.05,
+                )
+            else:
+                reach_target_pose(
+                    interface, pose, map_to_odom_converter, odom_to_map_converter
+                )
             time.sleep(0.1)
 
     finally:
