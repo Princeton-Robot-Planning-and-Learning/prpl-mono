@@ -20,7 +20,7 @@ def test_deterministic_demo_replay():
     4. Replaying actions produces identical rewards (if available)
     """
     # Register all environments
-    demo_path = "prbench/demos/DynScoopPour-o30/0/1762884952.p"
+    demo_path = "prbench/demos/DynScoopPour-o30/0/1762887452.p"
     prbench.register_all_environments()
 
     # Load demo data
@@ -48,8 +48,10 @@ def test_deterministic_demo_replay():
     env = prbench.make(env_id, render_mode="rgb_array")
 
     # Test reproducibility: reset with seed and replay actions
+    init_states = []
     for num in range(100):
         obs, _ = env.reset(seed=seed)
+        init_states.append(obs)
 
         # Check initial observation matches
         assert np.allclose(

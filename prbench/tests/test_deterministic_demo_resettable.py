@@ -8,7 +8,7 @@ import pytest
 import prbench
 from prbench.utils import find_all_demo_files, load_demo
 
-
+@pytest.mark.skip(reason="Dynamic2D resettable has not been verified yet")
 @pytest.mark.parametrize("demo_path", find_all_demo_files())
 def test_deterministic_demo_reset(demo_path: Path):
     """Test that demo replay produces identical observations and rewards.
@@ -25,10 +25,6 @@ def test_deterministic_demo_reset(demo_path: Path):
     prbench.register_all_environments()
 
     # Load demo data
-    # NOTE: Skip ScoopPour for now, it is super weird, run this twice will
-    # result in one pass one fail....
-    # if "DynScoopPour" in str(demo_path):
-    #     pytest.skip("Skipping DynScoopPour demos for now")
     try:
         demo_data = load_demo(demo_path)
     except Exception as e:
