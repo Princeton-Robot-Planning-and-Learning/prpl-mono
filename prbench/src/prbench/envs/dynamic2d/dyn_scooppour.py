@@ -565,7 +565,7 @@ class ObjectCentricDynScoopPourEnv(
                         pymunk_angle -= 2 * np.pi
                     elif pymunk_angle < -np.pi:
                         pymunk_angle += 2 * np.pi
-                    state.set(obj, "theta", pymunk_body.angle)
+                    state.set(obj, "theta", pymunk_angle)
 
                 # Update held status (only hook can be held)
                 if obj.is_instance(HookType):
