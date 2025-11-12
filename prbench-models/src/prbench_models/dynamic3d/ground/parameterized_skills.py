@@ -12,6 +12,7 @@ from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObj
 from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
 from prpl_utils.utils import get_signed_angle_distance
 from pybullet_helpers.geometry import Pose, multiply_poses, set_pose
+from pybullet_helpers.inverse_kinematics import inverse_kinematics
 from pybullet_helpers.joint import JointPositions
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
@@ -181,8 +182,7 @@ class PyBulletSim:
         # Create the PyBullet simulator.
         # Uncomment for debugging.
         # from pybullet_helpers.gui import create_gui_connection
-        # self._physics_client_id
-        # = create_gui_connection(camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0))
+        # self._physics_client_id = create_gui_connection(camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0)) # pylint: disable=line-too-long
         self._physics_client_id = p.connect(p.DIRECT)
 
         # Create the robot, assuming that it is a kinova gen3.
@@ -370,6 +370,118 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         return dist < 2 * 1e-2
 
 
+class MoveArmToEndEffectorController(
+    GroundParameterizedController[ObjectCentricState, Array]
+):
+    """Controller for motion planning the arm to reach a target end effector pose.
+
+    The object parameters are:
+        robot: The robot itself.
+
+    The continuous parameters are:
+        end_effector_pose: np.ndarray (x, y, z, rw, rx, ry, rz)
+
+    The controller uses motion planning in pybullet.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_state: ObjectCentricState | None = None
+        self._current_params: np.ndarray | None = None
+        self._current_arm_joint_plan: list[JointPositions] | None = None
+        self._pybullet_sim: PyBulletSim | None = None
+
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        # We can later implement sampling if it's helpful, but usually the user would
+        # want to specify the target end effector pose themselves.
+        raise NotImplementedError
+
+    def reset(self, x: ObjectCentricState, params: Any) -> None:
+        # Initialize the PyBullet interface if this is the first time ever.
+        if self._pybullet_sim is None:
+            self._pybullet_sim = PyBulletSim(x)
+        # Update the current state and parameters.
+        self._last_state = x
+        assert isinstance(params, np.ndarray)
+        self._current_params = params.copy()
+        target_end_effector_pose = Pose(
+            (self._current_params[0], self._current_params[1], self._current_params[2]),
+            (
+                self._current_params[4],
+                self._current_params[5],
+                self._current_params[6],
+                self._current_params[3],
+            ),
+        )  # (w, x, y, z) -> (x, y, z, w)
+        target_joints = inverse_kinematics(
+            self._pybullet_sim.robot,
+            target_end_effector_pose,
+            validate=True,
+            set_joints=True,
+        )
+        # Reset PyBullet given the current state.
+        self._pybullet_sim.set_state(x)
+        # Run motion planning.
+        plan = run_motion_planning(
+            self._pybullet_sim.robot,
+            self._pybullet_sim.get_robot_joints(),
+            target_joints,
+            collision_bodies=self._pybullet_sim.get_collision_bodies(),
+            seed=0,  # use a constant seed to make this effectively deterministic
+            physics_client_id=self._pybullet_sim.physics_client_id,
+        )
+        assert plan is not None, "Motion planning failed"
+        self._current_arm_joint_plan = plan
+
+    def terminated(self) -> bool:
+        assert self._current_arm_joint_plan is not None
+        return self._robot_is_close_to_conf(self._current_arm_joint_plan[-1])
+
+    def step(self) -> Array:
+        assert self._current_arm_joint_plan is not None
+        while len(self._current_arm_joint_plan) > 1:
+            peek_conf = self._current_arm_joint_plan[0]
+            # Close enough, pop and continue.
+            if self._robot_is_close_to_conf(peek_conf):
+                self._current_arm_joint_plan.pop(0)
+            # Not close enough, stop popping.
+            break
+        robot_conf = self._get_current_robot_arm_conf()
+        next_conf = self._current_arm_joint_plan[0]
+        action = np.zeros(11, dtype=np.float32)
+        action[3:10] = np.subtract(next_conf, robot_conf)[:7]
+        return action
+
+    def observe(self, x: ObjectCentricState) -> None:
+        self._last_state = x
+
+    def _get_current_robot_arm_conf(self) -> JointPositions:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        return [
+            x.get(robot_obj, "pos_arm_joint1"),
+            x.get(robot_obj, "pos_arm_joint2"),
+            x.get(robot_obj, "pos_arm_joint3"),
+            x.get(robot_obj, "pos_arm_joint4"),
+            x.get(robot_obj, "pos_arm_joint5"),
+            x.get(robot_obj, "pos_arm_joint6"),
+            x.get(robot_obj, "pos_arm_joint7"),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ]
+
+    def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
+        current_conf = self._get_current_robot_arm_conf()
+        assert self._pybullet_sim is not None
+        dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
+        return dist < 2 * 1e-2
+
+
 def create_lifted_controllers(
     action_space: TidyBot3DRobotActionSpace,
     init_constant_state: ObjectCentricState | None = None,
@@ -401,7 +513,18 @@ def create_lifted_controllers(
         )
     )
 
+    # Move arm to end effector controller.
+    robot = Variable("?robot", MujocoRobotObjectType)
+
+    LiftedMoveArmToEndEffectorController: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot],
+            MoveArmToEndEffectorController,
+        )
+    )
+
     return {
         "move_to_target": LiftedMoveToTargetController,
         "move_arm_to_conf": LiftedMoveArmToConfController,
+        "move_arm_to_end_effector": LiftedMoveArmToEndEffectorController,
     }
