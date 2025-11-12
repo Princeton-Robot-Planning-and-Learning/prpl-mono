@@ -26,7 +26,7 @@ def create_pybullet_block(
     half_extents: tuple[float, float, float],
     physics_client_id: int,
     mass: float = 0,
-    friction: float | None = None
+    friction: float | None = None,
 ) -> int:
     """A generic utility for creating a new block.
 
@@ -70,6 +70,7 @@ def create_pybullet_block(
         )
 
     return block_id
+
 
 def create_pybullet_block_with_peg(
     color: tuple[float, float, float, float],
@@ -131,7 +132,7 @@ def create_pybullet_block_with_peg(
     link_masses.append(mass)
     link_collision_ids.append(block_collision_id)
     link_visual_ids.append(block_visual_id)
-    link_positions.append((0, 0, 0))
+    link_positions.append((0.0, 0.0, 0.0))
     link_orientations.append([0, 0, 0, 1])
     link_inertial_positions.append([0, 0, 0])
     link_inertial_orientations.append([0, 0, 0, 1])
@@ -143,7 +144,7 @@ def create_pybullet_block_with_peg(
     link_masses.append(0)
     link_collision_ids.append(peg_collision_id)
     link_visual_ids.append(peg_visual_id)
-    link_positions.append((0, 0, half_extents[2] + peg_height / 2))
+    link_positions.append((0.0, 0.0, half_extents[2] + peg_height / 2))
     link_orientations.append([0, 0, 0, 1])
     link_inertial_positions.append([0, 0, 0])
     link_inertial_orientations.append([0, 0, 0, 1])
@@ -276,7 +277,7 @@ def create_pybullet_triangle(
     depth: float,
     physics_client_id: int,
     mass: float = 0,
-    friction: float | None = None
+    friction: float | None = None,
 ) -> int:
     """A generic utility for creating a triangle.
 
@@ -365,6 +366,7 @@ def create_pybullet_triangle(
 
     return triangle_id
 
+
 def create_pybullet_triangle_with_peg(
     color: tuple[float, float, float, float],
     triangle_type: str,
@@ -441,7 +443,7 @@ def create_pybullet_triangle_with_peg(
         physicsClientId=physics_client_id,
     )
 
-    triangle_mean = np.mean(np.array(vertices), axis=0)
+    triangle_mean = np.mean(np.array(vertices), axis=0, dtype=np.float32)
 
     # Prepare link data if has_peg
     link_masses = []
@@ -473,7 +475,7 @@ def create_pybullet_triangle_with_peg(
     link_masses.append(mass)
     link_collision_ids.append(triangle_collision_id)
     link_visual_ids.append(triangle_visual_id)
-    link_positions.append((0, 0, 0))
+    link_positions.append((0.0, 0.0, 0.0))
     link_orientations.append([0, 0, 0, 1])
     link_inertial_positions.append([0, 0, 0])
     link_inertial_orientations.append([0, 0, 0, 1])

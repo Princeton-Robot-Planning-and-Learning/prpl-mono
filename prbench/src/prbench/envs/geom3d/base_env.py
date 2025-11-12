@@ -37,7 +37,6 @@ from prbench.envs.geom3d.object_types import (
     Geom3DEnvTypeFeatures,
     Geom3DPointType,
     Geom3DRobotType,
-    Geom3DTriangleType,
 )
 from prbench.envs.geom3d.utils import (
     Geom3DObjectCentricState,

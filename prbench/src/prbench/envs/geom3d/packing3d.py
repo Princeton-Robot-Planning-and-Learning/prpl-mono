@@ -48,7 +48,7 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.25)
 
     # rack (target) region.
-    rack_half_extents: tuple[float, float, float] = (0.05, 0.1, 0.05)
+    rack_half_extents: tuple[float, float, float] = (0.1, 0.15, 0.05)
     rack_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
     # Parts.
@@ -485,7 +485,7 @@ class ObjectCentricPacking3DEnv(
             name = f"part{i}"
             part_type = (
                 Geom3DCuboidType
-                if self.np_random.uniform() > self.config.part_triangular_prob
+                if self.config.part_triangular_prob * self._num_parts >= i + 1
                 else Geom3DTriangleType
             )
 
@@ -561,6 +561,32 @@ class ObjectCentricPacking3DEnv(
                     + self.config.table_half_extents[2]
                     + part_z_half_extent * 2
                 )
+
+                # check that objects are not initialized too close to rack
+                rack_pose = get_pose(self._rack_id, self.physics_client_id)
+                rack_x_min = (
+                    rack_pose.position[0]
+                    - 1.5 * self._rack_half_extents[0]
+                    - half_extents[0]
+                )
+                rack_x_max = (
+                    rack_pose.position[0]
+                    + 1.5 * self._rack_half_extents[0]
+                    + half_extents[0]
+                )
+                rack_y_min = (
+                    rack_pose.position[1]
+                    - 1.5 * self._rack_half_extents[1]
+                    - half_extents[1]
+                )
+                rack_y_max = (
+                    rack_pose.position[1]
+                    + 1.5 * self._rack_half_extents[1]
+                    + half_extents[1]
+                )
+                if rack_x_min <= x <= rack_x_max and rack_y_min <= y <= rack_y_max:
+                    continue  # too close to rack
+
                 set_pose(part_id, Pose((x, y, z)), self.physics_client_id)
 
                 collision_exists = False

@@ -55,7 +55,7 @@ def test_pick_place_on_rack():
     """Test that picking and placing can be executed for any object."""
     # Create the real environment.
 
-    num_parts = 2
+    num_parts = 3
     env = Packing3DEnv(num_parts=num_parts, use_gui=False, render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
@@ -79,13 +79,15 @@ def test_pick_place_on_rack():
 
     # Run motion planning.
     if MAKE_VIDEOS:  # make a smooth motion plan for videos
-        max_candidate_plans = 20
+        max_candidate_plans = 1
     else:
         max_candidate_plans = 1
 
     # sample placement coefficients for each part
-    x_coeffs = np.linspace(0.5, -0.5, num_parts)
-    y_coeffs = np.linspace(0.5, -0.5, num_parts)
+    x_coeffs = np.linspace(1, -1, num_parts)
+    y_coeffs = np.linspace(1, -1, num_parts)
+    np.random.shuffle(x_coeffs)
+    np.random.shuffle(y_coeffs)
 
     # First, move to pre-grasp pose (top-down).
     selected_object = get_target_object_from_obs(obs)

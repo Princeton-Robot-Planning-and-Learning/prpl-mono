@@ -1,18 +1,18 @@
 # prbench/Packing3D-p2-v0
-*(Random action GIF could not be generated due to rendering issues)*
+![random action GIF](assets/random_action_gifs/Packing3D-p2.gif)
 
 ### Description
 A 3D packing environment where the goal is to place a set of parts into a rack without collisions.
 
 The robot is a Kinova Gen-3 with 7 degrees of freedom that can grasp and manipulate objects. The environment consists of:
 - A **table** with dimensions 0.400m × 0.800m × 0.500m
-- A **rack** (purple) with half-extents (0.05, 0.1, 0.05)
+- A **rack** (purple) with half-extents (0.1, 0.15, 0.05)
 - **Parts** (green) that must be packed into the rack. Parts are sampled with half-extents in (0.05, 0.05, 0.01, 0) to (0.05, 0.05, 0.01, 0) and a probability 0.5 of being triangle-shaped (triangles are represented as triangular prisms with depth 0.020m when used).
 
 The task requires planning to grasp and place each part into the rack while avoiding collisions and ensuring parts are supported by the rack (on the rack and not grasped) at the end.
 
 ### Initial State Distribution
-*(Initial state GIF could not be generated due to rendering issues)*
+![initial state GIF](assets/initial_state_gifs/Packing3D-p2.gif)
 
 ### Example Demonstration
 *(No demonstration GIFs available)*
@@ -57,10 +57,10 @@ The entries of an array in this Box space correspond to the following object fea
 | 33 | part0 | pose_qz |
 | 34 | part0 | pose_qw |
 | 35 | part0 | grasp_active |
-| 36 | part0 | triangle_type |
-| 37 | part0 | side_a |
-| 38 | part0 | side_b |
-| 39 | part0 | depth |
+| 36 | part0 | object_type |
+| 37 | part0 | half_extent_x |
+| 38 | part0 | half_extent_y |
+| 39 | part0 | half_extent_z |
 | 40 | part1 | pose_x |
 | 41 | part1 | pose_y |
 | 42 | part1 | pose_z |
