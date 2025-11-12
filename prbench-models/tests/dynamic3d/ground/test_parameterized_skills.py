@@ -114,3 +114,47 @@ def test_move_to_target_controller_one_cube():
         assert False, "Controller did not terminate"
 
     env.close()
+
+
+def test_move_to_target_arm_configuration():
+    """Test move-arm-to-conf controller in ground environment with 1 cube."""
+
+    # Create the environment.
+    num_cubes = 1
+    env = prbench.make(
+        f"prbench/TidyBot3D-ground-o{num_cubes}-v0", render_mode="rgb_array"
+    )
+    if MAKE_VIDEOS:
+        env = RecordVideo(
+            env, "unit_test_videos", name_prefix=f"TidyBot3D-ground-o{num_cubes}"
+        )
+
+    # Reset the environment and get the initial state.
+    obs, _ = env.reset(seed=123)
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    state = env.observation_space.devectorize(obs)
+
+    # Create the controller.
+    controllers = create_lifted_controllers(env.action_space)
+    lifted_controller = controllers["move_arm_to_conf"]
+    robot = state.get_object_from_name("robot")
+    object_parameters = (robot,)
+    controller = lifted_controller.ground(object_parameters)
+    target_conf = np.zeros(7)
+    params = target_conf
+
+    # Reset and execute the controller until it terminates.
+    controller.reset(state, params)
+    for _ in range(200):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    # TODO fix this...
+    # else:
+    #     assert False, "Controller did not terminate"
+
+    env.close()

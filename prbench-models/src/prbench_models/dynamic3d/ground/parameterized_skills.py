@@ -16,11 +16,20 @@ from relational_structs import (
     Variable,
 )
 from spatialmath import SE2
+from pybullet_helpers.motion_planning import (
+    run_motion_planning,
+    create_joint_distance_fn,
+)
+from pybullet_helpers.utils import create_pybullet_block
+from pybullet_helpers.joint import JointPositions
+from pybullet_helpers.geometry import set_pose, Pose, multiply_poses
+from pybullet_helpers.robots import create_pybullet_robot, SingleArmPyBulletRobot
 
 from prbench_models.dynamic3d.utils import (
     get_overhead_object_se2_pose,
     run_base_motion_planning,
 )
+import pybullet as p
 
 # Constants.
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
@@ -153,6 +162,209 @@ class MoveToTargetGroundController(
                 atol=atol,
             )
         )
+    
+
+class PyBulletSim:
+    """An interface to PyBullet.
+    
+    We should generalize and move this out later.
+    """
+
+    def __init__(self, initial_state: ObjectCentricState) -> None:
+        """NOTE: for now, this is extremely specific to the Ground environment where
+        there is exactly one cube. We will generalize this later."""
+
+        # Hardcode the transform from the base pose to the arm pose.
+        # TODO: check if this is correct......
+        self._base_to_arm_pose = Pose(
+            (0.12, 0.0, 0.4)
+        )
+
+        # Create the PyBullet simulator.
+        # Uncomment for debugging.
+        # from pybullet_helpers.gui import create_gui_connection
+        # self._physics_client_id = create_gui_connection(camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0))
+        self._physics_client_id = p.connect(p.DIRECT)
+
+        # Create the robot, assuming that it is a kinova gen3.
+        self._robot = create_pybullet_robot("kinova-gen3", self._physics_client_id,
+                                            fixed_base=False)
+
+        # Create the cube.
+        cube1_obj = initial_state.get_object_from_name("cube1")
+        cube_half_extents = (
+            initial_state.get(cube1_obj, "bb_x") / 2,
+            initial_state.get(cube1_obj, "bb_y") / 2,
+            initial_state.get(cube1_obj, "bb_z") / 2,
+        )
+        self._cube1 = create_pybullet_block(
+            color=(1.0, 0.0, 0.0, 1.0),  # doesn't matter,
+            half_extents=cube_half_extents,
+            physics_client_id=self._physics_client_id,
+        )
+
+        # Used for checking if two confs are close.
+        self._joint_distance_fn = create_joint_distance_fn(self._robot)
+
+    @property
+    def physics_client_id(self) -> int:
+        """The physics client ID."""
+        return self._physics_client_id
+
+    @property
+    def robot(self) -> SingleArmPyBulletRobot:
+        """The robot pybullet."""
+        return self._robot
+
+    def get_robot_joints(self) -> JointPositions:
+        """Get the current robot joints from the simulator."""
+        return self._robot.get_joint_positions()
+
+    def set_state(self, x: ObjectCentricState) -> None:
+        """Update the internal state of the simulator from an object-centric state."""
+        # Update the robot state.
+        robot_obj = x.get_object_from_name("robot")
+        # Update the arm base.
+        base_pose = Pose.from_rpy(
+            (x.get(robot_obj, "pos_base_x"), x.get(robot_obj, "pos_base_y"), 0.0),
+            (0, 0, x.get(robot_obj, "pos_base_rot"))
+        )
+        arm_pose = multiply_poses(self._base_to_arm_pose, base_pose)
+        self._robot.set_base(arm_pose)
+        # Update the arm conf.
+        arm_conf = [
+            x.get(robot_obj, "pos_arm_joint1"),
+            x.get(robot_obj, "pos_arm_joint2"),
+            x.get(robot_obj, "pos_arm_joint3"),
+            x.get(robot_obj, "pos_arm_joint4"),
+            x.get(robot_obj, "pos_arm_joint5"),
+            x.get(robot_obj, "pos_arm_joint6"),
+            x.get(robot_obj, "pos_arm_joint7"),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ]
+        self._robot.set_joints(arm_conf)
+
+        # Update the cube state.
+        cube1_obj = x.get_object_from_name("cube1")
+        cube_pose = Pose(
+            (x.get(cube1_obj, "x"), x.get(cube1_obj, "y"), x.get(cube1_obj, "z")),
+            (x.get(cube1_obj, "qx"), x.get(cube1_obj, "qy"), x.get(cube1_obj, "qz"), x.get(cube1_obj, "qw")),
+        )
+        set_pose(self._cube1, cube_pose, self._physics_client_id)
+        
+
+    def get_collision_bodies(self) -> set[int]:
+        """Get pybullet IDs for collision bodies."""
+        return {self._cube1}
+    
+    def get_joint_distance(self, conf1: JointPositions, conf2: JointPositions) -> float:
+        """Get the distance between two arm confs."""
+        return self._joint_distance_fn(conf1, conf2)
+
+
+class MoveArmToConfController(
+    GroundParameterizedController[ObjectCentricState, Array]
+):
+    """Controller for motion planning the arm to reach a target conf.
+
+    The object parameters are:
+        robot: The robot itself.
+
+    The continuous parameters are:
+        joint1_target: float
+        joint2_target: float
+        ...
+        joint7_target: float
+
+    The controller uses motion planning in pybullet.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_state: ObjectCentricState | None = None
+        self._current_params: np.ndarray | None = None
+        self._current_arm_joint_plan: list[JointPositions] | None = None
+        self._pybullet_sim : PyBulletSim | None = None
+
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        # We can later implement sampling if it's helpful, but usually the user would
+        # want to specify the target arm conf themselves.
+        raise NotImplementedError
+
+    def reset(self, x: ObjectCentricState, params: Any) -> None:
+        # Initialize the PyBullet interface if this is the first time ever.
+        if self._pybullet_sim is None:
+            self._pybullet_sim = PyBulletSim(x)
+        # Update the current state and parameters.
+        self._last_state = x
+        assert isinstance(params, np.ndarray)
+        self._current_params = params.copy()
+        target_joints = self._current_params.tolist() + ([0.0] * 6)
+        # Reset PyBullet given the current state.
+        self._pybullet_sim.set_state(x)
+        # Run motion planning.
+        plan = run_motion_planning(
+            self._pybullet_sim.robot,
+            self._pybullet_sim.get_robot_joints(),
+            target_joints,
+            collision_bodies=self._pybullet_sim.get_collision_bodies(),
+            seed=0,  # use a constant seed to make this effectively deterministic
+            physics_client_id=self._pybullet_sim.physics_client_id,
+        )
+        assert plan is not None, "Motion planning failed"
+        self._current_arm_joint_plan = plan
+
+    def terminated(self) -> bool:
+        assert self._current_arm_joint_plan is not None
+        return self._robot_is_close_to_conf(self._current_arm_joint_plan[-1])
+
+    def step(self) -> Array:
+        assert self._current_arm_joint_plan is not None
+        while len(self._current_arm_joint_plan) > 1:
+            peek_conf = self._current_arm_joint_plan[0]
+            # Close enough, pop and continue.
+            if self._robot_is_close_to_conf(peek_conf):
+                self._current_arm_joint_plan.pop(0)
+            # Not close enough, stop popping.
+            break
+        robot_conf = self._get_current_robot_arm_conf()
+        next_conf = self._current_arm_joint_plan[0]
+        action = np.zeros(11, dtype=np.float32)
+        action[3:10] = np.subtract(next_conf, robot_conf)[:7]
+        return action
+
+    def observe(self, x: ObjectCentricState) -> None:
+        self._last_state = x
+
+    def _get_current_robot_arm_conf(self) -> JointPositions:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        return [
+            x.get(robot_obj, "pos_arm_joint1"),
+            x.get(robot_obj, "pos_arm_joint2"),
+            x.get(robot_obj, "pos_arm_joint3"),
+            x.get(robot_obj, "pos_arm_joint4"),
+            x.get(robot_obj, "pos_arm_joint5"),
+            x.get(robot_obj, "pos_arm_joint6"),
+            x.get(robot_obj, "pos_arm_joint7"),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ]
+
+    def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
+        current_conf = self._get_current_robot_arm_conf()
+        dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
+        return dist < 1e-3
 
 
 def create_lifted_controllers(
@@ -165,6 +377,7 @@ def create_lifted_controllers(
 
     # Controllers.
 
+    # Move base to target controller.
     robot = Variable("?robot", MujocoRobotObjectType)
     target = Variable("?target", MujocoObjectType)
 
@@ -175,4 +388,18 @@ def create_lifted_controllers(
         )
     )
 
-    return {"move_to_target": LiftedMoveToTargetController}
+    # Move arm to conf controller.
+    robot = Variable("?robot", MujocoRobotObjectType)
+
+    LiftedMoveToTargetController: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot],
+            MoveArmToConfController,
+        )
+    )
+
+
+    return {
+        "move_to_target": LiftedMoveToTargetController,
+        "move_arm_to_conf": LiftedMoveToTargetController,
+    }
