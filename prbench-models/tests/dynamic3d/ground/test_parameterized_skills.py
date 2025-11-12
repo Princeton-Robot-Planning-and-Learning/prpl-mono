@@ -153,8 +153,7 @@ def test_move_to_target_arm_configuration():
         state = next_state
         if controller.terminated():
             break
-    # TODO fix this...
-    # else:
-    #     assert False, "Controller did not terminate"
+    else:
+        assert False, "Controller did not terminate"
 
     env.close()

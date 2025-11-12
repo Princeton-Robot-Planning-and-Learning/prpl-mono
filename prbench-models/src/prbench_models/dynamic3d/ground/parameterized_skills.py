@@ -3,6 +3,7 @@
 from typing import Any
 
 import numpy as np
+import pybullet as p
 from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
@@ -10,26 +11,25 @@ from bilevel_planning.structs import (
 from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType
 from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
 from prpl_utils.utils import get_signed_angle_distance
+from pybullet_helpers.geometry import Pose, multiply_poses, set_pose
+from pybullet_helpers.joint import JointPositions
+from pybullet_helpers.motion_planning import (
+    create_joint_distance_fn,
+    run_motion_planning,
+)
+from pybullet_helpers.robots import SingleArmPyBulletRobot, create_pybullet_robot
+from pybullet_helpers.utils import create_pybullet_block
 from relational_structs import (
     Array,
     ObjectCentricState,
     Variable,
 )
 from spatialmath import SE2
-from pybullet_helpers.motion_planning import (
-    run_motion_planning,
-    create_joint_distance_fn,
-)
-from pybullet_helpers.utils import create_pybullet_block
-from pybullet_helpers.joint import JointPositions
-from pybullet_helpers.geometry import set_pose, Pose, multiply_poses
-from pybullet_helpers.robots import create_pybullet_robot, SingleArmPyBulletRobot
 
 from prbench_models.dynamic3d.utils import (
     get_overhead_object_se2_pose,
     run_base_motion_planning,
 )
-import pybullet as p
 
 # Constants.
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
@@ -162,11 +162,11 @@ class MoveToTargetGroundController(
                 atol=atol,
             )
         )
-    
+
 
 class PyBulletSim:
     """An interface to PyBullet.
-    
+
     We should generalize and move this out later.
     """
 
@@ -175,20 +175,20 @@ class PyBulletSim:
         there is exactly one cube. We will generalize this later."""
 
         # Hardcode the transform from the base pose to the arm pose.
-        # TODO: check if this is correct......
-        self._base_to_arm_pose = Pose(
-            (0.12, 0.0, 0.4)
-        )
+        # check if this is correct......
+        self._base_to_arm_pose = Pose((0.12, 0.0, 0.4))
 
         # Create the PyBullet simulator.
         # Uncomment for debugging.
         # from pybullet_helpers.gui import create_gui_connection
-        # self._physics_client_id = create_gui_connection(camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0))
+        # self._physics_client_id
+        # = create_gui_connection(camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0))
         self._physics_client_id = p.connect(p.DIRECT)
 
         # Create the robot, assuming that it is a kinova gen3.
-        self._robot = create_pybullet_robot("kinova-gen3", self._physics_client_id,
-                                            fixed_base=False)
+        self._robot = create_pybullet_robot(
+            "kinova-gen3", self._physics_client_id, fixed_base=False
+        )
 
         # Create the cube.
         cube1_obj = initial_state.get_object_from_name("cube1")
@@ -227,7 +227,7 @@ class PyBulletSim:
         # Update the arm base.
         base_pose = Pose.from_rpy(
             (x.get(robot_obj, "pos_base_x"), x.get(robot_obj, "pos_base_y"), 0.0),
-            (0, 0, x.get(robot_obj, "pos_base_rot"))
+            (0, 0, x.get(robot_obj, "pos_base_rot")),
         )
         arm_pose = multiply_poses(self._base_to_arm_pose, base_pose)
         self._robot.set_base(arm_pose)
@@ -253,23 +253,25 @@ class PyBulletSim:
         cube1_obj = x.get_object_from_name("cube1")
         cube_pose = Pose(
             (x.get(cube1_obj, "x"), x.get(cube1_obj, "y"), x.get(cube1_obj, "z")),
-            (x.get(cube1_obj, "qx"), x.get(cube1_obj, "qy"), x.get(cube1_obj, "qz"), x.get(cube1_obj, "qw")),
+            (
+                x.get(cube1_obj, "qx"),
+                x.get(cube1_obj, "qy"),
+                x.get(cube1_obj, "qz"),
+                x.get(cube1_obj, "qw"),
+            ),
         )
         set_pose(self._cube1, cube_pose, self._physics_client_id)
-        
 
     def get_collision_bodies(self) -> set[int]:
         """Get pybullet IDs for collision bodies."""
         return {self._cube1}
-    
+
     def get_joint_distance(self, conf1: JointPositions, conf2: JointPositions) -> float:
         """Get the distance between two arm confs."""
         return self._joint_distance_fn(conf1, conf2)
 
 
-class MoveArmToConfController(
-    GroundParameterizedController[ObjectCentricState, Array]
-):
+class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, Array]):
     """Controller for motion planning the arm to reach a target conf.
 
     The object parameters are:
@@ -289,7 +291,7 @@ class MoveArmToConfController(
         self._last_state: ObjectCentricState | None = None
         self._current_params: np.ndarray | None = None
         self._current_arm_joint_plan: list[JointPositions] | None = None
-        self._pybullet_sim : PyBulletSim | None = None
+        self._pybullet_sim: PyBulletSim | None = None
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         # We can later implement sampling if it's helpful, but usually the user would
@@ -363,8 +365,9 @@ class MoveArmToConfController(
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
         current_conf = self._get_current_robot_arm_conf()
+        assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 1e-3
+        return dist < 2 * 1e-2
 
 
 def create_lifted_controllers(
@@ -391,15 +394,14 @@ def create_lifted_controllers(
     # Move arm to conf controller.
     robot = Variable("?robot", MujocoRobotObjectType)
 
-    LiftedMoveToTargetController: LiftedParameterizedController = (
+    LiftedMoveArmToConfController: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot],
             MoveArmToConfController,
         )
     )
 
-
     return {
         "move_to_target": LiftedMoveToTargetController,
-        "move_arm_to_conf": LiftedMoveToTargetController,
+        "move_arm_to_conf": LiftedMoveArmToConfController,
     }
