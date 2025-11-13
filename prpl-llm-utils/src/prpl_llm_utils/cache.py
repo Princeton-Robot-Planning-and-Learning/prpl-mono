@@ -70,7 +70,12 @@ class FilePretrainedLargeModelCache(PretrainedLargeModelCache):
             imgs_folderpath.mkdir(exist_ok=True)
             for i, img in enumerate(query.imgs):
                 filename_suffix = str(i) + ".jpg"
-                img.save(imgs_folderpath / filename_suffix)
+                # Convert RGBA to RGB if necessary (JPEG doesn't support transparency)
+                if img.mode == "RGBA":
+                    rgb_img = img.convert("RGB")
+                    rgb_img.save(imgs_folderpath / filename_suffix)
+                else:
+                    img.save(imgs_folderpath / filename_suffix)
         # Cache the text response.
         completion_file = cache_dir / "completion.txt"
         with open(completion_file, "w", encoding="utf-8") as f:
