@@ -28,7 +28,10 @@ def _main(cfg: DictConfig) -> None:
     logging.info(f"Running seed={cfg.seed}, env={cfg.env}, vlm_model={cfg.vlm_model}")
     # Create the environment.
     prbench.register_all_environments()
-    env = prbench.make(f"prbench/{cfg.env}")
+    if cfg.get("rgb_observation", False):
+        env = prbench.make(f"prbench/{cfg.env}", render_mode="rgb_array")
+    else:
+        env = prbench.make(f"prbench/{cfg.env}")
     assert env.spec is not None, "Environment spec must not be None"
     assert hasattr(
         env.spec, "entry_point"
@@ -54,7 +57,7 @@ def _main(cfg: DictConfig) -> None:
         temperature=cfg.temperature,
         max_planning_horizon=cfg.max_planning_horizon,
         seed=cfg.seed,
-        use_image=cfg.get("use_image", True),
+        rgb_observation=cfg.get("rgb_observation", False),
     )
 
     # Evaluate.
@@ -99,6 +102,12 @@ def _run_single_episode_evaluation(
     success = False
     seed = sample_seed_from_rng(rng)
     obs, info = env.reset(seed=seed)
+
+    # Wrap observation with rendered image if using RGB observations
+    if agent._rgb_observation:
+        rendered_img = env.render()
+        obs = {"state": obs, "img": rendered_img}
+
     assert (
         env.metadata["description"] is not None
     ), "Environment must have a description."
@@ -132,6 +141,11 @@ def _run_single_episode_evaluation(
         obs, rew, done, truncated, info = env.step(action)
         reward = float(rew)
         assert not truncated
+
+        # Wrap observation with rendered image if using RGB observations
+        if agent._rgb_observation:
+            rendered_img = env.render()
+            obs = {"state": obs, "img": rendered_img}
 
         with timer() as result:
             agent.update(obs, reward, done, info)

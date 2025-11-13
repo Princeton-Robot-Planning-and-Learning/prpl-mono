@@ -47,7 +47,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
         temperature: float = 0.0,
         max_planning_horizon: int = 50,
         seed: int = 0,
-        use_image: bool = True,
+        rgb_observation: bool = True,
     ) -> None:
         """Initialize the VLM planning agent.
 
@@ -58,7 +58,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
             max_planning_horizon: Maximum steps in a plan
             seed: Random seed
             env_models: Optional environment models from prbench_models
-            use_image: Whether to use image observations
+            rgb_observation: Whether to use image observations
         """
         super().__init__(seed)
 
@@ -69,7 +69,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
         self._temperature = temperature
         self._max_planning_horizon = max_planning_horizon
         self._controllers = env_controllers
-        self._use_image = use_image
+        self._rgb_observation = rgb_observation
 
         # Current plan state
         self._current_policy: Optional[Callable[[_O], _U]] = None
@@ -97,7 +97,9 @@ class VLMPlanningAgent(Agent[_O, _U]):
 
         try:
             self._current_policy = self._generate_plan(obs, info)
-            self._next_action = self._current_policy(obs)
+            # Extract state from dict if using RGB observations
+            state_obs = obs["state"] if self._rgb_observation else obs  # type: ignore
+            self._next_action = self._current_policy(state_obs)
         except Exception as e:
             logging.exception("Failed to generate initial plan")
             raise VLMPlanningAgentFailure(f"Failed to generate initial plan: " f"{e}")
@@ -120,7 +122,9 @@ class VLMPlanningAgent(Agent[_O, _U]):
         """Update the agent with the latest observation and reward."""
         super().update(obs, reward, done, info)
         assert self._current_policy is not None
-        self._next_action = self._current_policy(obs)
+        # Extract state from dict if using RGB observations
+        state_obs = obs["state"] if self._rgb_observation else obs  # type: ignore
+        self._next_action = self._current_policy(state_obs)
 
     def _generate_plan(self, obs: _O, info: dict[str, Any]) -> Callable[[_O], _U]:
         """Generate a plan using the VLM."""
@@ -131,23 +135,31 @@ class VLMPlanningAgent(Agent[_O, _U]):
         # Prepare images if available and using images
         images = None
         if (
-            self._use_image
+            self._rgb_observation
             and hasattr(obs, "get")
             and hasattr(obs, "__contains__")
-            and "rgb" in obs
+            and "img" in obs
         ):
-            rgb_obs = obs["rgb"]  # type: ignore
-            if isinstance(rgb_obs, np.ndarray):
-                pil_img = PIL.Image.fromarray(rgb_obs)
-                # Add text overlay indicating this is the initial state
-                draw = ImageDraw.Draw(pil_img)
-                text = "Initial state for planning"
-                # Simple text overlay at top-left
-                draw.text((10, 10), text, fill="white")
-                images = [pil_img]
+            img_obs = obs["img"]  # type: ignore
+            # Handle both numpy arrays and PIL images
+            if isinstance(img_obs, np.ndarray):
+                pil_img = PIL.Image.fromarray(img_obs)
+            elif isinstance(img_obs, PIL.Image.Image):
+                pil_img = img_obs
+            else:
+                raise ValueError(f"Unsupported image type: {type(img_obs)}")
+
+            # # Add text overlay indicating this is the initial state
+            # draw = ImageDraw.Draw(pil_img)
+            # text = "Initial state for planning"
+            # # Simple text overlay at top-left
+            # draw.text((10, 10), text, fill="red")
+            images = [pil_img]
 
         # Prepare prompt context
-        state = self._observation_space.devectorize(obs)
+        # Extract state from dict if using RGB observations
+        state_obs = obs["state"] if self._rgb_observation else obs
+        state = self._observation_space.devectorize(state_obs)
         controller_str = self._get_controllers_str()
         goal_str = self._get_goal_str(info)
 
