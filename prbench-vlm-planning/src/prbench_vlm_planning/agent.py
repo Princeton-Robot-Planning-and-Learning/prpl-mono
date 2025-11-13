@@ -18,7 +18,6 @@ from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
 )
-from PIL import ImageDraw
 from prpl_utils.gym_agent import Agent
 from relational_structs.objects import Type
 
@@ -79,6 +78,11 @@ class VLMPlanningAgent(Agent[_O, _U]):
 
         # Load base prompt from file
         self._base_prompt = self._load_base_prompt()
+
+    @property
+    def rgb_observation(self) -> bool:
+        """Whether the agent uses RGB observations."""
+        return self._rgb_observation
 
     def _load_base_prompt(self) -> str:
         """Load the base planning prompt from file."""
@@ -163,7 +167,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
 
         # Prepare prompt context
         # Extract state from dict if using RGB observations
-        state_obs = obs["state"] if self._rgb_observation else obs
+        state_obs = obs["state"] if self._rgb_observation else obs  # type: ignore[index]
         state = self._observation_space.devectorize(state_obs)
         controller_str = self._get_controllers_str()
         goal_str = self._get_goal_str(info)

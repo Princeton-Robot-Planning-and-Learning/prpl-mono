@@ -104,8 +104,8 @@ def _run_single_episode_evaluation(
     obs, info = env.reset(seed=seed)
 
     # Wrap observation with rendered image if using RGB observations
-    if agent._rgb_observation:
-        rendered_img = env.render()
+    if agent.rgb_observation:
+        rendered_img: np.ndarray = env.render()  # type: ignore[assignment]
         obs = {"state": obs, "img": rendered_img}
 
     assert (
@@ -143,8 +143,8 @@ def _run_single_episode_evaluation(
         assert not truncated
 
         # Wrap observation with rendered image if using RGB observations
-        if agent._rgb_observation:
-            rendered_img = env.render()
+        if agent.rgb_observation:
+            rendered_img = env.render()  # type: ignore[assignment]
             obs = {"state": obs, "img": rendered_img}
 
         with timer() as result:
