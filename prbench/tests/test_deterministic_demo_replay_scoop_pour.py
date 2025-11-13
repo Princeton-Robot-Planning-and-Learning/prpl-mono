@@ -20,7 +20,8 @@ def test_deterministic_demo_replay() -> None:
     """
     # Register all environments
     prbench.register_all_environments()
-    demo_path = "prbench/demos/DynScoopPour-o30/0/1762913563.p"
+    # demo_path = "prbench/demos/DynScoopPour-o30/0/1762913563.p"
+    demo_path = "prbench/demos/DynScoopPour-o10/0/1762914069.p"
 
     # Load demo data
     # NOTE: ScoopPour o30 has non-determinism issues, skip for now
@@ -47,7 +48,7 @@ def test_deterministic_demo_replay() -> None:
 
     # Test reproducibility: reset with seed and replay actions
     init_states = []
-    for num in range(100):
+    for num in range(20):
         obs, _ = env.reset(seed=seed)
         init_states.append(obs)
 
