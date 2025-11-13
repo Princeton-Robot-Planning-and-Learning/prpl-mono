@@ -1,8 +1,10 @@
 """Main entry point for running VLM planning experiments.
 
 Examples:
+VLM planning:
     python experiments/run_experiment.py env=Motion2D-p0-v0 seed=0 vlm_model=gpt-5
-
+LLM planning:
+    python experiments/run_experiment.py env=Motion2D-p0-v0 seed=0 vlm_model=gpt-5 rgb_observation=false
     python experiments/run_experiment.py -m env=Motion2D-p1 seed='range(0,10)'
 """
 
