@@ -483,6 +483,21 @@ class MujocoFixture(abc.ABC):
             ValueError: If regions list is empty or if any region has invalid bounds
         """
 
+    @abc.abstractmethod
+    def check_in_region(
+        self,
+        position: NDArray[np.float32],
+        region_name: str,
+    ) -> bool:
+        """Check if a given position is within the specified region.
+
+        Args:
+            position: Position as [x, y, z] array in world coordinates
+            region_name: Name of the region to check
+        Returns:
+            True if the position is within the specified region, False otherwise
+        """
+
 
 @register_fixture
 class Table(MujocoFixture):
@@ -765,6 +780,46 @@ class Table(MujocoFixture):
 
         return (world_x, world_y, world_z)
 
+    def check_in_region(
+        self,
+        position: NDArray[np.float32],
+        region_name: str,
+    ) -> bool:
+        """Check if a given position is within the specified region.
+
+        Args:
+            position: Position as [x, y, z] array in world coordinates
+            region_name: Name of the region to check
+        Returns:
+            True if the position is within the specified region, False otherwise
+        """
+        # Convert world coordinates to table-relative coordinates
+        table_x = position[0] - self.position[0]
+        table_y = position[1] - self.position[1]
+        table_z = position[2] - self.position[2]
+
+        table_placement_threshold = 0.02  # 2cm tolerance for placement
+
+        # Get the bounding box for the specified region
+        if region_name not in self.regions:
+            raise ValueError(f"Region '{region_name}' not found")
+
+        region_ranges = self.regions[region_name]
+
+        for region_range in region_ranges:
+            x_start, y_start, x_end, y_end = region_range
+
+            if (
+                x_start <= table_x <= x_end
+                and y_start <= table_y <= y_end
+                and self.table_height
+                <= table_z
+                <= (self.table_height + table_placement_threshold)
+            ):
+                return True
+
+        return False
+
     def __str__(self) -> str:
         """String representation of the table."""
         return (
@@ -850,7 +905,9 @@ class Cupboard(MujocoFixture):
 
         # Calculate derived properties
         self.num_shelves: int = len(self.shelf_heights) + 1  # +1 for the top shelf
-        self.cupboard_height: float = sum(self.shelf_heights) + self.shelf_thickness
+        self.cupboard_height: float = (
+            sum(self.shelf_heights) + self.num_shelves * self.shelf_thickness
+        )
 
         # Validate configuration
         if len(self.shelf_heights) < 1:
@@ -1065,7 +1122,8 @@ class Cupboard(MujocoFixture):
         shelf_thickness = float(
             fixture_config.get("shelf_thickness", Cupboard.default_shelf_thickness)
         )
-        cupboard_height = sum(shelf_heights_float) + shelf_thickness
+        num_shelves = len(shelf_heights_float) + 1  # +1 for the top shelf
+        cupboard_height = sum(shelf_heights_float) + num_shelves * shelf_thickness
 
         return [
             pos[0] - half_length,  # x_min
@@ -1144,6 +1202,47 @@ class Cupboard(MujocoFixture):
         world_z = z + self.position[2]
 
         return (world_x, world_y, world_z)
+
+    def check_in_region(
+        self,
+        position: NDArray[np.float32],
+        region_name: str,
+    ) -> bool:
+        """Check if a given position is within the specified region. This checks if the
+        position is on the top shelf surface.
+
+        Args:
+            position: Position as [x, y, z] array in world coordinates
+            region_name: Name of the region to check
+        Returns:
+            True if the position is within the specified region, False otherwise
+        """
+        # Convert world coordinates to cupboard-relative coordinates
+        cupboard_x = position[0] - self.position[0]
+        cupboard_y = position[1] - self.position[1]
+        cupboard_z = position[2] - self.position[2]
+
+        cupboard_placement_threshold = 0.02  # 2cm tolerance for placement
+
+        # Get the bounding box for the specified region
+        if region_name not in self.regions:
+            raise ValueError(f"Region '{region_name}' not found")
+
+        region_ranges = self.regions[region_name]
+
+        for region_range in region_ranges:
+            x_start, y_start, x_end, y_end = region_range
+
+            if (
+                x_start <= cupboard_x <= x_end
+                and y_start <= cupboard_y <= y_end
+                and self.cupboard_height
+                <= cupboard_z
+                <= (self.cupboard_height + cupboard_placement_threshold)
+            ):
+                return True
+
+        return False
 
     def __str__(self) -> str:
         """String representation of the cupboard."""

@@ -43,6 +43,7 @@ from prbench.envs.dynamic3d.robots import (
     TidyBotRobotEnv,
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
+from prbench.envs.dynamic3d.utils import check_in_region
 
 
 @dataclass(frozen=True)
@@ -415,13 +416,46 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         return self._get_current_state(), reward, terminated, truncated, {}
 
+    def _check_goals(self) -> bool:
+        """Check if the goal has been achieved."""
+        state = self._get_current_state()
+        goal_predicates = self.task_config.get("goal_state", [])
+        successes = []
+        for pred in goal_predicates:
+            if pred[0] == "on":
+                obj_name = pred[1]
+                region_name = pred[2]
+                obj = state.get_object_from_name(obj_name)
+                position = [
+                    state.get(obj, "x"),
+                    state.get(obj, "y"),
+                    state.get(obj, "z"),
+                ]
+                region_config = self.task_config["regions"][region_name]
+
+                if region_config["target"] == "ground":
+                    # Check pose directly on the ground in the world frame
+                    region_ranges = region_config["ranges"]
+                    in_region = check_in_region(position, region_ranges)
+                else:
+                    # Sample pose on a fixture (table, etc.)
+                    fixture = self._fixtures_dict[region_config["target"]]
+                    in_region = fixture.check_in_region(position, region_name)
+
+                successes.append(in_region)
+            else:
+                raise NotImplementedError(
+                    f"Goal predicate {pred[0]} not implemented in _check_goals"
+                )
+        return all(successes)
+
     def reward(self, obs: dict[str, Any]) -> float:
         """Calculate reward based on task completion."""
-        return self._reward_calculator.calculate_reward(obs)
+        return float(self._check_goals())
 
     def _is_terminated(self, obs: dict[str, Any]) -> bool:
         """Check if episode should terminate."""
-        return self._reward_calculator.is_terminated(obs)
+        return self._check_goals()
 
     def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the environment."""
