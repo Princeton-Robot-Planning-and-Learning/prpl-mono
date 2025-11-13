@@ -84,8 +84,11 @@ class VLMPlanningAgent(Agent[_O, _U]):
         """Load the base planning prompt from file."""
         # Get the path to the prompt file
         current_dir = os.path.dirname(__file__)
-        prompt_file = "vlm_planning_prompt.txt" if self._rgb_observation else \
-            "llm_planning_prompt.txt"
+        prompt_file = (
+            "vlm_planning_prompt.txt"
+            if self._rgb_observation
+            else "llm_planning_prompt.txt"
+        )
         prompt_path = os.path.join(current_dir, "prompts", prompt_file)
 
         with open(prompt_path, "r", encoding="utf-8") as f:
