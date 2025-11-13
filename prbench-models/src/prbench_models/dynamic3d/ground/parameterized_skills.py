@@ -178,12 +178,13 @@ class PyBulletSim:
         # Hardcode the transform from the base pose to the arm pose.
         # check if this is correct......
         self._base_to_arm_pose = Pose((0.12, 0.0, 0.4))
+        # self._base_to_arm_pose = Pose((0.0, 0.0, 0.0))
 
         # Create the PyBullet simulator.
         # Uncomment for debugging.
-        # from pybullet_helpers.gui import create_gui_connection
-        # self._physics_client_id = create_gui_connection(camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0)) # pylint: disable=line-too-long
-        self._physics_client_id = p.connect(p.DIRECT)
+        from pybullet_helpers.gui import create_gui_connection
+        self._physics_client_id = create_gui_connection(camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0)) # pylint: disable=line-too-long
+        # self._physics_client_id = p.connect(p.DIRECT)
 
         # Create the robot, assuming that it is a kinova gen3.
         self._robot = create_pybullet_robot(
@@ -229,7 +230,7 @@ class PyBulletSim:
             (x.get(robot_obj, "pos_base_x"), x.get(robot_obj, "pos_base_y"), 0.0),
             (0, 0, x.get(robot_obj, "pos_base_rot")),
         )
-        arm_pose = multiply_poses(self._base_to_arm_pose, base_pose)
+        arm_pose = multiply_poses(base_pose, self._base_to_arm_pose)
         self._robot.set_base(arm_pose)
         # Update the arm conf.
         arm_conf = [
@@ -404,6 +405,10 @@ class MoveArmToEndEffectorController(
         self._last_state = x
         assert isinstance(params, np.ndarray)
         self._current_params = params.copy()
+        
+        # Reset PyBullet given the current state.
+        self._pybullet_sim.set_state(x)
+
         target_end_effector_pose = Pose(
             (self._current_params[0], self._current_params[1], self._current_params[2]),
             (
@@ -413,14 +418,14 @@ class MoveArmToEndEffectorController(
                 self._current_params[3],
             ),
         )  # (w, x, y, z) -> (x, y, z, w)
+        import pdb; pdb.set_trace()
         target_joints = inverse_kinematics(
             self._pybullet_sim.robot,
             target_end_effector_pose,
             validate=True,
             set_joints=True,
         )
-        # Reset PyBullet given the current state.
-        self._pybullet_sim.set_state(x)
+
         # Run motion planning.
         plan = run_motion_planning(
             self._pybullet_sim.robot,
