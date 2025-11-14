@@ -409,15 +409,17 @@ class MoveArmToEndEffectorController(
         # Reset PyBullet given the current state.
         self._pybullet_sim.set_state(x)
 
-        target_end_effector_pose = Pose(
+        current_end_effector_pose = self._pybullet_sim.robot.get_end_effector_pose()
+
+        target_end_effector_pose = multiply_poses(current_end_effector_pose, Pose(
             (self._current_params[0], self._current_params[1], self._current_params[2]),
             (
+                self._current_params[3],
                 self._current_params[4],
                 self._current_params[5],
                 self._current_params[6],
-                self._current_params[3],
             ),
-        )  # (w, x, y, z) -> (x, y, z, w)
+        ))
         import pdb; pdb.set_trace()
         target_joints = inverse_kinematics(
             self._pybullet_sim.robot,

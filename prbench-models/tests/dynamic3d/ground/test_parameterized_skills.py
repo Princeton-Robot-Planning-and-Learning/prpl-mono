@@ -186,13 +186,13 @@ def test_move_to_target_arm_end_effector():
     controller = lifted_controller.ground(object_parameters)
     target_end_effector_pose = np.array(
         [
-            state.get(robot, "pos_base_x") + 0.1,
-            state.get(robot, "pos_base_y"),
+            -0.3,
+            -0.3,
+            0,
+            0,
+            0,
             0,
             1,
-            0,
-            0,
-            0,
         ]
     )  # x, y, z, rw, rx, ry, rz
     params = target_end_effector_pose
