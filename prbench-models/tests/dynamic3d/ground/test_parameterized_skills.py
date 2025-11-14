@@ -206,8 +206,8 @@ def test_move_to_target_arm_end_effector():
         state = next_state
         if controller.terminated():
             break
-    # else:
-    #     assert False, "Controller did not terminate"
+    else:
+        assert False, "Controller did not terminate"
 
     env.close()
 

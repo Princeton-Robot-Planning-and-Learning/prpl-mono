@@ -178,7 +178,6 @@ class PyBulletSim:
         # Hardcode the transform from the base pose to the arm pose.
         # check if this is correct......
         self._base_to_arm_pose = Pose((0.12, 0.0, 0.4))
-        # self._base_to_arm_pose = Pose((0.0, 0.0, 0.0))
 
         # Create the PyBullet simulator.
         # Uncomment for debugging.
@@ -440,7 +439,6 @@ class MoveArmToEndEffectorController(
         target_joints = inverse_kinematics(
             self._pybullet_sim.robot,
             target_end_effector_pose,
-            validate=True,
             set_joints=False,
         )
 
