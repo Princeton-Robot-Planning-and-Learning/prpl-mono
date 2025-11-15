@@ -35,6 +35,7 @@ from prbench_models.dynamic3d.utils import (
 # Constants.
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
 WAYPOINT_TOL = 1e-2
+GRIPPER_CLOSED_THRESHOLD = 0.02
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.1, 0.3)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi, np.pi)
 WORLD_X_BOUNDS = (-2.5, 2.5)  # we should move these later
@@ -504,6 +505,53 @@ class MoveArmToEndEffectorController(
         return dist < 3 * 1e-2
 
 
+class CloseGripperController(
+    GroundParameterizedController[ObjectCentricState, Array]
+):
+    """Controller for closing the gripper.
+
+    The object parameters are:
+        robot: The robot itself.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_state: ObjectCentricState | None = None
+        self.last_gripper_state: float = 0.0
+
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        # We can later implement sampling if it's helpful, but usually the user would
+        # want to specify the target end effector pose themselves.
+        raise NotImplementedError
+
+    def reset(self, x: ObjectCentricState) -> None:
+        # Update the current state and parameters.
+        self._last_state = x
+
+    def terminated(self) -> bool:
+        return False
+        #return self._robot_gripper_is_closed()
+
+    def step(self) -> Array:
+        self.last_gripper_state = self._get_current_gripper_pose()
+        action = np.zeros(11, dtype=np.float32)
+        action[-1] = 1
+        return action
+
+    def observe(self, x: ObjectCentricState) -> None:
+        self._last_state = x
+
+    def _get_current_gripper_pose(self) -> SE2:
+        assert self._last_state is not None
+        state = self._last_state
+        robot = self.objects[0]
+        return state.get(robot, "pos_gripper")
+
+    def _robot_gripper_is_closed(self, atol: float = GRIPPER_CLOSED_THRESHOLD) -> bool:
+        current_gripper_pose = self._get_current_gripper_pose()
+        return np.isclose(current_gripper_pose, self.last_gripper_state, atol=atol)
+
+
 def create_lifted_controllers(
     action_space: TidyBot3DRobotActionSpace,
     init_constant_state: ObjectCentricState | None = None,
@@ -545,8 +593,19 @@ def create_lifted_controllers(
         )
     )
 
+    # Close gripper controller.
+    robot = Variable("?robot", MujocoRobotObjectType)
+
+    LiftedCloseGripperController: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot],
+            CloseGripperController,
+        )
+    )
+
     return {
         "move_to_target": LiftedMoveToTargetController,
         "move_arm_to_conf": LiftedMoveArmToConfController,
         "move_arm_to_end_effector": LiftedMoveArmToEndEffectorController,
+        "close_gripper": LiftedCloseGripperController,
     }
