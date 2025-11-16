@@ -99,8 +99,20 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
 
-        # Initialize robot environment to None; will be created on first reset
-        self._robot_env: RobotEnv | None = None
+        # Initialize robot environment
+        robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
+            self.task_config["robots"][0]
+        ]
+        self._robot_env = robot_cls(
+            control_frequency=self.config.control_frequency,
+            act_delta=self.config.act_delta,
+            horizon=self.config.horizon,
+            camera_names=self.camera_names,
+            camera_width=self.config.camera_width,
+            camera_height=self.config.camera_height,
+            seed=seed if seed is not None else self.seed,
+            show_viewer=self.config.show_viewer,
+        )
 
         self._render_camera_name: str | None = "overview"
 
@@ -271,21 +283,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         options: dict[str, Any] | None = None,
     ) -> tuple[ObjectCentricState, dict[str, Any]]:
         """Reset the environment and return object-centric observation."""
-
-        if self._robot_env is None:
-            robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
-                self.task_config["robots"][0]
-            ]
-            self._robot_env = robot_cls(
-                control_frequency=self.config.control_frequency,
-                act_delta=self.config.act_delta,
-                horizon=self.config.horizon,
-                camera_names=self.camera_names,
-                camera_width=self.config.camera_width,
-                camera_height=self.config.camera_height,
-                seed=seed if seed is not None else self.seed,
-                show_viewer=self.config.show_viewer,
-            )
 
         # Reset the random seed
         self._robot_env.seed(seed=seed)
