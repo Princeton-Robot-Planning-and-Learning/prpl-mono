@@ -11,9 +11,9 @@ from prbench.envs.dynamic3d.robots.tidybot_robot_env import (
 )
 
 __all__ = [
-    RobotEnv,
-    RBY1ARobotActionSpace,
-    RBY1ARobotEnv,
-    TidyBot3DRobotActionSpace,
-    TidyBotRobotEnv,
+    "RobotEnv",
+    "RBY1ARobotActionSpace",
+    "RBY1ARobotEnv",
+    "TidyBot3DRobotActionSpace",
+    "TidyBotRobotEnv",
 ]
