@@ -27,7 +27,6 @@ class RobotEnv(MujocoEnv, abc.ABC):
         self.qvel: dict[str, NDArray[np.float64]] = {}
         self.ctrl: dict[str, NDArray[np.float64]] = {}
 
-    @abc.abstractmethod
     def reset(
         self,
         *,
@@ -45,7 +44,6 @@ class RobotEnv(MujocoEnv, abc.ABC):
         """
         return super().reset(seed=seed, options=options)
 
-    @abc.abstractmethod
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         """Step the robot environment with the given action.
 
