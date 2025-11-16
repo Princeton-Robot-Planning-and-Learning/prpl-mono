@@ -254,9 +254,9 @@ class TidyBotRobotEnv(RobotEnv):
         input_root = input_tree.getroot()
 
         # Read the scene XML content
-        models_dir = Path(__file__).parent.parent / "models" / "stanford_tidybot"
+        models_dir = Path(__file__).parents[1] / "models" / "stanford_tidybot"
         tidybot_path = models_dir / "tidybot.xml"
-        assets_dir = Path(__file__).parent.parent / "models" / "assets"
+        assets_dir = Path(__file__).parents[1] / "models" / "assets"
 
         with open(tidybot_path, "r", encoding="utf-8") as f:
             tidybot_content = f.read()

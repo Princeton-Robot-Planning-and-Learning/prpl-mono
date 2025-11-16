@@ -115,7 +115,7 @@ class RBY1ARobotEnv(RobotEnv):
         input_root = input_tree.getroot()
 
         # Read the scene XML content
-        models_dir = Path(__file__).parent.parent / "models" / "rby1a"
+        models_dir = Path(__file__).parents[1] / "models" / "rby1a"
         robot_path = models_dir / "rby1a_model_v1.2.xml"
         assets_dir = models_dir / "assets"
         # NOTE: currently manually handling duplicate geoms.xml
