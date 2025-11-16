@@ -135,7 +135,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
     def _update_ctrl(self, action: Array) -> None:
         assert self.sim is not None, "Simulation must be initialized."
-        self.sim.data._data.ctrl[:] = action  # pylint: disable=protected-access
+        self.sim.data._data.ctrl[:] = action
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         assert self.sim is not None, "Simulation must be initialized before stepping."
