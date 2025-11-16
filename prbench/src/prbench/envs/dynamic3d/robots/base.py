@@ -27,34 +27,6 @@ class RobotEnv(MujocoEnv, abc.ABC):
         self.qvel: dict[str, NDArray[np.float64]] = {}
         self.ctrl: dict[str, NDArray[np.float64]] = {}
 
-    def reset(
-        self,
-        *,
-        seed: int | None = None,
-        options: dict[str, Any] | None = None,
-    ) -> tuple[MjObs, dict[str, Any]]:
-        """Reset the robot environment.
-
-        Args:
-            seed: Random seed for reproducibility.
-            options: Additional options for resetting the environment.
-
-        Returns:
-            A tuple containing the observation and info dict.
-        """
-        return super().reset(seed=seed, options=options)
-
-    def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
-        """Step the robot environment with the given action.
-
-        Args:
-            action: The action to take in the environment.
-
-        Returns:
-            A tuple containing (observation, reward, terminated, truncated, info).
-        """
-        return super().step(action)
-
     @abc.abstractmethod
     def reward(self, obs: MjObs) -> float:
         """Compute the reward from an observation.
