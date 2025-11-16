@@ -38,7 +38,6 @@ from prbench.envs.dynamic3d.placement_samplers import (
 from prbench.envs.dynamic3d.robots import (
     RBY1ARobotActionSpace,
     RBY1ARobotEnv,
-    RobotEnv,
     TidyBot3DRobotActionSpace,
     TidyBotRobotEnv,
 )

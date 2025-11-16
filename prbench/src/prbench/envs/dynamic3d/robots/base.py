@@ -5,7 +5,6 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from relational_structs import Array
 
 from prbench.envs.dynamic3d.mujoco_utils import MjObs, MujocoEnv
 
