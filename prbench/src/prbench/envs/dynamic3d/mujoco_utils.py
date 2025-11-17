@@ -135,7 +135,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
     def _update_ctrl(self, action: Array) -> None:
         assert self.sim is not None, "Simulation must be initialized."
-        self.sim.data._data.ctrl[:] = action
+        self.sim.data.mj_data.ctrl[:] = action
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         assert self.sim is not None, "Simulation must be initialized before stepping."
@@ -174,7 +174,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
 
-        self.sim.data._data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = np.array(
+        self.sim.data.mj_data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = np.array(
             [float(x) for x in pos] + [float(q) for q in quat]
         )
 
@@ -185,8 +185,8 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         assert self.sim is not None, "Simulation not initialized"
         joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
-        pos = self.sim.data._data.qpos[joint_qpos_addr : joint_qpos_addr + 3]
-        quat = self.sim.data._data.qpos[joint_qpos_addr + 3 : joint_qpos_addr + 7]
+        pos = self.sim.data.mj_data.qpos[joint_qpos_addr : joint_qpos_addr + 3]
+        quat = self.sim.data.mj_data.qpos[joint_qpos_addr + 3 : joint_qpos_addr + 7]
         return pos, quat
 
     def set_joint_vel(
@@ -206,7 +206,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         joint_qvel_addr = self.sim.model.get_joint_qvel_addr(name)
 
-        self.sim.data._data.qvel[joint_qvel_addr : joint_qvel_addr + 6] = np.array(
+        self.sim.data.mj_data.qvel[joint_qvel_addr : joint_qvel_addr + 6] = np.array(
             [float(x) for x in linear_vel] + [float(q) for q in angular_vel]
         )
 
@@ -217,8 +217,8 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         assert self.sim is not None, "Simulation not initialized"
         joint_qvel_addr = self.sim.model.get_joint_qvel_addr(name)
-        linear_vel = self.sim.data._data.qvel[joint_qvel_addr : joint_qvel_addr + 3]
-        angular_vel = self.sim.data._data.qvel[
+        linear_vel = self.sim.data.mj_data.qvel[joint_qvel_addr : joint_qvel_addr + 3]
+        angular_vel = self.sim.data.mj_data.qvel[
             joint_qvel_addr + 3 : joint_qvel_addr + 6
         ]
         return linear_vel, angular_vel
@@ -229,8 +229,8 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         # Add a copy of qpos and qvel to observation
         obs_dict: dict[str, NDArray[Any]] = {
-            "qpos": np.copy(self.sim.data._data.qpos),
-            "qvel": np.copy(self.sim.data._data.qvel),
+            "qpos": np.copy(self.sim.data.mj_data.qpos),
+            "qvel": np.copy(self.sim.data.mj_data.qvel),
         }
 
         # Render images and update obs_dict
@@ -287,8 +287,8 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         if self.show_viewer:
             mujoco.viewer.launch(
-                self.sim.model._model,  # pylint: disable=protected-access
-                self.sim.data._data,  # pylint: disable=protected-access
+                self.sim.model.mj_model,
+                self.sim.data.mj_data,
                 show_left_ui=False,
                 show_right_ui=False,
             )
@@ -309,7 +309,7 @@ class MjModel:
             xml_string: A string containing the MuJoCo XML model.
         """
 
-        self._model = mujoco.MjModel.from_xml_string(xml_string)
+        self.mj_model = mujoco.MjModel.from_xml_string(xml_string)
         self._make_mappings()
 
     def get_joint_qpos_addr(self, name: str) -> int:
@@ -334,7 +334,7 @@ class MjModel:
             )
         joint_id = self._joint_name2id[name]
         assert joint_id is not None, "Joint ID should not be None here."
-        return self._model.jnt_qposadr[joint_id]
+        return self.mj_model.jnt_qposadr[joint_id]
 
     def get_joint_qvel_addr(self, name: str) -> int:
         """
@@ -358,7 +358,7 @@ class MjModel:
             )
         joint_id = self._joint_name2id[name]
         assert joint_id is not None, "Joint ID should not be None here."
-        return self._model.jnt_dofadr[joint_id]
+        return self.mj_model.jnt_dofadr[joint_id]
 
     def get_joint_type(self, name: str) -> int:
         """Returns the joint type for given joint.
@@ -375,7 +375,7 @@ class MjModel:
             )
         joint_id = self._joint_name2id[name]
         assert joint_id is not None, "Joint ID should not be None here."
-        return self._model.jnt_type[joint_id]
+        return self.mj_model.jnt_type[joint_id]
 
     def _make_mappings(self) -> None:
         """Make some useful internal mappings that mujoco-py supported."""
@@ -387,7 +387,7 @@ class MjModel:
             self._body_name2id,
             self._body_id2name,
         ) = self._extract_mj_names(
-            self._model.nbody,
+            self.mj_model.nbody,
             mujoco.mjtObj.mjOBJ_BODY,
         )
         self.joint_names: tuple[str | None, ...]
@@ -398,7 +398,7 @@ class MjModel:
             self._joint_name2id,
             self._joint_id2name,
         ) = self._extract_mj_names(
-            self._model.njnt,
+            self.mj_model.njnt,
             mujoco.mjtObj.mjOBJ_JOINT,
         )
         self.geom_names: tuple[str | None, ...]
@@ -409,7 +409,7 @@ class MjModel:
             self._geom_name2id,
             self._geom_id2name,
         ) = self._extract_mj_names(
-            self._model.ngeom,
+            self.mj_model.ngeom,
             mujoco.mjtObj.mjOBJ_GEOM,
         )
         self.site_names: tuple[str | None, ...]
@@ -420,7 +420,7 @@ class MjModel:
             self._site_name2id,
             self._site_id2name,
         ) = self._extract_mj_names(
-            self._model.nsite,
+            self.mj_model.nsite,
             mujoco.mjtObj.mjOBJ_SITE,
         )
         self.light_names: tuple[str | None, ...]
@@ -431,7 +431,7 @@ class MjModel:
             self._light_name2id,
             self._light_id2name,
         ) = self._extract_mj_names(
-            self._model.nlight,
+            self.mj_model.nlight,
             mujoco.mjtObj.mjOBJ_LIGHT,
         )
         self.camera_names: tuple[str | None, ...]
@@ -442,7 +442,7 @@ class MjModel:
             self._camera_name2id,
             self._camera_id2name,
         ) = self._extract_mj_names(
-            self._model.ncam,
+            self.mj_model.ncam,
             mujoco.mjtObj.mjOBJ_CAMERA,
         )
         self.actuator_names: tuple[str | None, ...]
@@ -453,7 +453,7 @@ class MjModel:
             self._actuator_name2id,
             self._actuator_id2name,
         ) = self._extract_mj_names(
-            self._model.nu,
+            self.mj_model.nu,
             mujoco.mjtObj.mjOBJ_ACTUATOR,
         )
         self.sensor_names: tuple[str | None, ...]
@@ -464,7 +464,7 @@ class MjModel:
             self._sensor_name2id,
             self._sensor_id2name,
         ) = self._extract_mj_names(
-            self._model.nsensor,
+            self.mj_model.nsensor,
             mujoco.mjtObj.mjOBJ_SENSOR,
         )
         self.tendon_names: tuple[str | None, ...]
@@ -475,7 +475,7 @@ class MjModel:
             self._tendon_name2id,
             self._tendon_id2name,
         ) = self._extract_mj_names(
-            self._model.ntendon,
+            self.mj_model.ntendon,
             mujoco.mjtObj.mjOBJ_TENDON,
         )
         self.mesh_names: tuple[str | None, ...]
@@ -486,7 +486,7 @@ class MjModel:
             self._mesh_name2id,
             self._mesh_id2name,
         ) = self._extract_mj_names(
-            self._model.nmesh,
+            self.mj_model.nmesh,
             mujoco.mjtObj.mjOBJ_MESH,
         )
 
@@ -519,7 +519,7 @@ class MjModel:
         name2id: dict[str | None, int] = {}
         for i in range(num_obj):
             name: str | None = mujoco.mj_id2name(
-                self._model, obj_type, i
+                self.mj_model, obj_type, i
             )  # pylint: disable=no-member
             name2id[name] = i
             id2name[i] = name
@@ -536,7 +536,7 @@ class MjData:
 
     def __init__(self, model: MjModel):
         self.model = model
-        self._data = mujoco.MjData(self.model._model)
+        self.mj_data = mujoco.MjData(self.model.mj_model)
 
     def get_body_xpos(self, name):
         """Get cartesian position of a mujoco body using body name.
@@ -547,7 +547,7 @@ class MjData:
             xpos (np.ndarray): xpos value of the mujoco body
         """
         body_id = self.model._body_name2id[name]
-        return self._data.xpos[body_id]
+        return self.mj_data.xpos[body_id]
 
     def get_body_xmat(self, name):
         """Get rotation of a mujoco body as matrix using body name.
@@ -558,7 +558,7 @@ class MjData:
             xmat (np.ndarray): xmat value of the mujoco body
         """
         body_id = self.model._body_name2id[name]
-        return self._data.xmat[body_id]
+        return self.mj_data.xmat[body_id]
 
     def get_body_jacp(self, name):
         """Get the position jacobian of a mujoco body using body name.
@@ -569,8 +569,8 @@ class MjData:
             jacp (np.ndarray): jacp value of the mujoco body
         """
         body_id = self.model._body_name2id[name]
-        jacp = np.zeros((3, self.model._model.nv))
-        mujoco.mj_jacBody(self.model._model, self._data, jacp, None, body_id)
+        jacp = np.zeros((3, self.model.mj_model.nv))
+        mujoco.mj_jacBody(self.model.mj_model, self.mj_data, jacp, None, body_id)
         return jacp
 
     def get_body_jacr(self, name):
@@ -582,8 +582,8 @@ class MjData:
             jacr (np.ndarray): jacr value of the mujoco body
         """
         body_id = self.model._body_name2id[name]
-        jacr = np.zeros((3, self.model._model.nv))
-        mujoco.mj_jacBody(self.model._model, self._data, jacr, None, body_id)
+        jacr = np.zeros((3, self.model.mj_model.nv))
+        mujoco.mj_jacBody(self.model.mj_model, self.mj_data, jacr, None, body_id)
         return jacr
 
     def get_body_xvelp(self, name):
@@ -595,7 +595,7 @@ class MjData:
             xvelp (np.ndarray): translational velocity of the mujoco body.
         """
         jacp = self.get_body_jacp(name)
-        return np.dot(jacp, self._data.qvel)
+        return np.dot(jacp, self.mj_data.qvel)
 
     def get_body_xvelr(self, name):
         """Get the rotational velocity of a mujoco body using body name.
@@ -606,7 +606,7 @@ class MjData:
             xvelr (np.ndarray): rotational velocity of the mujoco body.
         """
         jacr = self.get_body_jacr(name)
-        return np.dot(jacr, self._data.qvel)
+        return np.dot(jacr, self.mj_data.qvel)
 
 
 class MjSim:
@@ -659,19 +659,19 @@ class MjSim:
     def reset(self) -> None:
         """Reset the simulation."""
         mujoco.mj_resetData(  # pylint: disable=no-member
-            self.model._model, self.data._data  # pylint: disable=protected-access
+            self.model.mj_model, self.data.mj_data
         )
 
     def forward(self) -> None:
         """Synchronize derived quantities."""
         mujoco.mj_forward(  # pylint: disable=no-member
-            self.model._model, self.data._data  # pylint: disable=protected-access
+            self.model.mj_model, self.data.mj_data
         )
 
     def step(self) -> None:
         """Step the simulation."""
         mujoco.mj_step(  # pylint: disable=no-member
-            self.model._model, self.data._data  # pylint: disable=protected-access
+            self.model.mj_model, self.data.mj_data
         )
 
     def render(
@@ -793,9 +793,9 @@ class MjRenderContext:
         sim.forward()
 
         self.model: mujoco.MjModel = (
-            sim.model._model
+            sim.model.mj_model
         )  # pylint: disable=protected-access
-        self.data: mujoco.MjData = sim.data._data  # pylint: disable=protected-access
+        self.data: mujoco.MjData = sim.data.mj_data  # pylint: disable=protected-access
 
         # Create default scene
         # Set maxgeom to 10k to support large-scale scenes

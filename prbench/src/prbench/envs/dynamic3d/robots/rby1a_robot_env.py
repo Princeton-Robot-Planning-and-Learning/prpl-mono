@@ -231,21 +231,15 @@ class RBY1ARobotEnv(RobotEnv):
         }
 
         self.qpos = {
-            part: self.sim.data._data.qpos[  # pylint: disable=protected-access
-                start:end
-            ]
+            part: self.sim.data.mj_data.qpos[start:end]
             for part, (start, end) in qpos_start_end.items()
         }
         self.qvel = {
-            part: self.sim.data._data.qvel[  # pylint: disable=protected-access
-                start:end
-            ]
+            part: self.sim.data.mj_data.qvel[start:end]
             for part, (start, end) in qvel_start_end.items()
         }
         self.ctrl = {
-            part: self.sim.data._data.ctrl[  # pylint: disable=protected-access
-                start:end
-            ]
+            part: self.sim.data.mj_data.ctrl[start:end]
             for part, (start, end) in ctrl_start_end.items()
         }
 
@@ -366,21 +360,21 @@ class RBY1ARobotEnv(RobotEnv):
         assert self.sim is not None, "Simulation must be initialized."
         mass_matrix: NDArray[np.float64] = np.ndarray(
             shape=(
-                self.sim.model._model.nv,  # pylint: disable=protected-access
-                self.sim.model._model.nv,  # pylint: disable=protected-access
+                self.sim.model.mj_model.nv,
+                self.sim.model.mj_model.nv,
             ),
             dtype=np.float64,
         )
         mujoco.mj_fullM(  # pylint: disable=no-member
-            self.sim.model._model,  # pylint: disable=no-member,protected-access
+            self.sim.model.mj_model,  # pylint: disable=no-member
             mass_matrix,
-            self.sim.data._data.qM,  # pylint: disable=no-member,protected-access
+            self.sim.data.mj_data.qM,  # pylint: disable=no-member
         )
         mass_matrix = np.reshape(
             mass_matrix,
             (
-                self.sim.model._model.nv,  # pylint: disable=protected-access
-                self.sim.model._model.nv,  # pylint: disable=protected-access
+                self.sim.model.mj_model.nv,
+                self.sim.model.mj_model.nv,
             ),
         )
         mass_matrix = mass_matrix[self.joint_indices, :][:, self.joint_indices]
@@ -407,7 +401,7 @@ class RBY1ARobotEnv(RobotEnv):
     def torque_compensation(self) -> NDArray[np.float64]:
         """Return torque compensation values."""
         assert self.sim is not None, "Simulation must be initialized."
-        return self.sim.data._data.qfrc_bias[  # pylint: disable=protected-access
+        return self.sim.data.mj_data.qfrc_bias[  # pylint: disable=protected-access
             self.joint_indices
         ]
 

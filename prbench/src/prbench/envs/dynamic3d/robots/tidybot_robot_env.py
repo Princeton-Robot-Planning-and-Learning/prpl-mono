@@ -146,31 +146,13 @@ class TidyBotRobotEnv(RobotEnv):
         )
         arm_ctrl_start, arm_ctrl_end = min(arm_ctrl_indices), max(arm_ctrl_indices) + 1
 
-        self.qpos["base"] = (
-            self.sim.data._data.qpos[  # pylint: disable=protected-access
-                base_qpos_start:base_qpos_end
-            ]
-        )
-        self.qvel["base"] = (
-            self.sim.data._data.qvel[  # pylint: disable=protected-access
-                base_qvel_start:base_qvel_end
-            ]
-        )
-        self.ctrl["base"] = (
-            self.sim.data._data.ctrl[  # pylint: disable=protected-access
-                base_ctrl_start:base_ctrl_end
-            ]
-        )
+        self.qpos["base"] = self.sim.data.mj_data.qpos[base_qpos_start:base_qpos_end]
+        self.qvel["base"] = self.sim.data.mj_data.qvel[base_qvel_start:base_qvel_end]
+        self.ctrl["base"] = self.sim.data.mj_data.ctrl[base_ctrl_start:base_ctrl_end]
 
-        self.qpos["arm"] = self.sim.data._data.qpos[  # pylint: disable=protected-access
-            arm_qpos_start:arm_qpos_end
-        ]
-        self.qvel["arm"] = self.sim.data._data.qvel[  # pylint: disable=protected-access
-            arm_qvel_start:arm_qvel_end
-        ]
-        self.ctrl["arm"] = self.sim.data._data.ctrl[  # pylint: disable=protected-access
-            arm_ctrl_start:arm_ctrl_end
-        ]
+        self.qpos["arm"] = self.sim.data.mj_data.qpos[arm_qpos_start:arm_qpos_end]
+        self.qvel["arm"] = self.sim.data.mj_data.qvel[arm_qvel_start:arm_qvel_end]
+        self.ctrl["arm"] = self.sim.data.mj_data.ctrl[arm_ctrl_start:arm_ctrl_end]
 
         # Buffers for gripper
         gripper_ctrl_id = (
@@ -180,11 +162,9 @@ class TidyBotRobotEnv(RobotEnv):
         )
         # gripper not implemented
         self.qpos["gripper"] = None  # type: ignore[assignment]
-        self.ctrl["gripper"] = (
-            self.sim.data._data.ctrl[  # pylint: disable=protected-access
-                gripper_ctrl_id : gripper_ctrl_id + 1
-            ]
-        )
+        self.ctrl["gripper"] = self.sim.data.mj_data.ctrl[
+            gripper_ctrl_id : gripper_ctrl_id + 1
+        ]
 
     def reset(
         self,
