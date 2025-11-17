@@ -1,7 +1,6 @@
 """This module defines the RBY1ARobotEnv class, which is the base class for the RBY-1A
 robot in simulation."""
 
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Optional
 
@@ -96,7 +95,12 @@ class RBY1ARobotEnv(RobotEnv):
         assert options is not None and "xml" in options, "XML required to reset env"
         xml_string = options["xml"]
         # Insert the robot into the xml string.
-        xml_string = self._insert_robot_into_xml(xml_string)
+        xml_string = self._insert_robot_into_xml(
+            xml_string,
+            str(Path(__file__).parents[1] / "models" / "rby1a"),
+            "rby1a_model_v1.2.xml",
+            str(Path(__file__).parents[1] / "models" / "rby1a"),
+        )
         super().reset(seed=seed, options={"xml": xml_string})
 
         # Setup references to robot state/actuator buffers
@@ -107,99 +111,6 @@ class RBY1ARobotEnv(RobotEnv):
         self._randomize_arm_and_torso_pose()
 
         return self.get_obs(), {}
-
-    def _insert_robot_into_xml(self, xml_string: str) -> str:
-        """Insert the robot model into the provided XML string."""
-        # Parse the provided XML string
-        input_tree = ET.ElementTree(ET.fromstring(xml_string))
-        input_root = input_tree.getroot()
-
-        # Read the scene XML content
-        models_dir = Path(__file__).parents[1] / "models" / "rby1a"
-        robot_path = models_dir / "rby1a_model_v1.2.xml"
-        assets_dir = models_dir / "assets"
-        # NOTE: currently manually handling duplicate geoms.xml
-        # by creating duplicate asset directories. Probably
-        # handle that in code through recursive include.
-
-        with open(robot_path, "r", encoding="utf-8") as f:
-            robot_content = f.read()
-
-        # Parse robot XML
-        robot_tree = ET.ElementTree(ET.fromstring(robot_content))
-        robot_root = robot_tree.getroot()
-        if robot_root is None:
-            raise ValueError("Missing robot element")
-
-        # Update compiler meshdir to absolute path in robot content
-        robot_compiler = robot_root.find("compiler")  # type: ignore[union-attr]
-        if robot_compiler is not None:
-            robot_compiler.set("meshdir", str(assets_dir.resolve()))
-
-        # Helper function to recursively make include file paths absolute
-        def make_include_paths_absolute(element: ET.Element) -> None:
-            """Recursively process an element and its children to make include file
-            paths absolute."""
-            if element.tag == "include" and element.get("file") is not None:
-                file_path = element.get("file")
-                if file_path and not Path(file_path).is_absolute():
-                    # Make the file path absolute relative to the models directory
-                    absolute_path = models_dir / file_path
-                    element.set("file", str(absolute_path.resolve()))
-
-            # Recursively process all children
-            for child_elem in element:
-                make_include_paths_absolute(child_elem)
-
-        # Merge the robot content into the input XML
-        # Copy all children from robot root to input root (except mujoco tag itself)
-        for child in list(robot_root):
-            if child.tag == "worldbody":
-                # Merge worldbody content
-                input_worldbody = input_root.find(  # type:ignore[union-attr]
-                    "worldbody"
-                )
-                if input_worldbody is not None:
-                    for robot_body in list(child):
-                        # Process any include tags within robot_body and its children
-                        make_include_paths_absolute(robot_body)
-                        input_worldbody.append(robot_body)
-                else:
-                    input_root.append(child)  # type: ignore[union-attr]
-            elif child.tag == "default":
-                # Merge or append default sections
-                input_section = input_root.find(child.tag)  # type: ignore[union-attr]
-                if input_section is not None:
-                    for sub_child in list(child):
-                        input_section.append(sub_child)
-                else:
-                    input_root.append(child)  # type: ignore[union-attr]
-            elif child.tag == "asset":
-                # Merge or append asset sections
-                input_section = input_root.find(child.tag)  # type: ignore[union-attr]
-                if input_section is not None:
-                    for sub_child in list(child):
-                        # Check if the asset element has a "file" attribute
-                        # and make it absolute
-                        if sub_child.get("file") is not None:
-                            file_path = sub_child.get("file")
-                            if file_path and not Path(file_path).is_absolute():
-                                # Make the file path absolute relative to the
-                                # assets directory
-                                absolute_path = models_dir / file_path
-                                sub_child.set("file", str(absolute_path.resolve()))
-                        input_section.append(sub_child)
-                else:
-                    input_root.append(child)  # type: ignore[union-attr]
-            else:
-                # For other sections (compiler, actuator, contact, etc.), just append
-                input_root.append(child)  # type: ignore[union-attr]
-
-        if input_root is None:
-            raise ValueError("input_root is None, cannot serialize to string")
-
-        # Return the merged XML as string
-        return ET.tostring(input_root, encoding="unicode")
 
     def _setup_robot_references(self) -> None:
         """Setup references to robot state/actuator buffers."""

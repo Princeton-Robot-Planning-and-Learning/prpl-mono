@@ -1,7 +1,6 @@
 """This module defines the TidyBotRobotEnv class, which is the base class for the
 TidyBot robot in simulation."""
 
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Optional
 
@@ -198,7 +197,12 @@ class TidyBotRobotEnv(RobotEnv):
         xml_string = options["xml"]
 
         # Insert the robot into the xml string.
-        xml_string = self._insert_robot_into_xml(xml_string)
+        xml_string = self._insert_robot_into_xml(
+            xml_string,
+            str(Path(__file__).parents[1] / "models" / "stanford_tidybot"),
+            "tidybot.xml",
+            str(Path(__file__).parents[1] / "models" / "assets"),
+        )
         super().reset(seed=seed, options={"xml": xml_string})
 
         # Setup references to robot state/actuator buffers
@@ -246,62 +250,6 @@ class TidyBotRobotEnv(RobotEnv):
         self.qpos["arm"][:] = theta
         self.ctrl["arm"][:] = theta
         self.sim.forward()  # Update the simulation state
-
-    def _insert_robot_into_xml(self, xml_string: str) -> str:
-        """Insert the robot model into the provided XML string."""
-        # Parse the provided XML string
-        input_tree = ET.ElementTree(ET.fromstring(xml_string))
-        input_root = input_tree.getroot()
-
-        # Read the scene XML content
-        models_dir = Path(__file__).parents[1] / "models" / "stanford_tidybot"
-        tidybot_path = models_dir / "tidybot.xml"
-        assets_dir = Path(__file__).parents[1] / "models" / "assets"
-
-        with open(tidybot_path, "r", encoding="utf-8") as f:
-            tidybot_content = f.read()
-
-        # Parse tidybot XML
-        tidybot_tree = ET.ElementTree(ET.fromstring(tidybot_content))
-        tidybot_root = tidybot_tree.getroot()
-        if tidybot_root is None:
-            raise ValueError("Missing <tidybot> element")
-
-        # Update compiler meshdir to absolute path in tidybot content
-        tidybot_compiler = tidybot_root.find("compiler")  # type: ignore[union-attr]
-        if tidybot_compiler is not None:
-            tidybot_compiler.set("meshdir", str(assets_dir.resolve()))
-
-        # Merge the tidybot content into the input XML
-        # Copy all children from tidybot root to input root (except mujoco tag itself)
-        for child in list(tidybot_root):
-            if child.tag == "worldbody":
-                # Merge worldbody content
-                input_worldbody = input_root.find(  # type:ignore[union-attr]
-                    "worldbody"
-                )
-                if input_worldbody is not None:
-                    for tidybot_body in list(child):
-                        input_worldbody.append(tidybot_body)
-                else:
-                    input_root.append(child)  # type: ignore[union-attr]
-            elif child.tag in ["asset", "default"]:
-                # Merge or append asset and default sections
-                input_section = input_root.find(child.tag)  # type: ignore[union-attr]
-                if input_section is not None:
-                    for sub_child in list(child):
-                        input_section.append(sub_child)
-                else:
-                    input_root.append(child)  # type: ignore[union-attr]
-            else:
-                # For other sections (compiler, actuator, contact, etc.), just append
-                input_root.append(child)  # type: ignore[union-attr]
-
-        if input_root is None:
-            raise ValueError("input_root is None, cannot serialize to string")
-
-        # Return the merged XML as string
-        return ET.tostring(input_root, encoding="unicode")
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         if self.act_delta:  # Interpret action as delta.
