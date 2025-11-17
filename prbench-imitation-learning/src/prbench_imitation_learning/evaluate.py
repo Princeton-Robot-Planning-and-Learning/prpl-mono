@@ -1,59 +1,31 @@
-"""
-Evaluation utilities for PRBench imitation learning.
-"""
+"""Evaluation functions for PRBench imitation learning."""
 
 import concurrent.futures as cf
-import json
-import logging
-
-# Local eval utilities
-# Make local src importable when running as a script
-import sys
 import threading
 import time
 from collections import defaultdict
 from collections.abc import Callable
-from contextlib import nullcontext
 from copy import deepcopy
-from dataclasses import asdict
 from functools import partial
 from pathlib import Path
-from pathlib import Path as _Path
-from pprint import pformat
 from typing import Any, TypedDict
 
 import einops
 import gymnasium as gym
 import numpy as np
 import torch
-from lerobot.configs import parser
-from lerobot.configs.eval import EvalPipelineConfig
-from lerobot.envs.factory import make_env
-from lerobot.envs.utils import (
-    check_env_attributes_and_types,
-    close_envs,
-)
-from termcolor import colored
-from torch import Tensor, nn
-from tqdm import trange
-
-_ROOT = _Path(__file__).resolve().parents[1]
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
-
-from lerobot.policies.factory import make_policy, make_pre_post_processors
+from lerobot.envs.utils import check_env_attributes_and_types
 from lerobot.policies.pretrained import PreTrainedPolicy
 from lerobot.processor import PolicyAction, PolicyProcessorPipeline
 from lerobot.utils.constants import ACTION, DONE, OBS_STR, REWARD
 from lerobot.utils.io_utils import write_video
-from lerobot.utils.random_utils import set_seed
 from lerobot.utils.utils import (
-    get_safe_torch_device,
-    init_logging,
     inside_slurm,
 )
+from torch import Tensor, nn
+from tqdm import trange
 
-from src.prbench_imitation_learning.eval_utils import (
+from prbench_imitation_learning.eval_utils import (
     inject_task_generic,
     preprocess_observation_generic,
 )
@@ -70,32 +42,39 @@ def rollout(
 ) -> dict:
     """Run a batched policy rollout once through a batch of environments.
 
-    Note that all environments in the batch are run until the last environment is done. This means some
-    data will probably need to be discarded (for environments that aren't the first one to be done).
+    Note that all environments in the batch are run until the last environment is done.
+    This means some data will probably need to be discarded
+    (for environments that aren't the first one to be done).
 
     The return dictionary contains:
-        (optional) "observation": A dictionary of (batch, sequence + 1, *) tensors mapped to observation
-            keys. NOTE that this has an extra sequence element relative to the other keys in the
-            dictionary. This is because an extra observation is included for after the environment is
+        (optional) "observation": A dictionary of (batch, sequence + 1, *)
+            tensors mapped to observation keys.
+            NOTE that this has an extra sequence element relative to
+            the other keys in the dictionary.
+            This is because an extra observation is included for after the environment is
             terminated or truncated.
-        "action": A (batch, sequence, action_dim) tensor of actions applied based on the observations (not
-            including the last observations).
-        "reward": A (batch, sequence) tensor of rewards received for applying the actions.
-        "success": A (batch, sequence) tensor of success conditions (the only time this can be True is upon
-            environment termination/truncation).
-        "done": A (batch, sequence) tensor of **cumulative** done conditions. For any given batch element,
-            the first True is followed by True's all the way till the end. This can be used for masking
-            extraneous elements from the sequences above.
+        "action": A (batch, sequence, action_dim) tensor of actions applied
+            based on the observations (not including the last observations).
+        "reward": A (batch, sequence) tensor of rewards received
+            for applying the actions.
+        "success": A (batch, sequence) tensor of success conditions
+            (the only time this can be True is upon environment termination/truncation).
+        "done": A (batch, sequence) tensor of **cumulative** done conditions.
+            For any given batch element,
+            the first True is followed by True's all the way till the end.
+            This can be used for masking extraneous elements from the sequences above.
 
     Args:
         env: The batch of environments.
         policy: The policy. Must be a PyTorch nn module.
-        seeds: The environments are seeded once at the start of the rollout. If provided, this argument
-            specifies the seeds for each of the environments.
-        return_observations: Whether to include all observations in the returned rollout data. Observations
-            are returned optionally because they typically take more memory to cache. Defaults to False.
-        render_callback: Optional rendering callback to be used after the environments are reset, and after
-            every step.
+        seeds: The environments are seeded once at the start of the rollout.
+        If provided, this argument specifies the seeds for each of the environments.
+        return_observations: Whether to include all observations in the
+        returned rollout data. Observations are returned optionally
+        because they typically take more memory to cache.
+        Defaults to False.
+        render_callback: Optional rendering callback to be used
+        after the environments are reset, and after every step.
     Returns:
         The dictionary described above.
     """
@@ -103,16 +82,14 @@ def rollout(
 
     # Reset the policy and environments.
     policy.reset()
-    observation, info = env.reset(seed=seeds)
+    observation, _ = env.reset(seed=seeds)
     # Ensure observation provides both state and image for policies expecting images
     if not isinstance(observation, dict):
         frames = None
         try:
             frames_list = env.call("render")
             if isinstance(frames_list, list) and len(frames_list) > 0:
-                import numpy as _np
-
-                frames = _np.stack(frames_list, axis=0)
+                frames = np.stack(frames_list, axis=0)
         except Exception:
             frames = None
         if frames is not None:
@@ -135,7 +112,7 @@ def rollout(
     progbar = trange(
         max_steps,
         desc=f"Running rollout with at most {max_steps} steps",
-        disable=inside_slurm(),  # we dont want progress bar when we use slurm, since it clutters the logs
+        disable=inside_slurm(),
         leave=False,
     )
     check_env_attributes_and_types(env)
@@ -157,7 +134,6 @@ def rollout(
             all_observations.append(deepcopy(observation))
 
         # Infer "task" from attributes of environments.
-        # TODO: works with SyncVectorEnv but not AsyncVectorEnv
         observation = inject_task_generic(observation)
         observation = preprocessor(observation)
         # Ensure both single-image and multi-cam keys are present for diffusion stacking
@@ -174,7 +150,7 @@ def rollout(
         # Fabricate missing image keys if none are present but policy expects images
         try:
             needed = (
-                list(policy.config.image_features.keys())
+                list(policy.config.image_features.keys())  # type: ignore
                 if hasattr(policy.config, "image_features")
                 else []
             )
@@ -199,7 +175,7 @@ def rollout(
                         observation[img_key] = src
                     else:
                         # Create black image of expected shape (C,H,W)
-                        shape = policy.config.image_features[img_key].shape  # (C,H,W)
+                        shape = policy.config.image_features[img_key].shape  # type: ignore # pylint: disable=line-too-long
                         _dev = next(policy.parameters()).device
                         observation[img_key] = torch.zeros(
                             (batch_size, *shape), dtype=torch.float32, device=_dev
@@ -213,16 +189,14 @@ def rollout(
         assert action_numpy.ndim == 2, "Action dimensions should be (batch, action_dim)"
 
         # Apply the next action.
-        observation, reward, terminated, truncated, info = env.step(action_numpy)
+        observation, reward, terminated, truncated, _ = env.step(action_numpy)
         # Normalize observation format after step as well
         if not isinstance(observation, dict):
             frames = None
             try:
                 frames_list = env.call("render")
                 if isinstance(frames_list, list) and len(frames_list) > 0:
-                    import numpy as _np
-
-                    frames = _np.stack(frames_list, axis=0)
+                    frames = np.stack(frames_list, axis=0)
             except Exception:
                 frames = None
             if frames is not None:
@@ -232,8 +206,6 @@ def rollout(
         if render_callback is not None:
             render_callback(env)
 
-        # Success metric: success if the env terminated (not truncated) BEFORE reaching max_steps.
-        # This mirrors the user's requested definition.
         successes = [
             bool(terminated[idx] and not truncated[idx] and (step + 1) < max_steps)
             for idx in range(env.num_envs)
@@ -268,7 +240,8 @@ def rollout(
         observation = preprocess_observation_generic(observation)
         all_observations.append(deepcopy(observation))
 
-    # Stack the sequence along the first dimension so that we have (batch, sequence, *) tensors.
+    # Stack the sequence along the first dimension
+    # so that we have (batch, sequence, *) tensors.
     ret = {
         ACTION: torch.stack(all_actions, dim=1),
         "reward": torch.stack(all_rewards, dim=1),
@@ -307,10 +280,11 @@ def eval_policy(
         n_episodes: The number of episodes to evaluate.
         max_episodes_rendered: Maximum number of episodes to render into videos.
         videos_dir: Where to save rendered videos.
-        return_episode_data: Whether to return episode data for online training. Incorporates the data into
-            the "episodes" key of the returned dictionary.
-        start_seed: The first seed to use for the first individual rollout. For all subsequent rollouts the
-            seed is incremented by 1. If not provided, the environments are not manually seeded.
+        return_episode_data: Whether to return episode data for online training.
+        Incorporates the data into the "episodes" key of the returned dictionary.
+        start_seed: The first seed to use for the first individual rollout.
+        For all subsequent rollouts the seed is incremented by 1.
+        If not provided, the environments are not manually seeded.
     Returns:
         Dictionary with metrics and data regarding the rollouts.
     """
@@ -319,13 +293,15 @@ def eval_policy(
 
     if not isinstance(policy, PreTrainedPolicy):
         raise ValueError(
-            f"Policy of type 'PreTrainedPolicy' is expected, but type '{type(policy)}' was provided."
+            f"Policy of type 'PreTrainedPolicy' is expected, "
+            f"but type '{type(policy)}' was provided."
         )
 
     start = time.time()
     policy.eval()
 
-    # Determine how many batched rollouts we need to get n_episodes. Note that if n_episodes is not evenly
+    # Determine how many batched rollouts we need to get n_episodes.
+    # Note that if n_episodes is not evenly
     # divisible by env.num_envs we end up discarding some data in the last batch.
     n_batches = n_episodes // env.num_envs + int((n_episodes % env.num_envs) != 0)
 
@@ -344,12 +320,14 @@ def eval_policy(
             return
         n_to_render_now = min(max_episodes_rendered - n_episodes_rendered, env.num_envs)
         if isinstance(env, gym.vector.SyncVectorEnv):
-            ep_frames.append(
+            ep_frames.append(  # pylint: disable = possibly-used-before-assignment
                 np.stack([env.envs[i].render() for i in range(n_to_render_now)])
             )  # noqa: B023
         elif isinstance(env, gym.vector.AsyncVectorEnv):
             # Here we must render all frames and discard any we don't need.
-            ep_frames.append(np.stack(env.call("render")[:n_to_render_now]))
+            ep_frames.append(
+                np.stack(env.call("render")[:n_to_render_now])
+            )  # pylint: disable = possibly-used-before-assignment
 
     if max_episodes_rendered > 0:
         video_paths: list[str] = []
@@ -362,8 +340,6 @@ def eval_policy(
         n_batches, desc="Stepping through eval batches", disable=inside_slurm()
     )
     for batch_ix in progbar:
-        # Cache frames for rendering videos. Each item will be (b, h, w, c), and the list indexes the rollout
-        # step.
         if max_episodes_rendered > 0:
             ep_frames: list[np.ndarray] = []
 
@@ -384,14 +360,9 @@ def eval_policy(
             render_callback=render_frame if max_episodes_rendered > 0 else None,
         )
 
-        # Figure out where in each rollout sequence the first done condition was encountered (results after
-        # this won't be included).
         n_steps = rollout_data["done"].shape[1]
-        # Note: this relies on a property of argmax: that it returns the first occurrence as a tiebreaker.
         done_indices = torch.argmax(rollout_data["done"].to(int), dim=1)
 
-        # Make a mask with shape (batch, n_steps) to mask out rollout data after the first done
-        # (batch-element-wise). Note the `done_indices + 1` to make sure to keep the data from the done step.
         mask = (
             torch.arange(n_steps)
             <= einops.repeat(done_indices + 1, "b -> b s", s=n_steps)
@@ -414,7 +385,6 @@ def eval_policy(
         else:
             all_seeds.append(None)
 
-        # FIXME: episode_data is either None or it doesn't exist
         if return_episode_data:
             this_episode_data = _compile_episode_data(
                 rollout_data,
@@ -453,7 +423,9 @@ def eval_policy(
 
                 videos_dir.mkdir(parents=True, exist_ok=True)
                 video_path = videos_dir / f"eval_episode_{n_episodes_rendered}.mp4"
-                video_paths.append(str(video_path))
+                video_paths.append(  # pylint: disable = possibly-used-before-assignment
+                    str(video_path)
+                )
                 thread = threading.Thread(
                     target=write_video,
                     args=(
@@ -470,7 +442,7 @@ def eval_policy(
 
         progbar.set_postfix(
             {
-                "running_success_rate": f"{np.mean(all_successes[:n_episodes]).item() * 100:.1f}%"
+                "running_success_rate": f"{np.mean(all_successes[:n_episodes]).item() * 100:.1f}%"  # pylint: disable=line-too-long
             }
         )
 
@@ -536,17 +508,16 @@ def _compile_episode_data(
         num_frames = done_indices[ep_ix].item() + 2
         total_frames += num_frames
 
-        # Here we do `num_frames - 1` as we don't want to include the last observation frame just yet.
         ep_dict = {
-            ACTION: rollout_data[ACTION][ep_ix, : num_frames - 1],
+            ACTION: rollout_data[ACTION][ep_ix, : num_frames - 1],  # type: ignore
             "episode_index": torch.tensor(
                 [start_episode_index + ep_ix] * (num_frames - 1)
             ),
             "frame_index": torch.arange(0, num_frames - 1, 1),
             "timestamp": torch.arange(0, num_frames - 1, 1) / fps,
-            DONE: rollout_data["done"][ep_ix, : num_frames - 1],
-            "next.success": rollout_data["success"][ep_ix, : num_frames - 1],
-            REWARD: rollout_data["reward"][ep_ix, : num_frames - 1].type(torch.float32),
+            DONE: rollout_data["done"][ep_ix, : num_frames - 1],  # type: ignore
+            "next.success": rollout_data["success"][ep_ix, : num_frames - 1],  # type: ignore # pylint: disable=line-too-long
+            REWARD: rollout_data["reward"][ep_ix, : num_frames - 1].type(torch.float32),  # type: ignore # pylint: disable=line-too-long
         }
 
         # For the last observation frame, all other keys will just be copy padded.
@@ -554,7 +525,7 @@ def _compile_episode_data(
             ep_dict[k] = torch.cat([ep_dict[k], ep_dict[k][-1:]])
 
         for key in rollout_data[OBS_STR]:
-            ep_dict[key] = rollout_data[OBS_STR][key][ep_ix, :num_frames]
+            ep_dict[key] = rollout_data[OBS_STR][key][ep_ix, :num_frames]  # type: ignore
 
         ep_dicts.append(ep_dict)
 
@@ -568,8 +539,11 @@ def _compile_episode_data(
 
     return data_dict
 
+
 # ---- typed payload returned by one task eval ----
 class TaskMetrics(TypedDict):
+    """Typed dictionary returned by eval_one."""
+
     sum_rewards: list[float]
     max_rewards: list[float]
     successes: list[bool]
@@ -692,9 +666,6 @@ def eval_policy_all(
 
     # small inline helper to accumulate one task's metrics into accumulators
     def _accumulate_to(group: str, metrics: dict):
-        # metrics expected to contain 'sum_rewards', 'max_rewards', 'successes', optionally 'video_paths'
-        # but eval_one may store per-episode lists; we assume metrics uses scalars averaged per task as before.
-        # To be robust, accept scalars or lists.
         def _append(key, value):
             if value is None:
                 return
@@ -729,7 +700,6 @@ def eval_policy_all(
 
     if max_parallel_tasks <= 1:
         # sequential path (single accumulator path on the main thread)
-        # NOTE: keeping a single-threaded accumulator avoids concurrent list appends or locks
         for task_group, task_id, env in tasks:
             tg, tid, metrics = task_runner(task_group, task_id, env)
             _accumulate_to(tg, metrics)
@@ -737,7 +707,6 @@ def eval_policy_all(
                 {"task_group": tg, "task_id": tid, "metrics": metrics}
             )
     else:
-        # threaded path: submit all tasks, consume completions on main thread and accumulate there
         with cf.ThreadPoolExecutor(max_workers=max_parallel_tasks) as executor:
             fut2meta = {}
             for task_group, task_id, env in tasks:

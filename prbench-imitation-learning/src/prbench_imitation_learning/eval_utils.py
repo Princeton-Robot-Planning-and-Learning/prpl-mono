@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+"""Evaluation utilities for PRBench imitation learning."""
+
 from __future__ import annotations
 
 from typing import Any

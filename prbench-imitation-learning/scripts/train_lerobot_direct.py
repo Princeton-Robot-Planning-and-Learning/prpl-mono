@@ -6,16 +6,15 @@ training pipeline using the LeRobot framework directly.
 
 Usage:
     python scripts/train_lerobot_direct.py --output_dir results/pusht_run1 --steps 200000
-    python scripts/train_lerobot_direct.py --output_dir results/pusht_run1 --steps 200000 --eval_freq 10000
+    python scripts/train_lerobot_direct.py --output_dir results/pusht_run1 \
+    --steps 200000 --eval_freq 10000
 """
 
 import logging
 import sys
 import time
 from contextlib import nullcontext
-from pathlib import Path
 from pprint import pformat
-from typing import Any
 
 import torch
 from lerobot.configs import parser
@@ -27,8 +26,6 @@ from lerobot.envs.factory import make_env, make_env_config
 from lerobot.envs.utils import close_envs
 from lerobot.optim.factory import make_optimizer_and_scheduler
 from lerobot.policies.factory import make_policy, make_pre_post_processors
-from lerobot.policies.pretrained import PreTrainedPolicy
-from lerobot.policies.utils import get_device_from_parameters
 from lerobot.rl.wandb_utils import WandBLogger
 from lerobot.utils.logging_utils import AverageMeter, MetricsTracker
 from lerobot.utils.random_utils import set_seed
@@ -42,14 +39,14 @@ from lerobot.utils.train_utils import (
 from lerobot.utils.utils import (
     format_big_number,
     get_safe_torch_device,
-    has_method,
     init_logging,
 )
-from prbench_imitation_learning.train import update_policy
 from lerobot_eval import eval_policy_all
 from termcolor import colored
 from torch.amp import GradScaler
-from torch.optim import Optimizer
+
+from prbench_imitation_learning.train import update_policy
+
 
 @parser.wrap()
 def train(cfg: TrainPipelineConfig):
@@ -57,9 +54,10 @@ def train(cfg: TrainPipelineConfig):
 
     This function orchestrates the entire training pipeline, including:
     - Setting up logging, seeding, and device configuration.
-    - Creating the dataset, evaluation environment (if applicable), policy, and optimizer.
+    - Creating the dataset, evaluation environment, policy, and optimizer.
     - Handling resumption from a checkpoint.
-    - Running the main training loop, which involves fetching data batches and calling `update_policy`.
+    - Running the main training loop, which involves
+    - fetching data batches and calling `update_policy`.
     - Periodically logging metrics, saving model checkpoints, and evaluating the policy.
     - Pushing the final trained model to the Hugging Face Hub if configured.
 
@@ -86,7 +84,8 @@ def train(cfg: TrainPipelineConfig):
     logging.info("Creating dataset")
     dataset = make_dataset(cfg)
 
-    # Create environment used for evaluating checkpoints during training on simulation data.
+    # Create environment used for evaluating checkpoints during training
+    # on simulation data.
     eval_env = None
     eval_env_cfg = cfg.env
 
@@ -113,7 +112,8 @@ def train(cfg: TrainPipelineConfig):
                 robot_type = ""
             if isinstance(robot_type, str) and "motion2d" in robot_type.lower():
                 logging.info(
-                    "No --env specified; auto-configuring prbench Motion2D-p0-v0 for evaluation"
+                    "No --env specified;"
+                    "auto-configuring prbench Motion2D-p0-v0 for evaluation"
                 )
                 eval_env_cfg = make_env_config("prbench", task="Motion2D-p0-v0")
     if cfg.eval_freq > 0 and eval_env_cfg is not None:
@@ -130,7 +130,8 @@ def train(cfg: TrainPipelineConfig):
         ds_meta=dataset.meta,
     )
 
-    # Create processors - only provide dataset_stats if not resuming from saved processors
+    # Create processors - only provide dataset_stats
+    # if not resuming from saved processors
     processor_kwargs = {}
     postprocessor_kwargs = {}
     if (
@@ -182,7 +183,7 @@ def train(cfg: TrainPipelineConfig):
     )
     num_total_params = sum(p.numel() for p in policy.parameters())
 
-    logging.info(
+    logging.info(  # pylint: disable=logging-not-lazy
         colored("Output dir:", "yellow", attrs=["bold"]) + f" {cfg.output_dir}"
     )
     if eval_env is not None:
@@ -257,7 +258,8 @@ def train(cfg: TrainPipelineConfig):
             use_amp=cfg.policy.use_amp,
         )
 
-        # Note: eval and checkpoint happens *after* the `step`th training update has completed, so we
+        # Note: eval and checkpoint happens *after* the
+        # `step`th training update has completed, so we
         # increment `step` here.
         step += 1
         train_tracker.step()
@@ -356,7 +358,7 @@ def train(cfg: TrainPipelineConfig):
 def main():
     """Main entry point for training."""
     init_logging()
-    train()
+    train()  # pylint: disable=no-value-for-parameter
 
 
 if __name__ == "__main__":

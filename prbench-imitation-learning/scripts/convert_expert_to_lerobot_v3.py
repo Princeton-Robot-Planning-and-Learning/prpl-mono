@@ -35,18 +35,21 @@ Usage:
 """
 
 import argparse
-import json
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
 
 import numpy as np
 
 # Import LeRobot APIs
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
-from lerobot.datasets.utils import combine_feature_dicts, hw_to_dataset_features
-from PIL import Image as PILImage
 
-from prbench_imitation_learning.dataset import load_expert_pickle, load_teleop_demonstrations, infer_shapes, build_features, group_by_episode
+from prbench_imitation_learning.dataset import (
+    build_features,
+    group_by_episode,
+    infer_shapes,
+    load_expert_pickle,
+    load_teleop_demonstrations,
+)
+
 
 def convert(
     expert_data_dir: Path = None,
@@ -105,9 +108,9 @@ def convert(
 
     # Write episodes
     total_frames = 0
-    for ep_idx, ep_frames in episodes.items():
+    for _, ep_frames in episodes.items():
         # For each frame in the episode, add to buffer
-        for i, fr in enumerate(ep_frames):
+        for fr in ep_frames:
             obs_state = np.array(fr["observation.state"], dtype=np.float32)
             action = np.array(fr["action"], dtype=np.float32)
 
@@ -155,8 +158,10 @@ def convert(
 
 
 def main():
+    """Main function to convert expert demos to LeRobot v3.0 file-based dataset."""
     parser = argparse.ArgumentParser(
-        description="Convert expert pickle or teleoperated demos to LeRobot v3.0 file-based dataset"
+        description="Convert expert pickle or teleoperated demos "
+        "to LeRobot v3.0 file-based dataset"
     )
     parser.add_argument(
         "--expert_data_dir",
@@ -182,7 +187,8 @@ def main():
     parser.add_argument(
         "--render_images",
         action="store_true",
-        help="For teleoperated demos: render images by replaying in environment (requires prbench)",
+        help="For teleoperated demos: render images by "
+        "replaying in environment (requires prbench)",
     )
     args = parser.parse_args()
 
@@ -195,7 +201,8 @@ def main():
 
     if args.render_images and args.expert_data_dir is not None:
         print(
-            "Warning: --render_images has no effect for expert data (images already included)"
+            "Warning: --render_images has no effect for "
+            "expert data (images already included)"
         )
 
     expert_dir = Path(args.expert_data_dir) if args.expert_data_dir else None

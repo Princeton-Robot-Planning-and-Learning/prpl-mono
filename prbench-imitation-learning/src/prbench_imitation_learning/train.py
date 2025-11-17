@@ -1,46 +1,17 @@
 #!/usr/bin/env python
-"""
-Train a policy using LeRobot framework.
-"""
+"""Train a policy using LeRobot framework."""
 
-import logging
-import sys
 import time
 from contextlib import nullcontext
-from pathlib import Path
-from pprint import pformat
 from typing import Any
 
 import torch
-from lerobot.configs import parser
-from lerobot.configs.train import TrainPipelineConfig
-from lerobot.datasets.factory import make_dataset
-from lerobot.datasets.sampler import EpisodeAwareSampler
-from lerobot.datasets.utils import cycle
-from lerobot.envs.factory import make_env, make_env_config
-from lerobot.envs.utils import close_envs
-from lerobot.optim.factory import make_optimizer_and_scheduler
-from lerobot.policies.factory import make_policy, make_pre_post_processors
 from lerobot.policies.pretrained import PreTrainedPolicy
 from lerobot.policies.utils import get_device_from_parameters
-from lerobot.rl.wandb_utils import WandBLogger
-from lerobot.utils.logging_utils import AverageMeter, MetricsTracker
-from lerobot.utils.random_utils import set_seed
-from lerobot.utils.train_utils import (
-    get_step_checkpoint_dir,
-    get_step_identifier,
-    load_training_state,
-    save_checkpoint,
-    update_last_checkpoint,
-)
+from lerobot.utils.logging_utils import MetricsTracker
 from lerobot.utils.utils import (
-    format_big_number,
-    get_safe_torch_device,
     has_method,
-    init_logging,
 )
-from lerobot_eval import eval_policy_all
-from termcolor import colored
 from torch.amp import GradScaler
 from torch.optim import Optimizer
 
@@ -58,8 +29,9 @@ def update_policy(
 ) -> tuple[MetricsTracker, dict]:
     """Performs a single training step to update the policy's weights.
 
-    This function executes the forward and backward passes, clips gradients, and steps the optimizer and
-    learning rate scheduler. It also handles mixed-precision training via a GradScaler.
+    This function executes the forward and backward passes, clips gradients,
+    and steps the optimizer and learning rate scheduler.
+    It also handles mixed-precision training via a GradScaler.
 
     Args:
         train_metrics: A MetricsTracker instance to record training statistics.
@@ -84,7 +56,6 @@ def update_policy(
         loss, output_dict = policy.forward(batch)
     grad_scaler.scale(loss).backward()
 
-    # Unscale the gradient of the optimizer's assigned params in-place **prior to gradient clipping**.
     grad_scaler.unscale_(optimizer)
 
     grad_norm = torch.nn.utils.clip_grad_norm_(
@@ -107,7 +78,6 @@ def update_policy(
         lr_scheduler.step()
 
     if has_method(policy, "update"):
-        # To possibly update an internal buffer (for instance an Exponential Moving Average like in TDMPC).
         policy.update()
 
     train_metrics.loss = loss.item()

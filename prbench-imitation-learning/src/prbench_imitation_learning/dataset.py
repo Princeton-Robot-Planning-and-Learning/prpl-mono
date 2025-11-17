@@ -1,24 +1,24 @@
 #!/usr/bin/env python
-"""Dataset utilities for PRBench imitation learning.
-"""
+"""Dataset utilities for PRBench imitation learning."""
 
-import argparse
-import json
+import pickle
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+import gymnasium as gym
 import numpy as np
+import prbench
 
 # Import LeRobot APIs
-from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.datasets.utils import combine_feature_dicts, hw_to_dataset_features
-from PIL import Image as PILImage
+from PIL import Image
 
 
 def load_expert_pickle(
     expert_data_dir: Path,
 ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
-    import pickle
+    """Load expert data from pickle file."""
 
     pkl_path = expert_data_dir / "dataset.pkl"
     with open(pkl_path, "rb") as f:
@@ -72,8 +72,6 @@ def load_teleop_demonstrations(
             - episode_index: int
             - frame_index: int
     """
-    import pickle
-    import sys
 
     # Find all episode directories (numeric subdirectories)
     episode_dirs = sorted(
@@ -97,9 +95,6 @@ def load_teleop_demonstrations(
             sys.path.insert(0, str(prbench_src))
 
         try:
-            import gymnasium as gym
-            import prbench
-
             # Register all prbench environments
             prbench.register_all_environments()
         except ImportError as e:
@@ -130,8 +125,6 @@ def load_teleop_demonstrations(
         episode_images = None
         if render_images:
             if env is None:
-                import gymnasium as gym
-
                 env = gym.make(env_id, render_mode="rgb_array")
 
             # Reset with the same seed
@@ -139,7 +132,7 @@ def load_teleop_demonstrations(
             rendered = env.render()
             # Convert RGBA to RGB if needed
             if rendered.shape[-1] == 4:
-                rendered = rendered[:, :, :3]
+                rendered = rendered[:, :, :3]  # type: ignore
             episode_images = [rendered]
 
             # Execute actions to get images
@@ -147,8 +140,8 @@ def load_teleop_demonstrations(
                 env.step(action)
                 rendered = env.render()
                 # Convert RGBA to RGB if needed
-                if rendered.shape[-1] == 4:
-                    rendered = rendered[:, :, :3]
+                if rendered.shape[-1] == 4:  # type: ignore
+                    rendered = rendered[:, :, :3]  # type: ignore
                 episode_images.append(rendered)
 
         # Create frames (note: len(actions) == len(observations) - 1 typically)
@@ -181,15 +174,16 @@ def load_teleop_demonstrations(
     return metadata, frames
 
 
-def to_pil(img: np.ndarray) -> PILImage:
-    if isinstance(img, PILImage):
+def to_pil(img: np.ndarray) -> Image.Image:
+    """Convert numpy array to PIL image."""
+    if isinstance(img, Image.Image):
         return img
     if img.dtype != np.uint8:
         # clip + convert
         arr = np.clip(img, 0, 255).astype(np.uint8)
     else:
         arr = img
-    return PILImage.fromarray(arr)
+    return Image.fromarray(arr)
 
 
 def infer_shapes(frames: List[Dict[str, Any]]) -> Tuple[int, int, Any]:
@@ -204,8 +198,7 @@ def infer_shapes(frames: List[Dict[str, Any]]) -> Tuple[int, int, Any]:
             if "observation.image" in fr:
                 img_shape = tuple(np.array(fr["observation.image"]).shape)
                 return state_dim, action_dim, img_shape  # (H, W, C)
-            else:
-                return state_dim, action_dim, None  # No images
+            return state_dim, action_dim, None  # No images
     raise ValueError("Could not infer shapes from frames; expected keys missing.")
 
 
@@ -240,11 +233,12 @@ def build_features(
 
 
 def group_by_episode(frames: List[Dict[str, Any]]) -> Dict[int, List[Dict[str, Any]]]:
+    """Group frames by episode."""
     buckets: Dict[int, List[Dict[str, Any]]] = {}
     for fr in frames:
         ep_idx = int(fr.get("episode_index", 0))
         buckets.setdefault(ep_idx, []).append(fr)
     # sort frames within episode by frame_index if present
-    for ep_idx in buckets:
+    for ep_idx in buckets:  # pylint: disable=consider-using-dict-items
         buckets[ep_idx].sort(key=lambda x: int(x.get("frame_index", 0)))
     return dict(sorted(buckets.items(), key=lambda kv: kv[0]))
