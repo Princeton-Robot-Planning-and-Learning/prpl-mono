@@ -8,8 +8,13 @@ from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
 )
-from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
+from prbench.envs.dynamic3d.object_types import (
+    MujocoObjectType,
+    MujocoTidyBotRobotObjectType,
+)
+from prbench.envs.dynamic3d.robots.tidybot_robot_env import (
+    TidyBot3DRobotActionSpace,
+)
 from prpl_utils.utils import get_signed_angle_distance
 from pybullet_helpers.geometry import Pose, multiply_poses, set_pose
 from pybullet_helpers.inverse_kinematics import inverse_kinematics
@@ -514,8 +519,7 @@ def create_lifted_controllers(
 
     # Controllers.
 
-    # Move base to target controller.
-    robot = Variable("?robot", MujocoRobotObjectType)
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
     target = Variable("?target", MujocoObjectType)
 
     LiftedMoveToTargetController: LiftedParameterizedController = (
@@ -526,7 +530,7 @@ def create_lifted_controllers(
     )
 
     # Move arm to conf controller.
-    robot = Variable("?robot", MujocoRobotObjectType)
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
 
     LiftedMoveArmToConfController: LiftedParameterizedController = (
         LiftedParameterizedController(
@@ -536,7 +540,7 @@ def create_lifted_controllers(
     )
 
     # Move arm to end effector controller.
-    robot = Variable("?robot", MujocoRobotObjectType)
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
 
     LiftedMoveArmToEndEffectorController: LiftedParameterizedController = (
         LiftedParameterizedController(

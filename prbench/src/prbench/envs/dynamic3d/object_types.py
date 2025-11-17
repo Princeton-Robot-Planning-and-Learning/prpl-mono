@@ -42,8 +42,8 @@ MujocoObjectTypeFeatures[MujocoFixtureObjectType] = [
     "qz",
 ]
 
-MujocoRobotObjectType = Type("mujoco_robot")
-MujocoObjectTypeFeatures[MujocoRobotObjectType] = [
+MujocoTidyBotRobotObjectType = Type("mujoco_tidybot_robot")
+MujocoObjectTypeFeatures[MujocoTidyBotRobotObjectType] = [
     "pos_base_x",
     "pos_base_y",
     "pos_base_rot",
@@ -66,4 +66,11 @@ MujocoObjectTypeFeatures[MujocoRobotObjectType] = [
     "vel_arm_joint6",
     "vel_arm_joint7",
     "vel_gripper",
+]
+
+MujocoRBY1ARobotObjectType = Type("mujoco_rby1a_robot")
+MujocoObjectTypeFeatures[MujocoRBY1ARobotObjectType] = [
+    "pos_base_right",
+    "pos_base_left",
+    # TODO add more attributes  # pylint: disable=fixme
 ]

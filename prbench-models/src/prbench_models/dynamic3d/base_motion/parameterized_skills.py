@@ -7,8 +7,11 @@ from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
 )
-from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
+from prbench.envs.dynamic3d.object_types import (
+    MujocoObjectType,
+    MujocoTidyBotRobotObjectType,
+)
+from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBot3DRobotActionSpace
 from relational_structs import (
     Array,
     ObjectCentricState,
@@ -77,7 +80,7 @@ def create_lifted_controllers(
         def observe(self, x: ObjectCentricState) -> None:
             self._last_state = x
 
-    robot = Variable("?robot", MujocoRobotObjectType)
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
     target = Variable("?target", MujocoObjectType)
 
     LiftedMoveToTargetController: LiftedParameterizedController = (
