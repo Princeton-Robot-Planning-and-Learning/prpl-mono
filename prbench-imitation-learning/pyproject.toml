@@ -14,7 +14,7 @@ dependencies = [
     "diffusers==0.35.1",
     "datasets==4.1.1",
     "gymnasium",
-    "lerobot==0.3.4",
+    "lerobot@git+https://github.com/yixuanhuang98/lerobot_PRBench",
     "matplotlib",
     "wandb",
     "tqdm"
