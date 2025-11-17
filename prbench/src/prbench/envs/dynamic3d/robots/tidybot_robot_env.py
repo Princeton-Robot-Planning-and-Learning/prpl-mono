@@ -47,9 +47,14 @@ class TidyBotRobotEnv(RobotEnv):
     ) -> None:
         """
         Args:
-            xml_string: A string containing the MuJoCo XML model.
             control_frequency: Frequency at which control actions are applied (in Hz).
+            act_delta: Whether to interpret actions as deltas or absolute values.
             horizon: Maximum number of steps per episode.
+            camera_names: List of camera names for rendering.
+            camera_width: Width of camera images.
+            camera_height: Height of camera images.
+            seed: Random seed for reproducibility.
+            show_viewer: Whether to show the MuJoCo viewer.
         """
 
         super().__init__(
@@ -165,19 +170,22 @@ class TidyBotRobotEnv(RobotEnv):
         self.qvel["arm"] = self.sim.data.mj_data.qvel[arm_qvel_start:arm_qvel_end]
         self.ctrl["arm"] = self.sim.data.mj_data.ctrl[arm_ctrl_start:arm_ctrl_end]
 
-        # Create a custom wrapper that maintains references for non-contiguous gripper indices
+        # Create a custom wrapper that maintains references for
+        # non-contiguous gripper indices
         class IndexedView:
-            def __init__(self, array, indices):
+            """A view that provides indexed access to non-contiguous array elements."""
+
+            def __init__(self, array: Any, indices: list[int]) -> None:
                 self.array = array
                 self.indices = indices
 
-            def __setitem__(self, key, value):
+            def __setitem__(self, key: int, value: Any) -> None:
                 self.array[self.indices[key]] = value
 
-            def __getitem__(self, key):
+            def __getitem__(self, key: int) -> Any:
                 return self.array[self.indices[key]]
 
-            def __len__(self):
+            def __len__(self) -> int:
                 return len(self.indices)
 
         self.qpos["gripper"] = IndexedView(
@@ -196,6 +204,15 @@ class TidyBotRobotEnv(RobotEnv):
         seed: int | None = None,
         options: dict[str, Any] | None = None,
     ) -> tuple[MjObs, dict[str, Any]]:
+        """Reset the robot environment.
+
+        Args:
+            seed: Random seed for reproducibility.
+            options: Additional reset options, must contain 'xml' key.
+
+        Returns:
+            Tuple of observation and info dict.
+        """
         # Access the original xml.
         assert options is not None and "xml" in options, "XML required to reset env"
         xml_string = options["xml"]
@@ -255,11 +272,16 @@ class TidyBotRobotEnv(RobotEnv):
         self.ctrl["arm"][:] = theta
         self.sim.forward()  # Update the simulation state
 
-    def _update_ctrl(self, action) -> None:
+    def _update_ctrl(self, action: Array) -> None:
+        """Update control values from action array.
+
+        Args:
+            action: Action array to apply to robot controls.
+        """
         start = 0
-        for part in self.ctrl:
-            end = start + len(self.ctrl[part])
-            self.ctrl[part][:] = action[start:end]
+        for _, ctrl_part in self.ctrl.items():
+            end = start + len(ctrl_part)
+            ctrl_part[:] = action[start:end]
             start = end
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
