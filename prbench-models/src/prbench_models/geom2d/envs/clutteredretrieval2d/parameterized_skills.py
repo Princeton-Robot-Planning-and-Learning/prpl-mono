@@ -41,10 +41,12 @@ class GroundPickController(Geom2dRobotController):
         objects: Sequence[Object],
         action_space: CRVRobotActionSpace,
         init_constant_state: Optional[ObjectCentricState] = None,
+        max_resample_steps: int = 100,
     ) -> None:
         super().__init__(objects, action_space, init_constant_state)
         self._block = objects[1]
         self._action_space = action_space
+        self._max_resample_steps = max_resample_steps
 
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
@@ -56,7 +58,9 @@ class GroundPickController(Geom2dRobotController):
         init_constant_state = self._init_constant_state
         if init_constant_state is not None:
             full_state.data.update(init_constant_state.data)
-        while True:
+
+        successful_sample = False
+        for _ in range(self._max_resample_steps):
             grasp_ratio = rng.uniform(0.0, 1.0)
             side = rng.uniform(0.0, 1.0)
             max_arm_length = x.get(self._robot, "arm_length")
@@ -81,10 +85,15 @@ class GroundPickController(Geom2dRobotController):
             if not state_2d_has_collision(
                 full_state, moving_objects, static_objects, {}
             ):
+                successful_sample = True
                 break
-
-        # Pack parameters: side determines grasp approach, ratio determines position
-        return (grasp_ratio, side, arm_length)
+        if successful_sample:
+            # Pack parameters: side determines grasp approach, ratio determines position
+            return (grasp_ratio, side, arm_length)
+        
+        raise TrajectorySamplingFailure(
+            "Failed to find a feasible target pose."
+        )
 
     def _get_vacuum_actions(self) -> tuple[float, float]:
         return 0.0, 1.0
