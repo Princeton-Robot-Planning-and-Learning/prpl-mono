@@ -305,7 +305,7 @@ def train(cfg: TrainPipelineConfig):
                 ),
             ):
                 eval_info = eval_policy_all(
-                    envs=eval_env,  # dict[suite][task_id] -> vec_env
+                    envs=eval_env,  # type: ignore
                     policy=policy,
                     preprocessor=preprocessor,
                     postprocessor=postprocessor,
@@ -355,7 +355,7 @@ def train(cfg: TrainPipelineConfig):
         postprocessor.push_to_hub(cfg.policy.repo_id)
 
 
-def main():
+def main() -> None:
     """Main entry point for training."""
     init_logging()
     train()  # pylint: disable=no-value-for-parameter

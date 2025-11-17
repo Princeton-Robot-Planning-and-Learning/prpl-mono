@@ -52,10 +52,10 @@ from prbench_imitation_learning.dataset import (
 
 
 def convert(
-    expert_data_dir: Path = None,
-    teleop_data_dir: Path = None,
-    output_dir: Path = None,
-    repo_id: str = None,
+    expert_data_dir: Path = None,  # type: ignore
+    teleop_data_dir: Path = None,  # type: ignore
+    output_dir: Path = None,  # type: ignore
+    repo_id: str = None,  # type: ignore
     fps: int = 10,
     render_images: bool = False,
 ) -> None:
@@ -73,7 +73,7 @@ def convert(
     if expert_data_dir is not None:
         metadata, frames = load_expert_pickle(expert_data_dir)
         has_images = True
-    elif teleop_data_dir is not None:
+    elif teleop_data_dir is not None:  # type: ignore
         metadata, frames = load_teleop_demonstrations(
             teleop_data_dir, render_images=render_images
         )
@@ -157,7 +157,7 @@ def convert(
     print(f"  - {output_dir}/data/chunk-000/file-000.parquet (and possibly more)")
 
 
-def main():
+def main() -> None:
     """Main function to convert expert demos to LeRobot v3.0 file-based dataset."""
     parser = argparse.ArgumentParser(
         description="Convert expert pickle or teleoperated demos "
@@ -214,8 +214,8 @@ def main():
         raise FileExistsError(f"Output directory already exists: {out_dir}")
 
     convert(
-        expert_data_dir=expert_dir,
-        teleop_data_dir=teleop_dir,
+        expert_data_dir=expert_dir,  # type: ignore
+        teleop_data_dir=teleop_dir,  # type: ignore
         output_dir=out_dir,
         repo_id=args.repo_id,
         fps=args.fps,

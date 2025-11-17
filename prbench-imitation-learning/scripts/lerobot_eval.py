@@ -127,7 +127,7 @@ def eval_main(cfg: EvalPipelineConfig):
     logging.info("End of eval")
 
 
-def main():
+def main() -> None:
     """Main function."""
     init_logging()
     eval_main()  # pylint: disable=no-value-for-parameter
