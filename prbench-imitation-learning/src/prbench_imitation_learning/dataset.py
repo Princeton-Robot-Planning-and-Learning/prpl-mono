@@ -129,9 +129,9 @@ def load_teleop_demonstrations(
 
             # Reset with the same seed
             env.reset(seed=seed)
-            rendered = env.render()
+            rendered = env.render()  # type: ignore
             # Convert RGBA to RGB if needed
-            if rendered.shape[-1] == 4:
+            if rendered.shape[-1] == 4:  # type: ignore
                 rendered = rendered[:, :, :3]  # type: ignore
             episode_images = [rendered]
 
@@ -163,7 +163,7 @@ def load_teleop_demonstrations(
             print(f"Loaded {ep_idx + 1}/{len(episode_dirs)} episodes...")
 
     if env is not None:
-        env.close()
+        env.close()  # type: ignore
 
     metadata = {
         "env_name": env_id or "Motion2D",
@@ -176,8 +176,8 @@ def load_teleop_demonstrations(
 
 def to_pil(img: np.ndarray) -> Image.Image:
     """Convert numpy array to PIL image."""
-    if isinstance(img, Image.Image):
-        return img
+    if isinstance(img, Image.Image):  # type: ignore
+        return img  # type: ignore
     if img.dtype != np.uint8:
         # clip + convert
         arr = np.clip(img, 0, 255).astype(np.uint8)

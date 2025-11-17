@@ -81,7 +81,7 @@ def rollout(
     assert isinstance(policy, nn.Module), "Policy must be a PyTorch nn module."
 
     # Reset the policy and environments.
-    policy.reset()
+    policy.reset()  # type: ignore
     observation, _ = env.reset(seed=seeds)
     # Ensure observation provides both state and image for policies expecting images
     if not isinstance(observation, dict):
@@ -181,7 +181,7 @@ def rollout(
                             (batch_size, *shape), dtype=torch.float32, device=_dev
                         )
         with torch.inference_mode():
-            action = policy.select_action(observation)
+            action = policy.select_action(observation)  # type: ignore
         action = postprocessor(action)
 
         # Convert to CPU / numpy.
@@ -254,10 +254,10 @@ def rollout(
             stacked_observations[key] = torch.stack(
                 [obs[key] for obs in all_observations], dim=1
             )
-        ret[OBS_STR] = stacked_observations
+        ret[OBS_STR] = stacked_observations  # type: ignore
 
     if hasattr(policy, "use_original_modules"):
-        policy.use_original_modules()
+        policy.use_original_modules()  # type: ignore
 
     return ret
 
@@ -309,7 +309,7 @@ def eval_policy(
     sum_rewards = []
     max_rewards = []
     all_successes = []
-    all_seeds = []
+    all_seeds: list[int | None] = []
     threads = []  # for video saving threads
     n_episodes_rendered = 0  # for saving the correct number of videos
 
@@ -321,7 +321,7 @@ def eval_policy(
         n_to_render_now = min(max_episodes_rendered - n_episodes_rendered, env.num_envs)
         if isinstance(env, gym.vector.SyncVectorEnv):
             ep_frames.append(  # pylint: disable = possibly-used-before-assignment
-                np.stack([env.envs[i].render() for i in range(n_to_render_now)])
+                np.stack([env.envs[i].render() for i in range(n_to_render_now)])  # type: ignore # pylint: disable=line-too-long
             )  # noqa: B023
         elif isinstance(env, gym.vector.AsyncVectorEnv):
             # Here we must render all frames and discard any we don't need.
@@ -421,8 +421,8 @@ def eval_policy(
                 if n_episodes_rendered >= max_episodes_rendered:
                     break
 
-                videos_dir.mkdir(parents=True, exist_ok=True)
-                video_path = videos_dir / f"eval_episode_{n_episodes_rendered}.mp4"
+                videos_dir.mkdir(parents=True, exist_ok=True)  # type: ignore
+                video_path = videos_dir / f"eval_episode_{n_episodes_rendered}.mp4"  # type: ignore # pylint: disable=line-too-long
                 video_paths.append(  # pylint: disable = possibly-used-before-assignment
                     str(video_path)
                 )
@@ -480,7 +480,7 @@ def eval_policy(
     }
 
     if return_episode_data:
-        info["episodes"] = episode_data
+        info["episodes"] = episode_data  # type: ignore
 
     if max_episodes_rendered > 0:
         info["video_paths"] = video_paths
@@ -506,12 +506,12 @@ def _compile_episode_data(
     for ep_ix in range(rollout_data[ACTION].shape[0]):
         # + 2 to include the first done frame and the last observation frame.
         num_frames = done_indices[ep_ix].item() + 2
-        total_frames += num_frames
+        total_frames += num_frames  # type: ignore
 
         ep_dict = {
             ACTION: rollout_data[ACTION][ep_ix, : num_frames - 1],  # type: ignore
             "episode_index": torch.tensor(
-                [start_episode_index + ep_ix] * (num_frames - 1)
+                [start_episode_index + ep_ix] * (num_frames - 1)  # type: ignore
             ),
             "frame_index": torch.arange(0, num_frames - 1, 1),
             "timestamp": torch.arange(0, num_frames - 1, 1) / fps,
@@ -676,9 +676,9 @@ def eval_policy_all(
                 group_acc[group][key].append(value)
                 overall[key].append(value)
 
-        _append("sum_rewards", metrics.get("sum_rewards"))
-        _append("max_rewards", metrics.get("max_rewards"))
-        _append("successes", metrics.get("successes"))
+        _append("sum_rewards", metrics.get("sum_rewards"))  # type: ignore
+        _append("max_rewards", metrics.get("max_rewards"))  # type: ignore
+        _append("successes", metrics.get("successes"))  # type: ignore
         # video_paths is list-like
         paths = metrics.get("video_paths", [])
         if paths:
@@ -730,10 +730,10 @@ def eval_policy_all(
     groups_aggregated = {}
     for group, acc in group_acc.items():
         groups_aggregated[group] = {
-            "avg_sum_reward": _agg_from_list(acc["sum_rewards"]),
-            "avg_max_reward": _agg_from_list(acc["max_rewards"]),
+            "avg_sum_reward": _agg_from_list(acc["sum_rewards"]),  # type: ignore
+            "avg_max_reward": _agg_from_list(acc["max_rewards"]),  # type: ignore
             "pc_success": (
-                _agg_from_list(acc["successes"]) * 100
+                _agg_from_list(acc["successes"]) * 100  # type: ignore
                 if acc["successes"]
                 else float("nan")
             ),
@@ -743,10 +743,10 @@ def eval_policy_all(
 
     # overall aggregates
     overall_agg = {
-        "avg_sum_reward": _agg_from_list(overall["sum_rewards"]),
-        "avg_max_reward": _agg_from_list(overall["max_rewards"]),
+        "avg_sum_reward": _agg_from_list(overall["sum_rewards"]),  # type: ignore
+        "avg_max_reward": _agg_from_list(overall["max_rewards"]),  # type: ignore
         "pc_success": (
-            _agg_from_list(overall["successes"]) * 100
+            _agg_from_list(overall["successes"]) * 100  # type: ignore
             if overall["successes"]
             else float("nan")
         ),
