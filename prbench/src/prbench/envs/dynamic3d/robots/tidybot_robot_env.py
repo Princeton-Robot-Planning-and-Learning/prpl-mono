@@ -188,13 +188,13 @@ class TidyBotRobotEnv(RobotEnv):
             def __len__(self) -> int:
                 return len(self.indices)
 
-        self.qpos["gripper"] = IndexedView(
+        self.qpos["gripper"] = IndexedView(  # type: ignore[assignment]
             self.sim.data.mj_data.qpos, gripper_qpos_indices
         )
-        self.qvel["gripper"] = IndexedView(
+        self.qvel["gripper"] = IndexedView(  # type: ignore[assignment]
             self.sim.data.mj_data.qvel, gripper_qvel_indices
         )
-        self.ctrl["gripper"] = IndexedView(
+        self.ctrl["gripper"] = IndexedView(  # type: ignore[assignment]
             self.sim.data.mj_data.ctrl, gripper_ctrl_indices
         )
 
