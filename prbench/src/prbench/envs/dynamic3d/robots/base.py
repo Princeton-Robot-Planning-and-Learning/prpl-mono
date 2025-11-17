@@ -37,9 +37,9 @@ class RobotEnv(MujocoEnv, abc.ABC):
         input_root = input_tree.getroot()
 
         # Read the scene XML content
-        models_dir = Path(models_dir)
-        robot_path = models_dir / robot_xml_name
-        assets_dir = Path(assets_dir)
+        models_dir_path = Path(models_dir)
+        robot_path = models_dir_path / robot_xml_name
+        assets_dir_path = Path(assets_dir)
         # NOTE: currently manually handling duplicate geoms.xml
         # by creating duplicate asset directories. Probably
         # handle that in code through recursive include.
@@ -56,7 +56,7 @@ class RobotEnv(MujocoEnv, abc.ABC):
         # Update compiler meshdir to absolute path in robot content
         robot_compiler = robot_root.find("compiler")  # type: ignore[union-attr]
         if robot_compiler is not None:
-            robot_compiler.set("meshdir", str(assets_dir.resolve()))
+            robot_compiler.set("meshdir", str(assets_dir_path.resolve()))
 
         # Helper function to recursively make include file paths absolute
         def make_include_paths_absolute(element: ET.Element) -> None:
@@ -66,7 +66,7 @@ class RobotEnv(MujocoEnv, abc.ABC):
                 file_path = element.get("file")
                 if file_path and not Path(file_path).is_absolute():
                     # Make the file path absolute relative to the models directory
-                    absolute_path = models_dir / file_path
+                    absolute_path = models_dir_path / file_path
                     element.set("file", str(absolute_path.resolve()))
 
             # Recursively process all children
@@ -108,7 +108,7 @@ class RobotEnv(MujocoEnv, abc.ABC):
                             if file_path and not Path(file_path).is_absolute():
                                 # Make the file path absolute relative to the
                                 # assets directory
-                                absolute_path = assets_dir / file_path
+                                absolute_path = assets_dir_path / file_path
                                 sub_child.set("file", str(absolute_path.resolve()))
                         input_section.append(sub_child)
                 else:
