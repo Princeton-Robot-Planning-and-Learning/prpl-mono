@@ -79,6 +79,7 @@ class TidyBotRobotEnv(RobotEnv):
             "joint_6",
             "joint_7",
         ]
+        gripper_joint_names = ["right_driver_joint", "left_driver_joint"]
 
         # Joint positions: joint_id corresponds to qpos index
         base_qpos_indices = [
@@ -87,6 +88,9 @@ class TidyBotRobotEnv(RobotEnv):
         arm_qpos_indices = [
             self.sim.model.get_joint_qpos_addr(name) for name in arm_joint_names
         ]
+        gripper_qpos_indices = [
+            self.sim.model.get_joint_qpos_addr(name) for name in gripper_joint_names
+        ]
 
         # Joint velocities: joint_id corresponds to qvel index
         base_qvel_indices = [
@@ -94,6 +98,9 @@ class TidyBotRobotEnv(RobotEnv):
         ]
         arm_qvel_indices = [
             self.sim.model.get_joint_qvel_addr(name) for name in arm_joint_names
+        ]
+        gripper_qvel_indices = [
+            self.sim.model.get_joint_qvel_addr(name) for name in gripper_joint_names
         ]
 
         # Actuators: actuator_id corresponds to ctrl index
@@ -104,6 +111,10 @@ class TidyBotRobotEnv(RobotEnv):
         arm_ctrl_indices = [
             self.sim.model._actuator_name2id[name]  # pylint: disable=protected-access
             for name in arm_joint_names
+        ]
+        gripper_ctrl_indices = [
+            self.sim.model._actuator_name2id[name]  # pylint: disable=protected-access
+            for name in ["fingers_actuator"]
         ]
 
         # Verify indices are contiguous for slicing
@@ -154,17 +165,30 @@ class TidyBotRobotEnv(RobotEnv):
         self.qvel["arm"] = self.sim.data.mj_data.qvel[arm_qvel_start:arm_qvel_end]
         self.ctrl["arm"] = self.sim.data.mj_data.ctrl[arm_ctrl_start:arm_ctrl_end]
 
-        # Buffers for gripper
-        gripper_ctrl_id = (
-            self.sim.model._actuator_name2id[  # pylint: disable=protected-access
-                "fingers_actuator"
-            ]
+        # Create a custom wrapper that maintains references for non-contiguous gripper indices
+        class IndexedView:
+            def __init__(self, array, indices):
+                self.array = array
+                self.indices = indices
+
+            def __setitem__(self, key, value):
+                self.array[self.indices[key]] = value
+
+            def __getitem__(self, key):
+                return self.array[self.indices[key]]
+
+            def __len__(self):
+                return len(self.indices)
+
+        self.qpos["gripper"] = IndexedView(
+            self.sim.data.mj_data.qpos, gripper_qpos_indices
         )
-        # gripper not implemented
-        self.qpos["gripper"] = None  # type: ignore[assignment]
-        self.ctrl["gripper"] = self.sim.data.mj_data.ctrl[
-            gripper_ctrl_id : gripper_ctrl_id + 1
-        ]
+        self.qvel["gripper"] = IndexedView(
+            self.sim.data.mj_data.qvel, gripper_qvel_indices
+        )
+        self.ctrl["gripper"] = IndexedView(
+            self.sim.data.mj_data.ctrl, gripper_ctrl_indices
+        )
 
     def reset(
         self,
@@ -230,6 +254,13 @@ class TidyBotRobotEnv(RobotEnv):
         self.qpos["arm"][:] = theta
         self.ctrl["arm"][:] = theta
         self.sim.forward()  # Update the simulation state
+
+    def _update_ctrl(self, action) -> None:
+        start = 0
+        for part in self.ctrl:
+            end = start + len(self.ctrl[part])
+            self.ctrl[part][:] = action[start:end]
+            start = end
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         if self.act_delta:  # Interpret action as delta.
