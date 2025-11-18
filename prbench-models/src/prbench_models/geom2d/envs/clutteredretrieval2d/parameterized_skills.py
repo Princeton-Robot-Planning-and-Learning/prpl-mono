@@ -66,10 +66,9 @@ class GroundPickController(Geom2dRobotController):
             + 1e-4
         )
         arm_length = rng.uniform(min_arm_length, max_arm_length)
-            
+
         # Pack parameters: side determines grasp approach, ratio determines position
         return (grasp_ratio, side, arm_length)
-
 
     def _get_vacuum_actions(self) -> tuple[float, float]:
         return 0.0, 1.0
@@ -184,7 +183,7 @@ class GroundPlaceController(Geom2dRobotController):
         abs_x = rng.uniform(self.world_x_min, self.world_x_max)
         abs_y = rng.uniform(self.world_y_min, self.world_y_max)
         abs_theta = rng.uniform(-np.pi, np.pi)
-        
+
         rel_x = (abs_x - self.world_x_min) / (self.world_x_max - self.world_x_min)
         rel_y = (abs_y - self.world_y_min) / (self.world_y_max - self.world_y_min)
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
@@ -264,7 +263,6 @@ class GroundMoveToController(Geom2dRobotController):
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
 
         return rel_theta
-
 
     def _get_vacuum_actions(self) -> tuple[float, float]:
         return 1.0, 0.0  # During moveing, 1.0, after moving, 0.0
