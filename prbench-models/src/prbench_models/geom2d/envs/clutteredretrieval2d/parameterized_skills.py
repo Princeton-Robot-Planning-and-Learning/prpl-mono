@@ -189,6 +189,7 @@ class GroundPlaceController(Geom2dRobotController):
         objects: Sequence[Object],
         action_space: CRVRobotActionSpace,
         init_constant_state: Optional[ObjectCentricState] = None,
+        max_resample_steps: int = 100,
     ) -> None:
         super().__init__(objects, action_space, init_constant_state)
         self._block = objects[1]
@@ -198,6 +199,7 @@ class GroundPlaceController(Geom2dRobotController):
         self.world_x_max = env_config.world_max_x - env_config.robot_base_radius
         self.world_y_min = env_config.world_min_y + env_config.robot_base_radius
         self.world_y_max = env_config.world_max_y - env_config.robot_base_radius
+        self._max_resample_steps = max_resample_steps
 
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
@@ -207,7 +209,9 @@ class GroundPlaceController(Geom2dRobotController):
         init_constant_state = self._init_constant_state
         if init_constant_state is not None:
             full_state.data.update(init_constant_state.data)
-        while True:
+
+        successful_sample = False
+        for _ in range(self._max_resample_steps):
             abs_x = rng.uniform(self.world_x_min, self.world_x_max)
             abs_y = rng.uniform(self.world_y_min, self.world_y_max)
             abs_theta = rng.uniform(-np.pi, np.pi)
@@ -223,12 +227,17 @@ class GroundPlaceController(Geom2dRobotController):
             if not state_2d_has_collision(
                 full_state, moving_objects, static_objects, {}, ignore_z_orders=True
             ):
+                successful_sample = True
                 break
-        rel_x = (abs_x - self.world_x_min) / (self.world_x_max - self.world_x_min)
-        rel_y = (abs_y - self.world_y_min) / (self.world_y_max - self.world_y_min)
-        rel_theta = (abs_theta + np.pi) / (2 * np.pi)
 
-        return (rel_x, rel_y, rel_theta)
+        if successful_sample:
+            rel_x = (abs_x - self.world_x_min) / (self.world_x_max - self.world_x_min)
+            rel_y = (abs_y - self.world_y_min) / (self.world_y_max - self.world_y_min)
+            rel_theta = (abs_theta + np.pi) / (2 * np.pi)
+
+            return (rel_x, rel_y, rel_theta)
+
+        raise TrajectorySamplingFailure("Failed to find a feasible target pose.")
 
     def _get_vacuum_actions(self) -> tuple[float, float]:
         return 1.0, 0.0
@@ -286,12 +295,14 @@ class GroundMoveToController(Geom2dRobotController):
         objects: Sequence[Object],
         action_space: CRVRobotActionSpace,
         init_constant_state: Optional[ObjectCentricState] = None,
+        max_resample_steps: int = 100,
     ) -> None:
         super().__init__(objects, action_space, init_constant_state)
         self._robot = objects[0]
         self._tgt_block = objects[1]
         self._tgt_region = objects[2]
         self._action_space = action_space
+        self._max_resample_steps = max_resample_steps
 
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
@@ -312,7 +323,8 @@ class GroundMoveToController(Geom2dRobotController):
         if self._init_constant_state is not None:
             full_state.data.update(self._init_constant_state.data)
 
-        while True:
+        successful_sample = False
+        for _ in range(self._max_resample_steps):
             # Sample random orientation
             abs_theta = rng.uniform(-np.pi, np.pi)
             tgt_pose_center = SE2Pose(target_pose.x, target_pose.y, abs_theta)
@@ -341,11 +353,16 @@ class GroundMoveToController(Geom2dRobotController):
             )
             inside = is_inside(full_state, self._tgt_block, self._tgt_region, {})
             if not_collision and inside:
+                successful_sample = True
                 break
-        # Relative orientation
-        rel_theta = (abs_theta + np.pi) / (2 * np.pi)
 
-        return rel_theta
+        if successful_sample:
+            # Relative orientation
+            rel_theta = (abs_theta + np.pi) / (2 * np.pi)
+
+            return rel_theta
+
+        raise TrajectorySamplingFailure("Failed to find a feasible target pose.")
 
     def _get_vacuum_actions(self) -> tuple[float, float]:
         return 1.0, 0.0  # During moveing, 1.0, after moving, 0.0
