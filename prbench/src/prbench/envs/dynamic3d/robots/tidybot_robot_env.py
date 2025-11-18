@@ -47,9 +47,14 @@ class TidyBotRobotEnv(RobotEnv):
     ) -> None:
         """
         Args:
-            xml_string: A string containing the MuJoCo XML model.
             control_frequency: Frequency at which control actions are applied (in Hz).
+            act_delta: Whether to interpret actions as deltas or absolute values.
             horizon: Maximum number of steps per episode.
+            camera_names: List of camera names for rendering.
+            camera_width: Width of camera images.
+            camera_height: Height of camera images.
+            seed: Random seed for reproducibility.
+            show_viewer: Whether to show the MuJoCo viewer.
         """
 
         super().__init__(
@@ -79,6 +84,7 @@ class TidyBotRobotEnv(RobotEnv):
             "joint_6",
             "joint_7",
         ]
+        gripper_joint_names = ["right_driver_joint", "left_driver_joint"]
 
         # Joint positions: joint_id corresponds to qpos index
         base_qpos_indices = [
@@ -87,6 +93,9 @@ class TidyBotRobotEnv(RobotEnv):
         arm_qpos_indices = [
             self.sim.model.get_joint_qpos_addr(name) for name in arm_joint_names
         ]
+        gripper_qpos_indices = [
+            self.sim.model.get_joint_qpos_addr(name) for name in gripper_joint_names
+        ]
 
         # Joint velocities: joint_id corresponds to qvel index
         base_qvel_indices = [
@@ -94,6 +103,9 @@ class TidyBotRobotEnv(RobotEnv):
         ]
         arm_qvel_indices = [
             self.sim.model.get_joint_qvel_addr(name) for name in arm_joint_names
+        ]
+        gripper_qvel_indices = [
+            self.sim.model.get_joint_qvel_addr(name) for name in gripper_joint_names
         ]
 
         # Actuators: actuator_id corresponds to ctrl index
@@ -104,6 +116,10 @@ class TidyBotRobotEnv(RobotEnv):
         arm_ctrl_indices = [
             self.sim.model._actuator_name2id[name]  # pylint: disable=protected-access
             for name in arm_joint_names
+        ]
+        gripper_ctrl_indices = [
+            self.sim.model._actuator_name2id[name]  # pylint: disable=protected-access
+            for name in ["fingers_actuator"]
         ]
 
         # Verify indices are contiguous for slicing
@@ -154,17 +170,33 @@ class TidyBotRobotEnv(RobotEnv):
         self.qvel["arm"] = self.sim.data.mj_data.qvel[arm_qvel_start:arm_qvel_end]
         self.ctrl["arm"] = self.sim.data.mj_data.ctrl[arm_ctrl_start:arm_ctrl_end]
 
-        # Buffers for gripper
-        gripper_ctrl_id = (
-            self.sim.model._actuator_name2id[  # pylint: disable=protected-access
-                "fingers_actuator"
-            ]
+        # Create a custom wrapper that maintains references for
+        # non-contiguous gripper indices
+        class IndexedView:
+            """A view that provides indexed access to non-contiguous array elements."""
+
+            def __init__(self, array: Any, indices: list[int]) -> None:
+                self.array = array
+                self.indices = indices
+
+            def __setitem__(self, key: int, value: Any) -> None:
+                self.array[self.indices[key]] = value
+
+            def __getitem__(self, key: int) -> Any:
+                return self.array[self.indices[key]]
+
+            def __len__(self) -> int:
+                return len(self.indices)
+
+        self.qpos["gripper"] = IndexedView(  # type: ignore[assignment]
+            self.sim.data.mj_data.qpos, gripper_qpos_indices
         )
-        # gripper not implemented
-        self.qpos["gripper"] = None  # type: ignore[assignment]
-        self.ctrl["gripper"] = self.sim.data.mj_data.ctrl[
-            gripper_ctrl_id : gripper_ctrl_id + 1
-        ]
+        self.qvel["gripper"] = IndexedView(  # type: ignore[assignment]
+            self.sim.data.mj_data.qvel, gripper_qvel_indices
+        )
+        self.ctrl["gripper"] = IndexedView(  # type: ignore[assignment]
+            self.sim.data.mj_data.ctrl, gripper_ctrl_indices
+        )
 
     def reset(
         self,
@@ -172,6 +204,15 @@ class TidyBotRobotEnv(RobotEnv):
         seed: int | None = None,
         options: dict[str, Any] | None = None,
     ) -> tuple[MjObs, dict[str, Any]]:
+        """Reset the robot environment.
+
+        Args:
+            seed: Random seed for reproducibility.
+            options: Additional reset options, must contain 'xml' key.
+
+        Returns:
+            Tuple of observation and info dict.
+        """
         # Access the original xml.
         assert options is not None and "xml" in options, "XML required to reset env"
         xml_string = options["xml"]
@@ -230,6 +271,18 @@ class TidyBotRobotEnv(RobotEnv):
         self.qpos["arm"][:] = theta
         self.ctrl["arm"][:] = theta
         self.sim.forward()  # Update the simulation state
+
+    def _update_ctrl(self, action: Array) -> None:
+        """Update control values from action array.
+
+        Args:
+            action: Action array to apply to robot controls.
+        """
+        start = 0
+        for _, ctrl_part in self.ctrl.items():
+            end = start + len(ctrl_part)
+            ctrl_part[:] = action[start:end]
+            start = end
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         if self.act_delta:  # Interpret action as delta.
