@@ -90,10 +90,8 @@ class GroundPickController(Geom2dRobotController):
         if successful_sample:
             # Pack parameters: side determines grasp approach, ratio determines position
             return (grasp_ratio, side, arm_length)
-        
-        raise TrajectorySamplingFailure(
-            "Failed to find a feasible target pose."
-        )
+
+        raise TrajectorySamplingFailure("Failed to find a feasible target pose.")
 
     def _get_vacuum_actions(self) -> tuple[float, float]:
         return 0.0, 1.0
