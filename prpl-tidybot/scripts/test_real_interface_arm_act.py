@@ -13,7 +13,7 @@ if __name__ == "__main__":
     retract_qpos = np.deg2rad([0, -20, 180, -146, 0, -50, 90])
     ik_solver = IKSolver()  # type: ignore
     home_pos, home_quat = np.array([0.456, 0.0, 0.434]), np.array([0.5, 0.5, 0.5, 0.5])
-    home_joint_angles = ik_solver.solve(home_pos, home_quat, retract_qpos)  # type: ignore
+    home_joint_angles = ik_solver.solve(home_pos, home_quat, retract_qpos)  # type: ignore # pylint: disable=line-too-long
     interface = RealInterface()
     try:
         for i in range(10):
