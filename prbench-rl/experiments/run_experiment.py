@@ -16,7 +16,7 @@ from omegaconf import DictConfig, OmegaConf
 from prbench_rl import create_rl_agents
 
 
-@hydra.main(version_base=None, config_name="config_eval", config_path="conf/")
+@hydra.main(version_base=None, config_name="config_train", config_path="conf/")
 def _main(cfg: DictConfig) -> None:
     logging.info(
         f"Running agent={cfg.agent.name}, env={cfg.env_id},"

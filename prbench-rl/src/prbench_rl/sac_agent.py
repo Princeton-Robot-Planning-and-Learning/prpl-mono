@@ -54,6 +54,8 @@ class SACArgs:
     """Whether to save trajectory data into the `videos` folder."""
     save_model: bool = True
     """Whether to save model into the `runs/{run_name}` folder."""
+    save_model_freq: int = 50000
+    """Frequency to save the model (in timesteps)."""
 
     # Environment specific arguments
     num_envs: int = 1
@@ -386,6 +388,7 @@ class SACAgent(BaseRLAgent[_O, _U]):
         torch.backends.cudnn.deterministic = self.args.torch_deterministic
 
         # env setup
+        episodic_returns: list[float] = []
         envs = gym.vector.SyncVectorEnv(
             [
                 make_env_sac(
@@ -436,24 +439,24 @@ class SACAgent(BaseRLAgent[_O, _U]):
             # TRY NOT TO MODIFY: record rewards for plotting purposes
             if "final_info" in infos:
                 for info in infos["final_info"]:
-                    if info is not None:
-                        episodic_return = info["episode"]["r"]
-                        print(
+                    if info and "episode" in info:
+                        episode_return = info["episode"]["r"]
+                        logging.info(
                             f"global_step={global_step}, "
-                            f"episodic_return={episodic_return}"
+                            f"episodic_return={episode_return}"
                         )
+                        episodic_returns.append(info["episode"]["r"])
                         if self.writer is not None:
-                            self.writer.add_scalar(  # type: ignore
+                            self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                 "charts/episodic_return",
                                 info["episode"]["r"],
                                 global_step,
                             )
-                            self.writer.add_scalar(  # type: ignore
+                            self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                 "charts/episodic_length",
                                 info["episode"]["l"],
                                 global_step,
                             )
-                        break
 
             # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
             real_next_obs = next_obs.copy()
@@ -542,6 +545,13 @@ class SACAgent(BaseRLAgent[_O, _U]):
                             self.args.tau * param.data
                             + (1 - self.args.tau) * target_param.data
                         )
+                
+                if global_step % self.args.save_model_freq == 0 and self.args.save_model:
+                    model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
+                    base_path = Path(self.log_path) / "policies"
+                    base_path.mkdir(parents=True, exist_ok=True)
+                    self.save(str(model_path))
+                    logging.info(f"model saved to {model_path}")
 
                 if global_step % 100 == 0 and self.writer is not None:
                     self.writer.add_scalar(  # type: ignore
@@ -575,22 +585,6 @@ class SACAgent(BaseRLAgent[_O, _U]):
                         self.writer.add_scalar(  # type: ignore
                             "losses/alpha_loss", alpha_loss.item(), global_step
                         )
-
-            # Evaluation
-            if (
-                self.args.eval_freq > 0
-                and global_step > 0
-                and global_step % self.args.eval_freq == 0
-            ):
-                eval_metrics = self.evaluate(self.args.num_eval_envs)
-                logging.info(f"Evaluated {self.args.num_eval_envs} episodes")
-                for k, v in eval_metrics.items():
-                    mean = np.mean(v)
-                    if self.writer is not None:
-                        self.writer.add_scalar(  # type: ignore
-                            f"eval/{k}", mean, global_step
-                        )
-                    logging.info(f"eval_{k}_mean={mean}")
 
         if self.args.save_model:
             model_path = self.log_path / "final_ckpt.pt"
