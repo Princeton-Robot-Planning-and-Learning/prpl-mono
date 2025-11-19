@@ -177,8 +177,6 @@ def test_clutteredretrieval2d_skills():
     skill_name_to_skill = {s.operator.name: s for s in env_models.skills}
     PickTgt = skill_name_to_skill["PickTgt"]
     PickObstruction = skill_name_to_skill["PickObstruction"]
-    PlaceObstruction = skill_name_to_skill["PlaceObstruction"]
-    PlaceTgt = skill_name_to_skill["PlaceTgt"]
     obs0, _ = env.reset(seed=123)
     state0 = env_models.observation_to_state(obs0)
     abstract_state = env_models.state_abstractor(state0)
