@@ -11,8 +11,8 @@ from prbench.envs.dynamic3d.object_types import (
     MujocoObjectType,
     MujocoTidyBotRobotObjectType,
 )
-from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBot3DRobotActionSpace
+from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 from prbench_models.dynamic3d.base_motion.parameterized_skills import (
     create_lifted_controllers,
 )
