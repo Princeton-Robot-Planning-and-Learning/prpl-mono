@@ -177,6 +177,8 @@ def test_clutteredretrieval2d_skills():
     skill_name_to_skill = {s.operator.name: s for s in env_models.skills}
     PickTgt = skill_name_to_skill["PickTgt"]
     PickObstruction = skill_name_to_skill["PickObstruction"]
+    PlaceObstruction = skill_name_to_skill["PlaceObstruction"]
+    PlaceTgt = skill_name_to_skill["PlaceTgt"]
     obs0, _ = env.reset(seed=123)
     state0 = env_models.observation_to_state(obs0)
     abstract_state = env_models.state_abstractor(state0)
@@ -206,6 +208,44 @@ def test_clutteredretrieval2d_skills():
     assert (
         predicate_name_to_pred["HoldingObstruction"]([robot, obstruction])
         in abstract_state1.atoms
+    )
+
+    # Placing the obstruction to empty place.
+    place_obstruction = PlaceObstruction.ground((robot, obstruction))
+    obs1 = _skill_test_helper(place_obstruction, env_models, env, obs1, params=(0.1, 0.1, 0))
+    state1 = env_models.observation_to_state(obs1)
+    abstract_state1 = env_models.state_abstractor(state1)
+    assert predicate_name_to_pred["HandEmpty"]([robot]) in abstract_state1.atoms
+    assert (
+        predicate_name_to_pred["HoldingObstruction"]([robot, obstruction])
+        not in abstract_state1.atoms
+    )
+
+    # Picking the target block from right side, which should be possible now.
+    pick_target_block = PickTgt.ground((robot, target_block))
+    obs2 = _skill_test_helper(
+        pick_target_block, env_models, env, obs1, params=(0.9, 0.4, 0.15)
+    )
+    state2 = env_models.observation_to_state(obs2)
+    abstract_state2 = env_models.state_abstractor(state2)
+    assert (
+        predicate_name_to_pred["HoldingTgt"]([robot, target_block])
+        in abstract_state2.atoms
+    )
+
+    # Place the target block inside the target region.
+    place_target_block = PlaceTgt.ground(
+        (robot, target_block, obj_name_to_obj["target_region"])
+    )
+    obs3 = _skill_test_helper(place_target_block, env_models, env, obs2, params=(0.2, 0.2, 0))
+    state3 = env_models.observation_to_state(obs3)
+    abstract_state3 = env_models.state_abstractor(state3)
+    assert predicate_name_to_pred["HandEmpty"]([robot]) in abstract_state3.atoms
+    assert (
+        predicate_name_to_pred["Inside"](
+            [target_block, obj_name_to_obj["target_region"]]
+        )
+        in abstract_state3.atoms
     )
 
 
