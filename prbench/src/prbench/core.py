@@ -164,8 +164,9 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         )
         self.action_space = self._object_centric_env.action_space
         self.observation_space = self._object_centric_env.observation_space.to_box(
-            self._constant_objects, self._object_centric_env.type_features,
-            dtype=self.action_space.dtype
+            self._constant_objects,
+            self._object_centric_env.type_features,
+            dtype=self.action_space.dtype,
         )
         assert isinstance(self.observation_space, ObjectCentricBoxSpace)
         # The action space already inherits from Box, so we don't need to change it.

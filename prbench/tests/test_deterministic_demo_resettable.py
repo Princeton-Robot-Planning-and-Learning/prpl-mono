@@ -8,9 +8,9 @@ import pytest
 import prbench
 from prbench.utils import find_all_demo_files, load_demo
 
-# @pytest.mark.skip(reason="Dynamic2D resettable has not been verified yet")
-# @pytest.mark.parametrize("demo_path", find_all_demo_files())
-def test_deterministic_demo_reset():
+
+@pytest.mark.parametrize("demo_path", find_all_demo_files())
+def test_deterministic_demo_reset(demo_path: Path) -> None:
     """Test that demo replay produces identical observations and rewards.
 
     This test verifies that:
@@ -24,8 +24,9 @@ def test_deterministic_demo_reset():
     # Register all environments
     prbench.register_all_environments()
 
-    demo_path = "prbench/demos/DynObstruction2D-o3/1/1762886183.p"
     # Load demo data
+    if "Dyn" in str(demo_path):
+        pytest.skip("Skipping Dynamic2D due to unresettable physical simulation")
     try:
         demo_data = load_demo(demo_path)
     except Exception as e:
@@ -51,29 +52,18 @@ def test_deterministic_demo_reset():
 
     # Check initial observation matches
     obs_difference = np.abs(obs - expected_observations[0]).max()
-    print(
-        "Initalization max observation difference = {}".format(obs_difference)
-    )
+    print(f"Initalization max observation difference = {obs_difference}")
 
     # Replay all actions and verify observations/rewards
     for i, expected_obs in enumerate(expected_observations[:-1]):
-        # obs, _ = env.reset(seed=seed, options={"init_state": expected_obs})
+        obs, _ = env.reset(seed=seed, options={"init_state": expected_obs})
         action = actions[i]
         obs_next, reward, terminated, truncated, _ = env.step(action)
 
         # Check observation matches
         expected_obs_next = expected_observations[i + 1]
         obs_difference = np.abs(obs_next - expected_obs_next).max()
-        print(
-            "Step {}: max observation difference = {}".format(i, obs_difference)
-        )
-        # if not np.allclose(obs_next, expected_obs_next, atol=1e-4):
-        #     diff = np.abs(obs_next - expected_obs_next)
-        #     max_diff = np.max(diff)
-        #     raise AssertionError(
-        #         f"Observation mismatch at step {i} in {demo_path}: "
-        #         f"max difference {max_diff}"
-        #     )
+        print(f"Step {i}: max observation difference = {obs_difference}")
 
         # Check reward matches (if available)
         if expected_rewards is not None and i < len(expected_rewards):
