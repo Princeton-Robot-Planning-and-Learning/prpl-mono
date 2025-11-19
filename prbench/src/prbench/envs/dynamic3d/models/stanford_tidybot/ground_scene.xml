@@ -1,5 +1,4 @@
 <mujoco model="tidybot scene">
-  <include file="tidybot.xml"/>
   
   <statistic center="0.25 0 0.6" extent="1.0" meansize="0.05"/>
 

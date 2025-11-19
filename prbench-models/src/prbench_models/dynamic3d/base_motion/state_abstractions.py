@@ -4,7 +4,10 @@ from bilevel_planning.structs import (
     RelationalAbstractGoal,
     RelationalAbstractState,
 )
-from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType
+from prbench.envs.dynamic3d.object_types import (
+    MujocoObjectType,
+    MujocoTidyBotRobotObjectType,
+)
 from prbench.envs.dynamic3d.tidybot_rewards import BaseMotionRewardCalculator
 from relational_structs import (
     GroundAtom,
@@ -13,7 +16,7 @@ from relational_structs import (
 )
 
 # Predicates.
-AtTarget = Predicate("AtTarget", [MujocoRobotObjectType, MujocoObjectType])
+AtTarget = Predicate("AtTarget", [MujocoTidyBotRobotObjectType, MujocoObjectType])
 
 
 # State abstractor.

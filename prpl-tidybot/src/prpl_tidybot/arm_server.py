@@ -53,6 +53,9 @@ class Arm:
         qpos = self.ik_solver.solve(action['arm_pos'], action['arm_quat'], self.arm.q)
         self.command_queue.put((qpos, action['gripper_pos'].item()))
 
+    def execute_action_angular(self, qpos, gripper_pos):
+        self.command_queue.put((qpos, gripper_pos))
+    
     def get_state(self):
         arm_pos, arm_quat = self.arm.get_tool_pose()
         if arm_quat[3] < 0.0:  # Enforce quaternion uniqueness
