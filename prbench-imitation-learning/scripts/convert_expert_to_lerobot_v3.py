@@ -20,7 +20,7 @@ Usage:
 
   # For teleoperated demonstrations (with rendered images):
   python scripts/convert_expert_to_lerobot_v3.py \
-      --teleop_data_dir third-party/prbench/demos/Motion2D-p0 \
+      --teleop_data_dir ../prbench/demos/Motion2D-p0 \
       --output_dir datasets/motion2d_teleop_v3 \
       --repo_id motion2d_teleop \
       --fps 10 \
