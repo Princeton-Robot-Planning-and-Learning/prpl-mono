@@ -16,7 +16,7 @@ if __name__ == "__main__":
     home_joint_angles = ik_solver.solve(home_pos, home_quat, retract_qpos)  # type: ignore # pylint: disable=line-too-long
     interface = RealInterface()
     try:
-        for i in range(10):
+        for i in range(20):
             observation = interface.get_observation()
             print(
                 "current arm joint angles:",
@@ -24,10 +24,25 @@ if __name__ == "__main__":
             )
             tidybot_action = TidyBotAction(
                 base_local_goal=interface.get_base_state(),
-                arm_goal=home_joint_angles,
+                arm_goal=retract_qpos.tolist(),
                 gripper_goal=interface.get_gripper_state(),
             )
             interface.execute_arm_action(tidybot_action)
             time.sleep(POLICY_CONTROL_PERIOD)
+        # print('closing gripper')
+        # for i in range(10):
+        #     observation = interface.get_observation()
+        #     print(
+        #         "current arm joint angles:",
+        #         observation.arm_conf,
+        #     )
+        #     tidybot_action = TidyBotAction(
+        #         base_local_goal=interface.get_base_state(),
+        #         arm_goal=interface.get_arm_state(),
+        #         gripper_goal=1.0,
+        #     )
+        #     interface.execute_gripper_action(tidybot_action)
+        #     time.sleep(POLICY_CONTROL_PERIOD)
+
     finally:
         interface.close()

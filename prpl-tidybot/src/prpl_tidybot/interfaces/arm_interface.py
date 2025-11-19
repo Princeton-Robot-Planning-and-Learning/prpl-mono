@@ -22,8 +22,13 @@ class ArmInterface(abc.ABC):
     def get_gripper_state(self) -> float:
         """Get the current gripper state."""
 
+    @abc.abstractmethod
     def execute_action(self, action: list[float]) -> None:
         """Execute an action on the arm."""
+
+    @abc.abstractmethod
+    def execute_gripper_action(self, action: float) -> None:
+        """Execute a gripper action (1 is open, 0 is closed)."""
 
 
 class FakeArmInterface(ArmInterface):
@@ -40,6 +45,9 @@ class FakeArmInterface(ArmInterface):
         return self.gripper_state
 
     def execute_action(self, action) -> None:
+        pass
+
+    def execute_gripper_action(self, action) -> None:
         pass
 
 
@@ -67,6 +75,12 @@ class RealArmInterface(ArmInterface):
         """Execute an joint space action on the arm."""
         self.arm.execute_action_angular(
             qpos=action, gripper_pos=self.arm.get_gripper_position()
+        )
+
+    def execute_gripper_action(self, action) -> None:
+        """Execute an joint space action on the arm."""
+        self.arm.execute_action_angular(
+            qpos=self.arm.get_joint_angles(), gripper_pos=action
         )
 
     def close(self) -> None:
