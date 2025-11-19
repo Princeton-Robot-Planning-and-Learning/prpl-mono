@@ -25,10 +25,11 @@ def make_env_ppo(
         if capture_video and idx == 0:
             if "prbench" in env_id:
                 env = prbench.make(env_id, render_mode="rgb_array")
+                env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
             else:
                 env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-            env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
+            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}", 
+                                           episode_trigger=lambda x: True)
         else:
             if "prbench" in env_id:
                 env = prbench.make(env_id)
