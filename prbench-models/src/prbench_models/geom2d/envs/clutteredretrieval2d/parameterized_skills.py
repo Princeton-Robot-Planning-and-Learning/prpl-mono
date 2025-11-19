@@ -18,8 +18,11 @@ from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
+    is_inside,
     run_motion_planning_for_crv_robot,
+    snap_suctioned_objects,
 )
+from prbench.envs.utils import state_2d_has_collision
 from relational_structs import (
     Object,
     ObjectCentricState,
@@ -49,11 +52,6 @@ class GroundPickController(Geom2dRobotController):
         # Sample grasp ratio and side
         # grasp_ratio: determines position along the side ([0.0, 1.0])
         # side: 0~0.25 left, 0.25~0.5 right, 0.5~0.75 top, 0.75~1.0 bottom
-        full_state = x.copy()
-        init_constant_state = self._init_constant_state
-        if init_constant_state is not None:
-            full_state.data.update(init_constant_state.data)
-
         grasp_ratio = rng.uniform(0.0, 1.0)
         side = rng.uniform(0.0, 1.0)
         max_arm_length = x.get(self._robot, "arm_length")
@@ -128,6 +126,25 @@ class GroundPickController(Geom2dRobotController):
         target_se2_pose = self._calculate_grasp_robot_pose(
             state, grasp_ratio, side, desired_arm_length
         )
+
+        full_state = state.copy()
+        init_constant_state = self._init_constant_state
+        if init_constant_state is not None:
+            full_state.data.update(init_constant_state.data)
+
+        # Check if the target pose is collision-free
+        full_state.set(self._robot, "x", target_se2_pose.x)
+        full_state.set(self._robot, "y", target_se2_pose.y)
+        full_state.set(self._robot, "theta", target_se2_pose.theta)
+        full_state.set(self._robot, "arm_joint", desired_arm_length)
+
+        # Check target state collision
+        moving_objects = {self._robot}
+        static_objects = set(full_state) - moving_objects
+        if state_2d_has_collision(full_state, moving_objects, static_objects, {}):
+            raise TrajectorySamplingFailure(
+                "Failed to find a collision-free path to target."
+            )
 
         # Plan collision-free waypoints to the target pose
         mp_state = state.copy()
@@ -212,6 +229,30 @@ class GroundPlaceController(Geom2dRobotController):
             SE2Pose(robot_x, robot_y, robot_theta),
             robot_radius,
         )
+
+        # Check if the target pose is collision-free
+        full_state = state.copy()
+        init_constant_state = self._init_constant_state
+        if init_constant_state is not None:
+            full_state.data.update(init_constant_state.data)
+
+        full_state.set(self._robot, "x", final_robot_x)
+        full_state.set(self._robot, "y", final_robot_y)
+        full_state.set(self._robot, "theta", final_robot_theta)
+
+        suctioned_objects = get_suctioned_objects(state, self._robot)
+        snap_suctioned_objects(full_state, self._robot, suctioned_objects)
+        # Check collision
+        moving_objects = {self._robot} | {o for o, _ in suctioned_objects}
+        static_objects = set(full_state) - moving_objects
+        # Need to make sure no collision with target region
+        if state_2d_has_collision(
+            full_state, moving_objects, static_objects, {}, ignore_z_orders=True
+        ):
+            raise TrajectorySamplingFailure(
+                "Failed to find a collision-free path to target."
+            )
+
         # Plan collision-free waypoints to the target pose
         # We set the arm to be the longest during motion planning
         final_waypoints: list[tuple[SE2Pose, float]] = [current_wp]
@@ -293,6 +334,33 @@ class GroundMoveToController(Geom2dRobotController):
         world_to_gripper = tgt_pose_bottom * rel_se2_pose.inverse
         robot2gripper = SE2Pose(x=robot_arm_joint + gripper_width, y=0.0, theta=0.0)
         robot_pose = world_to_gripper * robot2gripper.inverse
+
+        # Check if the target pose is collision-free
+        full_state = state.copy()
+        init_constant_state = self._init_constant_state
+        if init_constant_state is not None:
+            full_state.data.update(init_constant_state.data)
+
+        # Convert to absolute coordinates within target bounds
+        full_state.set(self._tgt_block, "x", tgt_pose_bottom.x)
+        full_state.set(self._tgt_block, "y", tgt_pose_bottom.y)
+        full_state.set(self._tgt_block, "theta", params)
+
+        full_state.set(self._robot, "x", robot_pose.x)
+        full_state.set(self._robot, "y", robot_pose.y)
+        full_state.set(self._robot, "theta", robot_pose.theta)
+
+        # Check collision
+        moving_objects = {self._robot, self._tgt_block, self._tgt_region}
+        static_objects = set(full_state) - moving_objects
+        collision = state_2d_has_collision(
+            full_state, moving_objects, static_objects, {}
+        )
+        not_inside = not is_inside(full_state, self._tgt_block, self._tgt_region, {})
+        if collision or not_inside:
+            raise TrajectorySamplingFailure(
+                "Failed to find a collision-free path to target."
+            )
 
         # Use motion planning to find collision-free path
         mp_state = state.copy()
