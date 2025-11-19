@@ -1,0 +1,14 @@
+# Default configuration for RL experiments
+defaults:
+  - agent: ppo_motion2d_2_passages
+  - _self_
+
+# Experiment mode: "train" or "eval"
+mode: eval
+env_id: prbench/Motion2D-p2-v0
+max_episode_steps: 300
+load_agent_path: runs/ppo_m2d_2_passage_train_1119/policies/ckpt_972800.pt
+eval_episodes: 50
+
+# Random seed
+seed: 0

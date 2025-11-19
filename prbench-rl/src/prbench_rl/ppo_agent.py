@@ -385,24 +385,12 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
         for iteration in range(1, self.args.num_iterations + 1):
             logging.info(f"Epoch: {iteration}, global_step={global_step}")
-            # self.agent.eval()
-            # Evaluate episode performance
-            # if iteration % self.args.eval_freq == 0:
-            #     eval_metrics = self.evaluate(self.args.num_eval_envs)
-            #     logging.info(
-            #         f"Evaluated {self.args.num_eval_envs} episodes"
-            #     )
-            #     for k, v in eval_metrics.items():
-            #         mean = np.stack(v).mean()
-            #         if self.writer is not None:
-            #             self.writer.add_scalar(f"eval/{k}", mean, global_step)
-            #         logging.info(f"eval_{k}_mean={mean}")
-            # if self.args.save_model and iteration % self.args.eval_freq == 1:
-            #     model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
-            #     base_path = Path(self.log_path) / "policies"
-            #     base_path.mkdir(parents=True, exist_ok=True)
-            #     self.save(str(model_path))
-            #     logging.info(f"model saved to {model_path}")
+            if self.args.save_model and iteration % self.args.eval_freq == 1:
+                model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
+                base_path = Path(self.log_path) / "policies"
+                base_path.mkdir(parents=True, exist_ok=True)
+                self.save(str(model_path))
+                logging.info(f"model saved to {model_path}")
             # Annealing the rate if instructed to do so.
             if self.args.anneal_lr:
                 frac = 1.0 - (iteration - 1.0) / self.args.num_iterations

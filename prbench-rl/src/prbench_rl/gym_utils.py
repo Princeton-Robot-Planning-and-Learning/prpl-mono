@@ -21,15 +21,18 @@ def make_env_ppo(
     """Create a single environment instance with appropriate wrappers for ppo."""
 
     def thunk():
+        # NOTE: PRBench by default has infinite horizon, so we set a time limit here
         if capture_video and idx == 0:
             if "prbench" in env_id:
                 env = prbench.make(env_id, render_mode="rgb_array")
             else:
                 env = gym.make(env_id, render_mode="rgb_array")
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+            env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
         else:
             if "prbench" in env_id:
                 env = prbench.make(env_id)
+                env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
             else:
                 env = gym.make(env_id)
         env = gym.wrappers.FlattenObservation(env)
@@ -39,9 +42,6 @@ def make_env_ppo(
         env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         env = gym.wrappers.NormalizeReward(env, gamma=gamma)
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
-        # NOTE: PRBench by default has infinite horizon, so we set a time limit here
-        if "prbench" in env_id:
-            env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
         return env
 
     return thunk

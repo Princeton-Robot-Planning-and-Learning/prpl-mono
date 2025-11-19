@@ -3,7 +3,7 @@ name: ppo
 
 # Core training parameters
 args:
-  total_timesteps: 300000
+  total_timesteps: 1000000
   num_eval_envs: 1
   # Network architecture
   hidden_size: 64
@@ -13,5 +13,5 @@ torch_deterministic: true
 cuda: false
 
 # Logging settings
-exp_name: "ppo_m2d_0_passage_train_1119"
+exp_name: "ppo_m2d_2_passage_train_1119"
 tb_log_dir: "runs"
