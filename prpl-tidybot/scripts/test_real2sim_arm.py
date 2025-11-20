@@ -37,7 +37,7 @@ def real2sim() -> None:
         )
 
         # Reset the environment and get the initial state.
-        obs, _ = env.reset(seed=125)
+        obs, _ = env.reset(seed=125)  # type: ignore
         assert isinstance(env.observation_space, ObjectCentricBoxSpace)
 
         ### real interface
@@ -73,7 +73,7 @@ def real2sim() -> None:
         controller.reset(state, params)
         for _ in range(200):
             action = controller.step()
-            obs, _, _, _, _ = env.step(action)
+            obs, _, _, _, _ = env.step(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
@@ -104,7 +104,7 @@ def real2sim() -> None:
         controller.reset(state, params)
         for _ in range(200):
             action = controller.step()
-            obs, _, _, _, _ = env.step(action)
+            obs, _, _, _, _ = env.step(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
