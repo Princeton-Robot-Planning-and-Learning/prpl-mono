@@ -192,10 +192,11 @@ class VLMPlanningAgent(Agent[_O, _U]):
             for controller, objs, params in parsed_controller_plan:
                 logging.info(
                     f"Parsed option: {controller} with objects "
-                    f"{objs} and params {params}"
+                    f"{objs} and params {params}\n"
                 )
                 grounded_controller = controller.ground(objs)
-                controller_and_params_plan.append((grounded_controller, params))
+                controller_and_params_plan.append((grounded_controller, 
+                                                   tuple(params)))
 
             policy = controller_and_param_plan_to_policy(
                 controller_and_params_plan,
