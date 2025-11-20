@@ -46,7 +46,7 @@ class GroundMoveToTgtController(Geom2dRobotController):
         rel_x = rng.uniform(0.1, 0.9)
         rel_y = rng.uniform(0.1, 0.9)
         # Sample random orientation
-        abs_theta = rng.uniform(-np.pi, np.pi) 
+        abs_theta = rng.uniform(-np.pi, np.pi)
         # Relative orientation
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
 
@@ -84,12 +84,10 @@ class GroundMoveToTgtController(Geom2dRobotController):
         # Check collision
         moving_objects = {self._robot}
         static_objects = set(full_state) - moving_objects
-        if state_2d_has_collision(
-            full_state, moving_objects, static_objects, {}
-        ):
+        if state_2d_has_collision(full_state, moving_objects, static_objects, {}):
             raise TrajectorySamplingFailure(
-            "Failed to find a collision-free path to target."
-        )
+                "Failed to find a collision-free path to target."
+            )
 
         # Use motion planning to find collision-free path
         assert isinstance(self._action_space, CRVRobotActionSpace)
@@ -173,12 +171,10 @@ class GroundMoveToPassageController(GroundMoveToTgtController):
         # Check collision
         moving_objects = {self._robot}
         static_objects = set(full_state) - moving_objects
-        if state_2d_has_collision(
-            full_state, moving_objects, static_objects, {}
-        ):
+        if state_2d_has_collision(full_state, moving_objects, static_objects, {}):
             raise TrajectorySamplingFailure(
-            "Failed to find a collision-free path to target."
-        )
+                "Failed to find a collision-free path to target."
+            )
 
         # Use motion planning to find collision-free path
         assert isinstance(self._action_space, CRVRobotActionSpace)

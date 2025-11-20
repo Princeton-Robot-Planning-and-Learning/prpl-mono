@@ -358,7 +358,7 @@ class GroundPlaceBlockNotOnShelfController(Geom2dRobotController):
         abs_x = rng.uniform(self.world_x_min, self.world_x_max)
         abs_y = rng.uniform(self.world_y_min, self.world_y_max)
         abs_theta = rng.uniform(-np.pi, np.pi)
-            
+
         rel_x = (abs_x - self.world_x_min) / (self.world_x_max - self.world_x_min)
         rel_y = (abs_y - self.world_y_min) / (self.world_y_max - self.world_y_min)
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
@@ -405,12 +405,10 @@ class GroundPlaceBlockNotOnShelfController(Geom2dRobotController):
         # Check end-pose collision
         moving_objects = {self._robot} | {o for o, _ in suctioned_objects}
         static_objects = set(full_state) - moving_objects
-        if state_2d_has_collision(
-            full_state, moving_objects, static_objects, {}
-        ):
+        if state_2d_has_collision(full_state, moving_objects, static_objects, {}):
             # Stay static
             return final_waypoints
-        
+
         mp_state = state.copy()
         mp_state.set(self._robot, "arm_joint", robot_radius)
         init_constant_state = self._init_constant_state
