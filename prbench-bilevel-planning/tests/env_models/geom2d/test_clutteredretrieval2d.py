@@ -239,7 +239,7 @@ def test_clutteredretrieval2d_skills():
     place_target_block = PlaceTgt.ground(
         (robot, target_block, obj_name_to_obj["target_region"])
     )
-    obs3 = _skill_test_helper(place_target_block, env_models, env, obs2, params=1)
+    obs3 = _skill_test_helper(place_target_block, env_models, env, obs2, params=0.5)
     state3 = env_models.observation_to_state(obs3)
     abstract_state3 = env_models.state_abstractor(state3)
     assert predicate_name_to_pred["HandEmpty"]([robot]) in abstract_state3.atoms
