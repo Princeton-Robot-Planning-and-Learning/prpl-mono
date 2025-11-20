@@ -356,8 +356,7 @@ class GroundMoveToController(Geom2dRobotController):
         collision = state_2d_has_collision(
             full_state, moving_objects, static_objects, {}
         )
-        not_inside = not is_inside(full_state, self._tgt_block, self._tgt_region, {})
-        if collision or not_inside:
+        if collision:
             raise TrajectorySamplingFailure(
                 "Failed to find a collision-free path to target."
             )
