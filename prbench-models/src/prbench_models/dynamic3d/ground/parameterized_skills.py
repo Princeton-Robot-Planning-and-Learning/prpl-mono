@@ -98,7 +98,13 @@ class MoveToTargetGroundController(
         rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
-    def reset(self, x: ObjectCentricState, params: Any) -> None:
+    def reset(
+        self,
+        x: ObjectCentricState,
+        params: Any,
+        extend_xy_magnitude: float = 0.025,
+        extend_rot_magnitude: float = np.pi / 8,
+    ) -> None:
         self._last_state = x
         assert isinstance(params, np.ndarray)
         self._current_params = params.copy()
@@ -116,6 +122,8 @@ class MoveToTargetGroundController(
             x_bounds=WORLD_X_BOUNDS,
             y_bounds=WORLD_Y_BOUNDS,
             seed=0,  # use a constant seed to effectively make this "deterministic"
+            extend_xy_magnitude=extend_xy_magnitude,
+            extend_rot_magnitude=extend_rot_magnitude,
         )
         assert base_motion_plan is not None
         self._current_base_motion_plan = base_motion_plan
