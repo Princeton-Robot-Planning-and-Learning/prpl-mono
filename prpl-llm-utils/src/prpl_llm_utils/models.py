@@ -1,6 +1,8 @@
 """Interfaces for large language models."""
 
 import abc
+import base64
+import io
 import logging
 import os
 from typing import Hashable
@@ -91,9 +93,30 @@ class OpenAIModel(PretrainedLargeModel):
         return self._model_name
 
     def _run_query(self, query: Query) -> Response:
-        assert not query.imgs, "TODO"
-        messages = [{"role": "user", "content": query.prompt, "type": "text"}]
         kwargs = query.hyperparameters or {}
+
+        # Build message content
+        if query.imgs:
+            # For vision models, use content array with text and images
+            content: list[dict] = [{"type": "text", "text": query.prompt}]
+
+            for img in query.imgs:
+                # Convert PIL Image to base64
+                buffered = io.BytesIO()
+                img.save(buffered, format="PNG")
+                img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{img_base64}"},
+                    }
+                )
+
+            messages = [{"role": "user", "content": content}]
+        else:
+            # For text-only, use simple string content
+            messages = [{"role": "user", "content": query.prompt}]
 
         completion = self._client.chat.completions.create(  # type: ignore[call-overload]
             messages=messages,  # type: ignore
