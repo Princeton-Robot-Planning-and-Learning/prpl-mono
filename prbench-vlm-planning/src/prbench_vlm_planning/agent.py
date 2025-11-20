@@ -1,7 +1,7 @@
 """VLM planning agent for prbench environments."""
 
 import logging
-import os
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -87,13 +87,13 @@ class VLMPlanningAgent(Agent[_O, _U]):
     def _load_base_prompt(self) -> str:
         """Load the base planning prompt from file."""
         # Get the path to the prompt file
-        current_dir = os.path.dirname(__file__)
+        current_dir = Path(__file__).parent
         prompt_file = (
             "vlm_planning_prompt.txt"
             if self._rgb_observation
             else "llm_planning_prompt.txt"
         )
-        prompt_path = os.path.join(current_dir, "prompts", prompt_file)
+        prompt_path = current_dir / "prompts" / prompt_file
 
         with open(prompt_path, "r", encoding="utf-8") as f:
             return f.read()
