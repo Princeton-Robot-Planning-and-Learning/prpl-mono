@@ -6,7 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from prbench.envs.dynamic3d.object_types import (
     MujocoObjectType,
-    MujocoRobotObjectType,
+    MujocoTidyBotRobotObjectType,
 )
 from prpl_utils.motion_planning import BiRRT
 from prpl_utils.utils import get_signed_angle_distance, wrap_angle
@@ -39,7 +39,7 @@ def get_overhead_object_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
 
 def get_overhead_robot_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
     """Get the top-down SE2 pose for an object in a dynamic3D state."""
-    assert obj.is_instance(MujocoRobotObjectType)
+    assert obj.is_instance(MujocoTidyBotRobotObjectType)
     x = state.get(obj, "pos_base_x")
     y = state.get(obj, "pos_base_y")
     yaw = state.get(obj, "pos_base_rot")
@@ -54,7 +54,7 @@ def get_bounding_box(
     We may want to later add something to the state that allows these values to be
     extracted automatically.
     """
-    if obj.is_instance(MujocoRobotObjectType):
+    if obj.is_instance(MujocoTidyBotRobotObjectType):
         # NOTE: hardcoded for now.
         return (0.5, 0.5, 1.0)
     if obj.is_instance(MujocoObjectType):
@@ -70,7 +70,7 @@ def get_overhead_geom2ds(state: ObjectCentricState) -> dict[str, Geom2D]:
     """Get a mapping from object name to Geom2D from an overhead perspective."""
     geoms: dict[str, Geom2D] = {}
     for obj in state:
-        if obj.is_instance(MujocoRobotObjectType):
+        if obj.is_instance(MujocoTidyBotRobotObjectType):
             pose = get_overhead_robot_se2_pose(state, obj)
         elif obj.is_instance(MujocoObjectType):
             pose = get_overhead_object_se2_pose(state, obj)
@@ -140,7 +140,7 @@ def run_base_motion_planning(
 
     # Construct geoms.
     geoms = get_overhead_geom2ds(state)
-    (robot,) = state.get_objects(MujocoRobotObjectType)
+    (robot,) = state.get_objects(MujocoTidyBotRobotObjectType)
     robot_width, robot_height, _ = get_bounding_box(state, robot)
     obstacles = state.get_objects(MujocoObjectType)
     obstacle_geoms = {geoms[o.name] for o in obstacles}

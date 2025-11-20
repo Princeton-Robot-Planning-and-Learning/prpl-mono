@@ -93,8 +93,7 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
 
     def _get_query_hash(self, query: Query, model_id: str) -> str:
         """Get a unique hash for the query and model combination."""
-        query_id = query.get_id()
-        return f"{model_id}_{hash(query_id)}"
+        return f"{model_id}_{hash(query)}"
 
     def _ensure_initialized(self, query: Query) -> None:
         """Initialize the database with the required tables and columns."""

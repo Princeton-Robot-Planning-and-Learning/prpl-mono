@@ -11,7 +11,6 @@ from relational_structs.utils import create_state_from_dict
 
 from prbench.core import ObjectCentricPRBenchEnv, _ConfigType
 from prbench.envs.dynamic3d.object_types import MujocoObjectTypeFeatures
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
 
 
 class ObjectCentricDynamic3DRobotEnv(
@@ -30,9 +29,9 @@ class ObjectCentricDynamic3DRobotEnv(
         types = set(self.type_features.keys())
         return ObjectCentricStateSpace(types)
 
+    @abc.abstractmethod
     def _create_action_space(self, config: _ConfigType) -> Space[Array]:  # type: ignore
-        """Create action space for TidyBot's control interface."""
-        return TidyBot3DRobotActionSpace()
+        """Create action space for robot's control interface."""
 
     @abc.abstractmethod
     def reset(

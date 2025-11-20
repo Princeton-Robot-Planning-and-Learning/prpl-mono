@@ -22,6 +22,14 @@ _S = TypeVar("_S", bound=Hashable)  # state in heuristic search
 _A = TypeVar("_A")  # action in heuristic search
 
 
+@dataclass
+class SearchMetrics:
+    """Metrics recorded and returned by search algorithms."""
+
+    num_evals: int = 0  # number of priority function calls
+    num_expansions: int = 0  # number of successor generator calls
+
+
 @dataclass(frozen=True)
 class _HeuristicSearchNode(Generic[_S, _A]):
     state: _S
@@ -40,7 +48,7 @@ def _run_heuristic_search(
     max_evals: int = 10000000,
     timeout: float = 10000000,
     lazy_expansion: bool = False,
-) -> tuple[list[_S], list[_A]]:
+) -> tuple[list[_S], list[_A], SearchMetrics]:
     """A generic heuristic search implementation.
 
     Depending on get_priority, can implement A*, GBFS, or UCS.
@@ -56,15 +64,14 @@ def _run_heuristic_search(
     best_node_priority = root_priority
     tiebreak = itertools.count()
     hq.heappush(queue, (root_priority, next(tiebreak), root_node))
-    num_expansions = 0
-    num_evals = 1
     start_time = time.perf_counter()
+    metrics = SearchMetrics()
 
     while (
         len(queue) > 0
         and time.perf_counter() - start_time < timeout
-        and num_expansions < max_expansions
-        and num_evals < max_evals
+        and metrics.num_expansions < max_expansions
+        and metrics.num_evals < max_evals
     ):
         _, _, node = hq.heappop(queue)
         # If we already found a better path here, don't bother.
@@ -72,8 +79,9 @@ def _run_heuristic_search(
             continue
         # If the goal holds, return.
         if check_goal(node.state):
-            return _finish_plan(node)
-        num_expansions += 1
+            states, actions = _finish_plan(node)
+            return states, actions, metrics
+        metrics.num_expansions += 1
         # Generate successors.
         for action, child_state, cost in get_successors(node.state):
             if time.perf_counter() - start_time >= timeout:
@@ -91,7 +99,7 @@ def _run_heuristic_search(
                 action=action,
             )
             priority = get_priority(child_node)
-            num_evals += 1
+            metrics.num_evals += 1
             hq.heappush(queue, (priority, next(tiebreak), child_node))
             state_to_best_path_cost[child_state] = child_path_cost
             if priority < best_node_priority:
@@ -103,11 +111,12 @@ def _run_heuristic_search(
                 if lazy_expansion:
                     hq.heappush(queue, (priority, next(tiebreak), node))
                     break
-            if num_evals >= max_evals:
+            if metrics.num_evals >= max_evals:
                 break
 
     # Did not find path to goal; return best path seen.
-    return _finish_plan(best_node)
+    states, actions = _finish_plan(best_node)
+    return states, actions, metrics
 
 
 def _finish_plan(node: _HeuristicSearchNode[_S, _A]) -> tuple[list[_S], list[_A]]:
@@ -134,7 +143,7 @@ def run_gbfs(
     max_evals: int = 10000000,
     timeout: float = 10000000,
     lazy_expansion: bool = False,
-) -> tuple[list[_S], list[_A]]:
+) -> tuple[list[_S], list[_A], SearchMetrics]:
     """Greedy best-first search."""
     get_priority = lambda n: heuristic(n.state)
     return _run_heuristic_search(
@@ -158,7 +167,7 @@ def run_astar(
     max_evals: int = 10000000,
     timeout: float = 10000000,
     lazy_expansion: bool = False,
-) -> tuple[list[_S], list[_A]]:
+) -> tuple[list[_S], list[_A], SearchMetrics]:
     """A* search."""
     get_priority = lambda n: heuristic(n.state) + n.cumulative_cost
     return _run_heuristic_search(
@@ -308,7 +317,7 @@ def run_policy_guided_astar(
             next_state = get_next_state(state, action)
             yield ([action], next_state, cost)
 
-    _, action_subseqs = run_astar(
+    _, action_subseqs, _ = run_astar(
         initial_state=initial_state,
         check_goal=check_goal,
         get_successors=get_successors,
