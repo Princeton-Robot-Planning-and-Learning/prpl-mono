@@ -18,7 +18,6 @@ from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
-    is_inside,
     run_motion_planning_for_crv_robot,
     snap_suctioned_objects,
 )
