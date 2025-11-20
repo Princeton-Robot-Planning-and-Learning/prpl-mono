@@ -71,6 +71,137 @@ def create_pybullet_block(
 
     return block_id
 
+def create_pybullet_hollow_box(
+    color: tuple[float, float, float, float],
+    half_extents: tuple[float, float, float],
+    wall_thickness: float,
+    physics_client_id: int,
+    mass: float = 0,
+    friction: float | None = None,
+) -> int:
+    """
+    A generic utility for creating a hollow box.
+    inputs:
+        color: RGBA color of the box
+        half_extents: half extents of the outer box (x, y, z)
+        wall_thickness: thickness of the walls
+        physics_client_id: PyBullet physics client ID
+        mass: mass of the box
+        friction: friction coefficient of the box
+    Returns the PyBullet ID of the newly created hollow box.
+    """
+
+    # The poses here are not important because they are overwritten by
+    # the state values when a task is reset.
+    position = (0, 0, 0)
+    orientation = (1, 0, 0, 0)
+
+    outer_half_extents = half_extents
+    
+    # create base and walls as separate boxes
+    base_half_extents = (outer_half_extents[0], outer_half_extents[1], wall_thickness / 2)
+    wall1_half_extents = (wall_thickness / 2, outer_half_extents[1], outer_half_extents[2])
+    wall2_half_extents = (wall_thickness / 2, outer_half_extents[1], outer_half_extents[2])
+    wall3_half_extents = (outer_half_extents[0], wall_thickness / 2, outer_half_extents[2])
+    wall4_half_extents = (outer_half_extents[0], wall_thickness / 2, outer_half_extents[2])
+
+    base_collision_id = p.createCollisionShape(
+        p.GEOM_BOX, halfExtents=base_half_extents, physicsClientId=physics_client_id
+    )
+    wall1_collision_id = p.createCollisionShape(
+        p.GEOM_BOX, halfExtents=wall1_half_extents, physicsClientId=physics_client_id
+    )
+    wall2_collision_id = p.createCollisionShape(
+        p.GEOM_BOX, halfExtents=wall2_half_extents, physicsClientId=physics_client_id
+    )
+    wall3_collision_id = p.createCollisionShape(
+        p.GEOM_BOX, halfExtents=wall3_half_extents, physicsClientId=physics_client_id
+    )
+    wall4_collision_id = p.createCollisionShape(
+        p.GEOM_BOX, halfExtents=wall4_half_extents, physicsClientId=physics_client_id
+    )
+
+    base_visual_id = p.createVisualShape(
+        p.GEOM_BOX,
+        halfExtents=base_half_extents,
+        rgbaColor=color,
+        physicsClientId=physics_client_id,
+    )
+    wall1_visual_id = p.createVisualShape(
+        p.GEOM_BOX,
+        halfExtents=wall1_half_extents,
+        rgbaColor=color,
+        physicsClientId=physics_client_id,
+    )
+    wall2_visual_id = p.createVisualShape(
+        p.GEOM_BOX,
+        halfExtents=wall2_half_extents,
+        rgbaColor=color,
+        physicsClientId=physics_client_id,
+    )
+    wall3_visual_id = p.createVisualShape(
+        p.GEOM_BOX,
+        halfExtents=wall3_half_extents,
+        rgbaColor=color,
+        physicsClientId=physics_client_id,
+    )
+    wall4_visual_id = p.createVisualShape(
+        p.GEOM_BOX,
+        halfExtents=wall4_half_extents,
+        rgbaColor=color,
+        physicsClientId=physics_client_id,
+    )
+
+    eps = 1e-4 # small epsilon to avoid collision issues
+
+    hollow_box_id = p.createMultiBody(
+        baseMass=0,
+        baseCollisionShapeIndex=-1,
+        baseVisualShapeIndex=-1,
+        basePosition=position,
+        baseOrientation=orientation,
+        linkMasses=[mass] * 5,
+        linkCollisionShapeIndices=[
+            base_collision_id,
+            wall1_collision_id,
+            wall2_collision_id,
+            wall3_collision_id,
+            wall4_collision_id,
+        ],
+        linkVisualShapeIndices=[
+            base_visual_id,
+            wall1_visual_id,
+            wall2_visual_id,
+            wall3_visual_id,
+            wall4_visual_id,
+        ],
+        linkPositions=[
+            (0, 0, -(outer_half_extents[2] - wall_thickness/2)),       # base
+            (-outer_half_extents[0] + wall_thickness/2, 0, 0),         # wall 1
+            ( outer_half_extents[0] - wall_thickness/2, 0, 0),         # wall 2
+            (0, -outer_half_extents[1] + wall_thickness/2, 0),         # wall 3
+            (0,  outer_half_extents[1] - wall_thickness/2, 0),         # wall 4
+        ],
+        linkOrientations=[[0, 0, 0, 1]] * 5,
+        linkInertialFramePositions=[[0, 0, 0]] * 5,
+        linkInertialFrameOrientations=[[0, 0, 0, 1]] * 5,
+        linkParentIndices=[0] * 5,
+        linkJointTypes=[p.JOINT_FIXED] * 5,
+        linkJointAxis=[[0, 0, 0]] * 5,
+        physicsClientId=physics_client_id,
+    )
+
+    if friction:
+        # Apply friction to the hollow box (base or first link depending on has_peg)
+        link_index = 0
+        p.changeDynamics(
+            hollow_box_id,
+            linkIndex=link_index,
+            lateralFriction=friction,
+            physicsClientId=physics_client_id,
+        )
+
+    return hollow_box_id
 
 def create_pybullet_block_with_peg(
     color: tuple[float, float, float, float],

@@ -195,3 +195,52 @@ def is_on_top(
     zA_max, zB_min = np.max(C_A[:, 2]), np.min(C_B[:, 2])
 
     return overlap and (zB_min >= zA_max)
+
+
+def is_inside(
+    poseA: Pose,
+    halfA: tuple[float, float, float],
+    poseB: Pose,
+    halfB: tuple[float, float, float],
+) -> bool:
+    """Check if box B is inside box A.
+
+    Args:
+        poseA: Pose of box A. (position, orientation as quaternion).
+        halfA: Half extents of box A (hx, hy, hz).
+        poseB: Pose of box B. (position, orientation as quaternion).
+        halfB: Half extents of box B (hx, hy, hz).
+    Returns:
+        True if box B is inside box A, False otherwise.
+    """
+
+    posA, quatA = poseA.position, poseA.orientation
+    posB, quatB = poseB.position, poseB.orientation
+
+    R_A = Rotation.from_quat(quatA).as_matrix()
+    R_B = Rotation.from_quat(quatB).as_matrix()
+
+    def corners(
+        p: tuple[float, float, float], R: np.ndarray, h: np.ndarray
+    ) -> np.ndarray:
+        local = np.array(
+            [
+                [sx * h[0], sy * h[1], sz * h[2]]
+                for sx in [-1, 1]
+                for sy in [-1, 1]
+                for sz in [-1, 1]
+            ]
+        )
+        return (R @ local.T).T + p
+
+    C_A = corners(posA, R_A, np.array(halfA))
+    C_B = corners(posB, R_B, np.array(halfB))
+
+    PA = Polygon(C_A[:, :2]).convex_hull
+    PB = Polygon(C_B[:, :2]).convex_hull
+
+    inside = PA.contains(PB)
+    zA_min, zA_max = np.min(C_A[:, 2]), np.max(C_A[:, 2])
+    zB_min, zB_max = np.min(C_B[:, 2]), np.max(C_B[:, 2])
+
+    return inside and (zB_min >= zA_min) and (zB_max <= zA_max)

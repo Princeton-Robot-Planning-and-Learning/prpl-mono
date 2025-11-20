@@ -55,8 +55,8 @@ def test_pick_place_on_rack():
     """Test that picking and placing can be executed for any object."""
     # Create the real environment.
 
-    num_parts = 3
-    env = Packing3DEnv(num_parts=num_parts, use_gui=False, render_mode="rgb_array")
+    num_parts = 2
+    env = Packing3DEnv(num_parts=num_parts, use_gui=True, render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
     if MAKE_VIDEOS:
@@ -79,13 +79,13 @@ def test_pick_place_on_rack():
 
     # Run motion planning.
     if MAKE_VIDEOS:  # make a smooth motion plan for videos
-        max_candidate_plans = 1
+        max_candidate_plans = 10
     else:
         max_candidate_plans = 1
 
     # sample placement coefficients for each part
-    x_coeffs = np.linspace(1, -1, num_parts)
-    y_coeffs = np.linspace(1, -1, num_parts)
+    x_coeffs = np.linspace(0.35, -0.35, num_parts)
+    y_coeffs = np.linspace(0.35, -0.35, num_parts)
     np.random.shuffle(x_coeffs)
     np.random.shuffle(y_coeffs)
 
@@ -210,7 +210,8 @@ def test_pick_place_on_rack():
                 rack_pose.position[0] + x_coeffs[0] * rack_half_extents[0],
                 rack_pose.position[1] + y_coeffs[0] * rack_half_extents[1],
                 rack_pose.position[2]
-                + obs.rack_half_extents[2]
+                - obs.rack_half_extents[2]
+                + 0.01
                 + obs.get_object_half_extents(obs.grasped_object)[2]
                 + placement_padding,
             ),
@@ -224,7 +225,7 @@ def test_pick_place_on_rack():
             (
                 end_effector_placement_pose.position[0],
                 end_effector_placement_pose.position[1],
-                end_effector_placement_pose.position[2] + 0.2,
+                end_effector_placement_pose.position[2] + 0.1,
             ),
             end_effector_placement_pose.orientation,
         )

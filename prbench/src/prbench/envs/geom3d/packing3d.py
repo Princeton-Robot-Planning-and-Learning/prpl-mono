@@ -12,6 +12,7 @@ from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import (
     create_pybullet_block,
     create_pybullet_block_with_peg,
+    create_pybullet_hollow_box,
     create_pybullet_triangle_with_peg,
     get_triangle_vertices,
 )
@@ -32,6 +33,7 @@ from prbench.envs.geom3d.object_types import (
 )
 from prbench.envs.geom3d.utils import (
     Geom3DObjectCentricState,
+    is_inside,
     is_on_top,
     remove_fingers_from_extended_joints,
 )
@@ -48,7 +50,8 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.25)
 
     # rack (target) region.
-    rack_half_extents: tuple[float, float, float] = (0.1, 0.15, 0.05)
+    rack_half_extents: tuple[float, float, float] = (0.1, 0.15, 0.02)
+    rack_wall_thickness: float = 0.01
     rack_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
     # Parts.
@@ -271,7 +274,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
         available_parts = []
         for obj in self.objects:
             if obj.name.startswith("part"):
-                if self.get(obj, "grasp_active") < 0.5 and not is_on_top(
+                if self.get(obj, "grasp_active") < 0.5 and not is_inside(
                     self.rack_pose,
                     self.rack_half_extents,
                     self.get_object_pose(obj.name),
@@ -320,9 +323,10 @@ class ObjectCentricPacking3DEnv(
 
         # rack (created in reset because geometry could be randomized later)
         self._rack_half_extents = self.config.rack_half_extents
-        self._rack_id = create_pybullet_block(
+        self._rack_id = create_pybullet_hollow_box(
             self.config.rack_rgba,
-            half_extents=self.config.rack_half_extents,
+            half_extents=self._rack_half_extents,
+            wall_thickness=self.config.rack_wall_thickness,
             physics_client_id=self.physics_client_id,
         )
         rack_pose = Pose(
@@ -606,9 +610,10 @@ class ObjectCentricPacking3DEnv(
         if self._rack_id is not None:
             p.removeBody(self._rack_id, physicsClientId=self.physics_client_id)
         self._rack_half_extents = self.config.rack_half_extents
-        self._rack_id = create_pybullet_block(
+        self._rack_id = create_pybullet_hollow_box(
             PURPLE + (0.8,),
             half_extents=self._rack_half_extents,
+            wall_thickness=self.config.rack_wall_thickness,
             physics_client_id=self.physics_client_id,
         )
         if self._rack_id is not None:
@@ -698,7 +703,7 @@ class ObjectCentricPacking3DEnv(
             return False
         for i in range(self._num_parts):
             part_name = f"part{i}"
-            if not is_on_top(
+            if not is_inside(
                 self._get_obs().rack_pose,
                 self._get_obs().rack_half_extents,
                 self._get_obs().get_object_pose(part_name),
