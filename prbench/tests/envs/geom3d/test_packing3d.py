@@ -56,7 +56,7 @@ def test_pick_place_on_rack():
     # Create the real environment.
 
     num_parts = 2
-    env = Packing3DEnv(num_parts=num_parts, use_gui=True, render_mode="rgb_array")
+    env = Packing3DEnv(num_parts=num_parts, use_gui=False, render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
     if MAKE_VIDEOS:
@@ -84,8 +84,8 @@ def test_pick_place_on_rack():
         max_candidate_plans = 1
 
     # sample placement coefficients for each part
-    x_coeffs = np.linspace(0.35, -0.35, num_parts)
-    y_coeffs = np.linspace(0.35, -0.35, num_parts)
+    x_coeffs = np.linspace(0.4, -0.4, num_parts)
+    y_coeffs = np.linspace(0.4, -0.4, num_parts)
     np.random.shuffle(x_coeffs)
     np.random.shuffle(y_coeffs)
 

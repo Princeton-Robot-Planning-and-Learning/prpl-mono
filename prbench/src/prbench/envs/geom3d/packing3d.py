@@ -34,7 +34,6 @@ from prbench.envs.geom3d.object_types import (
 from prbench.envs.geom3d.utils import (
     Geom3DObjectCentricState,
     is_inside,
-    is_on_top,
     remove_fingers_from_extended_joints,
 )
 from prbench.envs.utils import PURPLE

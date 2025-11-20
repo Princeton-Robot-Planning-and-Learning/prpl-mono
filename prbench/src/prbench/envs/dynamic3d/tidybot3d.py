@@ -42,7 +42,6 @@ from prbench.envs.dynamic3d.robots import (
     TidyBotRobotEnv,
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBotRobotEnv
 
 
 @dataclass(frozen=True)
