@@ -135,7 +135,7 @@ def register_all_environments() -> None:
 
     for task_config in tasks_root.iterdir():
         config_name = task_config.stem
-        robot = {"tidybot": "TidyBot3D"}[config_name.split("-")[0]]
+        robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[config_name.split("-")[0]]
         scene_type = config_name.split("-")[1]
         num_objects_int = int(config_name.split("-o")[-1])
         register(

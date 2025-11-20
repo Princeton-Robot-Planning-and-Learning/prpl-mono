@@ -3,7 +3,7 @@
 from prbench.envs.dynamic3d.object_types import (
     MujocoObjectType,
     MujocoObjectTypeFeatures,
-    MujocoRobotObjectType,
+    MujocoTidyBotRobotObjectType,
 )
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
@@ -27,7 +27,7 @@ class PRBenchGroundPerceiver(Perceiver[ObjectCentricState]):
         gripper_state = self._interface.get_gripper_state()
 
         # Add robot into object-centric state.
-        robot = Object("robot", MujocoRobotObjectType)
+        robot = Object("robot", MujocoTidyBotRobotObjectType)
 
         # Build this super explicitly, even though verbose, to be careful.
         state_dict[robot] = {
@@ -72,9 +72,9 @@ class PRBenchGroundPerceiver(Perceiver[ObjectCentricState]):
             "wx": 0.0,
             "wy": 0.0,
             "wz": 0.0,
-            "bb_x": 0.1,
-            "bb_y": 0.1,
-            "bb_z": 0.1,
+            "bb_x": 0.03,
+            "bb_y": 0.03,
+            "bb_z": 0.03,
         }
 
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)

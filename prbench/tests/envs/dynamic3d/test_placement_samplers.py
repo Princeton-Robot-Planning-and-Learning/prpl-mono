@@ -3,13 +3,12 @@
 import numpy as np
 import pytest
 
+from prbench.envs.dynamic3d.objects import Table
 from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_position,
     sample_pose_in_region,
 )
-from prbench.envs.dynamic3d.objects import Table
 from prbench.envs.dynamic3d.utils import bboxes_overlap
-
 
 # Tests for sample_collision_free_position function
 
@@ -107,11 +106,14 @@ def test_crowded_scenario_fallback():
     np_random = np.random.default_rng(42)
     # Create a scenario where it's very hard to find collision-free space
     large_table_config = {
-        "shape": "rectangle", "length": 3.0, "width": 3.0, "height": 0.8
+        "shape": "rectangle",
+        "length": 3.0,
+        "width": 3.0,
+        "height": 0.8,
     }
     placed_bboxes = [
         [-2.0, 0.5, 0.0, 0.0, 2.5, 0.8],  # Left side
-        [0.0, 0.5, 0.0, 2.0, 2.5, 0.8],   # Right side
+        [0.0, 0.5, 0.0, 2.0, 2.5, 0.8],  # Right side
     ]
 
     # Get initial bounding box at origin

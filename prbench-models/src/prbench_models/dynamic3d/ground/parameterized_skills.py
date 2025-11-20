@@ -8,8 +8,13 @@ from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
 )
-from prbench.envs.dynamic3d.object_types import MujocoObjectType, MujocoRobotObjectType
-from prbench.envs.dynamic3d.tidybot_robot_env import TidyBot3DRobotActionSpace
+from prbench.envs.dynamic3d.object_types import (
+    MujocoObjectType,
+    MujocoTidyBotRobotObjectType,
+)
+from prbench.envs.dynamic3d.robots.tidybot_robot_env import (
+    TidyBot3DRobotActionSpace,
+)
 from prpl_utils.utils import get_signed_angle_distance
 from pybullet_helpers.geometry import Pose, multiply_poses, set_pose
 from pybullet_helpers.inverse_kinematics import inverse_kinematics
@@ -93,7 +98,13 @@ class MoveToTargetGroundController(
         rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
-    def reset(self, x: ObjectCentricState, params: Any) -> None:
+    def reset(
+        self,
+        x: ObjectCentricState,
+        params: Any,
+        extend_xy_magnitude: float = 0.025,
+        extend_rot_magnitude: float = np.pi / 8,
+    ) -> None:
         self._last_state = x
         assert isinstance(params, np.ndarray)
         self._current_params = params.copy()
@@ -111,6 +122,8 @@ class MoveToTargetGroundController(
             x_bounds=WORLD_X_BOUNDS,
             y_bounds=WORLD_Y_BOUNDS,
             seed=0,  # use a constant seed to effectively make this "deterministic"
+            extend_xy_magnitude=extend_xy_magnitude,
+            extend_rot_magnitude=extend_rot_magnitude,
         )
         assert base_motion_plan is not None
         self._current_base_motion_plan = base_motion_plan
@@ -229,7 +242,7 @@ class PyBulletSim:
             (x.get(robot_obj, "pos_base_x"), x.get(robot_obj, "pos_base_y"), 0.0),
             (0, 0, x.get(robot_obj, "pos_base_rot")),
         )
-        arm_pose = multiply_poses(self._base_to_arm_pose, base_pose)
+        arm_pose = multiply_poses(base_pose, self._base_to_arm_pose)
         self._robot.set_base(arm_pose)
         # Update the arm conf.
         arm_conf = [
@@ -367,7 +380,7 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 2 * 1e-2
+        return dist < 3 * 1e-2
 
 
 class MoveArmToEndEffectorController(
@@ -404,23 +417,44 @@ class MoveArmToEndEffectorController(
         self._last_state = x
         assert isinstance(params, np.ndarray)
         self._current_params = params.copy()
+
+        # Reset PyBullet given the current state.
+        self._pybullet_sim.set_state(x)
+
+        current_arm_base_pose = self._pybullet_sim.robot.get_base_pose()
+
+        target_end_effector_pose_temp = multiply_poses(
+            current_arm_base_pose,
+            Pose(
+                (
+                    self._current_params[0],
+                    self._current_params[1],
+                    self._current_params[2],
+                ),
+                (0, 0, 0, 1),
+            ),
+        )
+
         target_end_effector_pose = Pose(
-            (self._current_params[0], self._current_params[1], self._current_params[2]),
             (
+                target_end_effector_pose_temp.position[0],
+                target_end_effector_pose_temp.position[1],
+                target_end_effector_pose_temp.position[2],
+            ),
+            (
+                self._current_params[3],
                 self._current_params[4],
                 self._current_params[5],
                 self._current_params[6],
-                self._current_params[3],
             ),
-        )  # (w, x, y, z) -> (x, y, z, w)
+        )
+
         target_joints = inverse_kinematics(
             self._pybullet_sim.robot,
             target_end_effector_pose,
-            validate=True,
-            set_joints=True,
+            set_joints=False,
         )
-        # Reset PyBullet given the current state.
-        self._pybullet_sim.set_state(x)
+
         # Run motion planning.
         plan = run_motion_planning(
             self._pybullet_sim.robot,
@@ -430,6 +464,7 @@ class MoveArmToEndEffectorController(
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
+
         assert plan is not None, "Motion planning failed"
         self._current_arm_joint_plan = plan
 
@@ -479,7 +514,7 @@ class MoveArmToEndEffectorController(
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 2 * 1e-2
+        return dist < 3 * 1e-2
 
 
 def create_lifted_controllers(
@@ -492,8 +527,7 @@ def create_lifted_controllers(
 
     # Controllers.
 
-    # Move base to target controller.
-    robot = Variable("?robot", MujocoRobotObjectType)
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
     target = Variable("?target", MujocoObjectType)
 
     LiftedMoveToTargetController: LiftedParameterizedController = (
@@ -504,7 +538,7 @@ def create_lifted_controllers(
     )
 
     # Move arm to conf controller.
-    robot = Variable("?robot", MujocoRobotObjectType)
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
 
     LiftedMoveArmToConfController: LiftedParameterizedController = (
         LiftedParameterizedController(
@@ -514,7 +548,7 @@ def create_lifted_controllers(
     )
 
     # Move arm to end effector controller.
-    robot = Variable("?robot", MujocoRobotObjectType)
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
 
     LiftedMoveArmToEndEffectorController: LiftedParameterizedController = (
         LiftedParameterizedController(
