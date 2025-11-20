@@ -57,7 +57,7 @@ def test_run_base_motion_planning() -> None:
         # iio.imsave("real_to_sim_ground_image.png", img)
 
         state = sim._get_object_centric_state()  # pylint: disable=protected-access
-        target_base_pose = SE2(-0.5, -0.5, math.pi / 2)
+        target_base_pose = SE2(0.5, 0.5, math.pi / 2)
         x_bounds = (-1.5, 1.5)
         y_bounds = (-1.5, 1.5)
         seed = 123
