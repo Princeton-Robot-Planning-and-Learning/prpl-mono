@@ -55,7 +55,7 @@ def test_run_gbfs() -> None:
         return float(abs(state[0] - 4) + abs(state[1] - 4))
 
     initial_state = (0, 0)
-    state_sequence, action_sequence = search.run_gbfs(
+    state_sequence, action_sequence, metrics = search.run_gbfs(
         initial_state, _grid_check_goal_fn, _grid_successor_fn, _grid_heuristic_fn
     )
     assert state_sequence == [
@@ -79,9 +79,11 @@ def test_run_gbfs() -> None:
         "right",
         "right",
     ]
+    assert metrics.num_evals > 0
+    assert metrics.num_expansions > 0
 
     # Same, but actually reaching the goal is impossible.
-    state_sequence, action_sequence = search.run_gbfs(
+    state_sequence, action_sequence, _ = search.run_gbfs(
         initial_state, lambda s: False, _grid_successor_fn, _grid_heuristic_fn
     )
     assert state_sequence == [
@@ -119,7 +121,7 @@ def test_run_gbfs() -> None:
             yield (action, state, 100.0)
             i += 1
 
-    state_sequence, action_sequence = search.run_gbfs(
+    state_sequence, action_sequence, _ = search.run_gbfs(
         initial_state,
         _grid_check_goal_fn,
         _inf_grid_successor_fn,
@@ -148,7 +150,7 @@ def test_run_gbfs() -> None:
         "right",
     ]
     # Test limit on max evals.
-    state_sequence, action_sequence = search.run_gbfs(
+    state_sequence, action_sequence, _ = search.run_gbfs(
         initial_state,
         _grid_check_goal_fn,
         _inf_grid_successor_fn,
@@ -218,7 +220,7 @@ def test_run_astar() -> None:
         return float(abs(state[0] - 4) + abs(state[1] - 4))
 
     initial_state = (0, 0)
-    state_sequence, action_sequence = search.run_astar(
+    state_sequence, action_sequence, _ = search.run_astar(
         initial_state, _grid_check_goal_fn, _grid_successor_fn, _grid_heuristic_fn
     )
     assert state_sequence == [
