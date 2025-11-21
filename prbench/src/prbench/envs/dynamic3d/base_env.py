@@ -10,7 +10,7 @@ from relational_structs import Array, ObjectCentricState, ObjectCentricStateSpac
 from relational_structs.utils import create_state_from_dict
 
 from prbench.core import ObjectCentricPRBenchEnv, _ConfigType
-from prbench.envs.dynamic3d.object_types import MujocoObjectTypeFeatures
+from prbench.envs.dynamic3d.object_types import MujocoMovableObjectTypeFeatures
 
 
 class ObjectCentricDynamic3DRobotEnv(
@@ -22,7 +22,7 @@ class ObjectCentricDynamic3DRobotEnv(
         """Create the constant initial state (static objects that never change)."""
         # For TidyBot, we don't have static objects that persist across resets
         # All objects are created dynamically in each episode
-        return create_state_from_dict({}, MujocoObjectTypeFeatures)
+        return create_state_from_dict({}, MujocoMovableObjectTypeFeatures)
 
     def _create_observation_space(self, config: _ConfigType) -> ObjectCentricStateSpace:
         """Create observation space based on TidyBot's object types."""
@@ -52,4 +52,4 @@ class ObjectCentricDynamic3DRobotEnv(
     @property
     def type_features(self) -> dict[Type, list[str]]:
         """The types and features for this environment."""
-        return MujocoObjectTypeFeatures
+        return MujocoMovableObjectTypeFeatures

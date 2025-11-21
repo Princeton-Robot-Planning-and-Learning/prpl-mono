@@ -5,7 +5,7 @@ from typing import Iterable
 import numpy as np
 from matplotlib import pyplot as plt
 from prbench.envs.dynamic3d.object_types import (
-    MujocoObjectType,
+    MujocoMovableObjectType,
     MujocoTidyBotRobotObjectType,
 )
 from prpl_utils.motion_planning import BiRRT
@@ -21,7 +21,7 @@ from tomsgeoms2d.utils import geom2ds_intersect
 
 def get_overhead_object_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
     """Get the top-down SE2 pose for an object in a dynamic3D state."""
-    assert obj.is_instance(MujocoObjectType)
+    assert obj.is_instance(MujocoMovableObjectType)
     x = state.get(obj, "x")
     y = state.get(obj, "y")
     q = UnitQuaternion(
@@ -57,7 +57,7 @@ def get_bounding_box(
     if obj.is_instance(MujocoTidyBotRobotObjectType):
         # NOTE: hardcoded for now.
         return (0.5, 0.5, 1.0)
-    if obj.is_instance(MujocoObjectType):
+    if obj.is_instance(MujocoMovableObjectType):
         return (
             state.get(obj, "bb_x"),
             state.get(obj, "bb_y"),
@@ -72,7 +72,7 @@ def get_overhead_geom2ds(state: ObjectCentricState) -> dict[str, Geom2D]:
     for obj in state:
         if obj.is_instance(MujocoTidyBotRobotObjectType):
             pose = get_overhead_robot_se2_pose(state, obj)
-        elif obj.is_instance(MujocoObjectType):
+        elif obj.is_instance(MujocoMovableObjectType):
             pose = get_overhead_object_se2_pose(state, obj)
         else:
             raise NotImplementedError
@@ -142,7 +142,7 @@ def run_base_motion_planning(
     geoms = get_overhead_geom2ds(state)
     (robot,) = state.get_objects(MujocoTidyBotRobotObjectType)
     robot_width, robot_height, _ = get_bounding_box(state, robot)
-    obstacles = state.get_objects(MujocoObjectType)
+    obstacles = state.get_objects(MujocoMovableObjectType)
     obstacle_geoms = {geoms[o.name] for o in obstacles}
 
     # Set up the RRT methods.

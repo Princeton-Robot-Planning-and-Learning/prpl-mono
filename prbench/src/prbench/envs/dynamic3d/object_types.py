@@ -2,10 +2,10 @@
 
 from relational_structs import Type
 
-MujocoObjectTypeFeatures: dict[Type, list[str]] = {}
+MujocoMovableObjectTypeFeatures: dict[Type, list[str]] = {}
 
-MujocoObjectType = Type("mujoco_object")
-MujocoObjectTypeFeatures[MujocoObjectType] = [
+MujocoMovableObjectType = Type("mujoco_movable_object")
+MujocoMovableObjectTypeFeatures[MujocoMovableObjectType] = [
     # Position.
     "x",
     "y",
@@ -30,7 +30,7 @@ MujocoObjectTypeFeatures[MujocoObjectType] = [
 ]
 
 MujocoFixtureObjectType = Type("mujoco_fixture")
-MujocoObjectTypeFeatures[MujocoFixtureObjectType] = [
+MujocoMovableObjectTypeFeatures[MujocoFixtureObjectType] = [
     # Position.
     "x",
     "y",
@@ -43,7 +43,7 @@ MujocoObjectTypeFeatures[MujocoFixtureObjectType] = [
 ]
 
 MujocoTidyBotRobotObjectType = Type("mujoco_tidybot_robot")
-MujocoObjectTypeFeatures[MujocoTidyBotRobotObjectType] = [
+MujocoMovableObjectTypeFeatures[MujocoTidyBotRobotObjectType] = [
     "pos_base_x",
     "pos_base_y",
     "pos_base_rot",
@@ -69,7 +69,7 @@ MujocoObjectTypeFeatures[MujocoTidyBotRobotObjectType] = [
 ]
 
 MujocoRBY1ARobotObjectType = Type("mujoco_rby1a_robot")
-MujocoObjectTypeFeatures[MujocoRBY1ARobotObjectType] = [
+MujocoMovableObjectTypeFeatures[MujocoRBY1ARobotObjectType] = [
     "pos_base_right",
     "pos_base_left",
     # TODO add more attributes  # pylint: disable=fixme

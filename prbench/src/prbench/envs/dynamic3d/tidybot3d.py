@@ -21,7 +21,7 @@ from prbench.envs.dynamic3d.base_env import (
     ObjectCentricDynamic3DRobotEnv,
 )
 from prbench.envs.dynamic3d.object_types import (
-    MujocoObjectTypeFeatures,
+    MujocoMovableObjectTypeFeatures,
     MujocoRBY1ARobotObjectType,
     MujocoTidyBotRobotObjectType,
 )
@@ -380,7 +380,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Add robot into object-centric state.
         robot_state_dict = self._get_object_centric_robot_data()
         state_dict.update(robot_state_dict)
-        return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
+        return create_state_from_dict(state_dict, MujocoMovableObjectTypeFeatures)
 
     def step(
         self, action: Array
