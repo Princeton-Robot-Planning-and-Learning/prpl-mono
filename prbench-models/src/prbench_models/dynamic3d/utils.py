@@ -22,7 +22,7 @@ from tomsgeoms2d.utils import geom2ds_intersect
 
 def get_overhead_object_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
     """Get the top-down SE2 pose for an object in a dynamic3D state."""
-    assert obj.is_instance(MujocoObjectType) or obj.is_instance(MujocoFixtureObjectType)
+    assert obj.is_instance(MujocoObjectType)
     x = state.get(obj, "x")
     y = state.get(obj, "y")
     q = UnitQuaternion(
@@ -58,15 +58,15 @@ def get_bounding_box(
     if obj.is_instance(MujocoTidyBotRobotObjectType):
         # NOTE: hardcoded for now.
         return (0.5, 0.5, 1.0)
+    if obj.is_instance(MujocoFixtureObjectType):
+        # NOTE: hardcoded for now.
+        return (0.7, 0.7, 1.0)
     if obj.is_instance(MujocoObjectType):
         return (
             state.get(obj, "bb_x"),
             state.get(obj, "bb_y"),
             state.get(obj, "bb_z"),
         )
-    if obj.is_instance(MujocoFixtureObjectType):
-        # NOTE: hardcoded for now.
-        return (0.7, 0.7, 1.0)
     raise NotImplementedError
 
 
@@ -76,9 +76,7 @@ def get_overhead_geom2ds(state: ObjectCentricState) -> dict[str, Geom2D]:
     for obj in state:
         if obj.is_instance(MujocoTidyBotRobotObjectType):
             pose = get_overhead_robot_se2_pose(state, obj)
-        elif obj.is_instance(MujocoObjectType) or obj.is_instance(
-            MujocoFixtureObjectType
-        ):
+        elif obj.is_instance(MujocoObjectType):
             pose = get_overhead_object_se2_pose(state, obj)
         else:
             raise NotImplementedError
