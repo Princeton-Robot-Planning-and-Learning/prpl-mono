@@ -3,7 +3,7 @@ step, and reset."""
 
 from relational_structs import ObjectCentricState
 
-from prbench.envs.dynamic3d.object_types import MujocoMovableObjectTypeFeatures
+from prbench.envs.dynamic3d.object_types import MujocoObjectTypeFeatures
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 
 
@@ -128,7 +128,7 @@ def test_tidybot3d_object_centric_data():
         data = obj.get_object_centric_data()
         assert isinstance(data, dict), "Object-centric data should be a dict"
         object_type = obj.symbolic_object.type
-        expected_keys = set(MujocoMovableObjectTypeFeatures[object_type])
+        expected_keys = set(MujocoObjectTypeFeatures[object_type])
         assert expected_keys.issubset(
             data.keys()
         ), f"Data keys missing, expected at least {expected_keys}"
@@ -149,7 +149,7 @@ def test_tidybot3d_env_object_centric_state():
     ), "Incorrect number of objects in state"
     for obj, state in object_centric_state.data.items():
         assert len(state) == len(
-            MujocoMovableObjectTypeFeatures[obj.type]
+            MujocoObjectTypeFeatures[obj.type]
         ), "State vector length mismatch"
     env.close()
 

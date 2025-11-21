@@ -2,7 +2,7 @@
 
 from prbench.envs.dynamic3d.object_types import (
     MujocoMovableObjectType,
-    MujocoMovableObjectTypeFeatures,
+    MujocoObjectTypeFeatures,
     MujocoTidyBotRobotObjectType,
 )
 from relational_structs import Object, ObjectCentricState
@@ -77,4 +77,4 @@ class PRBenchGroundPerceiver(Perceiver[ObjectCentricState]):
             "bb_z": 0.03,
         }
 
-        return create_state_from_dict(state_dict, MujocoMovableObjectTypeFeatures)
+        return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
