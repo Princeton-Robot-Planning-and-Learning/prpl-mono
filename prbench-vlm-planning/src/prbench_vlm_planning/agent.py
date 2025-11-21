@@ -31,7 +31,7 @@ _O = TypeVar("_O", bound=Hashable)
 _U = TypeVar("_U", bound=Hashable)
 
 
-class VLMPlanningAgentFailure(BaseException):
+class VLMPlanningAgentFailure(Exception):
     """Raised when the VLM planning agent fails."""
 
 
@@ -111,7 +111,9 @@ class VLMPlanningAgent(Agent[_O, _U]):
             self._next_action = self._current_policy(state_obs)
         except Exception as e:
             logging.exception("Failed to generate initial plan")
-            raise VLMPlanningAgentFailure(f"Failed to generate initial plan: " f"{e}")
+            raise VLMPlanningAgentFailure(
+                f"Failed to generate initial plan: {e}"
+            ) from e
 
     def _get_action(self) -> _U:
         """Get the next action from the current plan."""
@@ -131,9 +133,13 @@ class VLMPlanningAgent(Agent[_O, _U]):
         """Update the agent with the latest observation and reward."""
         super().update(obs, reward, done, info)
         assert self._current_policy is not None
-        # Extract state from dict if using RGB observations
-        state_obs = obs["state"] if self._rgb_observation else obs  # type: ignore
-        self._next_action = self._current_policy(state_obs)
+        try:
+            self._next_action = self._current_policy(obs)
+        except Exception as e:
+            logging.exception("Failed to execute policy during update")
+            raise VLMPlanningAgentFailure(
+                f"Failed to execute policy during update: {e}"
+            ) from e
 
     def _generate_plan(self, obs: _O, info: dict[str, Any]) -> Callable[[_O], _U]:
         """Generate a plan using the VLM."""
@@ -213,10 +219,10 @@ class VLMPlanningAgent(Agent[_O, _U]):
             for controller, objs, params in parsed_controller_plan:
                 logging.info(
                     f"Parsed option: {controller} with objects "
-                    f"{objs} and params {params}"
+                    f"{objs} and params {params}\n"
                 )
                 grounded_controller = controller.ground(objs)
-                controller_and_params_plan.append((grounded_controller, params))
+                controller_and_params_plan.append((grounded_controller, tuple(params)))
 
             policy = controller_and_param_plan_to_policy(
                 controller_and_params_plan,
