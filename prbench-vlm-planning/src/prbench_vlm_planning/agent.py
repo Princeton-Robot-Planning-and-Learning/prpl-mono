@@ -111,7 +111,9 @@ class VLMPlanningAgent(Agent[_O, _U]):
             self._next_action = self._current_policy(state_obs)
         except Exception as e:
             logging.exception("Failed to generate initial plan")
-            raise VLMPlanningAgentFailure(f"Failed to generate initial plan: {e}") from e
+            raise VLMPlanningAgentFailure(
+                f"Failed to generate initial plan: {e}"
+            ) from e
 
     def _get_action(self) -> _U:
         """Get the next action from the current plan."""
@@ -220,8 +222,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
                     f"{objs} and params {params}\n"
                 )
                 grounded_controller = controller.ground(objs)
-                controller_and_params_plan.append((grounded_controller, 
-                                                   tuple(params)))
+                controller_and_params_plan.append((grounded_controller, tuple(params)))
 
             policy = controller_and_param_plan_to_policy(
                 controller_and_params_plan,
