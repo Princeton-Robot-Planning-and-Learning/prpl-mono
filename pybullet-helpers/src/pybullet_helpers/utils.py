@@ -130,8 +130,8 @@ def create_pybullet_shelf(
     spacing: float,
     support_width: float,
     num_layers: int,
-    shelf_texture_id: int,
     physics_client_id: int,
+    shelf_texture_id: int | None = None,
 ) -> tuple[int, set[int]]:
     """Returns the shelf ID and the link IDs of the individual shelves."""
 
@@ -218,13 +218,16 @@ def create_pybullet_shelf(
         linkJointAxis=link_joint_axes,
         physicsClientId=physics_client_id,
     )
-    for link_id in range(p.getNumJoints(shelf_id, physicsClientId=physics_client_id)):
-        p.changeVisualShape(
-            shelf_id,
-            link_id,
-            textureUniqueId=shelf_texture_id,
-            physicsClientId=physics_client_id,
-        )
+    if shelf_texture_id is not None:
+        for link_id in range(
+            p.getNumJoints(shelf_id, physicsClientId=physics_client_id)
+        ):
+            p.changeVisualShape(
+                shelf_id,
+                link_id,
+                textureUniqueId=shelf_texture_id,
+                physicsClientId=physics_client_id,
+            )
 
     return shelf_id, shelf_link_ids
 
