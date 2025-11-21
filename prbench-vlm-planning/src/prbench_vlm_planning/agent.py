@@ -139,7 +139,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
             logging.exception("Failed to execute policy during update")
             raise VLMPlanningAgentFailure(
                 f"Failed to execute policy during update: {e}"
-            )
+            ) from e
 
     def _generate_plan(self, obs: _O, info: dict[str, Any]) -> Callable[[_O], _U]:
         """Generate a plan using the VLM."""
