@@ -335,7 +335,7 @@ def test_move_to_target_object_in_shelf():
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
     target_distance = 1.0
-    target_rotation = - np.pi / 2
+    target_rotation = -np.pi / 2
     params = np.array([target_distance, target_rotation])
 
     # Reset and execute the controller until it terminates.
@@ -350,5 +350,5 @@ def test_move_to_target_object_in_shelf():
             break
     else:
         assert False, "Controller did not terminate"
-    
+
     env.close()
