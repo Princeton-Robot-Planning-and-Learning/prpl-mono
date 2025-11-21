@@ -8,7 +8,7 @@ from bilevel_planning.structs import (
 from gymnasium.spaces import Space
 from numpy.typing import NDArray
 from prbench.envs.dynamic3d.object_types import (
-    MujocoMovableObjectType,
+    MujocoObjectType,
     MujocoTidyBotRobotObjectType,
 )
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBot3DRobotActionSpace
@@ -64,7 +64,7 @@ def create_bilevel_planning_models(
         return obs.copy()
 
     # Types.
-    types = {MujocoTidyBotRobotObjectType, MujocoMovableObjectType}
+    types = {MujocoTidyBotRobotObjectType, MujocoObjectType}
 
     # Create the state space.
     state_space = ObjectCentricStateSpace(types)
@@ -74,7 +74,7 @@ def create_bilevel_planning_models(
 
     # Operators.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
-    target = Variable("?target", MujocoMovableObjectType)
+    target = Variable("?target", MujocoObjectType)
 
     MoveToTargetOperator = LiftedOperator(
         "MoveToTarget",

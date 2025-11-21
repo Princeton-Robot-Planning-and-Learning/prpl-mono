@@ -4,7 +4,21 @@ from relational_structs import Type
 
 MujocoObjectTypeFeatures: dict[Type, list[str]] = {}
 
-MujocoMovableObjectType = Type("mujoco_movable_object")
+# Parent class for different object types, whether they are movable or not.
+MujocoObjectType = Type("mujoco_object")
+MujocoObjectTypeFeatures[MujocoObjectType] = [
+    # Position.
+    "x",
+    "y",
+    "z",
+    # Orientation (quaternion).
+    "qw",
+    "qx",
+    "qy",
+    "qz",
+]
+
+MujocoMovableObjectType = Type("mujoco_movable_object", parent=MujocoObjectType)
 MujocoObjectTypeFeatures[MujocoMovableObjectType] = [
     # Position.
     "x",
@@ -29,7 +43,7 @@ MujocoObjectTypeFeatures[MujocoMovableObjectType] = [
     "bb_z",
 ]
 
-MujocoFixtureObjectType = Type("mujoco_fixture")
+MujocoFixtureObjectType = Type("mujoco_fixture", parent=MujocoObjectType)
 MujocoObjectTypeFeatures[MujocoFixtureObjectType] = [
     # Position.
     "x",

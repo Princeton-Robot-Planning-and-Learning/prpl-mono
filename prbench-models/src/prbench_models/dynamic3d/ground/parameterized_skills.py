@@ -9,7 +9,7 @@ from bilevel_planning.structs import (
     LiftedParameterizedController,
 )
 from prbench.envs.dynamic3d.object_types import (
-    MujocoMovableObjectType,
+    MujocoObjectType,
     MujocoTidyBotRobotObjectType,
 )
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import (
@@ -528,7 +528,7 @@ def create_lifted_controllers(
     # Controllers.
 
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
-    target = Variable("?target", MujocoMovableObjectType)
+    target = Variable("?target", MujocoObjectType)
 
     LiftedMoveToTargetController: LiftedParameterizedController = (
         LiftedParameterizedController(
