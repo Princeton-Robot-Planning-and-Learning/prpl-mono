@@ -5,6 +5,7 @@ from typing import Iterable
 import numpy as np
 from matplotlib import pyplot as plt
 from prbench.envs.dynamic3d.object_types import (
+    MujocoFixtureObjectType,
     MujocoObjectType,
     MujocoTidyBotRobotObjectType,
 )
@@ -21,7 +22,7 @@ from tomsgeoms2d.utils import geom2ds_intersect
 
 def get_overhead_object_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:
     """Get the top-down SE2 pose for an object in a dynamic3D state."""
-    assert obj.is_instance(MujocoObjectType)
+    assert obj.is_instance(MujocoObjectType) or obj.is_instance(MujocoFixtureObjectType)
     x = state.get(obj, "x")
     y = state.get(obj, "y")
     q = UnitQuaternion(
@@ -63,6 +64,9 @@ def get_bounding_box(
             state.get(obj, "bb_y"),
             state.get(obj, "bb_z"),
         )
+    if obj.is_instance(MujocoFixtureObjectType):
+        # NOTE: hardcoded for now.
+        return (0.7, 0.7, 1.0)
     raise NotImplementedError
 
 
@@ -72,7 +76,9 @@ def get_overhead_geom2ds(state: ObjectCentricState) -> dict[str, Geom2D]:
     for obj in state:
         if obj.is_instance(MujocoTidyBotRobotObjectType):
             pose = get_overhead_robot_se2_pose(state, obj)
-        elif obj.is_instance(MujocoObjectType):
+        elif obj.is_instance(MujocoObjectType) or obj.is_instance(
+            MujocoFixtureObjectType
+        ):
             pose = get_overhead_object_se2_pose(state, obj)
         else:
             raise NotImplementedError
