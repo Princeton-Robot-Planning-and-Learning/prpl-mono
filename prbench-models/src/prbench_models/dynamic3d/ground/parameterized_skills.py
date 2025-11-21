@@ -11,6 +11,7 @@ from bilevel_planning.structs import (
 from prbench.envs.dynamic3d.object_types import (
     MujocoObjectType,
     MujocoTidyBotRobotObjectType,
+    MujocoFixtureObjectType
 )
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import (
     TidyBot3DRobotActionSpace,
