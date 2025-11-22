@@ -72,6 +72,10 @@ class ObjectCentricState:
         """Return objects of the given type in the order of __iter__()."""
         return [o for o in self if o.is_instance(object_type)]
 
+    def get_object_names(self) -> List[str]:
+        """Return the names of all objects in the state."""
+        return [o.name for o in self]
+
     def get_object_from_name(self, name: str) -> Object:
         """Look up an object from its name."""
         matches = [o for o in self if o.name == name]
