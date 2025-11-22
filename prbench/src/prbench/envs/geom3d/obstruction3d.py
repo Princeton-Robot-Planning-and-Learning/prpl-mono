@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 from typing import Type as TypingType
 
 import numpy as np
@@ -55,6 +56,15 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     # surface during each round of rejection sampling during reset().
     obstruction_init_on_target_prob: float = 0.9
 
+    def get_camera_kwargs(self) -> dict[str, Any]:
+        """Get kwargs to pass to PyBullet camera."""
+        return {
+            "camera_target": self.robot_base_pose.position,
+            "camera_yaw": 90,
+            "camera_distance": 1.0,
+            "camera_pitch": -20,
+        }
+
     def _sample_block_on_block_pose(
         self,
         top_block_half_extents: tuple[float, float, float],
@@ -101,23 +111,20 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         bottom_block_half_extents: tuple[float, float, float],
         bottom_block_pose: Pose,
         rng: np.random.Generator,
+        allowed_overhang_fraction: float = 0.25,
     ) -> Pose:
         """Sample one block pose on top of another one, where hanging is allowed."""
         assert np.allclose(
             bottom_block_pose.orientation, (0, 0, 0, 1)
         ), "Not implemented"
 
-        overhang_pad = 1e-3
-
         lb = (
             bottom_block_pose.position[0]
             - bottom_block_half_extents[0]
-            - top_block_half_extents[0]
-            + overhang_pad,
+            - top_block_half_extents[0] * allowed_overhang_fraction,
             bottom_block_pose.position[1]
             - bottom_block_half_extents[1]
-            - top_block_half_extents[1]
-            + overhang_pad,
+            - top_block_half_extents[1] * allowed_overhang_fraction,
             bottom_block_pose.position[2]
             + bottom_block_half_extents[2]
             + top_block_half_extents[2],
@@ -126,12 +133,10 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         ub = (
             bottom_block_pose.position[0]
             + bottom_block_half_extents[0]
-            + top_block_half_extents[0]
-            - overhang_pad,
+            + top_block_half_extents[0] * allowed_overhang_fraction,
             bottom_block_pose.position[1]
             + bottom_block_half_extents[1]
-            + top_block_half_extents[1]
-            - overhang_pad,
+            + top_block_half_extents[1] * allowed_overhang_fraction,
             bottom_block_pose.position[2]
             + bottom_block_half_extents[2]
             + top_block_half_extents[2],
