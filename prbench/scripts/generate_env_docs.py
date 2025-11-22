@@ -31,7 +31,7 @@ def get_changed_files() -> set[Path]:
     for line in result.stdout.strip().split("\n"):
         if line.strip():
             assert line.startswith("prbench/")
-            line = line[len("prbench/"):]
+            line = line[len("prbench/") :]
             changed_files.add(Path(line.strip()).resolve())
 
     return changed_files

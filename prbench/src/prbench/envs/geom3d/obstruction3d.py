@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 from typing import Type as TypingType
 
 import numpy as np
@@ -54,6 +55,15 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     # that we will attempt to sample the obstruction somewhere on the target
     # surface during each round of rejection sampling during reset().
     obstruction_init_on_target_prob: float = 0.9
+
+    def get_camera_kwargs(self) -> dict[str, Any]:
+        """Get kwargs to pass to PyBullet camera."""
+        return {
+            "camera_target": self.robot_base_pose.position,
+            "camera_yaw": 90,
+            "camera_distance": 1.0,
+            "camera_pitch": -20,
+        }
 
     def _sample_block_on_block_pose(
         self,
