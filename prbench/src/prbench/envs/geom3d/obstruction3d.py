@@ -48,7 +48,7 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     target_block_rgba: tuple[float, float, float, float] = target_region_rgba
 
     # Obstructions.
-    obstruction_half_extents_lb: tuple[float, float, float] = (0.01, 0.01, 0.01)
+    obstruction_half_extents_lb: tuple[float, float, float] = (0.01, 0.01, 0.025)
     obstruction_half_extents_ub: tuple[float, float, float] = (0.02, 0.02, 0.03)
     obstruction_rgba: tuple[float, float, float, float] = (0.75, 0.1, 0.1, 1.0)
     # NOTE: this is not the "real" probability, but rather, the probability
