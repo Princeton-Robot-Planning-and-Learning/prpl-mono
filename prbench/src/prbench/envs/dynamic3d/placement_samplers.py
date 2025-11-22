@@ -12,6 +12,7 @@ from prbench.envs.dynamic3d.objects import get_fixture_class
 def sample_collision_free_positions(
     fixtures: dict[str, dict[str, dict[str, Any]]],
     np_random: np.random.Generator,
+    fixture_ranges: dict[str, tuple[float, float, float, float]] | None = None,
 ) -> dict[str, dict[str, dict[str, Any]]]:
     """Sample collision-free positions and yaws for multiple fixtures.
 
@@ -19,6 +20,9 @@ def sample_collision_free_positions(
         fixtures: Dictionary mapping fixture types to dictionaries of fixture
                  configurations (fixture_name -> fixture_config)
         np_random: Random number generator
+        fixture_ranges: Dictionary mapping fixture names to sampling ranges as
+                       (x_min, y_min, x_max, y_max). If None, uses default range
+                       (-2.0, 0.5, 2.0, 2.5) for all fixtures.
 
     Returns:
         Dictionary mapping fixture types to dictionaries of fixture poses
@@ -27,9 +31,22 @@ def sample_collision_free_positions(
     fixture_poses: dict[str, dict[str, dict[str, Any]]] = {}
     placed_bboxes: list[list[float]] = []
 
+    # Default range if none provided
+    default_range = (-2.0, 0.5, 2.0, 2.5)
+
     for fixture_type, fixture_configs in fixtures.items():
         fixture_poses[fixture_type] = {}
         for fixture_name, fixture_config in fixture_configs.items():
+            # Get the range for this fixture
+            if fixture_ranges and fixture_name in fixture_ranges:
+                x_min, y_min, x_max, y_max = fixture_ranges[fixture_name]
+                x_range = (x_min, x_max)
+                y_range = (y_min, y_max)
+            else:
+                x_min, y_min, x_max, y_max = default_range
+                x_range = (x_min, x_max)
+                y_range = (y_min, y_max)
+
             init_bbox = get_fixture_class(fixture_type).get_bounding_box_from_config(
                 np.array([0.0, 0.0, 0.0], dtype=np.float32), fixture_config
             )
@@ -38,6 +55,8 @@ def sample_collision_free_positions(
                 list(init_bbox),
                 placed_bboxes=placed_bboxes,
                 np_random=np_random,
+                x_range=x_range,
+                y_range=y_range,
             )
             bbox = get_fixture_class(fixture_type).get_bounding_box_from_config(
                 position, fixture_config
