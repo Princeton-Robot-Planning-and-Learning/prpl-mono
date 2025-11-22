@@ -287,7 +287,7 @@ class TidyBotRobotEnv(RobotEnv):
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         # Map gripper action from [0, 1] to [0, 255].
         action = action.copy()
-        action[-1] = action[-1] * 250.0
+        action[-1] = action[-1] * 255.0
         # Ctrl values > 127 apply closing force, < 127 apply opening force;
         # hence, 0 = fully open, 255 = fully closed, 127 = no force applied.
         # To ensure full closure, map 1.0 to 255, as lower forces may not fully close
