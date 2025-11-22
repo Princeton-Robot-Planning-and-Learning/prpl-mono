@@ -60,7 +60,7 @@ def get_bounding_box(
         return (0.5, 0.5, 1.0)
     if obj.is_instance(MujocoFixtureObjectType):
         # NOTE: hardcoded for now.
-        return (0.7, 0.7, 1.0)
+        return (0.61, 0.26, 1.0)
     if obj.is_instance(MujocoObjectType):
         return (
             state.get(obj, "bb_x"),

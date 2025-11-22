@@ -323,7 +323,7 @@ def test_move_to_target_object_in_shelf():
         )
 
     # Reset the environment and get the initial state.
-    obs, _ = env.reset(seed=125)
+    obs, _ = env.reset(seed=123)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
@@ -334,13 +334,65 @@ def test_move_to_target_object_in_shelf():
     cube = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
-    target_distance = 1.0
+    target_distance = 0.9
     target_rotation = -np.pi / 2
     params = np.array([target_distance, target_rotation])
 
     # Reset and execute the controller until it terminates.
     controller.reset(state, params)
     for _ in range(400):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    # move the arm to the target configuration
+    lifted_controller = controllers["move_arm_to_conf"]
+    robot = state.get_object_from_name("robot")
+    object_parameters = (robot,)
+    controller = lifted_controller.ground(object_parameters)
+    target_conf = np.deg2rad([0, -20, 180, -146, 0, -50, 90])  # retract configuration
+    params = target_conf
+
+    # Reset and execute the controller until it terminates.
+    controller.reset(state, params)
+    for _ in range(200):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    # create the move-arm controller.
+    lifted_controller = controllers["move_arm_to_end_effector"]
+    robot = state.get_object_from_name("robot")
+    object_parameters = (robot,)
+    controller = lifted_controller.ground(object_parameters)
+    target_end_effector_pose = np.array(
+        [
+            0.7,
+            0.0,
+            0.0,
+            0.5,
+            0.5,
+            0.5,
+            0.5,
+        ]
+    )  # x, y, z, rw, rx, ry, rz
+    params = target_end_effector_pose
+
+    # Reset and execute the controller until it terminates.
+    controller.reset(state, params)
+    for _ in range(200):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)

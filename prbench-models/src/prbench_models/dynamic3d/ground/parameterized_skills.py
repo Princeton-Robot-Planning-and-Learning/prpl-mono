@@ -24,7 +24,10 @@ from pybullet_helpers.motion_planning import (
     run_motion_planning,
 )
 from pybullet_helpers.robots import SingleArmPyBulletRobot, create_pybullet_robot
-from pybullet_helpers.utils import create_pybullet_block
+from pybullet_helpers.utils import (
+    create_pybullet_block,
+    create_pybullet_shelf,
+)
 from relational_structs import (
     Array,
     ObjectCentricState,
@@ -195,7 +198,9 @@ class PyBulletSim:
         # Create the PyBullet simulator.
         # Uncomment for debugging.
         # from pybullet_helpers.gui import create_gui_connection
-        # self._physics_client_id = create_gui_connection(camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0)) # pylint: disable=line-too-long
+        # self._physics_client_id = create_gui_connection(
+        #     camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0)
+        # )  # pylint: disable=line-too-long
         self._physics_client_id = p.connect(p.DIRECT)
 
         # Create the robot, assuming that it is a kinova gen3.
@@ -215,6 +220,20 @@ class PyBulletSim:
             half_extents=cube_half_extents,
             physics_client_id=self._physics_client_id,
         )
+
+        if "cupboard_1" in initial_state.get_object_names():
+            self._cupboard1_shelf_id, self._cupboard1_surface_ids = (
+                create_pybullet_shelf(
+                    color=(0.5, 0.5, 0.5, 1.0),
+                    shelf_width=0.60198,
+                    shelf_depth=0.254,
+                    shelf_height=0.0127,
+                    spacing=0.254,
+                    support_width=0.0127,
+                    num_layers=4,
+                    physics_client_id=self._physics_client_id,
+                )
+            )
 
         # Used for checking if two confs are close.
         self._joint_distance_fn = create_joint_distance_fn(self._robot)
@@ -274,6 +293,25 @@ class PyBulletSim:
             ),
         )
         set_pose(self._cube1, cube_pose, self._physics_client_id)
+
+        if "cupboard_1" in x.get_object_names():
+            cupboard1_obj = x.get_object_from_name("cupboard_1")
+            cupboard1_shelf_pose = Pose(
+                (
+                    x.get(cupboard1_obj, "x"),
+                    x.get(cupboard1_obj, "y"),
+                    x.get(cupboard1_obj, "z"),
+                ),
+                (
+                    x.get(cupboard1_obj, "qx"),
+                    x.get(cupboard1_obj, "qy"),
+                    x.get(cupboard1_obj, "qz"),
+                    x.get(cupboard1_obj, "qw"),
+                ),
+            )
+            set_pose(
+                self._cupboard1_shelf_id, cupboard1_shelf_pose, self._physics_client_id
+            )
 
     def get_collision_bodies(self) -> set[int]:
         """Get pybullet IDs for collision bodies."""
