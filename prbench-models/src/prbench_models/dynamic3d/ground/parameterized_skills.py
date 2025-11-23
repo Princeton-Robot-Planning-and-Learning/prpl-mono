@@ -43,6 +43,7 @@ from prbench_models.dynamic3d.utils import (
 # Constants.
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
 GRIPPER_CLOSED_THRESHOLD = 0.02
+GRIPPER_CLOSED_VALUE = 0.6
 WAYPOINT_TOL = 1e-2
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.1, 0.3)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi, np.pi)
@@ -177,7 +178,7 @@ class MoveToTargetGroundController(
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
         if x.get(robot_obj, "pos_gripper") > 0.2:
-            return 1.0
+            return GRIPPER_CLOSED_VALUE
         return 0.0
 
     def _robot_is_close_to_pose(self, pose: SE2, atol: float = WAYPOINT_TOL) -> bool:
@@ -433,7 +434,7 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
         if x.get(robot_obj, "pos_gripper") > 0.2:
-            return 1.0
+            return GRIPPER_CLOSED_VALUE
         return 0.0
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
@@ -579,7 +580,7 @@ class MoveArmToEndEffectorController(
         if (
             x.get(robot_obj, "pos_gripper") > 0.2
         ):  # to mitigate the pos_gripper not accurate
-            return 1.0
+            return GRIPPER_CLOSED_VALUE
         return 0.0
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
