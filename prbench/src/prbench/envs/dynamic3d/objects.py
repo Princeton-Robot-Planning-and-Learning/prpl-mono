@@ -862,6 +862,9 @@ class Table(MujocoFixture):
                         f"{region_center_x} {region_center_y} {region_center_z}",
                     )
                     region_geom.set("rgba", " ".join(map(str, region_config["rgba"])))
+                    # Disable collision for visual-only representation
+                    region_geom.set("contype", "0")
+                    region_geom.set("conaffinity", "0")
 
     def __str__(self) -> str:
         """String representation of the table."""
