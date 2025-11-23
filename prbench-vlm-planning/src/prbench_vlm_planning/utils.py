@@ -18,6 +18,9 @@ from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
 )
+from bilevel_planning.trajectory_samplers.trajectory_sampler import (
+    TrajectorySamplingFailure,
+)
 from numpy.typing import NDArray
 from prpl_llm_utils.cache import FilePretrainedLargeModelCache
 from prpl_llm_utils.models import OpenAIModel
@@ -248,7 +251,11 @@ def option_policy_to_policy(
         num_cur_option_steps += 1
 
         # Get action from controller
-        action = cur_option.step()
+        try:
+            action = cur_option.step()
+        except TrajectorySamplingFailure as e:
+            # Wrap the trajectory sampling failure in a more informative error
+            raise RuntimeError(f"Controller failed to find trajectory: {e}") from e
         return action
 
     return _policy

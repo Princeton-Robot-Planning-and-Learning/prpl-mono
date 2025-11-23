@@ -30,6 +30,14 @@ class Interface(abc.ABC):
         """Execute a base action in the local frame."""
 
     @abc.abstractmethod
+    def execute_arm_action(self, action: TidyBotAction) -> None:
+        """Execute a arm action in the local frame."""
+
+    @abc.abstractmethod
+    def execute_gripper_action(self, action: TidyBotAction) -> None:
+        """Execute a gripper action (1 is open, 0 is closed)."""
+
+    @abc.abstractmethod
     def get_map_base_state(self) -> spatialmath.SE2:
         """Get the base pose in the map frame."""
 
@@ -75,6 +83,12 @@ class RealInterface(Interface):
     def execute_base_action(self, action: TidyBotAction) -> None:
         return self.base_interface.execute_action(action.base_local_goal)
 
+    def execute_arm_action(self, action: TidyBotAction) -> None:
+        return self.arm_interface.execute_action(action.arm_goal)
+
+    def execute_gripper_action(self, action: TidyBotAction) -> None:
+        return self.arm_interface.execute_gripper_action(action.gripper_goal)
+
     def get_map_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_map_base_state()
 
@@ -110,6 +124,12 @@ class FakeInterface(Interface):
 
     def execute_base_action(self, action: TidyBotAction) -> None:
         return self.base_interface.execute_action(action.base_local_goal)
+
+    def execute_arm_action(self, action: TidyBotAction) -> None:
+        return self.arm_interface.execute_action(action.arm_goal)
+
+    def execute_gripper_action(self, action: TidyBotAction) -> None:
+        return self.arm_interface.execute_gripper_action(action.gripper_goal)
 
     def get_map_base_state(self) -> spatialmath.SE2:
         return self.base_interface.get_map_base_state()

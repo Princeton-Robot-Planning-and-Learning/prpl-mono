@@ -15,7 +15,7 @@ from prbench.envs.dynamic3d import utils
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
 from prbench.envs.dynamic3d.object_types import (
     MujocoFixtureObjectType,
-    MujocoObjectType,
+    MujocoMovableObjectType,
 )
 
 # Type variables for decorator type preservation
@@ -103,7 +103,7 @@ class MujocoObject:
         self.options = options if options is not None else {}
 
         # Create the corresponding Object for state representation key
-        self.symbolic_object = Object(self.name, MujocoObjectType)
+        self.symbolic_object = Object(self.name, MujocoMovableObjectType)
 
         self.xml_element: ET.Element  # To be defined in subclasses
 
@@ -300,7 +300,7 @@ class Cube(MujocoObject):
         super().__init__(name, env, options)
 
         # Override object type
-        self.symbolic_object = Object(self.name, MujocoObjectType)
+        self.symbolic_object = Object(self.name, MujocoMovableObjectType)
 
         # Handle size parameter
         size = self.options.get("size", 0.02)

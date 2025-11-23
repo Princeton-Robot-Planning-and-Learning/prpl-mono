@@ -70,7 +70,12 @@ class FilePretrainedLargeModelCache(PretrainedLargeModelCache):
             imgs_folderpath.mkdir(exist_ok=True)
             for i, img in enumerate(query.imgs):
                 filename_suffix = str(i) + ".jpg"
-                img.save(imgs_folderpath / filename_suffix)
+                # Convert RGBA to RGB if necessary (JPEG doesn't support transparency)
+                if img.mode == "RGBA":
+                    rgb_img = img.convert("RGB")
+                    rgb_img.save(imgs_folderpath / filename_suffix)
+                else:
+                    img.save(imgs_folderpath / filename_suffix)
         # Cache the text response.
         completion_file = cache_dir / "completion.txt"
         with open(completion_file, "w", encoding="utf-8") as f:
@@ -93,8 +98,7 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
 
     def _get_query_hash(self, query: Query, model_id: str) -> str:
         """Get a unique hash for the query and model combination."""
-        query_id = query.get_id()
-        return f"{model_id}_{hash(query_id)}"
+        return f"{model_id}_{hash(query)}"
 
     def _ensure_initialized(self, query: Query) -> None:
         """Initialize the database with the required tables and columns."""

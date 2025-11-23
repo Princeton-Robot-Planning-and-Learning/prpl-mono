@@ -1,7 +1,6 @@
 """This module defines the TidyBotRobotEnv class, which is the base class for the
 TidyBot robot in simulation."""
 
-import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Optional
 
@@ -48,9 +47,14 @@ class TidyBotRobotEnv(RobotEnv):
     ) -> None:
         """
         Args:
-            xml_string: A string containing the MuJoCo XML model.
             control_frequency: Frequency at which control actions are applied (in Hz).
+            act_delta: Whether to interpret actions as deltas or absolute values.
             horizon: Maximum number of steps per episode.
+            camera_names: List of camera names for rendering.
+            camera_width: Width of camera images.
+            camera_height: Height of camera images.
+            seed: Random seed for reproducibility.
+            show_viewer: Whether to show the MuJoCo viewer.
         """
 
         super().__init__(
@@ -80,6 +84,7 @@ class TidyBotRobotEnv(RobotEnv):
             "joint_6",
             "joint_7",
         ]
+        gripper_joint_names = ["right_driver_joint", "left_driver_joint"]
 
         # Joint positions: joint_id corresponds to qpos index
         base_qpos_indices = [
@@ -88,6 +93,9 @@ class TidyBotRobotEnv(RobotEnv):
         arm_qpos_indices = [
             self.sim.model.get_joint_qpos_addr(name) for name in arm_joint_names
         ]
+        gripper_qpos_indices = [
+            self.sim.model.get_joint_qpos_addr(name) for name in gripper_joint_names
+        ]
 
         # Joint velocities: joint_id corresponds to qvel index
         base_qvel_indices = [
@@ -95,6 +103,9 @@ class TidyBotRobotEnv(RobotEnv):
         ]
         arm_qvel_indices = [
             self.sim.model.get_joint_qvel_addr(name) for name in arm_joint_names
+        ]
+        gripper_qvel_indices = [
+            self.sim.model.get_joint_qvel_addr(name) for name in gripper_joint_names
         ]
 
         # Actuators: actuator_id corresponds to ctrl index
@@ -105,6 +116,10 @@ class TidyBotRobotEnv(RobotEnv):
         arm_ctrl_indices = [
             self.sim.model._actuator_name2id[name]  # pylint: disable=protected-access
             for name in arm_joint_names
+        ]
+        gripper_ctrl_indices = [
+            self.sim.model._actuator_name2id[name]  # pylint: disable=protected-access
+            for name in ["fingers_actuator"]
         ]
 
         # Verify indices are contiguous for slicing
@@ -147,44 +162,40 @@ class TidyBotRobotEnv(RobotEnv):
         )
         arm_ctrl_start, arm_ctrl_end = min(arm_ctrl_indices), max(arm_ctrl_indices) + 1
 
-        self.qpos["base"] = (
-            self.sim.data._data.qpos[  # pylint: disable=protected-access
-                base_qpos_start:base_qpos_end
-            ]
-        )
-        self.qvel["base"] = (
-            self.sim.data._data.qvel[  # pylint: disable=protected-access
-                base_qvel_start:base_qvel_end
-            ]
-        )
-        self.ctrl["base"] = (
-            self.sim.data._data.ctrl[  # pylint: disable=protected-access
-                base_ctrl_start:base_ctrl_end
-            ]
-        )
+        self.qpos["base"] = self.sim.data.mj_data.qpos[base_qpos_start:base_qpos_end]
+        self.qvel["base"] = self.sim.data.mj_data.qvel[base_qvel_start:base_qvel_end]
+        self.ctrl["base"] = self.sim.data.mj_data.ctrl[base_ctrl_start:base_ctrl_end]
 
-        self.qpos["arm"] = self.sim.data._data.qpos[  # pylint: disable=protected-access
-            arm_qpos_start:arm_qpos_end
-        ]
-        self.qvel["arm"] = self.sim.data._data.qvel[  # pylint: disable=protected-access
-            arm_qvel_start:arm_qvel_end
-        ]
-        self.ctrl["arm"] = self.sim.data._data.ctrl[  # pylint: disable=protected-access
-            arm_ctrl_start:arm_ctrl_end
-        ]
+        self.qpos["arm"] = self.sim.data.mj_data.qpos[arm_qpos_start:arm_qpos_end]
+        self.qvel["arm"] = self.sim.data.mj_data.qvel[arm_qvel_start:arm_qvel_end]
+        self.ctrl["arm"] = self.sim.data.mj_data.ctrl[arm_ctrl_start:arm_ctrl_end]
 
-        # Buffers for gripper
-        gripper_ctrl_id = (
-            self.sim.model._actuator_name2id[  # pylint: disable=protected-access
-                "fingers_actuator"
-            ]
+        # Create a custom wrapper that maintains references for
+        # non-contiguous gripper indices
+        class IndexedView:
+            """A view that provides indexed access to non-contiguous array elements."""
+
+            def __init__(self, array: Any, indices: list[int]) -> None:
+                self.array = array
+                self.indices = indices
+
+            def __setitem__(self, key: int, value: Any) -> None:
+                self.array[self.indices[key]] = value
+
+            def __getitem__(self, key: int) -> Any:
+                return self.array[self.indices[key]]
+
+            def __len__(self) -> int:
+                return len(self.indices)
+
+        self.qpos["gripper"] = IndexedView(  # type: ignore[assignment]
+            self.sim.data.mj_data.qpos, gripper_qpos_indices
         )
-        # gripper not implemented
-        self.qpos["gripper"] = None  # type: ignore[assignment]
-        self.ctrl["gripper"] = (
-            self.sim.data._data.ctrl[  # pylint: disable=protected-access
-                gripper_ctrl_id : gripper_ctrl_id + 1
-            ]
+        self.qvel["gripper"] = IndexedView(  # type: ignore[assignment]
+            self.sim.data.mj_data.qvel, gripper_qvel_indices
+        )
+        self.ctrl["gripper"] = IndexedView(  # type: ignore[assignment]
+            self.sim.data.mj_data.ctrl, gripper_ctrl_indices
         )
 
     def reset(
@@ -193,12 +204,26 @@ class TidyBotRobotEnv(RobotEnv):
         seed: int | None = None,
         options: dict[str, Any] | None = None,
     ) -> tuple[MjObs, dict[str, Any]]:
+        """Reset the robot environment.
+
+        Args:
+            seed: Random seed for reproducibility.
+            options: Additional reset options, must contain 'xml' key.
+
+        Returns:
+            Tuple of observation and info dict.
+        """
         # Access the original xml.
         assert options is not None and "xml" in options, "XML required to reset env"
         xml_string = options["xml"]
 
         # Insert the robot into the xml string.
-        xml_string = self._insert_robot_into_xml(xml_string)
+        xml_string = self._insert_robot_into_xml(
+            xml_string,
+            str(Path(__file__).parents[1] / "models" / "stanford_tidybot"),
+            "tidybot.xml",
+            str(Path(__file__).parents[1] / "models" / "assets"),
+        )
         super().reset(seed=seed, options={"xml": xml_string})
 
         # Setup references to robot state/actuator buffers
@@ -247,61 +272,17 @@ class TidyBotRobotEnv(RobotEnv):
         self.ctrl["arm"][:] = theta
         self.sim.forward()  # Update the simulation state
 
-    def _insert_robot_into_xml(self, xml_string: str) -> str:
-        """Insert the robot model into the provided XML string."""
-        # Parse the provided XML string
-        input_tree = ET.ElementTree(ET.fromstring(xml_string))
-        input_root = input_tree.getroot()
+    def _update_ctrl(self, action: Array) -> None:
+        """Update control values from action array.
 
-        # Read the scene XML content
-        models_dir = Path(__file__).parent.parent / "models" / "stanford_tidybot"
-        tidybot_path = models_dir / "tidybot.xml"
-        assets_dir = Path(__file__).parent.parent / "models" / "assets"
-
-        with open(tidybot_path, "r", encoding="utf-8") as f:
-            tidybot_content = f.read()
-
-        # Parse tidybot XML
-        tidybot_tree = ET.ElementTree(ET.fromstring(tidybot_content))
-        tidybot_root = tidybot_tree.getroot()
-        if tidybot_root is None:
-            raise ValueError("Missing <tidybot> element")
-
-        # Update compiler meshdir to absolute path in tidybot content
-        tidybot_compiler = tidybot_root.find("compiler")  # type: ignore[union-attr]
-        if tidybot_compiler is not None:
-            tidybot_compiler.set("meshdir", str(assets_dir.resolve()))
-
-        # Merge the tidybot content into the input XML
-        # Copy all children from tidybot root to input root (except mujoco tag itself)
-        for child in list(tidybot_root):
-            if child.tag == "worldbody":
-                # Merge worldbody content
-                input_worldbody = input_root.find(  # type:ignore[union-attr]
-                    "worldbody"
-                )
-                if input_worldbody is not None:
-                    for tidybot_body in list(child):
-                        input_worldbody.append(tidybot_body)
-                else:
-                    input_root.append(child)  # type: ignore[union-attr]
-            elif child.tag in ["asset", "default"]:
-                # Merge or append asset and default sections
-                input_section = input_root.find(child.tag)  # type: ignore[union-attr]
-                if input_section is not None:
-                    for sub_child in list(child):
-                        input_section.append(sub_child)
-                else:
-                    input_root.append(child)  # type: ignore[union-attr]
-            else:
-                # For other sections (compiler, actuator, contact, etc.), just append
-                input_root.append(child)  # type: ignore[union-attr]
-
-        if input_root is None:
-            raise ValueError("input_root is None, cannot serialize to string")
-
-        # Return the merged XML as string
-        return ET.tostring(input_root, encoding="unicode")
+        Args:
+            action: Action array to apply to robot controls.
+        """
+        start = 0
+        for _, ctrl_part in self.ctrl.items():
+            end = start + len(ctrl_part)
+            ctrl_part[:] = action[start:end]
+            start = end
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
         if self.act_delta:  # Interpret action as delta.
