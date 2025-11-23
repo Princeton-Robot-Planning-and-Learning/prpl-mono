@@ -543,7 +543,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
             "pos_arm_joint5": self._robot_env.qpos["arm"][4],
             "pos_arm_joint6": self._robot_env.qpos["arm"][5],
             "pos_arm_joint7": self._robot_env.qpos["arm"][6],
-            "pos_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+            "pos_gripper": self._robot_env.qpos["gripper"][0],
             "vel_base_x": self._robot_env.qvel["base"][0],
             "vel_base_y": self._robot_env.qvel["base"][1],
             "vel_base_rot": self._robot_env.qvel["base"][2],
@@ -554,7 +554,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
             "vel_arm_joint5": self._robot_env.qvel["arm"][4],
             "vel_arm_joint6": self._robot_env.qvel["arm"][5],
             "vel_arm_joint7": self._robot_env.qvel["arm"][6],
-            "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+            "vel_gripper": self._robot_env.qvel["gripper"][0],
         }
         return state_dict
 
