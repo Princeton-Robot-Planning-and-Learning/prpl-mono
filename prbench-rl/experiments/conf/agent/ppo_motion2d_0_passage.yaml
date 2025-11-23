@@ -13,5 +13,5 @@ torch_deterministic: true
 cuda: false
 
 # Logging settings
-exp_name: "ppo_m2d_0_passage_train_1119_1m"
+exp_name: "ppo_m2d_0_passage_train_1123_1m"
 tb_log_dir: "runs"
