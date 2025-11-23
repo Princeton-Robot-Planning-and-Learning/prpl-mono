@@ -66,7 +66,7 @@ def real2sim() -> None:
         cupboard_1 = state.get_object_from_name("cupboard_1")
         object_parameters = (robot, cupboard_1)
         controller = lifted_controller.ground(object_parameters)
-        target_distance = 0.9
+        target_distance = 1.0
         target_rotation = np.pi / 2
         params = np.array([target_distance, target_rotation])
 
@@ -82,6 +82,37 @@ def real2sim() -> None:
                 break
         else:
             assert False, "Controller did not terminate"
+
+        # create the move-arm controller.
+        lifted_controller = controllers["move_arm_to_end_effector"]
+        robot = state.get_object_from_name("robot")
+        object_parameters = (robot,) # type: ignore
+        controller = lifted_controller.ground(object_parameters)
+        target_end_effector_pose = np.array(
+            [
+                0.6,
+                0.0,
+                0.0,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+            ]
+        )  # x, y, z, rw, rx, ry, rz
+        params = target_end_effector_pose
+
+        # Reset and execute the controller until it terminates.
+        controller.reset(state, params)
+        for _ in range(200):
+            action = controller.step()
+            obs, _, _, _, _ = env.step(action)
+            next_state = env.observation_space.devectorize(obs)
+            controller.observe(next_state)
+            state = next_state
+            if controller.terminated():
+                break
+        # else:
+        #     assert False, "Controller did not terminate"
 
     finally:
         env.close()  # type: ignore

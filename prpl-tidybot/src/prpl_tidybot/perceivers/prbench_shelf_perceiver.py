@@ -60,13 +60,13 @@ class PRBenchShelfPerceiver(Perceiver[ObjectCentricState]):
         # Placeholder for actual object detection! Coming soon!!!
         cube = Object("cube1", MujocoMovableObjectType)
         state_dict[cube] = {
-            "x": 0.0,
-            "y": 0.0,
+            "x": -1.0,
+            "y": -1.0,
             "z": 0.0,
-            "qw": 1.0,
+            "qw": 0.707,
             "qx": 0.0,
             "qy": 0.0,
-            "qz": 0.0,
+            "qz": 0.707,
             "vx": 0.0,
             "vy": 0.0,
             "vz": 0.0,
@@ -81,8 +81,8 @@ class PRBenchShelfPerceiver(Perceiver[ObjectCentricState]):
         # Placeholder for actual shelf detection! Coming soon!!!
         shelf = Object("cupboard_1", MujocoFixtureObjectType)
         state_dict[shelf] = {
-            "x": 1.5,
-            "y": -0.5,
+            "x": 0.0,
+            "y": 0.0,
             "z": 0.4,
             "qw": 1.0,
             "qx": 0.0,
