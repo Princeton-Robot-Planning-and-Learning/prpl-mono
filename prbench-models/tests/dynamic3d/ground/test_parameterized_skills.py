@@ -331,7 +331,7 @@ def test_move_to_target_object_in_shelf():
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
     robot = state.get_object_from_name("robot")
-    cube = state.get_object_from_name("cupboard_1")
+    cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
     target_distance = 0.9
