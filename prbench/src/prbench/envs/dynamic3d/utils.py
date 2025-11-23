@@ -29,7 +29,7 @@ def check_in_region(
     Returns:
         True if position is inside any region, False otherwise
     """
-    x, y, z = position
+    x, y, _ = position
     for region in regions:
         x_start, y_start, x_end, y_end = region
         if x_start <= x <= x_end and y_start <= y <= y_end:

@@ -1298,7 +1298,7 @@ class Cupboard(MujocoFixture):
         This method adds visual elements to the MuJoCo XML to represent the regions
         defined for this cupboard.
         """
-        # TODO: Implement visualization for cupboard regions if needed
+        # Note: Cupboard region visualization not yet implemented
 
     def __str__(self) -> str:
         """String representation of the cupboard."""
