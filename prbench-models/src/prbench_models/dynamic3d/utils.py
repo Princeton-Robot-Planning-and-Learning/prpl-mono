@@ -5,6 +5,7 @@ from typing import Iterable
 import numpy as np
 from matplotlib import pyplot as plt
 from prbench.envs.dynamic3d.object_types import (
+    MujocoFixtureObjectType,
     MujocoObjectType,
     MujocoTidyBotRobotObjectType,
 )
@@ -57,6 +58,9 @@ def get_bounding_box(
     if obj.is_instance(MujocoTidyBotRobotObjectType):
         # NOTE: hardcoded for now.
         return (0.5, 0.5, 1.0)
+    if obj.is_instance(MujocoFixtureObjectType):
+        # NOTE: hardcoded for now.
+        return (0.61, 0.26, 1.0)
     if obj.is_instance(MujocoObjectType):
         return (
             state.get(obj, "bb_x"),

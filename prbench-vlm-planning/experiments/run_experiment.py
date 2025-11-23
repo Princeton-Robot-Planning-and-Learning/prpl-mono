@@ -1,12 +1,16 @@
 """Main entry point for running VLM planning experiments.
 
 Examples:
-VLM planning:
-    python experiments/run_experiment.py env=Motion2D-p0-v0 seed=0 vlm_model=gpt-5
-LLM planning:
+- Running on a single environment with a single seed:
     python experiments/run_experiment.py env=Motion2D-p0-v0 seed=0 vlm_model=gpt-5 \
-        rgb_observation=false
-    python experiments/run_experiment.py -m env=Motion2D-p1 seed='range(0,10)'
+        temperature=1
+    python experiments/run_experiment.py -m env=StickButton2D-b1-v0 seed=0 \
+        vlm_model=gpt-5 temperature=1
+
+- Running on multiple environments and multiple seeds:
+    python experiments/run_experiment.py -m seed='range(0,3)' \
+        env=Motion2D-p0-v0,Motion2D-p2-v0,StickButton2D-b1-v0,StickButton2D-b3-v0 \
+        vlm_model=gpt-5 use_image=true,false temperature=1
 """
 
 import logging
@@ -65,17 +69,31 @@ def _main(cfg: DictConfig) -> None:
 
     # Evaluate.
     rng = np.random.default_rng(cfg.seed)
-    metrics: list[dict[str, float]] = []
+    metrics: list[dict[str, float | bool | str]] = []
     for eval_episode in range(cfg.num_eval_episodes):
         logging.info(f"Starting evaluation episode {eval_episode}")
-        episode_metrics = _run_single_episode_evaluation(
-            agent,
-            env,
-            rng,
-            max_eval_steps=cfg.max_eval_steps,
-        )
-        episode_metrics["eval_episode"] = eval_episode
-        metrics.append(episode_metrics)
+        try:
+            episode_metrics = _run_single_episode_evaluation(
+                agent,
+                env,
+                rng,
+                max_eval_steps=cfg.max_eval_steps,
+            )
+            episode_metrics["eval_episode"] = eval_episode
+            metrics.append(episode_metrics)
+        except Exception as e:
+            logging.error(
+                f"Episode {eval_episode} failed with error: {e}", exc_info=True
+            )
+            # Record failure and continue to next episode
+            episode_metrics = {
+                "success": False,
+                "steps": 0,
+                "planning_time": 0.0,
+                "eval_episode": eval_episode,
+                "error": str(e),
+            }
+            metrics.append(episode_metrics)
 
     # Aggregate and save results.
     df = pd.DataFrame(metrics)
@@ -100,7 +118,7 @@ def _run_single_episode_evaluation(
     env: Env,
     rng: np.random.Generator,
     max_eval_steps: int,
-) -> dict[str, float]:
+) -> dict[str, float | bool | str]:
     steps = 0
     success = False
     seed = sample_seed_from_rng(rng)
@@ -151,7 +169,11 @@ def _run_single_episode_evaluation(
             obs = {"state": obs, "img": rendered_img}
 
         with timer() as result:
-            agent.update(obs, reward, done, info)
+            try:
+                agent.update(obs, reward, done, info)
+            except VLMPlanningAgentFailure as e:
+                logging.info(f"Agent failed during update: {e}")
+                break
         planning_time += result["time"]
 
         if done:
