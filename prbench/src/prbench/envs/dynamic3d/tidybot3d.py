@@ -475,11 +475,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 obj_name = pred[1]
                 region_name = pred[2]
                 obj = state.get_object_from_name(obj_name)
-                position = [
-                    state.get(obj, "x"),
-                    state.get(obj, "y"),
-                    state.get(obj, "z"),
-                ]
+                position = np.array(
+                    [
+                        state.get(obj, "x"),
+                        state.get(obj, "y"),
+                        state.get(obj, "z"),
+                    ],
+                    dtype=np.float32,
+                )
                 region_config = self.task_config["regions"][region_name]
 
                 if region_config["target"] == "ground":
@@ -498,11 +501,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 )
         return all(successes)
 
-    def reward(self, obs: dict[str, Any]) -> float:
+    def reward(self, obs: dict[str, Any]) -> float:  # pylint: disable=unused-argument
         """Calculate reward based on task completion."""
         return float(self._check_goals())
 
-    def _is_terminated(self, obs: dict[str, Any]) -> bool:
+    def _is_terminated(
+        self, obs: dict[str, Any]
+    ) -> bool:  # pylint: disable=unused-argument
         """Check if episode should terminate."""
         return self._check_goals()
 
