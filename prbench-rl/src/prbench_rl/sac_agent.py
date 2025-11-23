@@ -60,10 +60,6 @@ class SACArgs:
     # Environment specific arguments
     num_envs: int = 1
     """The number of parallel environments."""
-    num_eval_envs: int = 16
-    """The number of parallel evaluation environments."""
-    eval_freq: int = 10000
-    """Evaluation frequency in terms of steps."""
     save_train_video_freq: Optional[int] = None
     """Frequency to save training videos in terms of iterations."""
 
@@ -327,24 +323,34 @@ class SACAgent(BaseRLAgent[_O, _U]):
             action, _, _ = self.actor.get_action(obs, deterministic=True)
         return action
 
-    def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
-        """Evaluate the SAC agent."""
-        envs = gym.vector.SyncVectorEnv(
-            [
-                make_env_sac(
-                    self.env_id,
-                    0,
-                    render,
-                    self.cfg.exp_name + "_eval",
-                    self.max_episode_steps,
-                )
-            ]
+    def evaluate_on_env(
+        self, train_envs: gym.vector.VectorEnv, eval_episodes: int
+    ) -> dict[str, Any]:
+        """Evaluate the SAC agent with video recording.
+
+        Wraps the training environments with RecordVideo to capture evaluation episodes.
+        The environments retain their normalization statistics from training.
+
+        Args:
+            train_envs: Training environments to wrap with video recording
+            eval_episodes: Number of episodes to evaluate
+
+        Returns:
+            Dictionary with evaluation metrics
+        """
+        # Wrap the first training environment with RecordVideo for evaluation
+        # This preserves the normalization statistics while enabling video recording
+        video_folder = f"videos/{self.cfg.exp_name}_eval"
+        train_envs.envs[0] = gym.wrappers.RecordVideo(
+            train_envs.envs[0],
+            video_folder,
+            episode_trigger=lambda x: True,  # Record all episodes
         )
 
         # Set agent to eval mode
         self.actor.eval()
 
-        obs, _ = envs.reset()
+        obs, _ = train_envs.reset()
         episodic_returns: list[float] = []
         step_lengths: list[int] = []
         step_length = 0
@@ -355,23 +361,20 @@ class SACAgent(BaseRLAgent[_O, _U]):
                 action, _, _ = self.actor.get_action(obs_tensor, deterministic=True)
                 actions = action.cpu().numpy()
 
-            obs, _, _, _, infos = envs.step(actions)
+            obs, _, _, _, infos = train_envs.step(actions)
             step_length += 1
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info is None or "episode" not in info:
                         continue
-                    print(
+                    logging.info(
                         f"eval_episode={len(episodic_returns)}, "
                         f"episodic_return={info['episode']['r']}"
                     )
                     episodic_returns.append(info["episode"]["r"])
                     step_lengths.append(step_length)
                     step_length = 0
-                obs, _ = envs.reset()
-
-        envs.close()  # type: ignore
 
         eval_metrics = {
             "episodic_return": episodic_returns,
@@ -379,7 +382,7 @@ class SACAgent(BaseRLAgent[_O, _U]):
         }
         return eval_metrics
 
-    def train(self, render: bool = False) -> dict[str, Any]:  # type: ignore
+    def train(self, eval_episodes: int = 10) -> dict[str, Any]:  # type: ignore
         """Training the agent with an interactive batched environment."""
         # Seeding
         random.seed(self.args.seed)
@@ -389,13 +392,11 @@ class SACAgent(BaseRLAgent[_O, _U]):
 
         # env setup
         episodic_returns: list[float] = []
+        # Create training environments (no video recording during training)
         envs = gym.vector.SyncVectorEnv(
             [
                 make_env_sac(
                     self.env_id,
-                    self.args.seed + i,
-                    render,
-                    self.cfg.exp_name + "_train",
                     self.max_episode_steps,
                 )
                 for i in range(self.args.num_envs)
@@ -591,11 +592,28 @@ class SACAgent(BaseRLAgent[_O, _U]):
             self.save(str(model_path))
             logging.info(f"model saved to {model_path}")
 
+        # Evaluate on the training environment (shares the same normalizer)
+        logging.info(f"Starting evaluation for {eval_episodes} episodes...")
+        eval_metrics = self.evaluate_on_env(envs, eval_episodes)
+
+        # Log evaluation results
+        if eval_metrics["episodic_return"]:
+            avg_return = np.mean(eval_metrics["episodic_return"])
+            logging.info(f"Evaluation average return: {avg_return}")
+            if self.writer is not None:
+                self.writer.add_scalar(  # type: ignore
+                    "eval/average_return", avg_return, global_step
+                )
+
+        # Close environments and writer
         envs.close()  # type: ignore
         if self.writer is not None:
             self.writer.close()  # type: ignore
 
-        return {}
+        return {
+            "train": {"episodic_return": episodic_returns},
+            "eval": eval_metrics,
+        }
 
     def save(self, filepath: str) -> None:
         """Save agent parameters."""
