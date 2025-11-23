@@ -102,12 +102,13 @@ class MoveToTargetGroundController(
         rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
-    def reset(
+    def reset(  # disable-pylint: disable=dangerous-default-value
         self,
         x: ObjectCentricState,
         params: Any,
         extend_xy_magnitude: float = 0.025,
         extend_rot_magnitude: float = np.pi / 8,
+        disable_collision_objects: list[str] = [],
     ) -> None:
         self._last_state = x
         assert isinstance(params, np.ndarray)
@@ -128,6 +129,7 @@ class MoveToTargetGroundController(
             seed=0,  # use a constant seed to effectively make this "deterministic"
             extend_xy_magnitude=extend_xy_magnitude,
             extend_rot_magnitude=extend_rot_magnitude,
+            disable_collision_objects=disable_collision_objects,
         )
         assert base_motion_plan is not None
         self._current_base_motion_plan = base_motion_plan
@@ -154,6 +156,7 @@ class MoveToTargetGroundController(
         action[0] = dx
         action[1] = dy
         action[2] = drot
+        action[-1] = self._get_current_robot_gripper_pose()
         return action
 
     def observe(self, x: ObjectCentricState) -> None:
@@ -168,6 +171,14 @@ class MoveToTargetGroundController(
             state.get(robot, "pos_base_y"),
             state.get(robot, "pos_base_rot"),
         )
+
+    def _get_current_robot_gripper_pose(self) -> float:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        if x.get(robot_obj, "pos_gripper") > 0.2:
+            return 1.0
+        return 0.0
 
     def _robot_is_close_to_pose(self, pose: SE2, atol: float = WAYPOINT_TOL) -> bool:
         robot_pose = self._get_current_robot_pose()
@@ -387,9 +398,11 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
             # Not close enough, stop popping.
             break
         robot_conf = self._get_current_robot_arm_conf()
+        gripper_pose = self._get_current_robot_gripper_pose()
         next_conf = self._current_arm_joint_plan[0]
         action = np.zeros(11, dtype=np.float32)
         action[3:10] = np.subtract(next_conf, robot_conf)[:7]
+        action[-1] = gripper_pose
         return action
 
     def observe(self, x: ObjectCentricState) -> None:
@@ -414,6 +427,14 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
             0.0,
             0.0,
         ]
+
+    def _get_current_robot_gripper_pose(self) -> float:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        if x.get(robot_obj, "pos_gripper") > 0.2:
+            return 1.0
+        return 0.0
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
         current_conf = self._get_current_robot_arm_conf()
@@ -521,9 +542,11 @@ class MoveArmToEndEffectorController(
             # Not close enough, stop popping.
             break
         robot_conf = self._get_current_robot_arm_conf()
+        gripper_pose = self._get_current_robot_gripper_pose()
         next_conf = self._current_arm_joint_plan[0]
         action = np.zeros(11, dtype=np.float32)
         action[3:10] = np.subtract(next_conf, robot_conf)[:7]
+        action[-1] = gripper_pose
         return action
 
     def observe(self, x: ObjectCentricState) -> None:
@@ -548,6 +571,16 @@ class MoveArmToEndEffectorController(
             0.0,
             0.0,
         ]
+
+    def _get_current_robot_gripper_pose(self) -> float:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        if (
+            x.get(robot_obj, "pos_gripper") > 0.2
+        ):  # to mitigate the pos_gripper not accurate
+            return 1.0
+        return 0.0
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
         current_conf = self._get_current_robot_arm_conf()
@@ -602,6 +635,50 @@ class CloseGripperController(GroundParameterizedController[ObjectCentricState, A
         )
 
 
+class OpenGripperController(GroundParameterizedController[ObjectCentricState, Array]):
+    """Controller for opening the gripper.
+
+    The object parameters are:
+        robot: The robot itself.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_state: ObjectCentricState | None = None
+        self.last_gripper_state: float = 0.0
+
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        # We can later implement sampling if it's helpful, but usually the user would
+        # want to specify the target end effector pose themselves.
+        raise NotImplementedError
+
+    def reset(self, x: ObjectCentricState, params: Any | None = None) -> None:
+        # Update the current state and parameters.
+        self._last_state = x
+
+    def terminated(self) -> bool:
+        return self._robot_gripper_is_open()
+
+    def step(self) -> Array:
+        self.last_gripper_state = self._get_current_gripper_pose()
+        action = np.zeros(11, dtype=np.float32)
+        action[-1] = 0
+        return action
+
+    def observe(self, x: ObjectCentricState) -> None:
+        self._last_state = x
+
+    def _get_current_gripper_pose(self) -> SE2:
+        assert self._last_state is not None
+        state = self._last_state
+        robot = self.objects[0]
+        return state.get(robot, "pos_gripper")
+
+    def _robot_gripper_is_open(self, atol: float = GRIPPER_CLOSED_THRESHOLD) -> bool:
+        current_gripper_pose = self._get_current_gripper_pose()
+        return current_gripper_pose < atol
+
+
 def create_lifted_controllers(
     action_space: TidyBot3DRobotActionSpace,
     init_constant_state: ObjectCentricState | None = None,
@@ -652,9 +729,20 @@ def create_lifted_controllers(
         )
     )
 
+    # Open gripper controller.
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
+
+    LiftedOpenGripperController: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot],
+            OpenGripperController,
+        )
+    )
+
     return {
         "move_to_target": LiftedMoveToTargetController,
         "move_arm_to_conf": LiftedMoveArmToConfController,
         "move_arm_to_end_effector": LiftedMoveArmToEndEffectorController,
         "close_gripper": LiftedCloseGripperController,
+        "open_gripper": LiftedOpenGripperController,
     }
