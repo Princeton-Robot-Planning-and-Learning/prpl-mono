@@ -81,17 +81,22 @@ def test_tidybot_table_clutter_pick_place_goals():
     )
 
     # Reset the environment
-    obs, _ = env.reset()
+    env.reset()
 
     # After reset, goals should not be satisfied
-    assert not env._check_goals(), "Goals should not be satisfied after reset"
+    assert (
+        not env._check_goals()  # pylint: disable=protected-access
+    ), "Goals should not be satisfied after reset"
 
     # Get the current state
-    current_state = env._get_current_state()
+    current_state = env._get_current_state()  # pylint: disable=protected-access
 
     # Get all objects and the table fixture
-    table = list(env._fixtures_dict.values())[0]  # Assume first fixture is the table
-    object_names = [obj.name for obj in env._objects_dict.values()]
+    table = list(env._fixtures_dict.values())[0]  # pylint: disable=protected-access
+    object_names = [
+        obj.name
+        for obj in env._objects_dict.values()  # pylint: disable=protected-access
+    ]
 
     # Get goal regions from the table
     goal_regions = table.regions.get("table_1_object_goal_region", {}).get("ranges", [])
@@ -113,7 +118,7 @@ def test_tidybot_table_clutter_pick_place_goals():
 
             goal_x = x_start + x_offset + table.position[0]
             goal_y = y_start + y_offset + table.position[1]
-            # Place object on table surface: table position z + table height + small offset
+            # Place object on table surface: table z + table height + offset
             goal_z = table.position[2] + table.table_height + 0.01
 
             # Update the state with new object position
@@ -126,7 +131,7 @@ def test_tidybot_table_clutter_pick_place_goals():
 
         # Now goals should be satisfied
         assert (
-            env._check_goals()
+            env._check_goals()  # pylint: disable=protected-access
         ), "Goals should be satisfied after placing objects in goal region"
 
     env.close()
