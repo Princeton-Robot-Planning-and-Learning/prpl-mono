@@ -405,6 +405,7 @@ def test_move_to_target_object_in_shelf():
 
     env.close()
 
+
 def test_close_gripper_controller():
     """Test close-gripper controller in ground environment with 1 cube."""
 
@@ -427,7 +428,6 @@ def test_close_gripper_controller():
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["close_gripper"]
     robot = state.get_object_from_name("robot")
-    cube = state.get_object_from_name("cube1")
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
 
