@@ -753,17 +753,18 @@ class Table(MujocoFixture):
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
         """
+        assert self.regions is not None, "Regions must be defined"
         # Randomly select one of the regions
         selected_region = np_random.choice(self.regions[region_name]["ranges"])
 
         # Validate the selected region
-        if len(selected_region) != 4:
+        if len(selected_region) != 4:  # type: ignore[arg-type]
             raise ValueError(
                 f"Each region must have exactly 4 values "
                 f"[x_start, y_start, x_end, y_end], got {len(selected_region)}"
             )
 
-        x_start, y_start, x_end, y_end = selected_region
+        x_start, y_start, x_end, y_end = selected_region  # type: ignore[misc]
 
         # Validate bounds
         if x_start >= x_end:
@@ -806,6 +807,7 @@ class Table(MujocoFixture):
         table_placement_threshold = 0.01  # 1cm tolerance for placement
 
         # Get the bounding box for the specified region
+        assert self.regions is not None, "Regions must be defined"
         if region_name not in self.regions:
             raise ValueError(f"Region '{region_name}' not found")
 
@@ -1202,17 +1204,18 @@ class Cupboard(MujocoFixture):
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
         """
+        assert self.regions is not None, "Regions must be defined"
         # Randomly select one of the regions
         selected_region = np_random.choice(self.regions[region_name]["ranges"])
 
         # Validate the selected region
-        if len(selected_region) != 4:
+        if len(selected_region) != 4:  # type: ignore[arg-type]
             raise ValueError(
                 f"Each region must have exactly 4 values "
                 f"[x_start, y_start, x_end, y_end], got {len(selected_region)}"
             )
 
-        x_start, y_start, x_end, y_end = selected_region
+        x_start, y_start, x_end, y_end = selected_region  # type: ignore[misc]
 
         # Validate bounds
         if x_start >= x_end:
@@ -1269,6 +1272,7 @@ class Cupboard(MujocoFixture):
         cupboard_placement_threshold = 0.02  # 2cm tolerance for placement
 
         # Get the bounding box for the specified region
+        assert self.regions is not None, "Regions must be defined"
         if region_name not in self.regions:
             raise ValueError(f"Region '{region_name}' not found")
 
@@ -1295,7 +1299,6 @@ class Cupboard(MujocoFixture):
         defined for this cupboard.
         """
         # TODO: Implement visualization for cupboard regions if needed
-        pass
 
     def __str__(self) -> str:
         """String representation of the cupboard."""
