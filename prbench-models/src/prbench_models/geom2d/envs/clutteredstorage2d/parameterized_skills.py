@@ -355,26 +355,9 @@ class GroundPlaceBlockNotOnShelfController(Geom2dRobotController):
         # Sample place ratio
         # w.r.t (shelf_width - block_width)
         # and (shelf_height - block_height)
-        full_state = x.copy()
-        init_constant_state = self._init_constant_state
-        if init_constant_state is not None:
-            full_state.data.update(init_constant_state.data)
-        while True:
-            abs_x = rng.uniform(self.world_x_min, self.world_x_max)
-            abs_y = rng.uniform(self.world_y_min, self.world_y_max)
-            abs_theta = rng.uniform(-np.pi, np.pi)
-            full_state.set(self._robot, "x", abs_x)
-            full_state.set(self._robot, "y", abs_y)
-            full_state.set(self._robot, "theta", abs_theta)
-            suctioned_objects = get_suctioned_objects(x, self._robot)
-            snap_suctioned_objects(full_state, self._robot, suctioned_objects)
-            # Check collision
-            moving_objects = {self._robot} | {o for o, _ in suctioned_objects}
-            static_objects = set(full_state) - moving_objects
-            if not state_2d_has_collision(
-                full_state, moving_objects, static_objects, {}
-            ):
-                break
+        abs_x = rng.uniform(self.world_x_min, self.world_x_max)
+        abs_y = rng.uniform(self.world_y_min, self.world_y_max)
+        abs_theta = rng.uniform(-np.pi, np.pi)
         rel_x = (abs_x - self.world_x_min) / (self.world_x_max - self.world_x_min)
         rel_y = (abs_y - self.world_y_min) / (self.world_y_max - self.world_y_min)
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)

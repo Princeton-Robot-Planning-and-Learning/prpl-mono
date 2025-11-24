@@ -42,34 +42,12 @@ class GroundMoveToTgtController(Geom2dRobotController):
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
     ) -> tuple[float, float, float]:
+        del x  # Unused
         # Sample a point within the target region and a random orientation
-        target_x = x.get(self._target, "x")
-        target_y = x.get(self._target, "y")
-        target_width = x.get(self._target, "width")
-        target_height = x.get(self._target, "height")
-        full_state = x.copy()
-        if self._init_constant_state is not None:
-            full_state.data.update(self._init_constant_state.data)
-        while True:
-            # Sample relative position within the target region
-            rel_x = rng.uniform(0.1, 0.9)
-            rel_y = rng.uniform(0.1, 0.9)
-            # Sample random orientation
-            abs_theta = rng.uniform(-np.pi, np.pi)
-
-            # Convert to absolute coordinates within target bounds
-            abs_x = target_x + rel_x * target_width
-            abs_y = target_y + rel_y * target_height
-            full_state.set(self._robot, "x", abs_x)
-            full_state.set(self._robot, "y", abs_y)
-            full_state.set(self._robot, "theta", abs_theta)
-            # Check collision
-            moving_objects = {self._robot}
-            static_objects = set(full_state) - moving_objects
-            if not state_2d_has_collision(
-                full_state, moving_objects, static_objects, {}
-            ):
-                break
+        rel_x = rng.uniform(0.1, 0.9)
+        rel_y = rng.uniform(0.1, 0.9)
+        # Sample random orientation
+        abs_theta = rng.uniform(-np.pi, np.pi)
         # Relative orientation
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
 
@@ -130,46 +108,11 @@ class GroundMoveToPassageController(GroundMoveToTgtController):
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
     ) -> tuple[float, float, float]:
+        del x  # Unused
         # Sample a point between the two obstacles
-        obstacle1_x = x.get(self._obstacle1, "x")
-        obstacle1_width = x.get(self._obstacle1, "width")
-        obstacle1_y = x.get(self._obstacle1, "y")
-        obstacle2_y = x.get(self._obstacle2, "y")
-        obstacle2_height = x.get(self._obstacle2, "height")
-        robot_radius = x.get(self._robot, "base_radius")
-        full_state = x.copy()
-        if self._init_constant_state is not None:
-            full_state.data.update(self._init_constant_state.data)
-        while True:
-            rel_x = rng.uniform(0.1, 0.9)
-            rel_y = rng.uniform(0.1, 0.9)
-
-            abs_x = (
-                obstacle1_x
-                + obstacle1_width / 2
-                - robot_radius
-                + 2 * robot_radius * rel_x
-            )
-            abs_y = (
-                obstacle2_y
-                + obstacle2_height
-                + robot_radius
-                + (obstacle1_y - (obstacle2_y + obstacle2_height + 2 * robot_radius))
-                * rel_y
-            )
-            abs_theta = rng.uniform(-np.pi, np.pi)
-
-            full_state.set(self._robot, "theta", abs_theta)
-            full_state.set(self._robot, "x", abs_x)
-            full_state.set(self._robot, "y", abs_y)
-
-            # Check collision
-            moving_objects = {self._robot}
-            static_objects = set(full_state) - moving_objects
-            if not state_2d_has_collision(
-                full_state, moving_objects, static_objects, {}
-            ):
-                break
+        rel_x = rng.uniform(0.1, 0.9)
+        rel_y = rng.uniform(0.1, 0.9)
+        abs_theta = rng.uniform(-np.pi, np.pi)
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
         return (rel_x, rel_y, rel_theta)
 
