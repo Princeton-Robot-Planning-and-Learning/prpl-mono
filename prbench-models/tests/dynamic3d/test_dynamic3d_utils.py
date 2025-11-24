@@ -112,12 +112,12 @@ def test_plot_overhead_scene():
 def test_run_base_motion_planning():
     """Tests for run_base_motion_planning()."""
 
-    env = prbench.make("prbench/TidyBot3D-ground-o3-v0", render_mode="rgb_array")
+    env = prbench.make("prbench/TidyBot3D-cupboard-o1-v0", render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     obs, _ = env.reset(seed=123)
     state = env.observation_space.devectorize(obs)
 
-    target_base_pose = SE2(0.5, 0.5, 0.0)
+    target_base_pose = SE2(-1, 1, 0.0)
     x_bounds = (-1.5, 1.5)
     y_bounds = (-1.5, 1.5)
     seed = 123
@@ -154,14 +154,16 @@ def test_run_base_motion_planning():
 
     # Uncomment to debug.
     # from prpl_utils.utils import fig2data, get_signed_angle_distance
+
     # ax.set_title("Motion Planning Example")
     # plt.tight_layout()
     # img = fig2data(fig)
     # outfile = "base_motion_planning.png"
     # import imageio.v2 as iio
+
     # iio.imsave(outfile, img)
     # print(f"Wrote out to {outfile}")
-    # print('Number of steps:', len(base_motion_plan))
+    # print("Number of steps:", len(base_motion_plan))
 
     # import time
     # imgs = []

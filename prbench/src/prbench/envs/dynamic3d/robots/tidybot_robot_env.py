@@ -16,7 +16,7 @@ class TidyBot3DRobotActionSpace(RobotActionSpace):
     """An action in a MuJoCo environment; used to set sim.data.ctrl in MuJoCo."""
 
     def __init__(self) -> None:
-        # TidyBot actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
+        # TidyBot actions: base pos and yaw (3), arm joints (7), gripper pos (1)
         low = np.array(
             [-0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, -0.1, 0.0]
         )
@@ -25,7 +25,7 @@ class TidyBot3DRobotActionSpace(RobotActionSpace):
 
     def create_markdown_description(self) -> str:
         """Create a human-readable markdown description of this space."""
-        return """Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)"""
+        return """Actions: base pos and yaw (3), arm joints (7), gripper pos (1)"""
 
 
 class TidyBotRobotEnv(RobotEnv):
@@ -285,6 +285,15 @@ class TidyBotRobotEnv(RobotEnv):
             start = end
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
+        # Map gripper action from [0, 1] to [0, 255].
+        action = action.copy()
+        action[-1] = action[-1] * 255.0
+        # Ctrl values > 127 apply closing force, < 127 apply opening force;
+        # hence, 0 = fully open, 255 = fully closed, 127 = no force applied.
+        # To ensure full closure, map 1.0 to 255, as lower forces may not fully close
+        # the gripper due to opposing spring forces.
+
+        # Apply delta or absolute action
         if self.act_delta:  # Interpret action as delta.
             # Compute absolute joint action.
             curr_qpos = np.concatenate([self.qpos["base"], self.qpos["arm"]], -1)

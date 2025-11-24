@@ -122,6 +122,116 @@ def create_pybullet_cylinder(
     return cylinder_id
 
 
+def create_pybullet_shelf(
+    color: tuple[float, float, float, float],
+    shelf_width: float,
+    shelf_depth: float,
+    shelf_height: float,
+    spacing: float,
+    support_width: float,
+    num_layers: int,
+    physics_client_id: int,
+    shelf_texture_id: int | None = None,
+) -> tuple[int, set[int]]:
+    """Returns the shelf ID and the link IDs of the individual shelves."""
+
+    collision_shape_ids = []
+    visual_shape_ids = []
+    base_positions = []
+    base_orientations = []
+    link_masses = []
+    link_parent_indices = []
+    link_joint_types = []
+    link_joint_axes = []
+
+    # Add each shelf layer to the lists.
+    for i in range(num_layers):
+        layer_z = i * (spacing + shelf_height)
+
+        col_shape_id = p.createCollisionShape(
+            p.GEOM_BOX,
+            halfExtents=[shelf_width / 2, shelf_depth / 2, shelf_height / 2],
+            physicsClientId=physics_client_id,
+        )
+        visual_shape_id = p.createVisualShape(
+            p.GEOM_BOX,
+            halfExtents=[shelf_width / 2, shelf_depth / 2, shelf_height / 2],
+            rgbaColor=color,
+            physicsClientId=physics_client_id,
+        )
+
+        collision_shape_ids.append(col_shape_id)
+        visual_shape_ids.append(visual_shape_id)
+        base_positions.append([0, 0, layer_z])
+        base_orientations.append([0, 0, 0, 1])
+        link_masses.append(0)
+        link_parent_indices.append(0)
+        link_joint_types.append(p.JOINT_FIXED)
+        link_joint_axes.append([0, 0, 0])
+
+    shelf_link_ids = set(range(num_layers))
+
+    # Add vertical side supports to the lists.
+    support_height = (num_layers - 1) * spacing + (num_layers) * shelf_height
+    support_half_height = support_height / 2
+
+    for x_offset in [
+        -shelf_width / 2 - support_width / 2,
+        shelf_width / 2 + support_width / 2,
+    ]:
+        support_col_shape_id = p.createCollisionShape(
+            p.GEOM_BOX,
+            halfExtents=[support_width / 2, shelf_depth / 2, support_half_height],
+            physicsClientId=physics_client_id,
+        )
+        support_visual_shape_id = p.createVisualShape(
+            p.GEOM_BOX,
+            halfExtents=[support_width / 2, shelf_depth / 2, support_half_height],
+            rgbaColor=color,
+            physicsClientId=physics_client_id,
+        )
+
+        collision_shape_ids.append(support_col_shape_id)
+        visual_shape_ids.append(support_visual_shape_id)
+        base_positions.append([x_offset, 0, support_half_height - shelf_height / 2])
+        base_orientations.append([0, 0, 0, 1])
+        link_masses.append(0)
+        link_parent_indices.append(0)
+        link_joint_types.append(p.JOINT_FIXED)
+        link_joint_axes.append([0, 0, 0])
+
+    # Create the multibody with all collision and visual shapes.
+    shelf_id = p.createMultiBody(
+        baseMass=0,
+        baseCollisionShapeIndex=-1,
+        baseVisualShapeIndex=-1,
+        basePosition=(0, 0, 0),  # changed externally
+        linkMasses=link_masses,
+        linkCollisionShapeIndices=collision_shape_ids,
+        linkVisualShapeIndices=visual_shape_ids,
+        linkPositions=base_positions,
+        linkOrientations=base_orientations,
+        linkInertialFramePositions=[[0, 0, 0]] * len(collision_shape_ids),
+        linkInertialFrameOrientations=[[0, 0, 0, 1]] * len(collision_shape_ids),
+        linkParentIndices=link_parent_indices,
+        linkJointTypes=link_joint_types,
+        linkJointAxis=link_joint_axes,
+        physicsClientId=physics_client_id,
+    )
+    if shelf_texture_id is not None:
+        for link_id in range(
+            p.getNumJoints(shelf_id, physicsClientId=physics_client_id)
+        ):
+            p.changeVisualShape(
+                shelf_id,
+                link_id,
+                textureUniqueId=shelf_texture_id,
+                physicsClientId=physics_client_id,
+            )
+
+    return shelf_id, shelf_link_ids
+
+
 def get_closest_points_with_optional_links(
     body1: int,
     body2: int,

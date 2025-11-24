@@ -21,7 +21,7 @@ def agent_kwargs(mock_observation_space, sample_controllers):
         "temperature": 0.0,
         "max_planning_horizon": 50,
         "seed": 0,
-        "use_image": False,
+        "rgb_observation": False,
     }
 
 
@@ -56,7 +56,7 @@ def test_agent_initialization(agent_kwargs):
         assert agent._temperature == 0.0
         assert agent._max_planning_horizon == 50
         assert agent._seed == 0
-        assert agent._use_image is False
+        assert agent._rgb_observation is False
         assert agent._current_policy is None
         assert agent._next_action is None
 
@@ -294,7 +294,7 @@ def test_agent_generate_plan_vlm_failure(
 
 def test_agent_with_image_observation(agent_kwargs, mock_env_info, mock_vlm):
     """Test agent with image observation."""
-    agent_kwargs["use_image"] = True
+    agent_kwargs["rgb_observation"] = True
 
     with patch("prbench_vlm_planning.agent.create_vlm_by_name") as mock_create_vlm:
         mock_create_vlm.return_value = mock_vlm

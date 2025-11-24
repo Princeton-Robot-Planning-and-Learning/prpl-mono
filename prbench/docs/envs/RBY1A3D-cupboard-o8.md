@@ -5,7 +5,7 @@
 A 3D mobile manipulation environment using the RBY1A platform.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: cupboard with 50 objects.
+Scene type: cupboard with 8 objects.
 
 The robot can control:
 - Base pose (x, y, theta)
