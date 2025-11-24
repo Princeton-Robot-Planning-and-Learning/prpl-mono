@@ -320,6 +320,7 @@ def test_close_gripper_controller():
 
     env.close()
 
+
 def test_pick_place_ground():
     """Test pick and place in ground environment with 1 cube."""
 
