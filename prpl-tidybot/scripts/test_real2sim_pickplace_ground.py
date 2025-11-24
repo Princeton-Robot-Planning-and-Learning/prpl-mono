@@ -124,7 +124,7 @@ def real2sim() -> None:
         controller.reset(state)  # type: ignore
         for _ in range(20):
             action = controller.step()
-            obs, _, _, _, _ = env.step(action)
+            obs, _, _, _, _ = env.step(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
@@ -147,7 +147,7 @@ def real2sim() -> None:
         controller.reset(state, params)
         for _ in range(200):
             action = controller.step()
-            obs, _, _, _, _ = env.step(action)
+            obs, _, _, _, _ = env.step(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
@@ -171,7 +171,7 @@ def real2sim() -> None:
         controller.reset(state, params, disable_collision_objects=["cube1"])  # type: ignore # pylint: disable=line-too-long
         for _ in range(200):
             action = controller.step()
-            obs, _, _, _, _ = env.step(action)
+            obs, _, _, _, _ = env.step(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
@@ -202,7 +202,7 @@ def real2sim() -> None:
         controller.reset(state, params)
         for _ in range(200):
             action = controller.step()
-            obs, _, _, _, _ = env.step(action)
+            obs, _, _, _, _ = env.step(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
@@ -222,7 +222,7 @@ def real2sim() -> None:
         controller.reset(state)  # type: ignore
         for _ in range(20):
             action = controller.step()
-            obs, _, _, _, _ = env.step(action)
+            obs, _, _, _, _ = env.step(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
