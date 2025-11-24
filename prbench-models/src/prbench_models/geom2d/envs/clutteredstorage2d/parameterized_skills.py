@@ -20,6 +20,8 @@ from prbench.envs.geom2d.utils import (
     get_suctioned_objects,
     get_tool_tip_position,
     run_motion_planning_for_crv_robot,
+    snap_suctioned_objects,
+    state_2d_has_collision
 )
 from relational_structs import (
     Object,
@@ -384,9 +386,28 @@ class GroundPlaceBlockNotOnShelfController(Geom2dRobotController):
             SE2Pose(robot_x, robot_y, robot_theta),
             robot_radius,
         )
+
         # Plan collision-free waypoints to the target pose
         # We set the arm to be the longest during motion planning
         final_waypoints: list[tuple[SE2Pose, float]] = [current_wp]
+
+        full_state = state.copy()
+        init_constant_state = self._init_constant_state
+        if init_constant_state is not None:
+            full_state.data.update(init_constant_state.data)
+
+        full_state.set(self._robot, "x", params[0])
+        full_state.set(self._robot, "y", params[1])
+        full_state.set(self._robot, "theta", params[2])
+        suctioned_objects = get_suctioned_objects(state, self._robot)
+        snap_suctioned_objects(full_state, self._robot, suctioned_objects)
+        # Check end-pose collision
+        moving_objects = {self._robot} | {o for o, _ in suctioned_objects}
+        static_objects = set(full_state) - moving_objects
+        if state_2d_has_collision(full_state, moving_objects, static_objects, {}):
+            # Stay static
+            return final_waypoints
+
         mp_state = state.copy()
         mp_state.set(self._robot, "arm_joint", robot_radius)
         init_constant_state = self._init_constant_state

@@ -14,6 +14,7 @@ from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     run_motion_planning_for_crv_robot,
+    state_2d_has_collision
 )
 from relational_structs import (
     Object,
@@ -72,6 +73,22 @@ class GroundMoveToTgtController(Geom2dRobotController):
         # Convert to absolute angle
         final_theta = params[2] * 2 * np.pi - np.pi
         final_pose = SE2Pose(final_x, final_y, final_theta)
+
+        full_state = state.copy()
+        if self._init_constant_state is not None:
+            full_state.data.update(self._init_constant_state.data)
+
+        # Convert to absolute coordinates within target bounds
+        full_state.set(self._robot, "x", final_x)
+        full_state.set(self._robot, "y", final_y)
+        full_state.set(self._robot, "theta", final_theta)
+        # Check collision
+        moving_objects = {self._robot}
+        static_objects = set(full_state) - moving_objects
+        if state_2d_has_collision(full_state, moving_objects, static_objects, {}):
+            raise TrajectorySamplingFailure(
+                "Failed to find a collision-free path to target."
+            )
 
         # Use motion planning to find collision-free path
         assert isinstance(self._action_space, CRVRobotActionSpace)
@@ -143,6 +160,22 @@ class GroundMoveToPassageController(GroundMoveToTgtController):
         abs_theta = params[2] * 2 * np.pi - np.pi
 
         final_pose = SE2Pose(abs_x, abs_y, abs_theta)
+
+        full_state = state.copy()
+        if self._init_constant_state is not None:
+            full_state.data.update(self._init_constant_state.data)
+
+        full_state.set(self._robot, "theta", abs_theta)
+        full_state.set(self._robot, "x", abs_x)
+        full_state.set(self._robot, "y", abs_y)
+
+        # Check collision
+        moving_objects = {self._robot}
+        static_objects = set(full_state) - moving_objects
+        if state_2d_has_collision(full_state, moving_objects, static_objects, {}):
+            raise TrajectorySamplingFailure(
+                "Failed to find a collision-free path to target."
+            )
 
         # Use motion planning to find collision-free path
         assert isinstance(self._action_space, CRVRobotActionSpace)

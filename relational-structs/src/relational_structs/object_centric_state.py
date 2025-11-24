@@ -10,6 +10,7 @@ from typing import (
     Iterator,
     List,
     Sequence,
+    Set,
 )
 
 import numpy as np
@@ -71,6 +72,10 @@ class ObjectCentricState:
     def get_objects(self, object_type: Type) -> List[Object]:
         """Return objects of the given type in the order of __iter__()."""
         return [o for o in self if o.is_instance(object_type)]
+
+    def get_object_names(self) -> Set[str]:
+        """Return the names of all objects in the state."""
+        return set(o.name for o in self)
 
     def get_object_from_name(self, name: str) -> Object:
         """Look up an object from its name."""

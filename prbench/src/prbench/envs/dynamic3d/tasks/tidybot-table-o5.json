@@ -22,6 +22,17 @@
         }
     },
     "regions": {
+        "ground_table_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    -2,
+                    -0.5,
+                    2,
+                    2.5
+                ]
+            ]
+        },
         "table_1_object_init_region": {
             "target": "table_1",
             "ranges": [
@@ -75,6 +86,16 @@
         }
     },
     "initial_state": [
+        [
+            "on",
+            "table_1",
+            "ground_table_init_region"
+        ],
+        [
+            "on",
+            "table_2",
+            "ground_table_init_region"
+        ],
         [
             "on",
             "cube1",
