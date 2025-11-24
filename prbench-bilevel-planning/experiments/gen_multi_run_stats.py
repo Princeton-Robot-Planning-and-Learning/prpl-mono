@@ -99,6 +99,7 @@ def calculate_multi_run_stats(
                 mask = df["success"].astype(bool)
                 successful_values.extend(df.loc[mask, metric].values)
 
+
             if len(successful_values) > 0:
                 mean_val = np.mean(successful_values)
                 std_val = np.std(successful_values, ddof=1) if len(successful_values) > 1 else 0.0
