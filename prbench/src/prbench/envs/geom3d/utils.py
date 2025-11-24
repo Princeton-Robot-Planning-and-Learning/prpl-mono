@@ -239,8 +239,4 @@ def is_inside(
     PA = Polygon(C_A[:, :2]).convex_hull
     PB = Polygon(C_B[:, :2]).convex_hull
 
-    inside = PA.contains(PB)
-    zA_min, zA_max = np.min(C_A[:, 2]), np.max(C_A[:, 2])
-    zB_min, zB_max = np.min(C_B[:, 2]), np.max(C_B[:, 2])
-
-    return inside and (zB_min >= zA_min) and (zB_max <= zA_max)
+    return PA.contains(PB)

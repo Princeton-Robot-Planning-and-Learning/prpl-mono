@@ -71,6 +71,7 @@ def create_pybullet_block(
 
     return block_id
 
+
 def create_pybullet_hollow_box(
     color: tuple[float, float, float, float],
     half_extents: tuple[float, float, float],
@@ -79,8 +80,8 @@ def create_pybullet_hollow_box(
     mass: float = 0,
     friction: float | None = None,
 ) -> int:
-    """
-    A generic utility for creating a hollow box.
+    """A generic utility for creating a hollow box.
+
     inputs:
         color: RGBA color of the box
         half_extents: half extents of the outer box (x, y, z)
@@ -97,13 +98,33 @@ def create_pybullet_hollow_box(
     orientation = (1, 0, 0, 0)
 
     outer_half_extents = half_extents
-    
+
     # create base and walls as separate boxes
-    base_half_extents = (outer_half_extents[0], outer_half_extents[1], wall_thickness / 2)
-    wall1_half_extents = (wall_thickness / 2, outer_half_extents[1], outer_half_extents[2])
-    wall2_half_extents = (wall_thickness / 2, outer_half_extents[1], outer_half_extents[2])
-    wall3_half_extents = (outer_half_extents[0], wall_thickness / 2, outer_half_extents[2])
-    wall4_half_extents = (outer_half_extents[0], wall_thickness / 2, outer_half_extents[2])
+    base_half_extents = (
+        outer_half_extents[0],
+        outer_half_extents[1],
+        wall_thickness / 2,
+    )
+    wall1_half_extents = (
+        wall_thickness / 2,
+        outer_half_extents[1],
+        outer_half_extents[2],
+    )
+    wall2_half_extents = (
+        wall_thickness / 2,
+        outer_half_extents[1],
+        outer_half_extents[2],
+    )
+    wall3_half_extents = (
+        outer_half_extents[0],
+        wall_thickness / 2,
+        outer_half_extents[2],
+    )
+    wall4_half_extents = (
+        outer_half_extents[0],
+        wall_thickness / 2,
+        outer_half_extents[2],
+    )
 
     base_collision_id = p.createCollisionShape(
         p.GEOM_BOX, halfExtents=base_half_extents, physicsClientId=physics_client_id
@@ -151,9 +172,7 @@ def create_pybullet_hollow_box(
         rgbaColor=color,
         physicsClientId=physics_client_id,
     )
-
-    eps = 1e-4 # small epsilon to avoid collision issues
-
+    
     hollow_box_id = p.createMultiBody(
         baseMass=0,
         baseCollisionShapeIndex=-1,
@@ -176,11 +195,11 @@ def create_pybullet_hollow_box(
             wall4_visual_id,
         ],
         linkPositions=[
-            (0, 0, -(outer_half_extents[2] - wall_thickness/2)),       # base
-            (-outer_half_extents[0] + wall_thickness/2, 0, 0),         # wall 1
-            ( outer_half_extents[0] - wall_thickness/2, 0, 0),         # wall 2
-            (0, -outer_half_extents[1] + wall_thickness/2, 0),         # wall 3
-            (0,  outer_half_extents[1] - wall_thickness/2, 0),         # wall 4
+            (0, 0, -(outer_half_extents[2] - wall_thickness / 2)),  # base
+            (-outer_half_extents[0] + wall_thickness / 2, 0, 0),  # wall 1
+            (outer_half_extents[0] - wall_thickness / 2, 0, 0),  # wall 2
+            (0, -outer_half_extents[1] + wall_thickness / 2, 0),  # wall 3
+            (0, outer_half_extents[1] - wall_thickness / 2, 0),  # wall 4
         ],
         linkOrientations=[[0, 0, 0, 1]] * 5,
         linkInertialFramePositions=[[0, 0, 0]] * 5,
@@ -202,6 +221,7 @@ def create_pybullet_hollow_box(
         )
 
     return hollow_box_id
+
 
 def create_pybullet_block_with_peg(
     color: tuple[float, float, float, float],

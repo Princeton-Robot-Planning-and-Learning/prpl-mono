@@ -84,10 +84,8 @@ def test_pick_place_on_rack():
         max_candidate_plans = 1
 
     # sample placement coefficients for each part
-    x_coeffs = np.linspace(0.4, -0.4, num_parts)
-    y_coeffs = np.linspace(0.4, -0.4, num_parts)
-    np.random.shuffle(x_coeffs)
-    np.random.shuffle(y_coeffs)
+    x_coeffs = np.linspace(-0.35, 0.35, num_parts)
+    y_coeffs = np.linspace(-0.35, 0.35, num_parts)
 
     # First, move to pre-grasp pose (top-down).
     selected_object = get_target_object_from_obs(obs)
