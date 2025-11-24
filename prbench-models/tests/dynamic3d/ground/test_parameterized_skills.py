@@ -194,8 +194,9 @@ def test_move_to_target_arm_end_effector():
             0,
             0,
             0,
+            0.0,
         ]
-    )  # x, y, z, rw, rx, ry, rz
+    )  # x, y, z, rw, rx, ry, rz, yaw for relative rotation of target object
     params = relative_target_end_effector_pose
 
     # Reset and execute the controller until it terminates.
@@ -291,8 +292,9 @@ def test_move_to_target_object_in_shelf():
             0.5,
             0.5,
             0.5,
+            0.0,
         ]
-    )  # x, y, z, rw, rx, ry, rz
+    )  # x, y, z, rw, rx, ry, rz, yaw for relative rotation of target object
     params = target_end_effector_pose
 
     # Reset and execute the controller until it terminates.
@@ -486,9 +488,9 @@ def test_fake_interface_ee_control():
             0.707,
             0,
             0,
-            np.pi / 2, # yaw for relative rotation of cube1
+            - np.pi / 2,
         ]
-    )  # x, y, z, rw, rx, ry, rz
+    )  # x, y, z, rw, rx, ry, rz, yaw for relative rotation of target object
     params = target_end_effector_pose
 
     # Reset and execute the controller until it terminates.
@@ -595,8 +597,9 @@ def test_fake_interface():
             0.707,
             0,
             0,
+            0.0,
         ]
-    )  # x, y, z, rw, rx, ry, rz
+    )  # x, y, z, rw, rx, ry, rz, yaw for relative rotation of target object
     params = target_end_effector_pose
 
     # Reset and execute the controller until it terminates.
@@ -691,8 +694,9 @@ def test_fake_interface():
             0.707,
             0,
             0,
+            0.0,
         ]
-    )  # x, y, z, rw, rx, ry, rz
+    )  # x, y, z, rw, rx, ry, rz, yaw for relative rotation of target object
     params = target_end_effector_pose
 
     # Reset and execute the controller until it terminates.
@@ -799,8 +803,9 @@ def test_pick_place_shelf():
             0.707,
             0,
             0,
+            0.0,
         ]
-    )  # x, y, z, rw, rx, ry, rz
+    )  # x, y, z, rw, rx, ry, rz, yaw for relative rotation of target object
     params = target_end_effector_pose
 
     # Reset and execute the controller until it terminates.
@@ -895,8 +900,9 @@ def test_pick_place_shelf():
             0.5,
             0.5,
             0.5,
+            0.0,
         ]
-    )  # x, y, z, rw, rx, ry, rz
+    )  # x, y, z, rw, rx, ry, rz, yaw for relative rotation of target object
     params = target_end_effector_pose
 
     # Reset and execute the controller until it terminates.
