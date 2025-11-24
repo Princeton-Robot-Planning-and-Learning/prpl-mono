@@ -103,13 +103,13 @@ class MoveToTargetGroundController(
         rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
-    def reset(  # disable-pylint: disable=dangerous-default-value
+    def reset(
         self,
         x: ObjectCentricState,
         params: Any,
         extend_xy_magnitude: float = 0.025,
         extend_rot_magnitude: float = np.pi / 8,
-        disable_collision_objects: list[str] = [],
+        disable_collision_objects: list[str] | None = None,
     ) -> None:
         self._last_state = x
         assert isinstance(params, np.ndarray)

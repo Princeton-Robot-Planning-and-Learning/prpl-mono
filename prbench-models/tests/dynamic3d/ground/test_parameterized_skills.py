@@ -298,7 +298,6 @@ def test_move_to_target_object():
     controller.reset(state)
     for _ in range(20):
         action = controller.step()
-        # import pdb; pdb.set_trace()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
@@ -320,7 +319,6 @@ def test_move_to_target_object():
     controller.reset(state, params)
     for _ in range(200):
         action = controller.step()
-        # import pdb; pdb.set_trace()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
@@ -534,7 +532,6 @@ def test_close_gripper_controller():
     controller.reset(state)
     for _ in range(20):
         action = controller.step()
-        # import pdb; pdb.set_trace()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
@@ -556,7 +553,6 @@ def test_close_gripper_controller():
     controller.reset(state, params)
     for _ in range(200):
         action = controller.step()
-        # import pdb; pdb.set_trace()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
@@ -709,7 +705,6 @@ def test_fake_interface():
     controller.reset(state)
     for _ in range(20):
         action = controller.step()
-        # import pdb; pdb.set_trace()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
@@ -731,7 +726,6 @@ def test_fake_interface():
     controller.reset(state, params)
     for _ in range(200):
         action = controller.step()
-        # import pdb; pdb.set_trace()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
@@ -915,7 +909,6 @@ def test_pick_place_shelf():
     controller.reset(state)
     for _ in range(20):
         action = controller.step()
-        # import pdb; pdb.set_trace()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
@@ -937,7 +930,6 @@ def test_pick_place_shelf():
     controller.reset(state, params)
     for _ in range(200):
         action = controller.step()
-        # import pdb; pdb.set_trace()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
