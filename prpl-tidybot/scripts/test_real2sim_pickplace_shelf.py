@@ -522,5 +522,5 @@ def real2sim2real() -> None:
 
 
 if __name__ == "__main__":
-    real2sim()
-    # real2sim2real()
+    # real2sim()
+    real2sim2real()
