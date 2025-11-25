@@ -697,13 +697,16 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         self._closed_gripper: bool = False
         self._lifted: bool = False
         self._last_gripper_state: float = 0.0
+        self.home_joints = np.deg2rad(
+            [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
+        )  # retract configuration
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         # We can later implement sampling if it's helpful, but usually the user would
         # want to specify the target end effector pose themselves.
         raise NotImplementedError
 
-    def reset(self, x: ObjectCentricState) -> None:
+    def reset(self, x: ObjectCentricState) -> None:  # type: ignore # pylint: disable=arguments-differ
         # Initialize the PyBullet interface if this is the first time ever.
         if self._pybullet_sim is None:
             self._pybullet_sim = PyBulletSim(x)
@@ -712,8 +715,6 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
 
         # Reset PyBullet given the current state.
         self._pybullet_sim.set_state(x)
-
-        current_arm_base_pose = self._pybullet_sim.robot.get_base_pose()
 
         target_object = self.objects[1]
 
@@ -755,14 +756,10 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
 
-        self.home_joints = np.deg2rad(
-            [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
-        )  # retract configuration
-
         retract_plan = run_motion_planning(
             self._pybullet_sim.robot,
             target_joints,
-            self.home_joints,
+            self.home_joints.tolist(),
             collision_bodies={},
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
@@ -796,7 +793,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_arm_joint_plan[0]
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot.joint_infos
+            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -805,7 +802,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             )
             action[-1] = gripper_pose
             return action
-        elif self._pre_grasp and not self._closed_gripper:
+        if self._pre_grasp and not self._closed_gripper:
             if self._get_current_robot_gripper_pose() > 0.2 and np.isclose(
                 self._get_current_robot_gripper_pose(),
                 self._last_gripper_state,
@@ -816,21 +813,21 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             action[-1] = 1
             self._last_gripper_state = self._get_current_robot_gripper_pose()
             return action
-        elif self._pre_grasp and self._closed_gripper:
-            while len(self._current_retract_plan) > 1:
-                peek_conf = self._current_retract_plan[0]
+        if self._pre_grasp and self._closed_gripper:
+            while len(self._current_retract_plan) > 1:  # type: ignore
+                peek_conf = self._current_retract_plan[0]  # type: ignore
                 # Close enough, pop and continue.
                 if self._robot_is_close_to_conf(peek_conf):
-                    self._current_retract_plan.pop(0)
+                    self._current_retract_plan.pop(0)  # type: ignore
                 # Not close enough, stop popping.
                 break
-            if self._robot_is_close_to_conf(self._current_retract_plan[-1]):
+            if self._robot_is_close_to_conf(self._current_retract_plan[-1]):  # type: ignore # pylint: disable=line-too-long
                 self._lifted = True
             robot_conf = self._get_current_robot_arm_conf()
             gripper_pose = self._get_current_robot_gripper_pose()
-            next_conf = self._current_retract_plan[0]
+            next_conf = self._current_retract_plan[0]  # type: ignore
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot.joint_infos
+            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -839,8 +836,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             )
             action[-1] = gripper_pose
             return action
-        else:
-            raise ValueError("Invalid state")
+        raise ValueError("Invalid state")
 
     def observe(self, x: ObjectCentricState) -> None:
         self._last_state = x
@@ -901,13 +897,16 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         self._open_gripper: bool = False
         self._returned: bool = False
         self._last_gripper_state: float = 0.0
+        self.home_joints = np.deg2rad(
+            [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
+        )  # retract configuration
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         # We can later implement sampling if it's helpful, but usually the user would
         # want to specify the target end effector pose themselves.
         raise NotImplementedError
 
-    def reset(self, x: ObjectCentricState) -> None:
+    def reset(self, x: ObjectCentricState) -> None:  # type: ignore # pylint: disable=arguments-differ
         # Initialize the PyBullet interface if this is the first time ever.
         if self._pybullet_sim is None:
             self._pybullet_sim = PyBulletSim(x)
@@ -918,8 +917,6 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         self._pybullet_sim.set_state(x)
 
         current_arm_base_pose = self._pybullet_sim.robot.get_base_pose()
-
-        target_object = self.objects[1]
 
         target_end_effector_pose = Pose((0.7, 0.0, 0.03), (0.5, 0.5, 0.5, 0.5))
 
@@ -943,14 +940,10 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
 
-        self.home_joints = np.deg2rad(
-            [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
-        )  # retract configuration
-
         retract_plan = run_motion_planning(
             self._pybullet_sim.robot,
             target_joints,
-            self.home_joints,
+            self.home_joints.tolist(),
             collision_bodies=self._pybullet_sim.get_collision_bodies(),
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
@@ -984,7 +977,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_arm_joint_plan[0]
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot.joint_infos
+            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -993,28 +986,28 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             )
             action[-1] = gripper_pose
             return action
-        elif self._pre_place and not self._open_gripper:
+        if self._pre_place and not self._open_gripper:
             if self._get_current_robot_gripper_pose() < GRIPPER_OPEN_THRESHOLD:
                 self._open_gripper = True
             action = np.zeros(11, dtype=np.float32)
             action[-1] = 0
             self._last_gripper_state = self._get_current_robot_gripper_pose()
             return action
-        elif self._pre_place and self._open_gripper:
-            while len(self._current_retract_plan) > 1:
-                peek_conf = self._current_retract_plan[0]
+        if self._pre_place and self._open_gripper:
+            while len(self._current_retract_plan) > 1:  # type: ignore
+                peek_conf = self._current_retract_plan[0]  # type: ignore
                 # Close enough, pop and continue.
                 if self._robot_is_close_to_conf(peek_conf):
-                    self._current_retract_plan.pop(0)
+                    self._current_retract_plan.pop(0)  # type: ignore
                 # Not close enough, stop popping.
                 break
-            if self._robot_is_close_to_conf(self._current_retract_plan[-1]):
+            if self._robot_is_close_to_conf(self._current_retract_plan[-1]):  # type: ignore # pylint: disable=line-too-long
                 self._returned = True
             robot_conf = self._get_current_robot_arm_conf()
             gripper_pose = self._get_current_robot_gripper_pose()
-            next_conf = self._current_retract_plan[0]
+            next_conf = self._current_retract_plan[0]  # type: ignore
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot.joint_infos
+            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -1023,8 +1016,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             )
             action[-1] = gripper_pose
             return action
-        else:
-            raise ValueError("Invalid state")
+        raise ValueError("Invalid state")
 
     def observe(self, x: ObjectCentricState) -> None:
         self._last_state = x

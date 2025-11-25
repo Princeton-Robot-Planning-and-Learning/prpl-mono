@@ -12,7 +12,6 @@ from prbench.envs.dynamic3d.object_types import (
     MujocoTidyBotRobotObjectType,
 )
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
-from prbench.envs.dynamic3d.tidybot_rewards import BaseMotionRewardCalculator
 from relational_structs import (
     GroundAtom,
     ObjectCentricState,
@@ -32,8 +31,10 @@ HandEmpty = Predicate("HandEmpty", [MujocoTidyBotRobotObjectType])
 
 
 class CupboardRealStateAbstractor:
+    """State abstractor for the TidyBot3D cupboard real environment."""
 
     def __init__(self, sim: ObjectCentricTidyBot3DEnv) -> None:
+        """Initialize the state abstractor."""
         initial_state, _ = sim.reset()  # just need to access the objects
         self._pybullet_sim = PyBulletSim(initial_state)
 
@@ -94,7 +95,6 @@ class CupboardRealStateAbstractor:
                 robot_x = state.get(robot, "pos_base_x")
                 robot_y = state.get(robot, "pos_base_y")
                 robot_rot = state.get(robot, "pos_base_rot")
-                # TODO finish this
                 dx = target_x - robot_x
                 dy = target_y - robot_y
                 dist = (dx**2 + dy**2) ** 0.5
@@ -115,10 +115,10 @@ class CupboardRealStateAbstractor:
         gripper_val = state.get(robot, "pos_gripper")
         if gripper_val > GraspThreshold:
             for target in movables:
-                if state.get(target, "z") > 0.2:  # TODO: this is a hack.
+                if state.get(target, "z") > 0.2:  # this is a hack.
                     atoms.add(GroundAtom(Holding, [robot, target]))
 
-        # TODO: OnFixture.
+        # OnFixture.
         # for movable in movables:
         #     for fixture in fixtures:
         #         import ipdb; ipdb.set_trace()

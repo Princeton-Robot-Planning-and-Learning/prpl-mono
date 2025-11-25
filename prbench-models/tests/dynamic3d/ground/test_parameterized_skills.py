@@ -533,7 +533,7 @@ def test_pick_place_shelf():
     # Create the environment.
     num_cubes = 1
     env = prbench.make(
-        f"prbench/TidyBot3D-cupboard-o{num_cubes}-v0", render_mode="rgb_array"
+        f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0", render_mode="rgb_array"
     )
     if MAKE_VIDEOS:
         env = RecordVideo(
