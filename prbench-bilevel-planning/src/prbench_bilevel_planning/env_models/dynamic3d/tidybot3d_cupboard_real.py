@@ -20,10 +20,6 @@ from prbench_models.dynamic3d.base_motion.parameterized_skills import (
 )
 from prbench_models.dynamic3d.cupboard_real.state_abstractions import (
     AtPremanipulationTarget,
-    OnFixture,
-    OnGround,
-    Holding,
-    HandEmpty,
     CupboardRealStateAbstractor,
 )
 from relational_structs import (
@@ -75,7 +71,7 @@ def create_bilevel_planning_models(
         return obs.copy()
 
     # Types.
-    types = {MujocoTidyBotRobotObjectType, MujocoObjectType, MujocoFixtureObjectType, MujocoMovableObjectType}
+    types = {MujocoTidyBotRobotObjectType, MujocoObjectType, MujocoFixtureObjectType, MujocoMovableObjectType} # pylint: disable=line-too-long
 
     # Create the state space.
     state_space = ObjectCentricStateSpace(types)
