@@ -39,32 +39,39 @@ The entries of an array in this Box space correspond to the following object fea
 | 13 | cube1 | bb_x |
 | 14 | cube1 | bb_y |
 | 15 | cube1 | bb_z |
-| 16 | robot | pos_base_x |
-| 17 | robot | pos_base_y |
-| 18 | robot | pos_base_rot |
-| 19 | robot | pos_arm_joint1 |
-| 20 | robot | pos_arm_joint2 |
-| 21 | robot | pos_arm_joint3 |
-| 22 | robot | pos_arm_joint4 |
-| 23 | robot | pos_arm_joint5 |
-| 24 | robot | pos_arm_joint6 |
-| 25 | robot | pos_arm_joint7 |
-| 26 | robot | pos_gripper |
-| 27 | robot | vel_base_x |
-| 28 | robot | vel_base_y |
-| 29 | robot | vel_base_rot |
-| 30 | robot | vel_arm_joint1 |
-| 31 | robot | vel_arm_joint2 |
-| 32 | robot | vel_arm_joint3 |
-| 33 | robot | vel_arm_joint4 |
-| 34 | robot | vel_arm_joint5 |
-| 35 | robot | vel_arm_joint6 |
-| 36 | robot | vel_arm_joint7 |
-| 37 | robot | vel_gripper |
+| 16 | cupboard_1 | x |
+| 17 | cupboard_1 | y |
+| 18 | cupboard_1 | z |
+| 19 | cupboard_1 | qw |
+| 20 | cupboard_1 | qx |
+| 21 | cupboard_1 | qy |
+| 22 | cupboard_1 | qz |
+| 23 | robot | pos_base_x |
+| 24 | robot | pos_base_y |
+| 25 | robot | pos_base_rot |
+| 26 | robot | pos_arm_joint1 |
+| 27 | robot | pos_arm_joint2 |
+| 28 | robot | pos_arm_joint3 |
+| 29 | robot | pos_arm_joint4 |
+| 30 | robot | pos_arm_joint5 |
+| 31 | robot | pos_arm_joint6 |
+| 32 | robot | pos_arm_joint7 |
+| 33 | robot | pos_gripper |
+| 34 | robot | vel_base_x |
+| 35 | robot | vel_base_y |
+| 36 | robot | vel_base_rot |
+| 37 | robot | vel_arm_joint1 |
+| 38 | robot | vel_arm_joint2 |
+| 39 | robot | vel_arm_joint3 |
+| 40 | robot | vel_arm_joint4 |
+| 41 | robot | vel_arm_joint5 |
+| 42 | robot | vel_arm_joint6 |
+| 43 | robot | vel_arm_joint7 |
+| 44 | robot | vel_gripper |
 
 
 ### Action Space
-Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
+Actions: base pos and yaw (3), arm joints (7), gripper pos (1)
 
 ### Rewards
 Reward function depends on the specific task:
