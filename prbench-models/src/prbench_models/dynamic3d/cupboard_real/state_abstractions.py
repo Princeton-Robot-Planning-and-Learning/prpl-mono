@@ -68,9 +68,7 @@ class CupboardRealStateAbstractor:
             z = state.get(target, "z")
             bb_z = state.get(target, "bb_z")
             # Handle flipped cases later.
-            assert np.isclose(state.get(target, "qx"), 0.0, atol=on_ground_tol)
-            assert np.isclose(state.get(target, "qy"), 0.0, atol=on_ground_tol)
-            if np.isclose(z - bb_z / 2, 0.0, atol=on_ground_tol):
+            if np.isclose(z - bb_z / 2, 0.0, atol=on_ground_tol) and np.isclose(state.get(target, "qx"), 0.0, atol=on_ground_tol) and np.isclose(state.get(target, "qy"), 0.0, atol=on_ground_tol):
                 atoms.add(GroundAtom(OnGround, [target]))
 
         # HandEmpty.
@@ -82,25 +80,34 @@ class CupboardRealStateAbstractor:
         # AtPremanipulationTarget.
         premanipulation_distance_threshold = 0.75  # should be within this cardinal dist
         premanipulation_angle_threshold = 1e-1  # should be facing the target object
-        for target in all_mujoco_objects:
-            target_x = state.get(target, "x")
-            target_y = state.get(target, "y")
-            robot_x = state.get(robot, "pos_base_x")
-            robot_y = state.get(robot, "pos_base_y")
-            robot_rot = state.get(robot, "pos_base_rot")
-            # TODO finish this
-            dx = target_x - robot_x
-            dy = target_y - robot_y
-            dist = (dx**2 + dy**2) ** 0.5
-            if dist > premanipulation_distance_threshold:
-                continue  # too far away
-            # Desired direction from robot -> target
-            target_angle = np.arctan2(dy, dx)
-            # Smallest signed angular difference
-            angle_error = abs((target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi)
-            if angle_error < premanipulation_angle_threshold:
-                atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
+        if GroundAtom(HandEmpty, [robot]) in atoms:
+            for target in all_mujoco_objects:
+                target_x = state.get(target, "x")
+                target_y = state.get(target, "y")
+                robot_x = state.get(robot, "pos_base_x")
+                robot_y = state.get(robot, "pos_base_y")
+                robot_rot = state.get(robot, "pos_base_rot")
+                # TODO finish this
+                dx = target_x - robot_x
+                dy = target_y - robot_y
+                dist = (dx**2 + dy**2) ** 0.5
+                if dist > premanipulation_distance_threshold:
+                    continue  # too far away
+                # Desired direction from robot -> target
+                target_angle = np.arctan2(dy, dx)
+                # Smallest signed angular difference
+                angle_error = abs((target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi)
+                if angle_error < premanipulation_angle_threshold:
+                    atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
 
+        # Holding.
+        GraspThreshold = 0.1
+        gripper_val = state.get(robot, "pos_gripper")
+        if gripper_val > GraspThreshold:
+            for target in movables:
+                if state.get(target, "z") > 0.2: # TODO: this is a hack.
+                    atoms.add(GroundAtom(Holding, [robot, target]))
+        
         # TODO: OnFixture.
         # for movable in movables:
         #     for fixture in fixtures:

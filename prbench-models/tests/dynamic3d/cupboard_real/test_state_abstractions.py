@@ -83,7 +83,7 @@ def test_cupboard_real_state_abstraction():
         assert False, "Controller did not terminate"
 
     # Check updated state abstraction: the robot should be Holding the cube.
-    # abstract_state = abstractor.state_abstractor(state)
-    # assert str(sorted(abstract_state.atoms)) == "[(Holding robot cube1)]"
+    abstract_state = abstractor.state_abstractor(state)
+    assert str(sorted(abstract_state.atoms)) == "[(Holding robot cube1)]"
 
     env.close()
