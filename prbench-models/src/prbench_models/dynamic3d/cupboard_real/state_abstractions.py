@@ -1,27 +1,30 @@
 """State abstractions for the TidyBot3D cupboard real environment."""
 
+import numpy as np
 from bilevel_planning.structs import (
     RelationalAbstractGoal,
     RelationalAbstractState,
 )
 from prbench.envs.dynamic3d.object_types import (
-    MujocoObjectType,
-    MujocoTidyBotRobotObjectType,
     MujocoFixtureObjectType,
     MujocoMovableObjectType,
+    MujocoObjectType,
+    MujocoTidyBotRobotObjectType,
 )
-from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
+from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 from prbench.envs.dynamic3d.tidybot_rewards import BaseMotionRewardCalculator
 from relational_structs import (
     GroundAtom,
     ObjectCentricState,
     Predicate,
 )
-from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
-import numpy as np
+
+from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
 
 # Predicates.
-AtPremanipulationTarget = Predicate("AtPremanipulationTarget", [MujocoTidyBotRobotObjectType, MujocoObjectType])
+AtPremanipulationTarget = Predicate(
+    "AtPremanipulationTarget", [MujocoTidyBotRobotObjectType, MujocoObjectType]
+)
 OnFixture = Predicate("OnFixture", [MujocoObjectType, MujocoFixtureObjectType])
 OnGround = Predicate("OnGround", [MujocoMovableObjectType])
 Holding = Predicate("Holding", [MujocoTidyBotRobotObjectType, MujocoMovableObjectType])
@@ -33,7 +36,7 @@ class CupboardRealStateAbstractor:
     def __init__(self, sim: ObjectCentricTidyBot3DEnv) -> None:
         initial_state, _ = sim.reset()  # just need to access the objects
         self._pybullet_sim = PyBulletSim(initial_state)
-    
+
     def state_abstractor(self, state: ObjectCentricState) -> RelationalAbstractState:
         """Get the abstract state for the current state."""
         atoms: set[GroundAtom] = set()
@@ -68,7 +71,11 @@ class CupboardRealStateAbstractor:
             z = state.get(target, "z")
             bb_z = state.get(target, "bb_z")
             # Handle flipped cases later.
-            if np.isclose(z - bb_z / 2, 0.0, atol=on_ground_tol) and np.isclose(state.get(target, "qx"), 0.0, atol=on_ground_tol) and np.isclose(state.get(target, "qy"), 0.0, atol=on_ground_tol):
+            if (
+                np.isclose(z - bb_z / 2, 0.0, atol=on_ground_tol)
+                and np.isclose(state.get(target, "qx"), 0.0, atol=on_ground_tol)
+                and np.isclose(state.get(target, "qy"), 0.0, atol=on_ground_tol)
+            ):
                 atoms.add(GroundAtom(OnGround, [target]))
 
         # HandEmpty.
@@ -96,27 +103,28 @@ class CupboardRealStateAbstractor:
                 # Desired direction from robot -> target
                 target_angle = np.arctan2(dy, dx)
                 # Smallest signed angular difference
-                angle_error = abs((target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi)
+                angle_error = abs(
+                    (target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi
+                )
                 if angle_error < premanipulation_angle_threshold:
                     atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
 
         # Holding.
+        # checking the ee pose and target pose.
         GraspThreshold = 0.1
         gripper_val = state.get(robot, "pos_gripper")
         if gripper_val > GraspThreshold:
             for target in movables:
-                if state.get(target, "z") > 0.2: # TODO: this is a hack.
+                if state.get(target, "z") > 0.2:  # TODO: this is a hack.
                     atoms.add(GroundAtom(Holding, [robot, target]))
-        
+
         # TODO: OnFixture.
         # for movable in movables:
         #     for fixture in fixtures:
         #         import ipdb; ipdb.set_trace()
-        
 
         objects = {robot} | all_mujoco_objects
         return RelationalAbstractState(atoms, objects)
-
 
     def goal_deriver(self, state: ObjectCentricState) -> RelationalAbstractGoal:
         """The goal is to have the robot on the target."""
