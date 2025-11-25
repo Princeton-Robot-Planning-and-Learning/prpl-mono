@@ -170,7 +170,7 @@ class GroundPlaceController(Geom2dRobotController):
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
     ) -> tuple[float, float, float]:
-        del x # Unused
+        del x  # Unused
         # Sample collision-free robot pose
         abs_x = rng.uniform(self.world_x_min, self.world_x_max)
         abs_y = rng.uniform(self.world_y_min, self.world_y_max)

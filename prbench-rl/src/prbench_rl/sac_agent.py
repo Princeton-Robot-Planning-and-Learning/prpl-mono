@@ -10,7 +10,7 @@ import random
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, cast
 
 import dacite
 import gymnasium as gym
@@ -324,7 +324,10 @@ class SACAgent(BaseRLAgent[_O, _U]):
         return action
 
     def evaluate_on_env(
-        self, train_envs: gym.vector.VectorEnv, eval_episodes: int
+        self,
+        train_envs: gym.vector.VectorEnv,
+        eval_episodes: int,
+        render_video: bool = False,
     ) -> dict[str, Any]:
         """Evaluate the SAC agent with video recording.
 
@@ -340,12 +343,14 @@ class SACAgent(BaseRLAgent[_O, _U]):
         """
         # Wrap the first training environment with RecordVideo for evaluation
         # This preserves the normalization statistics while enabling video recording
-        video_folder = f"videos/{self.cfg.exp_name}_eval"
-        train_envs.envs[0] = gym.wrappers.RecordVideo(
-            train_envs.envs[0],
-            video_folder,
-            episode_trigger=lambda x: True,  # Record all episodes
-        )
+        if render_video:
+            video_folder = f"videos/{self.cfg.exp_name}_eval"
+            sync_envs = cast(gym.vector.SyncVectorEnv, train_envs)
+            sync_envs.envs[0] = gym.wrappers.RecordVideo(
+                sync_envs.envs[0],
+                video_folder,
+                episode_trigger=lambda x: True,  # Record all episodes
+            )
 
         # Set agent to eval mode
         self.actor.eval()
@@ -382,7 +387,9 @@ class SACAgent(BaseRLAgent[_O, _U]):
         }
         return eval_metrics
 
-    def train(self, eval_episodes: int = 10) -> dict[str, Any]:  # type: ignore
+    def train(  # type: ignore[override]
+        self, eval_episodes: int = 10, render_eval_video: bool = False
+    ) -> dict[str, Any]:
         """Training the agent with an interactive batched environment."""
         # Seeding
         random.seed(self.args.seed)
@@ -546,8 +553,11 @@ class SACAgent(BaseRLAgent[_O, _U]):
                             self.args.tau * param.data
                             + (1 - self.args.tau) * target_param.data
                         )
-                
-                if global_step % self.args.save_model_freq == 0 and self.args.save_model:
+
+                if (
+                    global_step % self.args.save_model_freq == 0
+                    and self.args.save_model
+                ):
                     model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
                     base_path = Path(self.log_path) / "policies"
                     base_path.mkdir(parents=True, exist_ok=True)
@@ -594,7 +604,9 @@ class SACAgent(BaseRLAgent[_O, _U]):
 
         # Evaluate on the training environment (shares the same normalizer)
         logging.info(f"Starting evaluation for {eval_episodes} episodes...")
-        eval_metrics = self.evaluate_on_env(envs, eval_episodes)
+        eval_metrics = self.evaluate_on_env(
+            envs, eval_episodes, render_video=render_eval_video
+        )
 
         # Log evaluation results
         if eval_metrics["episodic_return"]:

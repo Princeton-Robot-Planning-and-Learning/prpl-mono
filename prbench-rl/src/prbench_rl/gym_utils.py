@@ -21,7 +21,7 @@ def make_env_ppo(
     """
 
     def thunk():
-        # Create base environment with rgb_array render mode for potential video recording
+        # Create base environment with rgb_array render mode for video recording
         if "prbench" in env_id:
             env = prbench.make(env_id, render_mode="rgb_array")
             env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
@@ -52,7 +52,7 @@ def make_env_sac(
     """
 
     def thunk():
-        # Create base environment with rgb_array render mode for potential video recording
+        # Create base environment with rgb_array render mode for video recording
         if "prbench" in env_id:
             env = prbench.make(env_id, render_mode="rgb_array")
             env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
