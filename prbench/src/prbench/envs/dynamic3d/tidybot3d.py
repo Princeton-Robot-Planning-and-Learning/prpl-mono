@@ -585,7 +585,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
             "pos_arm_joint5": self._robot_env.qpos["arm"][4],
             "pos_arm_joint6": self._robot_env.qpos["arm"][5],
             "pos_arm_joint7": self._robot_env.qpos["arm"][6],
-            "pos_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+            "pos_gripper": self._robot_env.ctrl["gripper"][0] / 255.0,
             "vel_base_x": self._robot_env.qvel["base"][0],
             "vel_base_y": self._robot_env.qvel["base"][1],
             "vel_base_rot": self._robot_env.qvel["base"][2],
@@ -596,7 +596,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
             "vel_arm_joint5": self._robot_env.qvel["arm"][4],
             "vel_arm_joint6": self._robot_env.qvel["arm"][5],
             "vel_arm_joint7": self._robot_env.qvel["arm"][6],
-            "vel_gripper": 0,  # NOTE: gripper not yet available (is None), fix later
+            "vel_gripper": self._robot_env.qvel["gripper"][0],
         }
         return state_dict
 
@@ -620,7 +620,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         assert self._robot_env.qpos is not None
         self._robot_env.qpos["arm"][:] = robot_arm_pos
 
-        # NOTE: gripper position not yet implemented.
+        # Reset the robot gripper position.
+        gripper_pos = state.get(robot_obj, "pos_gripper")
+        assert self._robot_env.ctrl is not None
+        self._robot_env.ctrl["gripper"][:] = gripper_pos * 255.0
 
         # Reset the robot base velocity.
         robot_base_vel = [
@@ -636,7 +639,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         assert self._robot_env.qvel is not None
         self._robot_env.qvel["arm"][:] = robot_arm_vel
 
-        # NOTE: gripper velocity not yet implemented.
+        # Reset the robot gripper velocity.
+        gripper_vel = state.get(robot_obj, "vel_gripper")
+        assert self._robot_env.qvel is not None
+        self._robot_env.qvel["gripper"][:] = gripper_vel
 
 
 class TidyBot3DEnv(ConstantObjectPRBenchEnv):

@@ -15,6 +15,17 @@
         }
     },
     "regions": {
+        "ground_cupboard_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    1.5,
+                    0.0,
+                    1.5,
+                    0.0
+                ]
+            ]
+        },
         "ground_1_object_init_region": {
             "target": "ground",
             "ranges": [
@@ -30,13 +41,18 @@
     "objects": {
         "cube": {
             "cube1": {
-                "size": 0.02,
+                "size": 0.03,
                 "rgba": [0.5, 0.1, 0.1, 1],
                 "mass": 0.1
             }
         }
     },
     "initial_state": [
+        [
+            "on",
+            "cupboard_1",
+            "ground_cupboard_init_region"
+        ],
         [
             "on",
             "cube1",

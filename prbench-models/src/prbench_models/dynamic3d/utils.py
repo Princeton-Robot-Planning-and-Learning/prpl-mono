@@ -137,6 +137,7 @@ def run_base_motion_planning(
     num_attempts: int = 10,
     num_iters: int = 100,
     smooth_amt: int = 50,
+    disable_collision_objects: list[str] | None = None,
 ) -> list[SE2] | None:
     """Run motion planning for the robot base."""
 
@@ -147,6 +148,8 @@ def run_base_motion_planning(
     (robot,) = state.get_objects(MujocoTidyBotRobotObjectType)
     robot_width, robot_height, _ = get_bounding_box(state, robot)
     obstacles = state.get_objects(MujocoObjectType)
+    if disable_collision_objects is not None:
+        obstacles = [o for o in obstacles if o.name not in disable_collision_objects]
     obstacle_geoms = {geoms[o.name] for o in obstacles}
 
     # Set up the RRT methods.
