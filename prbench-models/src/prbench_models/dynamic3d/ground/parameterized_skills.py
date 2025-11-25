@@ -716,34 +716,21 @@ class PickGroundController(
 
         current_arm_base_pose = self._pybullet_sim.robot.get_base_pose()
 
+        
         target_object = self.objects[1]
-        target_object_pose = Pose(
+        
+        target_grap_pose_world = Pose(
             (x.get(target_object, "x"), x.get(target_object, "y"), x.get(target_object, "z")),
             (x.get(target_object, "qx"), x.get(target_object, "qy"), x.get(target_object, "qz"), x.get(target_object, "qw"))
         )
-        
+
         target_end_effector_pose = multiply_poses(
-            current_arm_base_pose,
+            target_grap_pose_world,
             Pose(
-                (
-                    0.39,
-                    0,
-                    -0.35,
-                ),
-                ( # assume the robot is in the pre-grasp pose
-                    0.707, 
-                    0.707,
-                    0,
-                    0,
-                ),
+                (0.015, 0, 0.03), # offsets in end-effector local frame
+                (0.707, 0.707, 0, 0), # orientation
             ),
         )
-
-        # target_end_effector_pose = Pose(
-        #     (x.get(target_object, "x"), x.get(target_object, "y"), x.get(target_object, "z")),
-
-        # )
-
 
         target_joints = inverse_kinematics(
             self._pybullet_sim.robot,
