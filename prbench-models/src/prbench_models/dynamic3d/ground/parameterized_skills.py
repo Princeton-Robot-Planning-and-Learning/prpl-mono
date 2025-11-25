@@ -492,22 +492,19 @@ class MoveArmToEndEffectorController(
                     self._current_params[1],
                     self._current_params[2],
                 ),
-                (0, 0, 0, 1),
+                (
+                    self._current_params[3],
+                    self._current_params[4],
+                    self._current_params[5],
+                    self._current_params[6],
+                ),
             ),
         )
 
-        target_end_effector_pose = Pose(
-            (
-                target_end_effector_pose_temp.position[0],
-                target_end_effector_pose_temp.position[1],
-                target_end_effector_pose_temp.position[2],
-            ),
-            (
-                self._current_params[3],
-                self._current_params[4],
-                self._current_params[5],
-                self._current_params[6],
-            ),
+        rotation = Pose.from_rpy((0, 0, 0), (0, 0, self._current_params[7]))
+        target_end_effector_pose = multiply_poses(
+            target_end_effector_pose_temp,
+            rotation,
         )
 
         target_joints = inverse_kinematics(
