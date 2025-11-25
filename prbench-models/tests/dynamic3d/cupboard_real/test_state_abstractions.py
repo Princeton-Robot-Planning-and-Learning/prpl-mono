@@ -27,7 +27,7 @@ def test_cupboard_real_state_abstraction():
 
     # Check state abstraction in the initial state. The robot's hand should be empty
     # and the object should be on the ground.
-    obs, _ = env.reset(seed=123)
+    obs, _ = env.reset(seed=124)
     state = env.observation_space.devectorize(obs)
     assert isinstance(state, ObjectCentricState)
     abstract_state = abstractor.state_abstractor(state)
@@ -62,5 +62,29 @@ def test_cupboard_real_state_abstraction():
     assert str(sorted(abstract_state.atoms)) == "[(AtPremanipulationTarget robot cube1), (HandEmpty robot), (OnGround cube1)]"
 
     # Pick up the cube.
+    controllers = create_lifted_controllers(env.action_space)
+    lifted_controller = controllers["pick_ground"]
+    robot = state.get_object_from_name("robot")
+    cube = state.get_object_from_name("cube1")
+    object_parameters = (robot, cube)
+    controller = lifted_controller.ground(object_parameters)
+
+    # Reset and execute the controller until it terminates.
+    controller.reset(state)
+    for _ in range(200):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    # Check updated state abstraction: the robot should be AtPremanipulationTarget.
+    abstract_state = abstractor.state_abstractor(state)
+    assert str(sorted(abstract_state.atoms)) == "[(AtPremanipulationTarget robot cube1), (HandEmpty robot), (OnGround cube1)]"
+
 
     env.close()
