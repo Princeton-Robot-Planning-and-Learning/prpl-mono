@@ -277,55 +277,6 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             action = self.agent.get_action(obs, deterministic=True)
         return action
 
-    def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
-        """Evaluate the agent by creating new environments.
-
-        Args:
-            eval_episodes: Number of episodes to evaluate
-            render: Whether to render (not used in current implementation)
-
-        Returns:
-            Dictionary with evaluation metrics
-        """
-        del render  # Render parameter not used in current implementation
-
-        envs = gym.vector.SyncVectorEnv(
-            [make_env_ppo(self.env_id, self.max_episode_steps)]
-        )
-
-        # Set agent to eval mode
-        self.agent.eval()
-
-        obs, _ = envs.reset()
-        episodic_returns: list[float] = []
-        step_lengths: list[int] = []
-        step_length = 0
-
-        while len(episodic_returns) < eval_episodes:
-            with torch.no_grad():
-                obs_tensor = torch.Tensor(obs).to(self.device)
-                action = self.agent(obs_tensor)
-                actions = action.cpu().numpy()
-
-            obs, _, _, _, infos = envs.step(actions)
-            step_length += 1
-
-            if "final_info" in infos:
-                for info in infos["final_info"]:
-                    if info is None or "episode" not in info:
-                        continue
-                    episodic_returns.append(info["episode"]["r"])
-                    step_lengths.append(step_length)
-                    step_length = 0
-
-        envs.close()  # type: ignore[no-untyped-call]
-
-        eval_metrics = {
-            "episodic_return": episodic_returns,
-            "step_length": step_lengths,
-        }
-        return eval_metrics
-
     def evaluate_on_env(
         self, train_envs: gym.vector.SyncVectorEnv, eval_episodes: int
     ) -> dict[str, Any]:
