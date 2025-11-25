@@ -11,8 +11,10 @@ Examples:
 
 import argparse
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 
@@ -20,9 +22,9 @@ def parse_episodic_return(return_str: str) -> float:
     """Parse episodic return from string format like '[-39.]' to float -39.0."""
     # Remove brackets and convert to float
     return_str = return_str.strip()
-    if return_str.startswith('[') and return_str.endswith(']'):
+    if return_str.startswith("[") and return_str.endswith("]"):
         return_str = return_str[1:-1]
-    return float(return_str.rstrip('.'))
+    return float(return_str.rstrip("."))
 
 
 def calculate_stats(exp_dir: Path, success_threshold: float = -300.0) -> dict:
@@ -35,12 +37,14 @@ def calculate_stats(exp_dir: Path, success_threshold: float = -300.0) -> dict:
     Returns:
         Dictionary containing mean and std statistics
     """
-    all_returns = []
-    seed_success_rates = []
-    seed_successful_steps = []
+    all_returns: list[float] = []
+    seed_success_rates: list[float] = []
+    seed_successful_steps: list[float] = []
 
     # Find all seed directories
-    seed_dirs = sorted([d for d in exp_dir.iterdir() if d.is_dir() and d.name.startswith('seed_')])
+    seed_dirs = sorted(
+        [d for d in exp_dir.iterdir() if d.is_dir() and d.name.startswith("seed_")]
+    )
 
     if not seed_dirs:
         raise ValueError(f"No seed directories found in {exp_dir}")
@@ -57,60 +61,77 @@ def calculate_stats(exp_dir: Path, success_threshold: float = -300.0) -> dict:
         df = pd.read_csv(eval_file)
 
         # Parse episodic returns
-        returns = df['episodic_return'].apply(parse_episodic_return).values
-        all_returns.extend(returns)
+        returns = cast(
+            npt.NDArray[np.floating[Any]],
+            df["episodic_return"].apply(parse_episodic_return).to_numpy(),
+        )
+        all_returns.extend(returns.tolist())
 
         # Classify episodes as successful or failed
-        successful = returns > success_threshold
-        success_rate = successful.mean()
+        successful: npt.NDArray[np.bool_] = returns > success_threshold
+        success_rate: float = float(successful.mean())
         seed_success_rates.append(success_rate)
 
         # For successful episodes, calculate steps (which is -return)
         if successful.any():
-            successful_steps = -returns[successful]
-            seed_successful_steps.append(successful_steps.mean())
+            successful_steps: npt.NDArray[np.floating[Any]] = -returns[successful]
+            seed_successful_steps.append(float(successful_steps.mean()))
         else:
             # If no successful episodes, record NaN
             seed_successful_steps.append(np.nan)
 
-        avg_steps_str = f"{seed_successful_steps[-1]:.2f}" if not np.isnan(seed_successful_steps[-1]) else "N/A"
-        print(f"  {seed_dir.name}: {len(returns)} episodes, "
-              f"success rate = {success_rate:.2%}, "
-              f"avg steps (successful) = {avg_steps_str}")
+        avg_steps_str = (
+            f"{seed_successful_steps[-1]:.2f}"
+            if not np.isnan(seed_successful_steps[-1])
+            else "N/A"
+        )
+        print(
+            f"  {seed_dir.name}: {len(returns)} episodes, "
+            f"success rate = {success_rate:.2%}, "
+            f"avg steps (successful) = {avg_steps_str}"
+        )
 
     # Calculate overall statistics
-    all_returns = np.array(all_returns)
-    successful_mask = all_returns > success_threshold
+    all_returns_array: npt.NDArray[np.floating[Any]] = np.array(all_returns)
+    successful_mask: npt.NDArray[np.bool_] = all_returns_array > success_threshold
 
     stats = {
-        'total_episodes': len(all_returns),
-        'num_seeds': len(seed_success_rates),
-        'success_rate_mean': np.mean(seed_success_rates),
-        'success_rate_std': np.std(seed_success_rates, ddof=1) if len(seed_success_rates) > 1 else 0.0,
+        "total_episodes": len(all_returns),
+        "num_seeds": len(seed_success_rates),
+        "success_rate_mean": np.mean(seed_success_rates),
+        "success_rate_std": (
+            np.std(seed_success_rates, ddof=1) if len(seed_success_rates) > 1 else 0.0
+        ),
     }
 
     # Calculate steps statistics for successful episodes
     if successful_mask.any():
         # Calculate mean steps across all successful episodes from all seeds
-        all_successful_steps = -all_returns[successful_mask]
-        stats['successful_steps_mean'] = np.mean(all_successful_steps)
-        stats['successful_steps_std'] = np.std(all_successful_steps, ddof=1)
+        all_successful_steps: npt.NDArray[np.floating[Any]] = -all_returns_array[
+            successful_mask
+        ]
+        stats["successful_steps_mean"] = float(np.mean(all_successful_steps))
+        stats["successful_steps_std"] = float(np.std(all_successful_steps, ddof=1))
 
         # Also calculate mean and std of the per-seed successful steps means
         valid_seed_steps = [s for s in seed_successful_steps if not np.isnan(s)]
         if valid_seed_steps:
-            stats['successful_steps_mean_per_seed'] = np.mean(valid_seed_steps)
-            stats['successful_steps_std_per_seed'] = np.std(valid_seed_steps, ddof=1) if len(valid_seed_steps) > 1 else 0.0
+            stats["successful_steps_mean_per_seed"] = np.mean(valid_seed_steps)
+            stats["successful_steps_std_per_seed"] = (
+                np.std(valid_seed_steps, ddof=1) if len(valid_seed_steps) > 1 else 0.0
+            )
     else:
-        stats['successful_steps_mean'] = np.nan
-        stats['successful_steps_std'] = np.nan
-        stats['successful_steps_mean_per_seed'] = np.nan
-        stats['successful_steps_std_per_seed'] = np.nan
+        stats["successful_steps_mean"] = np.nan
+        stats["successful_steps_std"] = np.nan
+        stats["successful_steps_mean_per_seed"] = np.nan
+        stats["successful_steps_std_per_seed"] = np.nan
 
     return stats
 
 
-def main(exp_dir: Path, output_file: Path | None = None, success_threshold: float = -300.0) -> None:
+def main(
+    exp_dir: Path, output_file: Path | None = None, success_threshold: float = -300.0
+) -> None:
     """Generate multi-run statistics and save to CSV.
 
     Args:
@@ -129,9 +150,20 @@ def main(exp_dir: Path, output_file: Path | None = None, success_threshold: floa
     print("=" * 80)
     print(f"Total episodes: {stats['total_episodes']}")
     print(f"Number of seeds: {stats['num_seeds']}")
-    print(f"Success rate: {stats['success_rate_mean']:.2%} ± {stats['success_rate_std']:.2%}")
-    print(f"Steps (successful, all episodes): {stats['successful_steps_mean']:.2f} ± {stats['successful_steps_std']:.2f}")
-    print(f"Steps (successful, per-seed means): {stats['successful_steps_mean_per_seed']:.2f} ± {stats['successful_steps_std_per_seed']:.2f}")
+    print(
+        f"Success rate: {stats['success_rate_mean']:.2%} ± "
+        f"{stats['success_rate_std']:.2%}"
+    )
+    print(
+        f"Steps (successful, all episodes): "
+        f"{stats['successful_steps_mean']:.2f} ± "
+        f"{stats['successful_steps_std']:.2f}"
+    )
+    print(
+        f"Steps (successful, per-seed means): "
+        f"{stats['successful_steps_mean_per_seed']:.2f} ± "
+        f"{stats['successful_steps_std_per_seed']:.2f}"
+    )
 
     # Create DataFrame and save
     df = pd.DataFrame([stats])
@@ -168,7 +200,10 @@ if __name__ == "__main__":
         "--success_threshold",
         type=float,
         default=-300.0,
-        help="Episodes with return > threshold are considered successful (default: -300.0)",
+        help=(
+            "Episodes with return > threshold are considered "
+            "successful (default: -300.0)"
+        ),
     )
 
     args = parser.parse_args()

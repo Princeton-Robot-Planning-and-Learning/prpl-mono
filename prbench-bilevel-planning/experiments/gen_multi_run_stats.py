@@ -10,7 +10,8 @@ For all other metrics, statistics are calculated only over successful episodes
 
 Examples:
     python experiments/gen_multi_run_stats.py --base_dir logs/motion2d-p0
-    python experiments/gen_multi_run_stats.py --base_dir logs/obstruction2d-p0 --metrics success steps planning_time
+    python experiments/gen_multi_run_stats.py --base_dir logs/obstruction2d-p0 \
+        --metrics success steps planning_time
 """
 
 import argparse
@@ -30,7 +31,8 @@ def calculate_multi_run_stats(
     Args:
         base_dir: Base directory containing seed_* subdirectories
         metrics: List of metric columns to aggregate (if None, uses all numeric columns)
-        output_file: Path to save statistics CSV (if None, saves to base_dir/results_summary.csv)
+        output_file: Path to save statistics CSV
+            (if None, saves to base_dir/results_summary.csv)
 
     Returns:
         DataFrame with mean and std for each metric
@@ -77,13 +79,15 @@ def calculate_multi_run_stats(
     # Convert success column to numeric if it exists
     for df in all_results:
         if "success" in df.columns and df["success"].dtype == "object":
-            df["success"] = df["success"].map({"True": 1, True: 1, "False": 0, False: 0})
+            df["success"] = df["success"].map(
+                {"True": 1, True: 1, "False": 0, False: 0}
+            )
 
     # Check if success column exists
     has_success = "success" in all_results[0].columns
 
     # Calculate statistics across all episodes in all seeds
-    results = {"metric": [], "mean": [], "std": []}
+    results: dict[str, list] = {"metric": [], "mean": [], "std": []}
 
     for metric in metrics:
         if metric == "success" or not has_success:
@@ -93,16 +97,19 @@ def calculate_multi_run_stats(
             std_val = np.std(all_values, ddof=1)  # Sample std
         else:
             # For other metrics, only calculate over successful episodes
-            successful_values = []
+            successful_values: list = []
             for df in all_results:
                 # Get values where success is True
                 mask = df["success"].astype(bool)
                 successful_values.extend(df.loc[mask, metric].values)
 
-
             if len(successful_values) > 0:
                 mean_val = np.mean(successful_values)
-                std_val = np.std(successful_values, ddof=1) if len(successful_values) > 1 else 0.0
+                std_val = (
+                    np.std(successful_values, ddof=1)
+                    if len(successful_values) > 1
+                    else 0.0
+                )
             else:
                 mean_val = np.nan
                 std_val = np.nan
@@ -166,7 +173,8 @@ if __name__ == "__main__":
         "--output",
         type=Path,
         default=None,
-        help="Output path for summary statistics CSV (default: <base_dir>/results_summary.csv)",
+        help="Output path for summary statistics CSV "
+        "(default: <base_dir>/results_summary.csv)",
     )
 
     args = parser.parse_args()
