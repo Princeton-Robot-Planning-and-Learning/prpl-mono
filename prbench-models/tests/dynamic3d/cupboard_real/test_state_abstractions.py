@@ -1,15 +1,24 @@
 """Tests for cupboard real state_abstractions.py."""
 
 from prbench_models.dynamic3d.cupboard_real.state_abstractions import CupboardRealStateAbstractor
-from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
+from prbench_models.dynamic3d.ground.parameterized_skills import create_lifted_controllers
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from relational_structs import ObjectCentricState
 import prbench
+import numpy as np
+from conftest import MAKE_VIDEOS
+from gymnasium.wrappers import RecordVideo
 
 def test_cupboard_real_state_abstraction():
     """Tests for CupboardRealStateAbstractor()."""
     prbench.register_all_environments()
     num_objects = 1
     env = prbench.make(f"prbench/TidyBot3D-cupboard_real-o{num_objects}-v0", render_mode="rgb_array")
+    if MAKE_VIDEOS:
+        env = RecordVideo(
+            env, "unit_test_videos",
+            name_prefix=f"TidyBot3D-cupboard_real_state_abstraction"
+        )
     sim = ObjectCentricTidyBot3DEnv(scene_type="cupboard_real",
         num_objects=num_objects,
         render_images=False
@@ -20,6 +29,37 @@ def test_cupboard_real_state_abstraction():
     # and the object should be on the ground.
     obs, _ = env.reset(seed=123)
     state = env.observation_space.devectorize(obs)
+    assert isinstance(state, ObjectCentricState)
     abstract_state = abstractor.state_abstractor(state)
+    assert str(sorted(abstract_state.atoms)) == "[(HandEmpty robot), (OnGround cube1)]"
 
-    import ipdb; ipdb.set_trace()
+    # Run move base to cube.
+    controllers = create_lifted_controllers(env.action_space)
+    lifted_controller = controllers["move_to_target"]
+    robot = state.get_object_from_name("robot")
+    cube = state.get_object_from_name("cube1")
+    object_parameters = (robot, cube)
+    controller = lifted_controller.ground(object_parameters)
+    target_distance = 0.5
+    target_rotation = 0.0
+    params = np.array([target_distance, target_rotation])
+
+    # Reset and execute the controller until it terminates.
+    controller.reset(state, params)
+    for _ in range(200):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    # Check updated state abstraction: the robot should be AtPremanipulationTarget.
+    abstract_state = abstractor.state_abstractor(state)
+    assert str(sorted(abstract_state.atoms)) == "[(AtPremanipulationTarget robot cube1), (HandEmpty robot), (OnGround cube1)]"
+
+
+    env.close()
