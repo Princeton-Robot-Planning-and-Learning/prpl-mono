@@ -501,15 +501,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 )
         return all(successes)
 
-    def reward(self, obs: dict[str, Any]) -> float:  # pylint: disable=unused-argument
+    def reward(self, obs: dict[str, Any]) -> float:
         """Calculate reward based on task completion."""
-        return float(self._check_goals())
+        return self._reward_calculator.calculate_reward(obs)
 
-    def _is_terminated(
-        self, obs: dict[str, Any]  # pylint: disable=unused-argument
-    ) -> bool:
+    def _is_terminated(self, obs: dict[str, Any]) -> bool:
         """Check if episode should terminate."""
-        return self._check_goals()
+        return self._reward_calculator.is_terminated(obs)
 
     def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the environment."""
