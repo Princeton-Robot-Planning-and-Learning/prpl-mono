@@ -76,7 +76,7 @@ def test_tidybot_table_clutter_pick_place_goals():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="table",
         num_objects=7,
-        task_config_path=str(tasks_root / "tidybot-table-o15-clutterBlocks.json"),
+        task_config_path=str(tasks_root / "tidybot-table-o20-SortClutteredBlocks.json"),
         render_images=False,
     )
 
