@@ -364,6 +364,101 @@ class Cube(MujocoObject):
         return (2 * self.size[0], 2 * self.size[1], 2 * self.size[2])
 
 
+@register_object
+class Cuboid(MujocoObject):
+    """A cuboid (rectangular box) object for TidyBot environments."""
+
+    def __init__(
+        self,
+        name: str,
+        env: MujocoEnv | None = None,
+        options: dict | None = None,
+    ) -> None:
+        """Initialize a Cuboid object.
+
+        Args:
+            name: Name of the cuboid body in the XML
+            options: Dictionary of cuboid options:
+                - size: [x, y, z] dimensions as a list of three floats
+                - rgba: Color of the cuboid (either string or [r, g, b, a] values)
+                - mass: Mass of the cuboid
+            env: Reference to the environment (needed for position get/set operations)
+        """
+        # Initialize base class
+        super().__init__(name, env, options)
+
+        # Override object type
+        self.symbolic_object = Object(self.name, MujocoMovableObjectType)
+
+        # Handle size parameter - must be a list of 3 dimensions
+        size = self.options.get("size", [0.02, 0.02, 0.02])
+        if isinstance(size, (int, float)):
+            # If scalar provided, treat as cube
+            self.size = [size, size, size]
+        else:
+            # Expect a list of [x, y, z]
+            self.size = list(size)
+            if len(self.size) != 3:
+                raise ValueError(
+                    f"Cuboid size must be a list of 3 values [x, y, z], "
+                    f"got {len(self.size)} values"
+                )
+
+        # Handle rgba parameter
+        rgba = self.options.get("rgba", ".5 .7 .5 1")
+        if isinstance(rgba, str):
+            self.rgba = rgba
+        else:
+            self.rgba = " ".join(str(x) for x in rgba)
+
+        self.mass = self.options.get("mass", 0.1)
+
+        # Create the XML element
+        self.xml_element = self._create_xml_element()
+
+    def _create_xml_element(self) -> ET.Element:
+        """Create the XML Element for this cuboid.
+
+        Returns:
+            ET.Element representing the cuboid body
+        """
+        # Create body element
+        body = ET.Element("body", name=self.name)
+
+        # Add freejoint for position/orientation control
+        ET.SubElement(body, "freejoint", name=self.joint_name)
+
+        # Add geom element with cuboid properties
+        size_str = " ".join(str(x) for x in self.size)
+        ET.SubElement(
+            body,
+            "geom",
+            type="box",
+            size=size_str,
+            rgba=self.rgba,
+            mass=str(self.mass),
+        )
+
+        return body
+
+    def __str__(self) -> str:
+        """String representation of the cuboid."""
+        return (
+            f"Cuboid(name='{self.name}', size={self.size}, "
+            f"rgba='{self.rgba}', mass={self.mass})"
+        )
+
+    def __repr__(self) -> str:
+        """Detailed string representation of the cuboid."""
+        return (
+            f"Cuboid(name='{self.name}', joint_name='{self.joint_name}', "
+            f"size={self.size}, rgba='{self.rgba}', mass={self.mass})"
+        )
+
+    def get_bounding_box_dimensions(self) -> tuple[float, float, float]:
+        return (2 * self.size[0], 2 * self.size[1], 2 * self.size[2])
+
+
 class MujocoFixture(abc.ABC):
     """Base class for MuJoCo fixtures (static objects).
 
