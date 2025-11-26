@@ -537,7 +537,7 @@ def test_pick_place_shelf():
     )
     if MAKE_VIDEOS:
         env = RecordVideo(
-            env, "unit_test_videos", name_prefix=f"TidyBot3D-cupboard-o{num_cubes}"
+            env, "unit_test_videos", name_prefix=f"TidyBot3D-cupboard-o{num_cubes}-real"
         )
 
     # Reset the environment and get the initial state.
