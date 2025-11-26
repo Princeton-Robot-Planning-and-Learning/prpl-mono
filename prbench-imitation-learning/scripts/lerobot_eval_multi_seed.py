@@ -4,7 +4,7 @@ Usage example:
 
 ```
 python scripts/lerobot_eval_multi_seed.py \
-    --policy.path=outputs/train/2025-11-19/18-25-35_prbench_diffusion/checkpoints/030000/pretrained_model \
+    --policy.path=path/to/pretrained_model \
     --env.type=prbench \
     --env.task=Motion2D-p0-v0 \
     --eval.batch_size=20 \
@@ -42,8 +42,11 @@ from prbench_imitation_learning.evaluate import eval_policy_all
 @dataclass
 class MultiSeedEvalConfig(EvalPipelineConfig):
     """Config for multi-seed evaluation."""
+
     num_seeds: int = 5  # Number of random seeds to evaluate
-    base_seed: int = 0  # Base seed (will use base_seed, base_seed+1, ..., base_seed+num_seeds-1)
+    base_seed: int = (
+        0  # Base seed (will use base_seed, base_seed+1, ..., base_seed+num_seeds-1)
+    )
 
 
 @parser.wrap()
@@ -57,7 +60,7 @@ def eval_multi_seed_main(cfg: MultiSeedEvalConfig):
     torch.backends.cudnn.benchmark = True
     torch.backends.cuda.matmul.allow_tf32 = True
 
-    logging.info(
+    logging.info(  # pylint: disable=logging-not-lazy
         colored("Output dir:", "yellow", attrs=["bold"]) + f" {cfg.output_dir}"
     )
 
@@ -81,8 +84,11 @@ def eval_multi_seed_main(cfg: MultiSeedEvalConfig):
     for seed_idx in range(cfg.num_seeds):
         current_seed = cfg.base_seed + seed_idx
         logging.info(
-            colored(f"\n{'='*80}\nEvaluating with seed {current_seed} ({seed_idx+1}/{cfg.num_seeds})\n{'='*80}",
-                   "cyan", attrs=["bold"])
+            colored(
+                f"\n{'='*80}\nEvaluating with seed {current_seed} ({seed_idx+1}/{cfg.num_seeds})\n{'='*80}",  # pylint: disable=line-too-long
+                "cyan",
+                attrs=["bold"],
+            )
         )
 
         set_seed(current_seed)
@@ -111,7 +117,7 @@ def eval_multi_seed_main(cfg: MultiSeedEvalConfig):
 
         # Run evaluation and track time
         start_time = time.time()
-        
+
         with (
             torch.no_grad(),
             (
@@ -131,7 +137,7 @@ def eval_multi_seed_main(cfg: MultiSeedEvalConfig):
                 start_seed=current_seed,
                 max_parallel_tasks=cfg.env.max_parallel_tasks,
             )
-        
+
         end_time = time.time()
         total_time = end_time - start_time
         time_per_episode = total_time / cfg.eval.n_episodes
@@ -140,37 +146,43 @@ def eval_multi_seed_main(cfg: MultiSeedEvalConfig):
         close_envs(envs)
 
         # Extract metrics from info
-        # The info structure has per_task with individual episode data and overall aggregated metrics
-        
+        # The info structure has per_task with individual episode data
+        # and overall aggregated metrics
+
         # Get overall metrics
         overall_info = info.get("overall", {})
-        
+
         # Extract success rate from pc_success (percentage, so convert to rate)
         success_rate = overall_info.get("pc_success", 0.0) / 100.0
-        
+
         # Compute average reward for successful episodes only
         # We need to use per_task data to get individual episode results
         all_sum_rewards = []
         all_successes = []
-        
+
         for task_data in info.get("per_task", []):
             metrics = task_data.get("metrics", {})
             sum_rewards = metrics.get("sum_rewards", [])
             successes = metrics.get("successes", [])
-            
+
             all_sum_rewards.extend(sum_rewards)
             all_successes.extend(successes)
-        
+
         # Compute average reward for successful episodes only
         if all_sum_rewards and all_successes:
             successful_rewards = [
-                reward for reward, success in zip(all_sum_rewards, all_successes)
+                reward
+                for reward, success in zip(all_sum_rewards, all_successes)
                 if success
             ]
-            avg_reward_successful = np.mean(successful_rewards) if successful_rewards else 0.0
+            avg_reward_successful = (
+                np.mean(successful_rewards) if successful_rewards else 0.0
+            )
         else:
             # Fallback to overall average if per-task data not available
-            logging.warning("Could not extract per-episode data, using overall avg_sum_reward")
+            logging.warning(
+                "Could not extract per-episode data, using overall avg_sum_reward"
+            )
             avg_reward_successful = overall_info.get("avg_sum_reward", 0.0)
 
         # Store results for this seed
@@ -183,7 +195,7 @@ def eval_multi_seed_main(cfg: MultiSeedEvalConfig):
             "n_episodes": cfg.eval.n_episodes,
             "full_info": info,
         }
-        all_results["seeds"].append(seed_result)
+        all_results["seeds"].append(seed_result)  # type: ignore
 
         # Track for aggregation
         all_success_rates.append(success_rate)
@@ -191,7 +203,9 @@ def eval_multi_seed_main(cfg: MultiSeedEvalConfig):
         all_wall_clock_times.append(time_per_episode)
 
         # Print seed results
-        logging.info(colored(f"\nResults for seed {current_seed}:", "green", attrs=["bold"]))
+        logging.info(
+            colored(f"\nResults for seed {current_seed}:", "green", attrs=["bold"])
+        )
         logging.info(f"  Success Rate: {success_rate:.4f}")
         logging.info(f"  Avg Sum Rewards (Successful): {avg_reward_successful:.4f}")
         logging.info(f"  Wall-clock Time per Episode: {time_per_episode:.4f} seconds")
@@ -223,32 +237,67 @@ def eval_multi_seed_main(cfg: MultiSeedEvalConfig):
     }
 
     # Print final aggregated results
-    logging.info(colored(f"\n{'='*80}\nAggregated Results Across {cfg.num_seeds} Seeds\n{'='*80}", 
-                        "cyan", attrs=["bold"]))
+    logging.info(
+        colored(
+            f"\n{'='*80}\nAggregated Results Across {cfg.num_seeds} Seeds\n{'='*80}",
+            "cyan",
+            attrs=["bold"],
+        )
+    )
     logging.info(colored("\nSuccess Rate:", "green", attrs=["bold"]))
-    logging.info(f"  Mean: {all_results['aggregated_metrics']['success_rate']['mean']:.4f}")
-    logging.info(f"  Std:  {all_results['aggregated_metrics']['success_rate']['std']:.4f}")
-    logging.info(f"  Min:  {all_results['aggregated_metrics']['success_rate']['min']:.4f}")
-    logging.info(f"  Max:  {all_results['aggregated_metrics']['success_rate']['max']:.4f}")
-    
-    logging.info(colored("\nAvg Sum Rewards (Successful Episodes):", "green", attrs=["bold"]))
-    logging.info(f"  Mean: {all_results['aggregated_metrics']['avg_sum_rewards_successful']['mean']:.4f}")
-    logging.info(f"  Std:  {all_results['aggregated_metrics']['avg_sum_rewards_successful']['std']:.4f}")
-    logging.info(f"  Min:  {all_results['aggregated_metrics']['avg_sum_rewards_successful']['min']:.4f}")
-    logging.info(f"  Max:  {all_results['aggregated_metrics']['avg_sum_rewards_successful']['max']:.4f}")
-    
-    logging.info(colored("\nWall-clock Time per Episode (seconds):", "green", attrs=["bold"]))
-    logging.info(f"  Mean: {all_results['aggregated_metrics']['wall_clock_time_per_episode']['mean']:.4f}")
-    logging.info(f"  Std:  {all_results['aggregated_metrics']['wall_clock_time_per_episode']['std']:.4f}")
-    logging.info(f"  Min:  {all_results['aggregated_metrics']['wall_clock_time_per_episode']['min']:.4f}")
-    logging.info(f"  Max:  {all_results['aggregated_metrics']['wall_clock_time_per_episode']['max']:.4f}")
+    logging.info(
+        f"  Mean: {all_results['aggregated_metrics']['success_rate']['mean']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+    logging.info(
+        f"  Std:  {all_results['aggregated_metrics']['success_rate']['std']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+    logging.info(
+        f"  Min:  {all_results['aggregated_metrics']['success_rate']['min']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+    logging.info(
+        f"  Max:  {all_results['aggregated_metrics']['success_rate']['max']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+
+    logging.info(
+        colored("\nAvg Sum Rewards (Successful Episodes):", "green", attrs=["bold"])
+    )
+    logging.info(
+        f"  Mean: {all_results['aggregated_metrics']['avg_sum_rewards_successful']['mean']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+    logging.info(
+        f"  Std:  {all_results['aggregated_metrics']['avg_sum_rewards_successful']['std']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+    logging.info(
+        f"  Min:  {all_results['aggregated_metrics']['avg_sum_rewards_successful']['min']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+    logging.info(
+        f"  Max:  {all_results['aggregated_metrics']['avg_sum_rewards_successful']['max']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+
+    logging.info(
+        colored("\nWall-clock Time per Episode (seconds):", "green", attrs=["bold"])
+    )
+    logging.info(
+        f"  Mean: {all_results['aggregated_metrics']['wall_clock_time_per_episode']['mean']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+    logging.info(
+        f"  Std:  {all_results['aggregated_metrics']['wall_clock_time_per_episode']['std']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+    logging.info(
+        f"  Min:  {all_results['aggregated_metrics']['wall_clock_time_per_episode']['min']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
+    logging.info(
+        f"  Max:  {all_results['aggregated_metrics']['wall_clock_time_per_episode']['max']:.4f}"  # type: ignore # pylint: disable=line-too-long
+    )
 
     # Save results to JSON
     results_file = output_dir / "multi_seed_eval_results.json"
     with open(results_file, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, default=str)
-    
-    logging.info(colored(f"\nResults saved to: {results_file}", "yellow", attrs=["bold"]))
+
+    logging.info(
+        colored(f"\nResults saved to: {results_file}", "yellow", attrs=["bold"])
+    )
     logging.info("End of multi-seed evaluation")
 
 
@@ -260,4 +309,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
