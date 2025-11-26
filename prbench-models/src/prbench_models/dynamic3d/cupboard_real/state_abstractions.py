@@ -86,10 +86,11 @@ class CupboardRealStateAbstractor:
             atoms.add(GroundAtom(HandEmpty, [robot]))
 
         # AtPremanipulationTarget.
-        premanipulation_distance_threshold = 0.75  # should be within this cardinal dist
+        premanipulation_distance_threshold = 0.95  # should be within this cardinal dist
         premanipulation_angle_threshold = 1e-1  # should be facing the target object
-        if GroundAtom(HandEmpty, [robot]) in atoms:
-            for target in all_mujoco_objects:
+        for target in all_mujoco_objects:
+            import pdb; pdb.set_trace()
+            if GroundAtom(Holding, [robot, target]) not in atoms:
                 target_x = state.get(target, "x")
                 target_y = state.get(target, "y")
                 robot_x = state.get(robot, "pos_base_x")
@@ -103,11 +104,19 @@ class CupboardRealStateAbstractor:
                 # Desired direction from robot -> target
                 target_angle = np.arctan2(dy, dx)
                 # Smallest signed angular difference
-                angle_error = abs(
-                    (target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi
-                )
-                if angle_error < premanipulation_angle_threshold:
-                    atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
+                if target in movables:
+                    angle_error = abs(
+                        (target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi
+                    )
+                    if angle_error < premanipulation_angle_threshold:
+                        atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
+                elif target in fixtures:
+                    import pdb; pdb.set_trace()
+                    angle_error = abs(
+                        (target_angle - robot_rot - (-np.pi / 2) + np.pi) % (2 * np.pi) - np.pi
+                    )
+                    if angle_error < premanipulation_angle_threshold:
+                        atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
 
         # Holding.
         # checking the ee pose and target pose.
@@ -119,9 +128,13 @@ class CupboardRealStateAbstractor:
                     atoms.add(GroundAtom(Holding, [robot, target]))
 
         # OnFixture.
-        # for movable in movables:
-        #     for fixture in fixtures:
-        #         import ipdb; ipdb.set_trace()
+        for movable in movables:
+            if GroundAtom(Holding, [robot, movable]) in atoms:
+                continue
+            for fixture in fixtures:
+                if abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.1 and \
+                    abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.1:
+                    atoms.add(GroundAtom(OnFixture, [movable, fixture]))
 
         objects = {robot} | all_mujoco_objects
         return RelationalAbstractState(atoms, objects)

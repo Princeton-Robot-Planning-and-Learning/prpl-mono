@@ -122,8 +122,11 @@ def test_cupboard_real_state_abstraction():
         assert False, "Controller did not terminate"
 
     # Check updated state abstraction: the robot should be AtPremanipulationTarget.
-    # abstract_state = abstractor.state_abstractor(state)
-    # assert str(sorted(abstract_state.atoms)) == "[(AtPremanipulationTarget robot cupboard_1), (Holding robot cube1)]" # pylint: disable=line-too-long
+    abstract_state = abstractor.state_abstractor(state)
+    assert (
+        str(sorted(abstract_state.atoms))
+        == "[(AtPremanipulationTarget robot cupboard_1), (Holding robot cube1)]" # pylint: disable=line-too-long
+    )
 
     # Plce the cube.
     controllers = create_lifted_controllers(env.action_space)
@@ -146,7 +149,10 @@ def test_cupboard_real_state_abstraction():
     # else:
     #     assert False, "Controller did not terminate"
 
-    # abstract_state = abstractor.state_abstractor(state)
-    # assert str(sorted(abstract_state.atoms)) == "[(HandEmpty robot), (OnFixture cupboard_1 cube1)]" # pylint: disable=line-too-long
+    abstract_state = abstractor.state_abstractor(state)
+    assert (
+        str(sorted(abstract_state.atoms))
+        == "[(OnFixture cube1 cupboard_1), (HandEmpty robot)]" # pylint: disable=line-too-long
+    )
 
     env.close()
