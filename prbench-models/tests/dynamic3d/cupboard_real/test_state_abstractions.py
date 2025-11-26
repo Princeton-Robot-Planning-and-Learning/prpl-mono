@@ -125,7 +125,7 @@ def test_cupboard_real_state_abstraction():
     abstract_state = abstractor.state_abstractor(state)
     assert (
         str(sorted(abstract_state.atoms))
-        == "[(AtPremanipulationTarget robot cupboard_1), (Holding robot cube1)]" # pylint: disable=line-too-long
+        == "[(AtPremanipulationTarget robot cupboard_1), (Holding robot cube1)]"  # pylint: disable=line-too-long
     )
 
     # Plce the cube.
@@ -152,7 +152,7 @@ def test_cupboard_real_state_abstraction():
     abstract_state = abstractor.state_abstractor(state)
     assert (
         str(sorted(abstract_state.atoms))
-        == "[(OnFixture cube1 cupboard_1), (HandEmpty robot)]" # pylint: disable=line-too-long
+        == "[(AtPremanipulationTarget robot cube1), (AtPremanipulationTarget robot cupboard_1), (HandEmpty robot), (OnFixture cube1 cupboard_1)]"  # pylint: disable=line-too-long
     )
 
     env.close()

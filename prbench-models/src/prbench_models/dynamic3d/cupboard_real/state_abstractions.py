@@ -85,39 +85,6 @@ class CupboardRealStateAbstractor:
         if np.isclose(gripper_val, 0.0, atol=handempty_tol):
             atoms.add(GroundAtom(HandEmpty, [robot]))
 
-        # AtPremanipulationTarget.
-        premanipulation_distance_threshold = 0.95  # should be within this cardinal dist
-        premanipulation_angle_threshold = 1e-1  # should be facing the target object
-        for target in all_mujoco_objects:
-            import pdb; pdb.set_trace()
-            if GroundAtom(Holding, [robot, target]) not in atoms:
-                target_x = state.get(target, "x")
-                target_y = state.get(target, "y")
-                robot_x = state.get(robot, "pos_base_x")
-                robot_y = state.get(robot, "pos_base_y")
-                robot_rot = state.get(robot, "pos_base_rot")
-                dx = target_x - robot_x
-                dy = target_y - robot_y
-                dist = (dx**2 + dy**2) ** 0.5
-                if dist > premanipulation_distance_threshold:
-                    continue  # too far away
-                # Desired direction from robot -> target
-                target_angle = np.arctan2(dy, dx)
-                # Smallest signed angular difference
-                if target in movables:
-                    angle_error = abs(
-                        (target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi
-                    )
-                    if angle_error < premanipulation_angle_threshold:
-                        atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
-                elif target in fixtures:
-                    import pdb; pdb.set_trace()
-                    angle_error = abs(
-                        (target_angle - robot_rot - (-np.pi / 2) + np.pi) % (2 * np.pi) - np.pi
-                    )
-                    if angle_error < premanipulation_angle_threshold:
-                        atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
-
         # Holding.
         # checking the ee pose and target pose.
         GraspThreshold = 0.1
@@ -132,9 +99,38 @@ class CupboardRealStateAbstractor:
             if GroundAtom(Holding, [robot, movable]) in atoms:
                 continue
             for fixture in fixtures:
-                if abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.1 and \
-                    abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.1:
+                if (
+                    abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.1
+                    and abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.1
+                ):
                     atoms.add(GroundAtom(OnFixture, [movable, fixture]))
+
+        # AtPremanipulationTarget.
+        premanipulation_distance_threshold = 0.95  # should be within this cardinal dist
+        premanipulation_angle_threshold = 1e-1  # should be facing the target object
+        for target in all_mujoco_objects:
+            target_x = state.get(target, "x")
+            target_y = state.get(target, "y")
+            robot_x = state.get(robot, "pos_base_x")
+            robot_y = state.get(robot, "pos_base_y")
+            robot_rot = state.get(robot, "pos_base_rot")
+            dx = target_x - robot_x
+            dy = target_y - robot_y
+            dist = (dx**2 + dy**2) ** 0.5
+            if dist > premanipulation_distance_threshold:
+                continue  # too far away
+            # Desired direction from robot -> target
+            target_angle = np.arctan2(dy, dx)
+
+            if target in fixtures or (
+                target in movables and GroundAtom(Holding, [robot, target]) not in atoms
+            ):
+                # Smallest signed angular difference
+                angle_error = abs(
+                    (target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi
+                )
+                if angle_error < premanipulation_angle_threshold:
+                    atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
 
         objects = {robot} | all_mujoco_objects
         return RelationalAbstractState(atoms, objects)
