@@ -180,6 +180,7 @@ def test_run_base_motion_planning() -> None:
 
     finally:
         time.sleep(1)
+        env.close()  # type: ignore
         interface.close()
         print("Interface closed")
 

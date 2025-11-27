@@ -17,6 +17,26 @@ def convert_yaw_to_quaternion(yaw: float) -> list[float]:
     return [np.cos(half_yaw), 0.0, 0.0, np.sin(half_yaw)]  # w, x, y, z
 
 
+def check_in_region(
+    position: NDArray[np.float32],
+    regions: list[list[float]],
+) -> bool:
+    """Check if a position is inside any of the given regions.
+
+    Args:
+        position: Position as [x, y, z] array
+        regions: List of regions, each defined as [x_start, y_start, x_end, y_end]
+    Returns:
+        True if position is inside any region, False otherwise
+    """
+    x, y, _ = position
+    for region in regions:
+        x_start, y_start, x_end, y_end = region
+        if x_start <= x <= x_end and y_start <= y <= y_end:
+            return True
+    return False
+
+
 def bboxes_overlap(bbox1: list[float], bbox2: list[float], margin: float = 0.2) -> bool:
     """Check if two bounding boxes overlap with a safety margin.
 
