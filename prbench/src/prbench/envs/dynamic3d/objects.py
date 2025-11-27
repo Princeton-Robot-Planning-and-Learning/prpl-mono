@@ -1074,7 +1074,8 @@ class Cupboard(MujocoFixture):
                 ):
                     raise ValueError(
                         f"Partition position {partition_pos} on shelf {i} must be "
-                        f"between -{self.cupboard_length/2} and {self.cupboard_length/2} "
+                        f"between -{self.cupboard_length/2} and "
+                        f"{self.cupboard_length/2} "
                         f"(cupboard length is {self.cupboard_length})"
                     )
 
