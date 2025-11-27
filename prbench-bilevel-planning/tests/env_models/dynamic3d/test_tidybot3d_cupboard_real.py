@@ -33,13 +33,14 @@ def test_tidybot3d_cupboard_bilevel_planning():
     )
     obs, info = env.reset(seed=seed)
     total_reward = 0
+
     agent.reset(obs, info)
     for _ in range(100):
         action = agent.step()
         obs, reward, terminated, truncated, info = env.step(action)
         total_reward += reward
         agent.update(obs, reward, terminated or truncated, info)
-        if terminated or truncated:
+        if terminated or truncated or len(agent._current_plan) == 0:
             break
 
     else:

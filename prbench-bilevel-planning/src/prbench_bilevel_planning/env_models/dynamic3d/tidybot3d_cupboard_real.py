@@ -15,7 +15,7 @@ from prbench.envs.dynamic3d.object_types import (
 )
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBot3DRobotActionSpace
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
-from prbench_models.dynamic3d.base_motion.parameterized_skills import (
+from prbench_models.dynamic3d.ground.parameterized_skills import (
     create_lifted_controllers,
 )
 from prbench_models.dynamic3d.cupboard_real.state_abstractions import (
