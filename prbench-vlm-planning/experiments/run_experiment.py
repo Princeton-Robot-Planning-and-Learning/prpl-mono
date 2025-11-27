@@ -10,7 +10,7 @@ Examples:
 - Running on multiple environments and multiple seeds:
     python experiments/run_experiment.py -m seed='range(0,3)' \
         env=Motion2D-p0-v0,Motion2D-p2-v0,StickButton2D-b1-v0,StickButton2D-b3-v0 \
-        vlm_model=gpt-5 use_image=true,false temperature=1
+        vlm_model=gpt-5 rgb_observation=true,false temperature=1
 """
 
 import logging
