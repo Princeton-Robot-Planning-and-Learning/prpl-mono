@@ -1,5 +1,8 @@
 """Tests for the TidyBot3D cupboard scene: observation/action spaces, reset, and step."""
 
+from pathlib import Path
+
+import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 
 
