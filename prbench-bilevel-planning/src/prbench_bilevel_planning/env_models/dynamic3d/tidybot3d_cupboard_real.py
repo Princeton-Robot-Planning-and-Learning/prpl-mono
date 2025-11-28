@@ -21,6 +21,9 @@ from prbench_models.dynamic3d.ground.parameterized_skills import (
 from prbench_models.dynamic3d.cupboard_real.state_abstractions import (
     AtPremanipulationTarget,
     CupboardRealStateAbstractor,
+    Holding,
+    HandEmpty,
+    OnGround
 )
 from relational_structs import (
     LiftedAtom,
@@ -49,7 +52,7 @@ def create_bilevel_planning_models(
     # State and goal abstractors.
     abstractor = CupboardRealStateAbstractor(sim)
     state_abstractor = abstractor.state_abstractor
-    goal_deriver = abstractor.goal_deriver
+    goal_deriver = abstractor.goal_deriver_grasp
 
     # Need to call reset to initialize the qpos, qvel.
     sim.reset()
@@ -77,7 +80,7 @@ def create_bilevel_planning_models(
     state_space = ObjectCentricStateSpace(types)
 
     # Predicates.
-    predicates = {AtPremanipulationTarget}
+    predicates = {AtPremanipulationTarget, Holding, HandEmpty, OnGround}
 
     # Operators.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
@@ -86,18 +89,32 @@ def create_bilevel_planning_models(
     MoveToTargetOperator = LiftedOperator(
         "MoveToTarget",
         [robot, target],
-        preconditions=set(),
+        preconditions={LiftedAtom(HandEmpty, [robot]), LiftedAtom(OnGround, [target])},
         add_effects={LiftedAtom(AtPremanipulationTarget, [robot, target])},
         delete_effects=set(),
+    )
+
+    # Pick ground controller.
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
+    target = Variable("?target", MujocoMovableObjectType)
+
+    PickTargetOperator = LiftedOperator(
+        "pick_ground",
+        [robot, target],
+        preconditions={LiftedAtom(HandEmpty, [robot]), LiftedAtom(AtPremanipulationTarget, [robot, target]), LiftedAtom(OnGround, [target])},
+        add_effects={LiftedAtom(Holding, [robot, target])},
+        delete_effects={LiftedAtom(HandEmpty, [robot]), LiftedAtom(AtPremanipulationTarget, [robot, target]), LiftedAtom(OnGround, [target])},
     )
 
     # Controllers.
     controllers = create_lifted_controllers(action_space, sim.initial_constant_state)
     LiftedMoveToTargetController = controllers["move_to_target"]
+    LiftedPickGroundController = controllers["pick_ground"]
 
     # Finalize the skills.
     skills = {
         LiftedSkill(MoveToTargetOperator, LiftedMoveToTargetController),
+        LiftedSkill(PickTargetOperator, LiftedPickGroundController),
     }
 
     # Finalize the models.

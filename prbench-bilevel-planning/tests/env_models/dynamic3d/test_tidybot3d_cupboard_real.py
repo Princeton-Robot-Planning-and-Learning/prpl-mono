@@ -11,7 +11,7 @@ prbench.register_all_environments()
 
 
 def test_tidybot3d_cupboard_bilevel_planning():
-    """Tests for bilevel planning in the TidyBot3D base motion environment."""
+    """Tests for bilevel planning in the TidyBot3D cupboard real environment."""
 
     env = prbench.make("prbench/TidyBot3D-cupboard_real-o1-v0", render_mode="rgb_array")
 
@@ -29,13 +29,15 @@ def test_tidybot3d_cupboard_bilevel_planning():
         seed=seed,
         max_abstract_plans=1,
         samples_per_step=1,
-        planning_timeout=30.0,
+        planning_timeout=50.0,
+        max_skill_horizon=200,
     )
     obs, info = env.reset(seed=seed)
     total_reward = 0
 
     agent.reset(obs, info)
-    for _ in range(100):
+    for _ in range(400):
+        print('length of current plan:', len(agent._current_plan))
         action = agent.step()
         obs, reward, terminated, truncated, info = env.step(action)
         total_reward += reward
