@@ -46,7 +46,7 @@ class GroundPickController(Dynamic2dRobotController):
         # Sample grasp ratio and side
         # grasp_ratio: determines position along the side ([0.0, 1.0])
         # side: 0~0.25 left, 0.25~0.5 right, 0.5~0.75 top, 0.75~1.0 bottom
-        grasp_ratio = 0 # rng.uniform(0.0, 0.1)
+        grasp_ratio = 0  # rng.uniform(0.0, 0.1)
         side = rng.uniform(0.5, 0.75)
         max_arm_length = x.get(self._robot, "arm_length")
         min_arm_length = (
@@ -184,7 +184,7 @@ class GroundPlaceController(Dynamic2dRobotController):
         return (rel_x, rel_y, rel_theta)
 
     def _get_gripper_actions(self) -> tuple[float, float]:
-        return 1.0, 0.0  # Keep closed during movement, open after placing
+        return -0.01, 0.02  # Keep closed during movement, open after placing
 
     def _generate_waypoints(
         self, state: ObjectCentricState
@@ -273,7 +273,7 @@ class GroundMoveToController(Dynamic2dRobotController):
         return rel_theta
 
     def _get_gripper_actions(self) -> tuple[float, float]:
-        return 1.0, 0.0  # Keep closed during movement, open after moving
+        return -0.005, 0  # Keep closed during movement, open after moving
 
     def _generate_waypoints(
         self, state: ObjectCentricState
@@ -417,12 +417,10 @@ def create_lifted_controllers(
         )
     )
 
-    place_tgt_controller: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, target_block, target_surface],
-            MoveToTgtController,
-            move_to_params_space,
-        )
+    place_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
+        [robot, target_block, target_surface],
+        MoveToTgtController,
+        move_to_params_space,
     )
 
     return {
@@ -431,4 +429,3 @@ def create_lifted_controllers(
         "place_obstruction": place_obstruction_controller,
         "place_tgt": place_tgt_controller,
     }
-

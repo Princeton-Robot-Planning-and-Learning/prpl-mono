@@ -6,20 +6,22 @@ from typing import Iterable, Optional, Sequence, Union
 import numpy as np
 from bilevel_planning.structs import GroundParameterizedController
 from numpy.typing import NDArray
+from prbench.envs.dynamic2d.dyn_obstruction2d import (
+    DynObstruction2DEnvConfig,
+)
 from prbench.envs.dynamic2d.object_types import KinRobotType
-from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.dynamic2d.utils import KinRobotActionSpace
+from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.utils import state_2d_has_collision
 from prpl_utils.motion_planning import BiRRT
 from prpl_utils.utils import get_signed_angle_distance, wrap_angle
 from relational_structs.object_centric_state import ObjectCentricState
 from relational_structs.objects import Object
-from prbench.envs.dynamic2d.dyn_obstruction2d import (
-    DynObstruction2DEnvConfig,
-)
+
 
 class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
-    """General controller for 2D dynamic robot manipulation tasks using SE2 waypoints."""
+    """General controller for 2D dynamic robot manipulation tasks using SE2
+    waypoints."""
 
     def __init__(
         self,
@@ -56,7 +58,7 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
     @abc.abstractmethod
     def _get_gripper_actions(self) -> tuple[float, float]:
         """Get gripper actions for during and after waypoint movement.
-        
+
         Returns:
             Tuple of (gripper_during_plan, gripper_after_plan) where values are:
             - Positive values mean opening the gripper
@@ -75,7 +77,10 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
         curr_y = state.get(self._robot, "y")
         curr_theta = state.get(self._robot, "theta")
         curr_arm = state.get(self._robot, "arm_joint")
-        current_pos: tuple[SE2Pose, float] = (SE2Pose(curr_x, curr_y, curr_theta), curr_arm)
+        current_pos: tuple[SE2Pose, float] = (
+            SE2Pose(curr_x, curr_y, curr_theta),
+            curr_arm,
+        )
         waypoints = [current_pos] + waypoints
 
         # Create a static state copy for collision checking
@@ -90,7 +95,7 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
             + state.get(self._robot, "gripper_base_height") / 2
             + 1e-4
         )
-        
+
         rng = np.random.default_rng(0)
 
         # Define motion planning functions
@@ -117,13 +122,19 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
             # Calculate number of steps needed for each dimension
             abs_x = self._max_delta_x if dx > 0 else abs(self._max_delta_x)
             abs_y = self._max_delta_y if dy > 0 else abs(self._max_delta_y)
-            abs_theta = self._max_delta_theta if dtheta > 0 else abs(self._max_delta_theta)
+            abs_theta = (
+                self._max_delta_theta if dtheta > 0 else abs(self._max_delta_theta)
+            )
             abs_arm = self._max_delta_arm if darm > 0 else abs(self._max_delta_arm)
 
             x_num_steps = max(1, int(np.ceil(abs(dx) / abs_x)) if abs_x > 0 else 1)
             y_num_steps = max(1, int(np.ceil(abs(dy) / abs_y)) if abs_y > 0 else 1)
-            theta_num_steps = max(1, int(np.ceil(abs(dtheta) / abs_theta)) if abs_theta > 0 else 1)
-            arm_num_steps = max(1, int(np.ceil(abs(darm) / abs_arm)) if abs_arm > 0 else 1)
+            theta_num_steps = max(
+                1, int(np.ceil(abs(dtheta) / abs_theta)) if abs_theta > 0 else 1
+            )
+            arm_num_steps = max(
+                1, int(np.ceil(abs(darm) / abs_arm)) if abs_arm > 0 else 1
+            )
 
             num_steps = max(x_num_steps, y_num_steps, theta_num_steps, arm_num_steps)
 
@@ -153,7 +164,9 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
             moving_objects = {self._robot}
             static_objects = set(test_state) - moving_objects
 
-            return state_2d_has_collision(test_state, moving_objects, static_objects, {})
+            return state_2d_has_collision(
+                test_state, moving_objects, static_objects, {}
+            )
 
         def distance_fn(
             pt1: tuple[SE2Pose, float], pt2: tuple[SE2Pose, float]
@@ -252,4 +265,3 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
             np.array([0, 0, 0, 0, gripper_after_plan], dtype=np.float32),
         ]
         return waypoint_plan + plan_suffix
-
