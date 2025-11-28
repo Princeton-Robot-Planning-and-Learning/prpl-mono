@@ -134,7 +134,8 @@ class VLMPlanningAgent(Agent[_O, _U]):
         super().update(obs, reward, done, info)
         assert self._current_policy is not None
         try:
-            self._next_action = self._current_policy(obs)
+            state_obs = obs["state"] if self._rgb_observation else obs  # type: ignore
+            self._next_action = self._current_policy(state_obs)
         except Exception as e:
             logging.exception("Failed to execute policy during update")
             raise VLMPlanningAgentFailure(

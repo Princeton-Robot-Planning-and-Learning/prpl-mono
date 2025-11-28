@@ -35,7 +35,7 @@ def load_run_data(run_dir: Path) -> Optional[Dict]:
     return {
         'env': config['env'],
         'seed': config['seed'],
-        'use_image': config['use_image'],
+        'rgb_observation': config['rgb_observation'],
         'vlm_model': config.get('vlm_model', 'unknown'),
         'temperature': config.get('temperature', 'unknown'),
         'results': results_df
@@ -67,7 +67,7 @@ def analyze_results(log_dir: Path) -> pd.DataFrame:
         for _, row in results.iterrows():
             all_data.append({
                 'env': data['env'],
-                'use_image': data['use_image'],
+                'rgb_observation': data['rgb_observation'],
                 'seed': data['seed'],
                 'eval_episode': row['eval_episode'],
                 'success': row['success'],
@@ -82,19 +82,19 @@ def analyze_results(log_dir: Path) -> pd.DataFrame:
     # Create DataFrame
     df = pd.DataFrame(all_data)
 
-    # Group by env and use_image, compute averages
-    grouped = df.groupby(['env', 'use_image']).agg({
+    # Group by env and rgb_observation, compute averages
+    grouped = df.groupby(['env', 'rgb_observation']).agg({
         'success': ['mean', 'std', 'count'],
         'planning_time': ['mean', 'std'],
         'steps': 'mean'
     }).reset_index()
 
     # Flatten column names
-    grouped.columns = pd.Index(['env', 'use_image', 'solve_rate', 'solve_rate_std',
+    grouped.columns = pd.Index(['env', 'rgb_observation', 'solve_rate', 'solve_rate_std',
                                  'num_runs', 'avg_planning_time', 'planning_time_std', 'avg_steps'])
 
-    # Sort by environment and use_image
-    grouped = grouped.sort_values(['env', 'use_image'], ascending=[True, False])
+    # Sort by environment and rgb_observation
+    grouped = grouped.sort_values(['env', 'rgb_observation'], ascending=[True, False])
 
     return grouped
 
@@ -112,7 +112,7 @@ def format_table(df: pd.DataFrame) -> str:
 
     for _, row in df.iterrows():
         env = row['env']
-        method = "With Image" if row['use_image'] else "Without Image"
+        method = "With Image" if row['rgb_observation'] else "Without Image"
         # Format with mean ± std explicitly
         solve_rate = f"{row['solve_rate']:.1%} ± {row['solve_rate_std']:.1%}"
         planning_time = f"{row['avg_planning_time']:.4f} ± {row['planning_time_std']:.4f}"
