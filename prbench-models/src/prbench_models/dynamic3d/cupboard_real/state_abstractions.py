@@ -25,7 +25,7 @@ AtPremanipulationTarget = Predicate(
     "AtPremanipulationTarget", [MujocoTidyBotRobotObjectType, MujocoObjectType]
 )
 OnFixture = Predicate("OnFixture", [MujocoObjectType, MujocoFixtureObjectType])
-OnGround = Predicate("OnGround", [MujocoMovableObjectType])
+OnGround = Predicate("OnGround", [MujocoObjectType])
 Holding = Predicate("Holding", [MujocoTidyBotRobotObjectType, MujocoMovableObjectType])
 HandEmpty = Predicate("HandEmpty", [MujocoTidyBotRobotObjectType])
 
@@ -91,7 +91,7 @@ class CupboardRealStateAbstractor:
         gripper_val = state.get(robot, "pos_gripper")
         if gripper_val > GraspThreshold:
             for target in movables:
-                if state.get(target, "z") > 0.2:  # this is a hack.
+                if state.get(target, "z") > 0.1:  # this is a hack.
                     atoms.add(GroundAtom(Holding, [robot, target]))
 
         # OnFixture.
@@ -140,4 +140,11 @@ class CupboardRealStateAbstractor:
         target = state.get_object_from_name("cube1")
         robot = state.get_object_from_name("robot")
         atoms = {GroundAtom(AtPremanipulationTarget, [robot, target])}
+        return RelationalAbstractGoal(atoms, self.state_abstractor)
+
+    def goal_deriver_grasp(self, state: ObjectCentricState) -> RelationalAbstractGoal:
+        """The goal is to grasp the target."""
+        target = state.get_object_from_name("cube1")
+        robot = state.get_object_from_name("robot")
+        atoms = {GroundAtom(Holding, [robot, target])}
         return RelationalAbstractGoal(atoms, self.state_abstractor)

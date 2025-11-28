@@ -10,6 +10,7 @@ from bilevel_planning.structs import (
 )
 from prbench.envs.dynamic3d.object_types import (
     MujocoObjectType,
+    MujocoMovableObjectType,
     MujocoTidyBotRobotObjectType,
 )
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import (
@@ -704,9 +705,9 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         # We can later implement sampling if it's helpful, but usually the user would
         # want to specify the target end effector pose themselves.
-        raise NotImplementedError
+        pass
 
-    def reset(self, x: ObjectCentricState) -> None:  # type: ignore # pylint: disable=arguments-differ
+    def reset(self, x: ObjectCentricState, params: Any | None = None) -> None:  # type: ignore # pylint: disable=arguments-differ
         # Initialize the PyBullet interface if this is the first time ever.
         if self._pybullet_sim is None:
             self._pybullet_sim = PyBulletSim(x)
@@ -1120,7 +1121,7 @@ def create_lifted_controllers(
 
     # Pick ground controller.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
-    target = Variable("?target", MujocoObjectType)
+    target = Variable("?target", MujocoMovableObjectType)
 
     LiftedPickGroundController: LiftedParameterizedController = (
         LiftedParameterizedController(
@@ -1131,7 +1132,7 @@ def create_lifted_controllers(
 
     # Place controller.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
-    target = Variable("?target", MujocoObjectType)
+    target = Variable("?target", MujocoMovableObjectType)
 
     LiftedPlaceGroundController: LiftedParameterizedController = (
         LiftedParameterizedController(
