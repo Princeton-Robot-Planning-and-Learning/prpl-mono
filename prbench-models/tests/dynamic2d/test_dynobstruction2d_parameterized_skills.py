@@ -2,6 +2,9 @@
 
 import numpy as np
 import prbench
+from bilevel_planning.trajectory_samplers.trajectory_sampler import (
+    TrajectorySamplingFailure,
+)
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
 from relational_structs.spaces import ObjectCentricBoxSpace
@@ -108,7 +111,7 @@ def test_pick_obstruction_controller():
             state = next_state
             if controller.terminated():
                 break
-        except:
+        except TrajectorySamplingFailure:
             break
 
     assert not is_successful

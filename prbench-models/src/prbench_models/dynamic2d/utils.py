@@ -211,10 +211,13 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
                 path = direct_path
             else:
                 # Use BiRRT to plan
-                path = birrt.query(start, end)
-                if path is None:
+                birrt_path = birrt.query(start, end)
+
+                if birrt_path is None:
                     # If planning fails, fall back to direct interpolation
                     path = list(extend_fn(start, end))
+                else:
+                    path = birrt_path
 
             # Convert path to actions
             for pt1, pt2 in zip(path[:-1], path[1:]):
