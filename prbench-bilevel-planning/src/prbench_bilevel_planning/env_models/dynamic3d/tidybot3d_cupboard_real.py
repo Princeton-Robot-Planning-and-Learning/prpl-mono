@@ -71,7 +71,6 @@ def create_bilevel_planning_models(
         state = x.copy()
         sim.set_state(state)
         obs, _, _, _, _ = sim.step(u)
-        import ipdb; ipdb.set_trace()
         return obs.copy()
 
     # Types.
