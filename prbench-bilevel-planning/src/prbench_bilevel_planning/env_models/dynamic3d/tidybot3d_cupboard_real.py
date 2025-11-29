@@ -52,7 +52,7 @@ def create_bilevel_planning_models(
     # State and goal abstractors.
     abstractor = CupboardRealStateAbstractor(sim)
     state_abstractor = abstractor.state_abstractor
-    goal_deriver = abstractor.goal_deriver_grasp
+    goal_deriver = abstractor.goal_deriver_grasp_move
 
     # Need to call reset to initialize the qpos, qvel.
     sim.reset()
@@ -71,6 +71,7 @@ def create_bilevel_planning_models(
         state = x.copy()
         sim.set_state(state)
         obs, _, _, _, _ = sim.step(u)
+        import ipdb; ipdb.set_trace()
         return obs.copy()
 
     # Types.
@@ -89,7 +90,7 @@ def create_bilevel_planning_models(
     MoveToTargetOperator = LiftedOperator(
         "MoveToTarget",
         [robot, target],
-        preconditions={LiftedAtom(HandEmpty, [robot]), LiftedAtom(OnGround, [target])},
+        preconditions=set(),
         add_effects={LiftedAtom(AtPremanipulationTarget, [robot, target])},
         delete_effects=set(),
     )
