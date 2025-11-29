@@ -1,0 +1,402 @@
+{
+    "robots": [
+        "tidybot"
+    ],
+    "fixtures": {
+        "table": {
+            "table_1": {
+                "shape": "rectangle",
+                "length": 0.8,
+                "width": 0.6,
+                "height": 0.4,
+                "thickness": 0.04,
+                "texture": "wood"
+            }
+        }
+    },
+    "regions": {
+        "ground_table_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    -2,
+                    -0.5,
+                    2,
+                    2.5
+                ]
+            ]
+        },
+        "table_1_object_init_region": {
+            "target": "table_1",
+            "ranges": [
+                [
+                    -0.035,
+                    -0.035,
+                    0.035,
+                    0.035
+                ]
+            ]
+        },
+        "table_1_object_goal_red_region": {
+            "target": "table_1",
+            "ranges": [
+                [
+                    -0.4,
+                    0.1,
+                    -0.2,
+                    0.3
+                ]
+            ],
+            "rgba": [1, 0, 0, 0.3]
+        },
+        "table_1_object_goal_green_region": {
+            "target": "table_1",
+            "ranges": [
+                [
+                    0.2,
+                    0.1,
+                    0.4,
+                    0.3
+                ]
+            ],
+            "rgba": [0, 1, 0, 0.3]
+        },
+        "table_1_object_goal_blue_region": {
+            "target": "table_1",
+            "ranges": [
+                [
+                    0.2,
+                    -0.3,
+                    0.4,
+                    -0.1
+                ]
+            ],
+            "rgba": [0, 0, 1, 0.3]
+        },
+        "table_1_object_goal_yellow_region": {
+            "target": "table_1",
+            "ranges": [
+                [
+                    -0.4,
+                    -0.3,
+                    -0.2,
+                    -0.1
+                ]
+            ],
+            "rgba": [1, 1, 0, 0.3]
+        }
+    },
+    "objects": {
+        "cube": {
+            "cube1": {
+                "size": 0.01,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube2": {
+                "size": 0.01,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube3": {
+                "size": 0.01,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube4": {
+                "size": 0.01,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube5": {
+                "size": 0.01,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube6": {
+                "size": 0.01,
+                "rgba": [0.1, 0.5, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube7": {
+                "size": 0.01,
+                "rgba": [0.1, 0.5, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube8": {
+                "size": 0.01,
+                "rgba": [0.1, 0.5, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube9": {
+                "size": 0.01,
+                "rgba": [0.1, 0.5, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube10": {
+                "size": 0.01,
+                "rgba": [0.1, 0.5, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube11": {
+                "size": 0.01,
+                "rgba": [0.1, 0.1, 0.5, 1],
+                "mass": 0.1
+            },
+            "cube12": {
+                "size": 0.01,
+                "rgba": [0.1, 0.1, 0.5, 1],
+                "mass": 0.1
+            },
+            "cube13": {
+                "size": 0.01,
+                "rgba": [0.1, 0.1, 0.5, 1],
+                "mass": 0.1
+            },
+            "cube14": {
+                "size": 0.01,
+                "rgba": [0.1, 0.1, 0.5, 1],
+                "mass": 0.1
+            },
+            "cube15": {
+                "size": 0.01,
+                "rgba": [0.1, 0.1, 0.5, 1],
+                "mass": 0.1
+            },
+            "cube16": {
+                "size": 0.01,
+                "rgba": [1.0, 1.0, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube17": {
+                "size": 0.01,
+                "rgba": [1.0, 1.0, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube18": {
+                "size": 0.01,
+                "rgba": [1.0, 1.0, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube19": {
+                "size": 0.01,
+                "rgba": [1.0, 1.0, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube20": {
+                "size": 0.01,
+                "rgba": [1.0, 1.0, 0.1, 1],
+                "mass": 0.1
+            }
+        }
+    },
+    "initial_state": [
+        [
+            "on",
+            "table_1",
+            "ground_table_init_region"
+        ],
+        [
+            "on",
+            "cube1",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube2",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube3",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube4",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube5",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube6",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube7",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube8",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube9",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube10",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube11",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube12",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube13",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube14",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube15",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube16",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube17",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube18",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube19",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube20",
+            "table_1_object_init_region"
+        ]
+    ],
+    "goal_state": [
+        [
+            "on",
+            "cube1",
+            "table_1_object_goal_red_region"
+        ],
+        [
+            "on",
+            "cube2",
+            "table_1_object_goal_red_region"
+        ],
+        [
+            "on",
+            "cube3",
+            "table_1_object_goal_red_region"
+        ],
+        [
+            "on",
+            "cube4",
+            "table_1_object_goal_red_region"
+        ],
+        [
+            "on",
+            "cube5",
+            "table_1_object_goal_red_region"
+        ],
+        [
+            "on",
+            "cube6",
+            "table_1_object_goal_green_region"
+        ],
+        [
+            "on",
+            "cube7",
+            "table_1_object_goal_green_region"
+        ],
+        [
+            "on",
+            "cube8",
+            "table_1_object_goal_green_region"
+        ],
+        [
+            "on",
+            "cube9",
+            "table_1_object_goal_green_region"
+        ],
+        [
+            "on",
+            "cube10",
+            "table_1_object_goal_green_region"
+        ],
+        [
+            "on",
+            "cube11",
+            "table_1_object_goal_blue_region"
+        ],
+        [
+            "on",
+            "cube12",
+            "table_1_object_goal_blue_region"
+        ],
+        [
+            "on",
+            "cube13",
+            "table_1_object_goal_blue_region"
+        ],
+        [
+            "on",
+            "cube14",
+            "table_1_object_goal_blue_region"
+        ],
+        [
+            "on",
+            "cube15",
+            "table_1_object_goal_blue_region"
+        ],
+        [
+            "on",
+            "cube16",
+            "table_1_object_goal_yellow_region"
+        ],
+        [
+            "on",
+            "cube17",
+            "table_1_object_goal_yellow_region"
+        ],
+        [
+            "on",
+            "cube18",
+            "table_1_object_goal_yellow_region"
+        ],
+        [
+            "on",
+            "cube19",
+            "table_1_object_goal_yellow_region"
+        ],
+        [
+            "on",
+            "cube20",
+            "table_1_object_goal_yellow_region"
+        ]
+    ]
+}

@@ -1,11 +1,11 @@
-# prbench/TidyBot3D-base_motion-o1-v0
-![random action GIF](assets/random_action_gifs/TidyBot3D-base_motion-o1.gif)
+# prbench/TidyBot3D-cupboard-o1-v0
+![random action GIF](assets/random_action_gifs/TidyBot3D-cupboard-o1.gif)
 
 ### Description
 A 3D mobile manipulation environment using the TidyBot platform.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: base_motion with 1 objects.
+Scene type: cupboard with 1 objects.
 
 The robot can control:
 - Base pose (x, y, theta)
@@ -14,7 +14,7 @@ The robot can control:
 - Gripper position (open/close)
 
 ### Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/TidyBot3D-base_motion-o1.gif)
+![initial state GIF](assets/initial_state_gifs/TidyBot3D-cupboard-o1.gif)
 
 ### Example Demonstration
 *(No demonstration GIFs available)*
@@ -64,7 +64,7 @@ The entries of an array in this Box space correspond to the following object fea
 
 
 ### Action Space
-Actions: base pos and yaw (3), arm joints (7), gripper pos (1)
+Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
 
 ### Rewards
 Reward function depends on the specific task:

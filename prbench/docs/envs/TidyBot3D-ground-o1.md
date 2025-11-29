@@ -64,7 +64,7 @@ The entries of an array in this Box space correspond to the following object fea
 
 
 ### Action Space
-Actions: base_pose (3), arm_pos (3), arm_quat (4), gripper_pos (1)
+Actions: base pos and yaw (3), arm joints (7), gripper pos (1)
 
 ### Rewards
 The primary reward is for successfully placing objects at their target locations.
