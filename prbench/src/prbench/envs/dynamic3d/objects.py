@@ -464,7 +464,7 @@ class MujocoFixture(abc.ABC):
     @abc.abstractmethod
     def sample_pose_in_region(
         self,
-        regions: list[list[float]],
+        region_name: str,
         np_random: np.random.Generator,
     ) -> tuple[float, float, float]:
         """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
@@ -481,6 +481,29 @@ class MujocoFixture(abc.ABC):
 
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
+        """
+
+    @abc.abstractmethod
+    def check_in_region(
+        self,
+        position: NDArray[np.float32],
+        region_name: str,
+    ) -> bool:
+        """Check if a given position is within the specified region.
+
+        Args:
+            position: Position as [x, y, z] array in world coordinates
+            region_name: Name of the region to check
+        Returns:
+            True if the position is within the specified region, False otherwise
+        """
+
+    @abc.abstractmethod
+    def visualize_regions(self) -> None:
+        """Visualize the fixture's regions in the MuJoCo environment.
+
+        This method adds visual elements to the MuJoCo XML to represent the regions
+        defined for this fixture.
         """
 
 
@@ -712,7 +735,7 @@ class Table(MujocoFixture):
 
     def sample_pose_in_region(
         self,
-        regions: list[list[float]],
+        region_name: str,
         np_random: np.random.Generator,
     ) -> tuple[float, float, float]:
         """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
@@ -730,20 +753,18 @@ class Table(MujocoFixture):
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
         """
-        if not regions:
-            raise ValueError("Regions list cannot be empty")
-
+        assert self.regions is not None, "Regions must be defined"
         # Randomly select one of the regions
-        selected_region = np_random.choice(regions)
+        selected_region = np_random.choice(self.regions[region_name]["ranges"])
 
         # Validate the selected region
-        if len(selected_region) != 4:
+        if len(selected_region) != 4:  # type: ignore[arg-type]
             raise ValueError(
                 f"Each region must have exactly 4 values "
                 f"[x_start, y_start, x_end, y_end], got {len(selected_region)}"
             )
 
-        x_start, y_start, x_end, y_end = selected_region
+        x_start, y_start, x_end, y_end = selected_region  # type: ignore[misc]
 
         # Validate bounds
         if x_start >= x_end:
@@ -764,6 +785,88 @@ class Table(MujocoFixture):
         world_z = z + self.position[2]
 
         return (world_x, world_y, world_z)
+
+    def check_in_region(
+        self,
+        position: NDArray[np.float32],
+        region_name: str,
+    ) -> bool:
+        """Check if a given position is within the specified region.
+
+        Args:
+            position: Position as [x, y, z] array in world coordinates
+            region_name: Name of the region to check
+        Returns:
+            True if the position is within the specified region, False otherwise
+        """
+        # Convert world coordinates to table-relative coordinates
+        table_x = position[0] - self.position[0]
+        table_y = position[1] - self.position[1]
+        table_z = position[2] - self.position[2]
+
+        table_placement_threshold = 0.01  # 1cm tolerance for placement
+
+        # Get the bounding box for the specified region
+        assert self.regions is not None, "Regions must be defined"
+        if region_name not in self.regions:
+            raise ValueError(f"Region '{region_name}' not found")
+
+        region_ranges = self.regions[region_name]["ranges"]
+
+        for region_range in region_ranges:
+            x_start, y_start, x_end, y_end = region_range
+
+            if (
+                x_start <= table_x <= x_end
+                and y_start <= table_y <= y_end
+                and self.table_height
+                <= table_z
+                <= (self.table_height + table_placement_threshold)
+            ):
+                return True
+
+        return False
+
+    def visualize_regions(self) -> None:
+        """Visualize the table's regions in the MuJoCo environment.
+
+        This method adds visual elements to the MuJoCo XML to represent the regions
+        defined for this table.
+        """
+        if self.regions is None:
+            return
+
+        for region_name, region_config in self.regions.items():
+            if "rgba" in region_config:
+                region_bounds_list = region_config["ranges"]
+                for region_bounds in region_bounds_list:
+                    x_start, y_start, x_end, y_end = region_bounds
+                    region_center_x = (x_start + x_end) / 2
+                    region_center_y = (y_start + y_end) / 2
+                    region_center_z = (
+                        self.table_height + self.position[2] + 0.01
+                    )  # Slightly above
+
+                    region_size_x = (x_end - x_start) / 2
+                    region_size_y = (y_end - y_start) / 2
+                    region_size_z = 0.005  # Thin box for visualization
+
+                    # Create geom element for the region visualization
+                    region_geom = ET.SubElement(self.xml_element, "geom")
+                    region_geom.set("name", f"{self.name}_{region_name}_region")
+                    region_geom.set("type", "box")
+                    region_geom.set(
+                        "size",
+                        f"{region_size_x} {region_size_y} {region_size_z}",
+                    )
+                    region_geom.set(
+                        "pos",
+                        f"{region_center_x} {region_center_y} {region_center_z}",
+                    )
+                    region_geom.set("rgba", " ".join(map(str, region_config["rgba"])))
+                    # Disable collision for visual-only representation
+                    region_geom.set("contype", "0")
+                    region_geom.set("conaffinity", "0")
 
     def __str__(self) -> str:
         """String representation of the table."""
@@ -850,7 +953,9 @@ class Cupboard(MujocoFixture):
 
         # Calculate derived properties
         self.num_shelves: int = len(self.shelf_heights) + 1  # +1 for the top shelf
-        self.cupboard_height: float = sum(self.shelf_heights) + self.shelf_thickness
+        self.cupboard_height: float = (
+            sum(self.shelf_heights) + self.num_shelves * self.shelf_thickness
+        )
 
         # Validate configuration
         if len(self.shelf_heights) < 1:
@@ -1065,7 +1170,8 @@ class Cupboard(MujocoFixture):
         shelf_thickness = float(
             fixture_config.get("shelf_thickness", Cupboard.default_shelf_thickness)
         )
-        cupboard_height = sum(shelf_heights_float) + shelf_thickness
+        num_shelves = len(shelf_heights_float) + 1  # +1 for the top shelf
+        cupboard_height = sum(shelf_heights_float) + num_shelves * shelf_thickness
 
         return [
             pos[0] - half_length,  # x_min
@@ -1078,7 +1184,7 @@ class Cupboard(MujocoFixture):
 
     def sample_pose_in_region(
         self,
-        regions: list[list[float]],
+        region_name: str,
         np_random: np.random.Generator,
     ) -> tuple[float, float, float]:
         """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
@@ -1098,20 +1204,18 @@ class Cupboard(MujocoFixture):
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
         """
-        if not regions:
-            raise ValueError("Regions list cannot be empty")
-
+        assert self.regions is not None, "Regions must be defined"
         # Randomly select one of the regions
-        selected_region = np_random.choice(regions)
+        selected_region = np_random.choice(self.regions[region_name]["ranges"])
 
         # Validate the selected region
-        if len(selected_region) != 4:
+        if len(selected_region) != 4:  # type: ignore[arg-type]
             raise ValueError(
                 f"Each region must have exactly 4 values "
                 f"[x_start, y_start, x_end, y_end], got {len(selected_region)}"
             )
 
-        x_start, y_start, x_end, y_end = selected_region
+        x_start, y_start, x_end, y_end = selected_region  # type: ignore[misc]
 
         # Validate bounds
         if x_start >= x_end:
@@ -1144,6 +1248,57 @@ class Cupboard(MujocoFixture):
         world_z = z + self.position[2]
 
         return (world_x, world_y, world_z)
+
+    def check_in_region(
+        self,
+        position: NDArray[np.float32],
+        region_name: str,
+    ) -> bool:
+        """Check if a given position is within the specified region.
+
+        This checks if the
+        position is on the top shelf surface.
+        Args:
+            position: Position as [x, y, z] array in world coordinates
+            region_name: Name of the region to check
+        Returns:
+            True if the position is within the specified region, False otherwise
+        """
+        # Convert world coordinates to cupboard-relative coordinates
+        cupboard_x = position[0] - self.position[0]
+        cupboard_y = position[1] - self.position[1]
+        cupboard_z = position[2] - self.position[2]
+
+        cupboard_placement_threshold = 0.02  # 2cm tolerance for placement
+
+        # Get the bounding box for the specified region
+        assert self.regions is not None, "Regions must be defined"
+        if region_name not in self.regions:
+            raise ValueError(f"Region '{region_name}' not found")
+
+        region_ranges = self.regions[region_name]["ranges"]
+
+        for region_range in region_ranges:
+            x_start, y_start, x_end, y_end = region_range
+
+            if (
+                x_start <= cupboard_x <= x_end
+                and y_start <= cupboard_y <= y_end
+                and self.cupboard_height
+                <= cupboard_z
+                <= (self.cupboard_height + cupboard_placement_threshold)
+            ):
+                return True
+
+        return False
+
+    def visualize_regions(self) -> None:
+        """Visualize the cupboard's regions in the MuJoCo environment.
+
+        This method adds visual elements to the MuJoCo XML to represent the regions
+        defined for this cupboard.
+        """
+        # Note: Cupboard region visualization not yet implemented
 
     def __str__(self) -> str:
         """String representation of the cupboard."""
