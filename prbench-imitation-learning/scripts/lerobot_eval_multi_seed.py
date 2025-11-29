@@ -245,50 +245,34 @@ def eval_multi_seed_main(cfg: MultiSeedEvalConfig):
         )
     )
     logging.info(colored("\nSuccess Rate:", "green", attrs=["bold"]))
-    logging.info(
-        f"  Mean: {all_results['aggregated_metrics']['success_rate']['mean']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
-    logging.info(
-        f"  Std:  {all_results['aggregated_metrics']['success_rate']['std']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
-    logging.info(
-        f"  Min:  {all_results['aggregated_metrics']['success_rate']['min']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
-    logging.info(
-        f"  Max:  {all_results['aggregated_metrics']['success_rate']['max']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
+    aggregated_metrics = all_results["aggregated_metrics"]
+    success_rate_metrics = aggregated_metrics["success_rate"]  # type: ignore
+    logging.info(f"  Mean: {success_rate_metrics['mean']:.4f}")
+    logging.info(f"  Std:  {success_rate_metrics['std']:.4f}")
+    logging.info(f"  Min:  {success_rate_metrics['min']:.4f}")
+    logging.info(f"  Max:  {success_rate_metrics['max']:.4f}")
 
     logging.info(
         colored("\nAvg Sum Rewards (Successful Episodes):", "green", attrs=["bold"])
     )
-    logging.info(
-        f"  Mean: {all_results['aggregated_metrics']['avg_sum_rewards_successful']['mean']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
-    logging.info(
-        f"  Std:  {all_results['aggregated_metrics']['avg_sum_rewards_successful']['std']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
-    logging.info(
-        f"  Min:  {all_results['aggregated_metrics']['avg_sum_rewards_successful']['min']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
-    logging.info(
-        f"  Max:  {all_results['aggregated_metrics']['avg_sum_rewards_successful']['max']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
+    avg_sum_rewards_successful_metrics = aggregated_metrics[  # type: ignore
+        "avg_sum_rewards_successful"
+    ]
+    logging.info(f"  Mean: {avg_sum_rewards_successful_metrics['mean']:.4f}")
+    logging.info(f"  Std:  {avg_sum_rewards_successful_metrics['std']:.4f}")
+    logging.info(f"  Min:  {avg_sum_rewards_successful_metrics['min']:.4f}")
+    logging.info(f"  Max:  {avg_sum_rewards_successful_metrics['max']:.4f}")
 
     logging.info(
         colored("\nWall-clock Time per Episode (seconds):", "green", attrs=["bold"])
     )
-    logging.info(
-        f"  Mean: {all_results['aggregated_metrics']['wall_clock_time_per_episode']['mean']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
-    logging.info(
-        f"  Std:  {all_results['aggregated_metrics']['wall_clock_time_per_episode']['std']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
-    logging.info(
-        f"  Min:  {all_results['aggregated_metrics']['wall_clock_time_per_episode']['min']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
-    logging.info(
-        f"  Max:  {all_results['aggregated_metrics']['wall_clock_time_per_episode']['max']:.4f}"  # type: ignore # pylint: disable=line-too-long
-    )
+    wall_clock_time_per_episode_metrics = aggregated_metrics[  # type: ignore
+        "wall_clock_time_per_episode"
+    ]
+    logging.info(f"  Mean: {wall_clock_time_per_episode_metrics['mean']:.4f}")
+    logging.info(f"  Std:  {wall_clock_time_per_episode_metrics['std']:.4f}")
+    logging.info(f"  Min:  {wall_clock_time_per_episode_metrics['min']:.4f}")
+    logging.info(f"  Max:  {wall_clock_time_per_episode_metrics['max']:.4f}")
 
     # Save results to JSON
     results_file = output_dir / "multi_seed_eval_results.json"
