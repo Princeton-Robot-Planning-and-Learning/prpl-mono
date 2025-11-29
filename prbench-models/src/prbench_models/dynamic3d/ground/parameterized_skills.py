@@ -100,9 +100,13 @@ class MoveToTargetGroundController(
         self._current_params: np.ndarray | None = None
         self._current_base_motion_plan: list[SE2] | None = None
 
-    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
-        distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
-        rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator, rotate: bool = False) -> Any:
+        if rotate:
+            distance = 0.9
+            rot = - np.pi / 2
+        else:
+            distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
+            rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
     def reset(
@@ -705,7 +709,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         # We can later implement sampling if it's helpful, but usually the user would
         # want to specify the target end effector pose themselves.
-        pass
+        return None
 
     def reset(self, x: ObjectCentricState, params: Any | None = None) -> None:  # type: ignore # pylint: disable=arguments-differ
         # Initialize the PyBullet interface if this is the first time ever.
@@ -736,7 +740,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         target_end_effector_pose = multiply_poses(
             target_grap_pose_world,
             Pose(
-                (0.015, 0, 0.03),  # offsets in end-effector local frame
+                (0.005, 0, 0.03),  # offsets in end-effector local frame
                 (0.707, 0.707, 0, 0),  # orientation
             ),
         )

@@ -4,6 +4,9 @@ from typing import Callable, Hashable, TypeVar
 
 import numpy as np
 
+from prbench_models.dynamic3d.ground.parameterized_skills import MoveToTargetGroundController
+from relational_structs import GroundAtom
+from prbench_models.dynamic3d.cupboard_real.state_abstractions import Holding
 from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
 from bilevel_planning.structs import ParameterizedController, TransitionFailure
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
@@ -51,11 +54,17 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
         # Initialize the trajectory.
         x_traj: list[_X] = [x]
         u_traj: list[_U] = []
-
-        # Sample parameters for the controller.
-        params = controller.sample_parameters(x, rng)
-
+        
+        import ipdb; ipdb.set_trace()
         # Reset the controller.
+        # Sample parameters for the controller.
+        # robot = x.get_object_from_name("robot")
+        # cube1 = x.get_object_from_name("cube1")
+        # if isinstance(controller, MoveToTargetGroundController) and GroundAtom(Holding, [robot, cube1]) in s.atoms:
+        #     params = controller.sample_parameters(x, rng, rotate = True)
+        #     controller.reset(x, params, disable_collision_objects=[cube1.name])
+        # else: 
+        params = controller.sample_parameters(x, rng)
         controller.reset(x, params)
 
         # Simulate until termination.
