@@ -705,7 +705,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         # want to specify the target end effector pose themselves.
         return None
 
-    def reset(self, x: ObjectCentricState, params: Any | None = None) -> None:  # type: ignore # pylint: disable=arguments-differ
+    def reset(self, x: ObjectCentricState, params: Any | None = None) -> None:
         # Initialize the PyBullet interface if this is the first time ever.
         if self._pybullet_sim is None:
             self._pybullet_sim = PyBulletSim(x)
