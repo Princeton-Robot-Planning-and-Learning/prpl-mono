@@ -1,0 +1,339 @@
+{
+    "robots": [
+        "tidybot"
+    ],
+    "fixtures": {
+        "table": {
+            "table_1": {
+                "shape": "rectangle",
+                "length": 0.8,
+                "width": 0.6,
+                "height": 0.4,
+                "thickness": 0.04,
+                "texture": "wood"
+            }
+        },
+        "cupboard": {
+            "cupboard_1": {
+                "length": 0.45,
+                "depth": 0.3,
+                "shelf_heights": [0.10, 0.10, 0.10, 0.45],
+                "shelf_partitions": [[], [], [], [-0.075, 0.075]],
+                "side_and_back_open": true
+            }
+        }
+    },
+    "regions": {
+        "ground_table_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    -0.2,
+                    0.8,
+                    0.1,
+                    1.2
+                ]
+            ]
+        },
+        "ground_cupboard_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    1.2,
+                    0.8,
+                    1.8,
+                    1.2
+                ]
+            ]
+        },
+        "table_1_object_init_region": {
+            "target": "table_1",
+            "ranges": [
+                [
+                    -0.3,
+                    -0.2,
+                    0.3,
+                    0.2
+                ]
+            ]
+        },
+        "cupboard_1_shelf_0_red_goal": {
+            "target": "cupboard_1",
+            "shelf": 0,
+            "ranges": [
+                [
+                    -0.20,
+                    -0.13,
+                    0.20,
+                    0.13
+                ]
+            ],
+            "rgba": [1.0, 0.0, 0.0, 0.3]
+        },
+        "cupboard_1_shelf_1_green_goal": {
+            "target": "cupboard_1",
+            "shelf": 1,
+            "ranges": [
+                [
+                    -0.20,
+                    -0.13,
+                    0.20,
+                    0.13
+                ]
+            ],
+            "rgba": [0.0, 1.0, 0.0, 0.3]
+        },
+        "cupboard_1_shelf_2_blue_goal": {
+            "target": "cupboard_1",
+            "shelf": 2,
+            "ranges": [
+                [
+                    -0.20,
+                    -0.13,
+                    0.20,
+                    0.13
+                ]
+            ],
+            "rgba": [0.0, 0.0, 1.0, 0.3]
+        },
+        "cupboard_1_shelf_3_red_partition_goal": {
+            "target": "cupboard_1",
+            "shelf": 3,
+            "ranges": [
+                [
+                    -0.21,
+                    -0.13,
+                    -0.09,
+                    0.13
+                ]
+            ],
+            "rgba": [1.0, 0.0, 0.0, 0.3]
+        },
+        "cupboard_1_shelf_3_green_partition_goal": {
+            "target": "cupboard_1",
+            "shelf": 3,
+            "ranges": [
+                [
+                    -0.06,
+                    -0.13,
+                    0.06,
+                    0.13
+                ]
+            ],
+            "rgba": [0.0, 1.0, 0.0, 0.3]
+        },
+        "cupboard_1_shelf_3_blue_partition_goal": {
+            "target": "cupboard_1",
+            "shelf": 3,
+            "ranges": [
+                [
+                    0.09,
+                    -0.13,
+                    0.21,
+                    0.13
+                ]
+            ],
+            "rgba": [0.0, 0.0, 1.0, 0.3]
+        }
+    },
+    "objects": {
+        "cuboid": {
+            "red_cuboid1": {
+                "size": [0.015, 0.35, 0.015],
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.1
+            },
+            "green_cuboid1": {
+                "size": [0.015, 0.35, 0.015],
+                "rgba": [0.1, 0.5, 0.1, 1],
+                "mass": 0.1
+            },
+            "blue_cuboid1": {
+                "size": [0.015, 0.35, 0.015],
+                "rgba": [0.1, 0.1, 0.5, 1],
+                "mass": 0.1
+            }
+        },
+        "cube": {
+            "red_cube1": {
+                "size": 0.01,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.05
+            },
+            "red_cube2": {
+                "size": 0.01,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.05
+            },
+            "red_cube3": {
+                "size": 0.01,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.05
+            },
+            "green_cube1": {
+                "size": 0.01,
+                "rgba": [0.1, 0.5, 0.1, 1],
+                "mass": 0.05
+            },
+            "green_cube2": {
+                "size": 0.01,
+                "rgba": [0.1, 0.5, 0.1, 1],
+                "mass": 0.05
+            },
+            "green_cube3": {
+                "size": 0.01,
+                "rgba": [0.1, 0.5, 0.1, 1],
+                "mass": 0.05
+            },
+            "blue_cube1": {
+                "size": 0.01,
+                "rgba": [0.1, 0.1, 0.5, 1],
+                "mass": 0.05
+            },
+            "blue_cube2": {
+                "size": 0.01,
+                "rgba": [0.1, 0.1, 0.5, 1],
+                "mass": 0.05
+            },
+            "blue_cube3": {
+                "size": 0.01,
+                "rgba": [0.1, 0.1, 0.5, 1],
+                "mass": 0.05
+            }
+        }
+    },
+    "initial_state": [
+        [
+            "on",
+            "table_1",
+            "ground_table_init_region"
+        ],
+        [
+            "on",
+            "cupboard_1",
+            "ground_cupboard_init_region"
+        ],
+        [
+            "on",
+            "red_cuboid1",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "green_cuboid1",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "blue_cuboid1",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "red_cube1",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "red_cube2",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "red_cube3",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "green_cube1",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "green_cube2",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "green_cube3",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "blue_cube1",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "blue_cube2",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "blue_cube3",
+            "table_1_object_init_region"
+        ]
+    ],
+    "goal_state": [
+        [
+            "on",
+            "red_cuboid1",
+            "cupboard_1_shelf_3_red_partition_goal"
+        ],
+        [
+            "on",
+            "green_cuboid1",
+            "cupboard_1_shelf_3_green_partition_goal"
+        ],
+        [
+            "on",
+            "blue_cuboid1",
+            "cupboard_1_shelf_3_blue_partition_goal"
+        ],
+        [
+            "on",
+            "red_cube1",
+            "cupboard_1_shelf_0_red_goal"
+        ],
+        [
+            "on",
+            "red_cube2",
+            "cupboard_1_shelf_0_red_goal"
+        ],
+        [
+            "on",
+            "red_cube3",
+            "cupboard_1_shelf_0_red_goal"
+        ],
+        [
+            "on",
+            "green_cube1",
+            "cupboard_1_shelf_1_green_goal"
+        ],
+        [
+            "on",
+            "green_cube2",
+            "cupboard_1_shelf_1_green_goal"
+        ],
+        [
+            "on",
+            "green_cube3",
+            "cupboard_1_shelf_1_green_goal"
+        ],
+        [
+            "on",
+            "blue_cube1",
+            "cupboard_1_shelf_2_blue_goal"
+        ],
+        [
+            "on",
+            "blue_cube2",
+            "cupboard_1_shelf_2_blue_goal"
+        ],
+        [
+            "on",
+            "blue_cube3",
+            "cupboard_1_shelf_2_blue_goal"
+        ]
+    ]
+}

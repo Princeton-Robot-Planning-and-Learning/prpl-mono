@@ -42,6 +42,7 @@ from prbench.envs.dynamic3d.robots import (
     TidyBotRobotEnv,
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
+from prbench.envs.dynamic3d.utils import check_in_region
 
 
 @dataclass(frozen=True)
@@ -227,12 +228,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         fixture_yaw = fixture_pose["yaw"]
 
                         # Find regions for this fixture if specified
-                        regions = {}
-                        fixture_regions = self.task_config.get("regions", {})
-                        for region_name, region_config in fixture_regions.items():
+                        regions_in_fixture = {}
+                        all_regions = self.task_config.get("regions", {})
+                        for region_name, region_config in all_regions.items():
                             if region_config["target"] == fixture_name:
-                                region_ranges = region_config["ranges"]
-                                regions[region_name] = region_ranges
+                                regions_in_fixture[region_name] = region_config
 
                         # Create new fixture with configuration dictionary
                         fixture_cls = get_fixture_class(fixture_type)
@@ -241,8 +241,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                             fixture_config=fixture_config,
                             position=fixture_pos,
                             yaw=fixture_yaw,
-                            regions=regions,
+                            regions=regions_in_fixture,
                         )
+                        new_fixture.visualize_regions()
                         self._fixtures_dict[fixture_name] = new_fixture
                         fixture_body = new_fixture.xml_element
                         worldbody.append(fixture_body)
@@ -306,7 +307,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     )
                     fixture = self._fixtures_dict[target_fixture]
                     pos_x, pos_y, pos_z = fixture.sample_pose_in_region(
-                        region_ranges, self.np_random
+                        region_name, self.np_random
                     )
 
                 # Randomize orientation around Z-axis (yaw)
@@ -392,6 +393,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         assert self._robot_env.sim is not None, "Simulation not initialized"
         self._robot_env.sim.forward()
 
+        # Update the cached current state
+        self._current_state = self._get_object_centric_state()
+
     def _visualize_image_in_window(
         self, image: NDArray[np.uint8], window_name: str
     ) -> None:
@@ -460,6 +464,42 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         truncated = False
 
         return self._get_current_state(), reward, terminated, truncated, {}
+
+    def _check_goals(self) -> bool:
+        """Check if the goal has been achieved."""
+        state = self._get_current_state()
+        goal_predicates = self.task_config.get("goal_state", [])
+        successes = []
+        for pred in goal_predicates:
+            if pred[0] == "on":
+                obj_name = pred[1]
+                region_name = pred[2]
+                obj = state.get_object_from_name(obj_name)
+                position = np.array(
+                    [
+                        state.get(obj, "x"),
+                        state.get(obj, "y"),
+                        state.get(obj, "z"),
+                    ],
+                    dtype=np.float32,
+                )
+                region_config = self.task_config["regions"][region_name]
+
+                if region_config["target"] == "ground":
+                    # Check pose directly on the ground in the world frame
+                    region_ranges = region_config["ranges"]
+                    in_region = check_in_region(position, region_ranges)
+                else:
+                    # Sample pose on a fixture (table, etc.)
+                    fixture = self._fixtures_dict[region_config["target"]]
+                    in_region = fixture.check_in_region(position, region_name)
+
+                successes.append(in_region)
+            else:
+                raise NotImplementedError(
+                    f"Goal predicate {pred[0]} not implemented in _check_goals"
+                )
+        return all(successes)
 
     def reward(self, obs: dict[str, Any]) -> float:
         """Calculate reward based on task completion."""
