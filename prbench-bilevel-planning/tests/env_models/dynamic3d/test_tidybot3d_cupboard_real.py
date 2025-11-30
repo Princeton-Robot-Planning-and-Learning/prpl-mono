@@ -37,9 +37,6 @@ def test_tidybot3d_cupboard_bilevel_planning():
 
     agent.reset(obs, info)
     for _ in range(400):
-        print(
-            "length of current plan:", len(agent._current_plan) # pylint: disable=protected-access
-        )
         action = agent.step()
         obs, reward, terminated, truncated, info = env.step(action)
         total_reward += reward
