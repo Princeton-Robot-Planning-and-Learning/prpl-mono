@@ -72,7 +72,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     max_action_mag: float = 0.05
 
     # This is used to check whether a grasped object can be placed on a surface.
-    min_placement_dist: float = 5e-3  # this is a more reasonable default
+    min_placement_dist: float = 5e-3
 
     # For rendering.
     render_dpi: int = 300

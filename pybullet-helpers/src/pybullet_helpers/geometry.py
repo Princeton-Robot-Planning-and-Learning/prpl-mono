@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Iterator, NamedTuple, cast
+from typing import Iterator, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
 import pybullet as p
 from pybullet_utils.transformations import (
     euler_from_quaternion,
-    quaternion_from_euler,
+)
+from pybullet_utils.transformations import (
+    quaternion_from_euler as putil_quat_from_euler,)
+from pybullet_utils.transformations import (
     quaternion_from_matrix,
 )
 from scipy.spatial.transform import Rotation as ScipyRotation
@@ -18,6 +21,12 @@ from scipy.spatial.transform import Slerp
 Pose3D = tuple[float, float, float]
 Quaternion = tuple[float, float, float, float]
 RollPitchYaw = tuple[float, float, float]
+
+
+def quaternion_from_euler(rpy: RollPitchYaw) -> Quaternion:
+    """Convert a euler angle into a quaternion."""
+    qx, qy, qz, qw = putil_quat_from_euler(*rpy)
+    return (qx, qy, qz, qw)
 
 
 class Pose(NamedTuple):
@@ -35,9 +44,7 @@ class Pose(NamedTuple):
     @classmethod
     def from_rpy(cls, translation: Pose3D, rpy: RollPitchYaw) -> Pose:
         """Create a Pose from translation and Euler roll-pitch-yaw angles."""
-        # quaternion_from_euler returns an ndarray; convert to tuple for the
-        # Quaternion type alias.
-        return cls(translation, cast(Quaternion, tuple(quaternion_from_euler(*rpy))))
+        return cls(translation, quaternion_from_euler(rpy))
 
     @classmethod
     def from_matrix(cls, matrix: npt.NDArray) -> Pose:
@@ -125,8 +132,8 @@ def rotate_pose(
     """Rotate a pose by the given rpy to make a new pose."""
     # Ensure we have tuple quaternions when passed to matrix_from_quat which
     # expects a Quaternion typed value.
-    current_orn = cast(Quaternion, tuple(pose.orientation))
-    rot_orn = cast(Quaternion, tuple(quaternion_from_euler(roll, pitch, yaw)))
+    current_orn = pose.orientation
+    rot_orn = quaternion_from_euler((roll, pitch, yaw))
     current_mat = matrix_from_quat(current_orn)
     rot_mat = matrix_from_quat(rot_orn)
     new_mat = current_mat @ rot_mat

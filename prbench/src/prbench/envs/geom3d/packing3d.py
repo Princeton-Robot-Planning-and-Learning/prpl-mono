@@ -48,7 +48,7 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.25)
 
-    # rack (target) region.
+    # Rack (target) region.
     rack_half_extents: tuple[float, float, float] = (0.1, 0.15, 0.02)
     rack_wall_thickness: float = 0.01
     rack_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
@@ -320,7 +320,7 @@ class ObjectCentricPacking3DEnv(
         )
         set_pose(self.table_id, self.config.table_pose, self.physics_client_id)
 
-        # rack (created in reset because geometry could be randomized later)
+        # Rack (created in reset because geometry could be randomized later)
         self._rack_half_extents = self.config.rack_half_extents
         self._rack_id = create_pybullet_hollow_box(
             self.config.rack_rgba,
@@ -565,7 +565,7 @@ class ObjectCentricPacking3DEnv(
                     + part_z_half_extent * 2
                 )
 
-                # check that objects are not initialized too close to rack
+                # Check that objects are not initialized too close to rack
                 rack_pose = get_pose(self._rack_id, self.physics_client_id)
                 rack_x_min = (
                     rack_pose.position[0]
@@ -616,7 +616,7 @@ class ObjectCentricPacking3DEnv(
             physics_client_id=self.physics_client_id,
         )
         if self._rack_id is not None:
-            # rack pose expected as a cuboid in the state
+            # Rack pose expected as a cuboid in the state
             set_pose(self._rack_id, obs.get_object_pose("rack"), self.physics_client_id)
 
         parts = obs.part_poses
