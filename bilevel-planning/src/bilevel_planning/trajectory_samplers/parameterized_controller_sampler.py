@@ -3,11 +3,12 @@
 from typing import Callable, Hashable, TypeVar
 
 import numpy as np
-from prbench_models.dynamic3d.cupboard_real.state_abstractions import Holding
+from prbench.envs.dynamic3d.object_types import (
+    MujocoFixtureObjectType,
+)
 from prbench_models.dynamic3d.ground.parameterized_skills import (
     MoveToTargetGroundController,
 )
-from relational_structs import GroundAtom
 
 from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
 from bilevel_planning.structs import ParameterizedController, TransitionFailure
@@ -61,14 +62,12 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
         # Reset the controller.
         # Sample parameters for the controller.
         if isinstance(controller, MoveToTargetGroundController):
-            robot = x.get_object_from_name("robot")  # type: ignore
-            cube1 = x.get_object_from_name("cube1")  # type: ignore
-            if GroundAtom(Holding, [robot, cube1]) in s.atoms:  # type: ignore
+            if a.parameters[1].type == MujocoFixtureObjectType:  # type: ignore
                 rotate = True
 
         if rotate:
             params = controller.sample_parameters(x, rng, rotate=True)  # type: ignore
-            controller.reset(x, params, disable_collision_objects=[cube1.name])  # type: ignore # pylint: disable=line-too-long
+            controller.reset(x, params, disable_collision_objects=["cube1"])  # type: ignore # pylint: disable=line-too-long
         else:
             params = controller.sample_parameters(x, rng)
             controller.reset(x, params)
