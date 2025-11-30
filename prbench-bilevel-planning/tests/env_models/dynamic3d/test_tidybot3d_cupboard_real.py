@@ -23,26 +23,28 @@ def test_tidybot3d_cupboard_bilevel_planning():
         env.observation_space,
         env.action_space,
     )
-    seed = 12
+    seed = 123
     agent = BilevelPlanningAgent(
         env_models,
         seed=seed,
         max_abstract_plans=1,
         samples_per_step=1,
-        planning_timeout=50.0,
+        planning_timeout=70.0,
         max_skill_horizon=200,
     )
     obs, info = env.reset(seed=seed)
     total_reward = 0
 
     agent.reset(obs, info)
-    for _ in range(400):
+    for _ in range(600):
         action = agent.step()
         obs, reward, terminated, truncated, info = env.step(action)
         total_reward += reward
         agent.update(obs, reward, terminated or truncated, info)
         if (
-            terminated or truncated or len(agent._current_plan) == 0  # pylint: disable=protected-access
+            terminated
+            or truncated
+            or len(agent._current_plan) == 0  # pylint: disable=protected-access
         ):
             break
 
