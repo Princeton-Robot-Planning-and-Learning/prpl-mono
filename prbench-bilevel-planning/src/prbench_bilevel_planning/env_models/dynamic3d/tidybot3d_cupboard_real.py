@@ -8,22 +8,23 @@ from bilevel_planning.structs import (
 from gymnasium.spaces import Space
 from numpy.typing import NDArray
 from prbench.envs.dynamic3d.object_types import (
-    MujocoObjectType,
-    MujocoTidyBotRobotObjectType,
     MujocoFixtureObjectType,
     MujocoMovableObjectType,
+    MujocoObjectType,
+    MujocoTidyBotRobotObjectType,
 )
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBot3DRobotActionSpace
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
-from prbench_models.dynamic3d.ground.parameterized_skills import (
-    create_lifted_controllers,
-)
 from prbench_models.dynamic3d.cupboard_real.state_abstractions import (
     AtPremanipulationTarget,
     CupboardRealStateAbstractor,
-    Holding,
     HandEmpty,
-    OnGround
+    Holding,
+    OnFixture,
+    OnGround,
+)
+from prbench_models.dynamic3d.ground.parameterized_skills import (
+    create_lifted_controllers,
 )
 from relational_structs import (
     LiftedAtom,
@@ -52,7 +53,7 @@ def create_bilevel_planning_models(
     # State and goal abstractors.
     abstractor = CupboardRealStateAbstractor(sim)
     state_abstractor = abstractor.state_abstractor
-    goal_deriver = abstractor.goal_deriver_grasp_move
+    goal_deriver = abstractor.goal_deriver_grasp
 
     # Need to call reset to initialize the qpos, qvel.
     sim.reset()
@@ -74,13 +75,18 @@ def create_bilevel_planning_models(
         return obs.copy()
 
     # Types.
-    types = {MujocoTidyBotRobotObjectType, MujocoObjectType, MujocoFixtureObjectType, MujocoMovableObjectType} # pylint: disable=line-too-long
+    types = {
+        MujocoTidyBotRobotObjectType,
+        MujocoObjectType,
+        MujocoFixtureObjectType,
+        MujocoMovableObjectType,
+    }  # pylint: disable=line-too-long
 
     # Create the state space.
     state_space = ObjectCentricStateSpace(types)
 
     # Predicates.
-    predicates = {AtPremanipulationTarget, Holding, HandEmpty, OnGround}
+    predicates = {AtPremanipulationTarget, Holding, HandEmpty, OnGround, OnFixture}
 
     # Operators.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
@@ -101,20 +107,54 @@ def create_bilevel_planning_models(
     PickTargetOperator = LiftedOperator(
         "pick_ground",
         [robot, target],
-        preconditions={LiftedAtom(HandEmpty, [robot]), LiftedAtom(AtPremanipulationTarget, [robot, target]), LiftedAtom(OnGround, [target])},
+        preconditions={
+            LiftedAtom(HandEmpty, [robot]),
+            LiftedAtom(AtPremanipulationTarget, [robot, target]),
+            LiftedAtom(OnGround, [target]),
+        },
         add_effects={LiftedAtom(Holding, [robot, target])},
-        delete_effects={LiftedAtom(HandEmpty, [robot]), LiftedAtom(AtPremanipulationTarget, [robot, target]), LiftedAtom(OnGround, [target])},
+        delete_effects={
+            LiftedAtom(HandEmpty, [robot]),
+            LiftedAtom(AtPremanipulationTarget, [robot, target]),
+            LiftedAtom(OnGround, [target]),
+        },
+    )
+
+    # Place cupboard controller.
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
+    target = Variable("?target", MujocoMovableObjectType)
+    target_place = Variable("?target_place", MujocoFixtureObjectType)
+
+    PlaceTargetOperator = LiftedOperator(
+        "place_target",
+        [robot, target, target_place],
+        preconditions={
+            LiftedAtom(Holding, [robot, target]),
+            LiftedAtom(AtPremanipulationTarget, [robot, target_place]),
+        },
+        add_effects={
+            LiftedAtom(HandEmpty, [robot]),
+            LiftedAtom(AtPremanipulationTarget, [robot, target]),
+            LiftedAtom(AtPremanipulationTarget, [robot, target_place]),
+            LiftedAtom(OnFixture, [target, target_place]),
+        },
+        delete_effects={
+            LiftedAtom(Holding, [robot, target]),
+            LiftedAtom(AtPremanipulationTarget, [robot, target_place]),
+        },
     )
 
     # Controllers.
     controllers = create_lifted_controllers(action_space, sim.initial_constant_state)
     LiftedMoveToTargetController = controllers["move_to_target"]
     LiftedPickGroundController = controllers["pick_ground"]
+    LiftedPlaceGroundController = controllers["place_ground"]
 
     # Finalize the skills.
     skills = {
         LiftedSkill(MoveToTargetOperator, LiftedMoveToTargetController),
         LiftedSkill(PickTargetOperator, LiftedPickGroundController),
+        LiftedSkill(PlaceTargetOperator, LiftedPlaceGroundController),
     }
 
     # Finalize the models.
