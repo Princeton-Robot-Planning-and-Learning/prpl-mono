@@ -46,7 +46,6 @@ from prbench_models.dynamic3d.utils import (
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
 GRIPPER_OPEN_THRESHOLD = 0.01
 GRIPPER_CLOSED_THRESHOLD = 0.02
-GRIPPER_CLOSED_VALUE = 0.6
 WAYPOINT_TOL = 1e-2
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.3, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi, np.pi)
@@ -186,9 +185,7 @@ class MoveToTargetGroundController(
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        if x.get(robot_obj, "pos_gripper") > 0.2:
-            return GRIPPER_CLOSED_VALUE
-        return 0.0
+        return x.get(robot_obj, "pos_gripper")
 
     def _robot_is_close_to_pose(self, pose: SE2, atol: float = WAYPOINT_TOL) -> bool:
         robot_pose = self._get_current_robot_pose()
@@ -442,9 +439,7 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        if x.get(robot_obj, "pos_gripper") > 0.2:
-            return GRIPPER_CLOSED_VALUE
-        return 0.0
+        return x.get(robot_obj, "pos_gripper")
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
         current_conf = self._get_current_robot_arm_conf()
@@ -583,11 +578,7 @@ class MoveArmToEndEffectorController(
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        if (
-            x.get(robot_obj, "pos_gripper") > 0.2
-        ):  # to mitigate the pos_gripper not accurate
-            return GRIPPER_CLOSED_VALUE
-        return 0.0
+        return x.get(robot_obj, "pos_gripper")
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
         current_conf = self._get_current_robot_arm_conf()
@@ -873,11 +864,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        if (
-            x.get(robot_obj, "pos_gripper") > 0.2
-        ):  # to mitigate the pos_gripper not accurate
-            return GRIPPER_CLOSED_VALUE
-        return 0.0
+        return x.get(robot_obj, "pos_gripper")
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
         current_conf = self._get_current_robot_arm_conf()
@@ -1053,17 +1040,13 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        if (
-            x.get(robot_obj, "pos_gripper") > 0.2
-        ):  # to mitigate the pos_gripper not accurate
-            return GRIPPER_CLOSED_VALUE
-        return 0.0
+        return x.get(robot_obj, "pos_gripper")
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 3 * 1e-2
+        return dist < 4 * 1e-2
 
 
 def create_lifted_controllers(

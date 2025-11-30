@@ -147,8 +147,8 @@ def test_cupboard_real_state_abstraction():
         state = next_state
         if controller.terminated():
             break
-    # else:
-    #     assert False, "Controller did not terminate"
+    else:
+        assert False, "Controller did not terminate"
 
     abstract_state = abstractor.state_abstractor(state)
     assert (
