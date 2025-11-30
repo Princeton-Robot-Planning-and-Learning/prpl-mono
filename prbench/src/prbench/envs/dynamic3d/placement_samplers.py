@@ -110,7 +110,7 @@ def sample_collision_free_position(
         )
 
         # Sample a random yaw angle
-        candidate_yaw = np_random.uniform(0, 2 * np.pi)
+        candidate_yaw = np.pi/2 # np_random.uniform(0, 2 * np.pi)
 
         # Translate the bounding box to the candidate position
         translation = candidate_pos - np.array(

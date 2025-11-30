@@ -107,7 +107,7 @@ class CupboardRealStateAbstractor:
 
         # AtPremanipulationTarget.
         premanipulation_distance_threshold = 0.95  # should be within this cardinal dist
-        premanipulation_angle_threshold = 1e-1  # should be facing the target object
+        premanipulation_angle_threshold = 3 * 1e-2  # should be facing the target object
         for target in all_mujoco_objects:
             target_x = state.get(target, "x")
             target_y = state.get(target, "y")
@@ -149,10 +149,28 @@ class CupboardRealStateAbstractor:
         atoms = {GroundAtom(Holding, [robot, target])}
         return RelationalAbstractGoal(atoms, self.state_abstractor)
 
-    def goal_deriver_grasp_move(self, state: ObjectCentricState) -> RelationalAbstractGoal:
+    def goal_deriver_grasp_move(
+        self, state: ObjectCentricState
+    ) -> RelationalAbstractGoal:
         """The goal is to grasp the target and move to the target."""
         target = state.get_object_from_name("cube1")
         target_cupboard = state.get_object_from_name("cupboard_1")
         robot = state.get_object_from_name("robot")
-        atoms = {GroundAtom(Holding, [robot, target]), GroundAtom(AtPremanipulationTarget, [robot, target_cupboard])}
+        atoms = {
+            GroundAtom(Holding, [robot, target]),
+            GroundAtom(AtPremanipulationTarget, [robot, target_cupboard]),
+        }
+        return RelationalAbstractGoal(atoms, self.state_abstractor)
+
+    def goal_deriver_place(self, state: ObjectCentricState) -> RelationalAbstractGoal:
+        """The goal is to place the target in the cupboard."""
+        target = state.get_object_from_name("cube1")
+        cupboard = state.get_object_from_name("cupboard_1")
+        robot = state.get_object_from_name("robot")
+        atoms = {
+            GroundAtom(AtPremanipulationTarget, [robot, target]),
+            GroundAtom(AtPremanipulationTarget, [robot, cupboard]),
+            GroundAtom(HandEmpty, [robot]),
+            GroundAtom(OnFixture, [target, cupboard]),
+        }
         return RelationalAbstractGoal(atoms, self.state_abstractor)
