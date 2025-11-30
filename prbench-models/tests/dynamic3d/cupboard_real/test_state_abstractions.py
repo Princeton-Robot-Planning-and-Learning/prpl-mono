@@ -133,7 +133,8 @@ def test_cupboard_real_state_abstraction():
     lifted_controller = controllers["place_ground"]
     robot = state.get_object_from_name("robot")
     cube = state.get_object_from_name("cube1")
-    object_parameters = (robot, cube)
+    cupboard = state.get_object_from_name("cupboard_1")
+    object_parameters = (robot, cube, cupboard)
     controller = lifted_controller.ground(object_parameters)
 
     # Reset and execute the controller until it terminates.
