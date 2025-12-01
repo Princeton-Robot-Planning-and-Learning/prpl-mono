@@ -737,7 +737,7 @@ def test_pick_place_skill():
     """Test pick and place skill in ground environment with 1 cube."""
 
     # Create the environment.
-    num_cubes = 1
+    num_cubes = 2
     env = prbench.make(
         f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0", render_mode="rgb_array"
     )
