@@ -70,10 +70,53 @@ class PretrainedLargeModel(abc.ABC):
         imgs: list[PIL.Image.Image] | None = None,
         hyperparameters: dict[str, Hashable] | None = None,
         bypass_cache: bool = False,
+        seed: int | None = None,
     ) -> Response:
-        """Build and run a query."""
+        """Build and run a query.
+
+        Args:
+            prompt: The text prompt
+            imgs: Optional list of images
+            hyperparameters: Optional model-specific hyperparameters
+            bypass_cache: If True, always query the model
+            seed: Optional seed for reproducibility. Different seeds with the
+                  same prompt will be cached separately.
+        """
+        # Add seed to hyperparameters if provided
+        if seed is not None:
+            hyperparameters = hyperparameters or {}
+            hyperparameters = {**hyperparameters, "seed": seed}
+
         query = Query(prompt, imgs=imgs, hyperparameters=hyperparameters)
         return self.run_query(query, bypass_cache)
+
+    def query_multi_response(
+        self,
+        prompt: str,
+        num_responses: int,
+        imgs: list[PIL.Image.Image] | None = None,
+        hyperparameters: dict[str, Hashable] | None = None,
+        bypass_cache: bool = False,
+        seed: int | None = None,
+    ) -> list[Response]:
+        """Build and run a query that returns multiple responses.
+
+        Args:
+            prompt: The text prompt
+            num_responses: Number of responses to generate
+            imgs: Optional list of images
+            hyperparameters: Optional model-specific hyperparameters
+            bypass_cache: If True, always query the model
+            seed: Optional seed for reproducibility. Different seeds with the
+                  same prompt will be cached separately.
+        """
+        # Add seed to hyperparameters if provided
+        if seed is not None:
+            hyperparameters = hyperparameters or {}
+            hyperparameters = {**hyperparameters, "seed": seed}
+
+        query = Query(prompt, imgs=imgs, hyperparameters=hyperparameters)
+        return self.run_query_multi_response(query, num_responses, bypass_cache)
 
     def run_query_multi_response(
         self, query: Query, num_responses: int, bypass_cache: bool = False

@@ -330,3 +330,127 @@ def test_multi_response_use_cache_only_missing():
             llm2.run_query_multi_response(query, num_responses=5)
         assert "Missing cached responses at indices" in str(e)
         assert "[2, 3, 4]" in str(e)
+
+
+def test_seed_parameter_single_response():
+    """Test that different seeds produce different cached responses."""
+    responses_data = [Response(f"Response {i}", {"index": i}) for i in range(10)]
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as cache_dir:
+        cache_path = Path(cache_dir) / "cache.db"
+        cache = SQLite3PretrainedLargeModelCache(cache_path)
+        llm = OrderedResponseModel(responses_data, cache)
+
+        # Query with seed=1
+        response1 = llm.query("Test prompt", seed=1)
+        assert response1.text == "Response 0"
+
+        # Query with seed=2 - should get different response
+        response2 = llm.query("Test prompt", seed=2)
+        assert response2.text == "Response 1"
+
+        # Query again with seed=1 - should use cache
+        llm2 = OrderedResponseModel(responses_data, cache, use_cache_only=True)
+        response3 = llm2.query("Test prompt", seed=1)
+        assert response3.text == "Response 0"
+        assert response3.text == response1.text
+
+        # Query again with seed=2 - should use cache
+        response4 = llm2.query("Test prompt", seed=2)
+        assert response4.text == "Response 1"
+        assert response4.text == response2.text
+
+
+def test_seed_parameter_multi_response():
+    """Test that seed works with multi-response queries."""
+    responses_data = [Response(f"Response {i}", {"index": i}) for i in range(20)]
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as cache_dir:
+        cache_path = Path(cache_dir) / "cache.db"
+        cache = SQLite3PretrainedLargeModelCache(cache_path)
+        llm = OrderedResponseModel(responses_data, cache)
+
+        # Query 3 responses with seed=1
+        responses1 = llm.query_multi_response("Test prompt", num_responses=3, seed=1)
+        assert len(responses1) == 3
+        assert [r.text for r in responses1] == [
+            "Response 0",
+            "Response 1",
+            "Response 2",
+        ]
+
+        # Query 3 responses with seed=2 - should get different responses
+        responses2 = llm.query_multi_response("Test prompt", num_responses=3, seed=2)
+        assert len(responses2) == 3
+        assert [r.text for r in responses2] == [
+            "Response 3",
+            "Response 4",
+            "Response 5",
+        ]
+
+        # Query again with seed=1 - should use cache
+        llm2 = OrderedResponseModel(responses_data, cache, use_cache_only=True)
+        responses3 = llm2.query_multi_response("Test prompt", num_responses=3, seed=1)
+        assert len(responses3) == 3
+        assert [r.text for r in responses3] == [
+            "Response 0",
+            "Response 1",
+            "Response 2",
+        ]
+
+        # Query again with seed=2 - should use cache
+        responses4 = llm2.query_multi_response("Test prompt", num_responses=3, seed=2)
+        assert len(responses4) == 3
+        assert [r.text for r in responses4] == [
+            "Response 3",
+            "Response 4",
+            "Response 5",
+        ]
+
+
+def test_seed_none_vs_no_seed():
+    """Test that seed=None behaves the same as not providing seed."""
+    responses_data = [Response(f"Response {i}", {"index": i}) for i in range(5)]
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as cache_dir:
+        cache_path = Path(cache_dir) / "cache.db"
+        cache = SQLite3PretrainedLargeModelCache(cache_path)
+        llm = OrderedResponseModel(responses_data, cache)
+
+        # Query without seed
+        response1 = llm.query("Test prompt")
+        assert response1.text == "Response 0"
+
+        # Query with seed=None - should use same cache
+        llm2 = OrderedResponseModel(responses_data, cache, use_cache_only=True)
+        response2 = llm2.query("Test prompt", seed=None)
+        assert response2.text == "Response 0"
+
+
+def test_seed_with_other_hyperparameters():
+    """Test that seed works alongside other hyperparameters."""
+    responses_data = [Response(f"Response {i}", {"index": i}) for i in range(10)]
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as cache_dir:
+        cache_path = Path(cache_dir) / "cache.db"
+        cache = SQLite3PretrainedLargeModelCache(cache_path)
+        llm = OrderedResponseModel(responses_data, cache)
+
+        # Query with temperature and seed
+        response1 = llm.query(
+            "Test prompt", hyperparameters={"temperature": 0.5}, seed=1
+        )
+        assert response1.text == "Response 0"
+
+        # Query with different seed but same temperature
+        response2 = llm.query(
+            "Test prompt", hyperparameters={"temperature": 0.5}, seed=2
+        )
+        assert response2.text == "Response 1"
+
+        # Query with same seed and temperature - should use cache
+        llm2 = OrderedResponseModel(responses_data, cache, use_cache_only=True)
+        response3 = llm2.query(
+            "Test prompt", hyperparameters={"temperature": 0.5}, seed=1
+        )
+        assert response3.text == "Response 0"
