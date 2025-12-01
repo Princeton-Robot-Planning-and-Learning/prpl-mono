@@ -26,6 +26,26 @@ class PretrainedLargeModelCache(abc.ABC):
     def save(self, query: Query, model_id: str, response: Response) -> None:
         """Save the response for the query."""
 
+    @abc.abstractmethod
+    def try_load_responses(
+        self, query: Query, model_id: str, num_responses: int
+    ) -> list[Response | None]:
+        """Load multiple responses for a query.
+
+        Returns a list of length num_responses where each element is either:
+        - A Response object if cached
+        - None if not cached
+
+        This allows partial cache hits where some responses are cached
+        and others need to be queried.
+        """
+
+    @abc.abstractmethod
+    def save_response_at_index(
+        self, query: Query, model_id: str, response: Response, index: int
+    ) -> None:
+        """Save a response at a specific index for multi-response queries."""
+
 
 class FilePretrainedLargeModelCache(PretrainedLargeModelCache):
     """A cache that saves and loads from individual files."""
@@ -86,6 +106,68 @@ class FilePretrainedLargeModelCache(PretrainedLargeModelCache):
             json.dump(response.metadata, f)
         logging.debug(f"Saved model response to {cache_dir}.")
 
+    def try_load_responses(
+        self, query: Query, model_id: str, num_responses: int
+    ) -> list[Response | None]:
+        """Load multiple responses for a query."""
+        cache_dir = self._get_cache_dir_for_query(query, model_id)
+        if not (cache_dir / "prompt.txt").exists():
+            return [None] * num_responses
+
+        responses: list[Response | None] = []
+        for i in range(num_responses):
+            completion_file = cache_dir / f"completion_{i}.txt"
+            metadata_file = cache_dir / f"metadata_{i}.json"
+
+            if completion_file.exists() and metadata_file.exists():
+                with open(completion_file, "r", encoding="utf-8") as f:
+                    completion = f.read()
+                with open(metadata_file, "r", encoding="utf-8") as f:
+                    metadata = json.load(f)
+                responses.append(Response(completion, metadata))
+                logging.debug(f"Loaded response {i} from {cache_dir}.")
+            else:
+                responses.append(None)
+
+        return responses
+
+    def save_response_at_index(
+        self, query: Query, model_id: str, response: Response, index: int
+    ) -> None:
+        """Save a response at a specific index."""
+        cache_dir = self._get_cache_dir_for_query(query, model_id)
+
+        # Cache the text prompt if not already cached.
+        prompt_file = cache_dir / "prompt.txt"
+        if not prompt_file.exists():
+            with open(prompt_file, "w", encoding="utf-8") as f:
+                f.write(query.prompt)
+
+        # Cache the image prompt if it exists and not already cached.
+        if query.imgs is not None:
+            imgs_folderpath = cache_dir / "imgs"
+            if not imgs_folderpath.exists():
+                imgs_folderpath.mkdir(exist_ok=True)
+                for i, img in enumerate(query.imgs):
+                    filename_suffix = str(i) + ".jpg"
+                    if img.mode == "RGBA":
+                        rgb_img = img.convert("RGB")
+                        rgb_img.save(imgs_folderpath / filename_suffix)
+                    else:
+                        img.save(imgs_folderpath / filename_suffix)
+
+        # Cache the text response at the specified index.
+        completion_file = cache_dir / f"completion_{index}.txt"
+        with open(completion_file, "w", encoding="utf-8") as f:
+            f.write(response.text)
+
+        # Cache the metadata at the specified index.
+        metadata_file = cache_dir / f"metadata_{index}.json"
+        with open(metadata_file, "w", encoding="utf-8") as f:
+            json.dump(response.metadata, f)
+
+        logging.debug(f"Saved response {index} to {cache_dir}.")
+
 
 class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
     """A cache that uses a SQLite3 database."""
@@ -130,6 +212,52 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
             """
             )
 
+            # Add response_index column for multi-response support.
+            # First check if it exists.
+            cursor = conn.execute("PRAGMA table_info(responses)")
+            columns = [info[1] for info in cursor.fetchall()]
+
+            if "response_index" not in columns:
+                # Add response_index column with default 0 for
+                # backward compatibility.
+                try:
+                    conn.execute(
+                        """ALTER TABLE responses ADD COLUMN
+                           response_index INTEGER DEFAULT 0"""
+                    )
+                    # For proper multi-response support, we need a composite key.
+                    # Since SQLite doesn't support modifying PRIMARY KEY,
+                    # we'll create a new table and migrate data.
+                    conn.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS responses_new (
+                            query_hash TEXT NOT NULL,
+                            response_index INTEGER NOT NULL DEFAULT 0,
+                            model_id TEXT NOT NULL,
+                            prompt TEXT NOT NULL,
+                            images_hash TEXT,
+                            completion TEXT NOT NULL,
+                            metadata TEXT NOT NULL,
+                            PRIMARY KEY (query_hash, response_index)
+                        )
+                        """
+                    )
+                    # Copy data from old table to new table.
+                    conn.execute(
+                        """
+                        INSERT INTO responses_new
+                        SELECT query_hash, response_index, model_id, prompt,
+                               images_hash, completion, metadata
+                        FROM responses
+                        """
+                    )
+                    # Drop old table and rename new table.
+                    conn.execute("DROP TABLE responses")
+                    conn.execute("ALTER TABLE responses_new RENAME TO responses")
+                except sqlite3.OperationalError:
+                    # Migration already done or column exists.
+                    pass
+
             # Add hyperparameter columns if present.
             if query.hyperparameters is not None:
                 self._hyperparameter_keys = set(query.hyperparameters.keys())
@@ -149,7 +277,8 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
 
         with sqlite3.connect(self._database_path) as conn:
             cursor = conn.execute(
-                "SELECT completion, metadata FROM responses WHERE query_hash = ?",
+                """SELECT completion, metadata FROM responses
+                   WHERE query_hash = ? AND response_index = 0""",
                 (query_hash,),
             )
             result = cursor.fetchone()
@@ -167,6 +296,41 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
 
     def save(self, query: Query, model_id: str, response: Response) -> None:
         self._ensure_initialized(query)
+        self.save_response_at_index(query, model_id, response, index=0)
+
+    def try_load_responses(
+        self, query: Query, model_id: str, num_responses: int
+    ) -> list[Response | None]:
+        """Load multiple responses for a query."""
+        self._ensure_initialized(query)
+        query_hash = self._get_query_hash(query, model_id)
+
+        responses: list[Response | None] = [None] * num_responses
+
+        with sqlite3.connect(self._database_path) as conn:
+            for i in range(num_responses):
+                cursor = conn.execute(
+                    """SELECT completion, metadata FROM responses
+                       WHERE query_hash = ? AND response_index = ?""",
+                    (query_hash, i),
+                )
+                result = cursor.fetchone()
+
+                if result is not None:
+                    completion, metadata_json = result
+                    metadata = json.loads(metadata_json)
+                    responses[i] = Response(completion, metadata)
+                    logging.debug(
+                        f"Loaded response {i} from SQLite for query hash {query_hash}."
+                    )
+
+        return responses
+
+    def save_response_at_index(
+        self, query: Query, model_id: str, response: Response, index: int
+    ) -> None:
+        """Save a response at a specific index."""
+        self._ensure_initialized(query)
         query_hash = self._get_query_hash(query, model_id)
 
         # Prepare the data for storage.
@@ -180,6 +344,7 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
         # Build base columns and values.
         columns = [
             "query_hash",
+            "response_index",
             "model_id",
             "prompt",
             "images_hash",
@@ -188,6 +353,7 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
         ]
         values = [
             query_hash,
+            index,
             model_id,
             query.prompt,
             images_hash,
@@ -212,7 +378,7 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
             conn.commit()
 
         logging.debug(
-            f"Saved model response to SQLite database for query hash {query_hash}."
+            f"Saved response {index} to SQLite database for query hash {query_hash}."
         )
 
     def to_csv(self, csv_path: Path) -> None:
