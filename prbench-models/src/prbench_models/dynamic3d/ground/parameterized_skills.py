@@ -188,6 +188,7 @@ class MoveToTargetGroundController(
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
+        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -444,6 +445,7 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
+        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -585,6 +587,7 @@ class MoveArmToEndEffectorController(
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
+        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -743,7 +746,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         target_end_effector_pose = multiply_poses(
             target_grap_pose_world,
             Pose(
-                (0.005, 0, 0.03),  # offsets in end-effector local frame
+                (0.005, 0, 0.035),  # offsets in end-effector local frame
                 (0.707, 0.707, 0, 0),  # orientation
             ),
         )
@@ -774,6 +777,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         )
 
         assert plan is not None, "Motion planning failed"
+        assert retract_plan is not None, "Motion planning failed"
         self._current_arm_joint_plan = plan
         self._current_retract_plan = retract_plan
 
@@ -873,6 +877,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
+        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -956,6 +961,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         )
 
         assert plan is not None, "Motion planning failed"
+        assert retract_plan is not None, "Motion planning failed"
         self._current_arm_joint_plan = plan
         self._current_retract_plan = retract_plan
 
@@ -1051,9 +1057,10 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        if x.get(robot_obj, "pos_gripper") > 0.2:
-            return GRASP_CLOSE_THRESHOLD
-        return 0.0
+        return x.get(robot_obj, "pos_gripper")
+        # if x.get(robot_obj, "pos_gripper") > 0.2:
+        #     return GRASP_CLOSE_THRESHOLD
+        # return 0.0
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
         current_conf = self._get_current_robot_arm_conf()
