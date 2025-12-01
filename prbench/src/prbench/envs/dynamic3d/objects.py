@@ -277,8 +277,112 @@ class MujocoObject:
 
 
 @register_object
-class Cube(MujocoObject):
-    """A cube object for TidyBot environments."""
+class Cuboid(MujocoObject):
+    """A cuboid (rectangular box) object for TidyBot environments."""
+
+    default_edge_size: float = 0.02  # Default edge size in meters
+
+    def __init__(
+        self,
+        name: str,
+        env: MujocoEnv | None = None,
+        options: dict | None = None,
+    ) -> None:
+        """Initialize a Cuboid object.
+
+        Args:
+            name: Name of the cuboid body in the XML
+            options: Dictionary of cuboid options:
+                - size: [x, y, z] dimensions as a list of three floats
+                - rgba: Color of the cuboid (either string or [r, g, b, a] values)
+                - mass: Mass of the cuboid
+            env: Reference to the environment (needed for position get/set operations)
+        """
+        # Initialize base class
+        super().__init__(name, env, options)
+
+        # Override object type
+        self.symbolic_object = Object(self.name, MujocoMovableObjectType)
+
+        # Handle size parameter - must be a list of 3 dimensions
+        default_size = Cuboid.default_edge_size
+        size = self.options.get(
+            "size",
+            [default_size, default_size, default_size],
+        )
+        if isinstance(size, (int, float)):
+            # If scalar provided, treat as cube
+            self.size = [size, size, size]
+        else:
+            # Expect a list of [x, y, z]
+            self.size = list(size)
+            if len(self.size) != 3:
+                raise ValueError(
+                    f"Cuboid size must be a list of 3 values [x, y, z], "
+                    f"got {len(self.size)} values"
+                )
+
+        # Handle rgba parameter
+        rgba = self.options.get("rgba", ".5 .7 .5 1")
+        if isinstance(rgba, str):
+            self.rgba = rgba
+        else:
+            self.rgba = " ".join(str(x) for x in rgba)
+
+        self.mass = self.options.get("mass", 0.1)
+
+        # Create the XML element
+        self.xml_element = self._create_xml_element()
+
+    def _create_xml_element(self) -> ET.Element:
+        """Create the XML Element for this cuboid.
+
+        Returns:
+            ET.Element representing the cuboid body
+        """
+        # Create body element
+        body = ET.Element("body", name=self.name)
+
+        # Add freejoint for position/orientation control
+        ET.SubElement(body, "freejoint", name=self.joint_name)
+
+        # Add geom element with cuboid properties
+        size_str = " ".join(str(x) for x in self.size)
+        ET.SubElement(
+            body,
+            "geom",
+            type="box",
+            size=size_str,
+            rgba=self.rgba,
+            mass=str(self.mass),
+        )
+
+        return body
+
+    def __str__(self) -> str:
+        """String representation of the cuboid."""
+        return (
+            f"Cuboid(name='{self.name}', size={self.size}, "
+            f"rgba='{self.rgba}', mass={self.mass})"
+        )
+
+    def __repr__(self) -> str:
+        """Detailed string representation of the cuboid."""
+        return (
+            f"Cuboid(name='{self.name}', joint_name='{self.joint_name}', "
+            f"size={self.size}, rgba='{self.rgba}', mass={self.mass})"
+        )
+
+    def get_bounding_box_dimensions(self) -> tuple[float, float, float]:
+        return (2 * self.size[0], 2 * self.size[1], 2 * self.size[2])
+
+
+@register_object
+class Cube(Cuboid):
+    """A cube object for TidyBot environments.
+    
+    This is a special case of Cuboid where all dimensions are equal.
+    """
 
     def __init__(
         self,
@@ -296,55 +400,24 @@ class Cube(MujocoObject):
                 - mass: Mass of the cube
             env: Reference to the environment (needed for position get/set operations)
         """
-        # Initialize base class
-        super().__init__(name, env, options)
+        # Normalize size to scalar if all dimensions are equal
+        if options is None:
+            options = {}
 
-        # Override object type
-        self.symbolic_object = Object(self.name, MujocoMovableObjectType)
-
-        # Handle size parameter
-        size = self.options.get("size", 0.02)
+        size = options.get("size", Cuboid.default_edge_size)
         if isinstance(size, (int, float)):
-            self.size = [size, size, size]
+            # Already scalar, keep as is
+            pass
         else:
-            self.size = list(size)
+            # Convert to list to check dimensions
+            size_list = list(size)
+            if len(size_list) == 3 and size_list[0] == size_list[1] == size_list[2]:
+                # All dimensions equal, use scalar
+                options = dict(options)  # Create a copy
+                options["size"] = size_list[0]
 
-        # Handle rgba parameter
-        rgba = self.options.get("rgba", ".5 .7 .5 1")
-        if isinstance(rgba, str):
-            self.rgba = rgba
-        else:
-            self.rgba = " ".join(str(x) for x in rgba)
-
-        self.mass = self.options.get("mass", 0.1)
-
-        # Create the XML element
-        self.xml_element = self._create_xml_element()
-
-    def _create_xml_element(self) -> ET.Element:
-        """Create the XML Element for this cube.
-
-        Returns:
-            ET.Element representing the cube body
-        """
-        # Create body element
-        body = ET.Element("body", name=self.name)
-
-        # Add freejoint for position/orientation control
-        ET.SubElement(body, "freejoint", name=self.joint_name)
-
-        # Add geom element with cube properties
-        size_str = " ".join(str(x) for x in self.size)
-        ET.SubElement(
-            body,
-            "geom",
-            type="box",
-            size=size_str,
-            rgba=self.rgba,
-            mass=str(self.mass),
-        )
-
-        return body
+        # Initialize parent Cuboid class
+        super().__init__(name, env, options)
 
     def __str__(self) -> str:
         """String representation of the cube."""
@@ -359,9 +432,6 @@ class Cube(MujocoObject):
             f"Cube(name='{self.name}', joint_name='{self.joint_name}', "
             f"size={self.size}, rgba='{self.rgba}', mass={self.mass})"
         )
-
-    def get_bounding_box_dimensions(self) -> tuple[float, float, float]:
-        return (2 * self.size[0], 2 * self.size[1], 2 * self.size[2])
 
 
 class MujocoFixture(abc.ABC):
@@ -755,16 +825,16 @@ class Table(MujocoFixture):
         """
         assert self.regions is not None, "Regions must be defined"
         # Randomly select one of the regions
-        selected_region = np_random.choice(self.regions[region_name]["ranges"])
+        selected_range = np_random.choice(self.regions[region_name]["ranges"])
 
         # Validate the selected region
-        if len(selected_region) != 4:  # type: ignore[arg-type]
+        if len(selected_range) != 4:  # type: ignore[arg-type]
             raise ValueError(
                 f"Each region must have exactly 4 values "
-                f"[x_start, y_start, x_end, y_end], got {len(selected_region)}"
+                f"[x_start, y_start, x_end, y_end], got {len(selected_range)}"
             )
 
-        x_start, y_start, x_end, y_end = selected_region  # type: ignore[misc]
+        x_start, y_start, x_end, y_end = selected_range  # type: ignore[misc]
 
         # Validate bounds
         if x_start >= x_end:
@@ -839,7 +909,7 @@ class Table(MujocoFixture):
         for region_name, region_config in self.regions.items():
             if "rgba" in region_config:
                 region_bounds_list = region_config["ranges"]
-                for region_bounds in region_bounds_list:
+                for i_region, region_bounds in enumerate(region_bounds_list):
                     x_start, y_start, x_end, y_end = region_bounds
                     region_center_x = (x_start + x_end) / 2
                     region_center_y = (y_start + y_end) / 2
@@ -853,7 +923,9 @@ class Table(MujocoFixture):
 
                     # Create geom element for the region visualization
                     region_geom = ET.SubElement(self.xml_element, "geom")
-                    region_geom.set("name", f"{self.name}_{region_name}_region")
+                    region_geom.set(
+                        "name", f"{self.name}_{region_name}_region_{i_region}"
+                    )
                     region_geom.set("type", "box")
                     region_geom.set(
                         "size",
@@ -971,14 +1043,46 @@ class Cupboard(MujocoFixture):
         # Validate partition positions
         for i, partitions in enumerate(self.shelf_partitions):
             for partition_pos in partitions:
-                if partition_pos <= 0 or partition_pos >= self.cupboard_depth:
+                if (
+                    partition_pos <= -self.cupboard_length / 2
+                    or partition_pos >= self.cupboard_length / 2
+                ):
                     raise ValueError(
                         f"Partition position {partition_pos} on shelf {i} must be "
-                        f"between 0 and depth {self.cupboard_depth}"
+                        f"between -{self.cupboard_length/2} and "
+                        f"{self.cupboard_length/2} "
+                        f"(cupboard length is {self.cupboard_length})"
                     )
+
+        # Precompute shelf z positions for efficiency
+        self._shelf_z_positions = self._compute_shelf_z_positions()
 
         # Create the XML element
         self.xml_element = self._create_xml_element()
+
+    def _compute_shelf_z_positions(self) -> list[float]:
+        """Compute the z position of each shelf surface.
+
+        Returns:
+            List of z positions for each shelf surface (relative to cupboard base)
+        """
+        shelf_z_positions = []
+        current_z = self.shelf_thickness / 2
+
+        for i in range(self.num_shelves):
+            # Z position of shelf surface (top of shelf)
+            shelf_surface_z = current_z + self.shelf_thickness / 2
+            shelf_z_positions.append(shelf_surface_z)
+
+            # Move to next shelf if not the last one
+            if i < len(self.shelf_heights):
+                current_z += (
+                    self.shelf_thickness / 2
+                    + self.shelf_heights[i]
+                    + self.shelf_thickness / 2
+                )
+
+        return shelf_z_positions
 
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this cupboard.
@@ -1064,9 +1168,7 @@ class Cupboard(MujocoFixture):
                 )
 
                 for j, partition_x in enumerate(partitions):
-                    # Convert from left edge distance to center-relative position
-                    partition_x_center = partition_x - cupboard_half_depth
-
+                    # partition_x is already in center-relative coordinates
                     # Calculate partition dimensions
                     partition_half_thickness = Cupboard.default_partition_thickness / 2
                     partition_half_height = shelf_height / 2
@@ -1080,7 +1182,7 @@ class Cupboard(MujocoFixture):
                         f"{partition_half_thickness} {cupboard_half_depth} "
                         f"{partition_half_height}",
                     )
-                    partition.set("pos", f"{partition_x_center} 0 {partition_z}")
+                    partition.set("pos", f"{partition_x} 0 {partition_z}")
                     partition.set(
                         "rgba", "0.7 0.5 0.3 1"
                     )  # Slightly different color for partitions
@@ -1205,17 +1307,34 @@ class Cupboard(MujocoFixture):
             ValueError: If regions list is empty or if any region has invalid bounds
         """
         assert self.regions is not None, "Regions must be defined"
+
+        # Ensure region exists
+        region = self.regions.get(region_name)
+        if region is None:
+            raise ValueError(f"Region '{region_name}' not found")
+
+        # Ensure shelf index is specified
+        if "shelf" not in region:
+            raise ValueError(
+                f"Cupboard region '{region_name}' must specify 'shelf' to sample on"
+            )
+        shelf = region["shelf"]
+        assert 0 <= shelf < self.num_shelves, (
+            f"Shelf index {shelf} out of range for cupboard with "
+            f"{self.num_shelves} shelves"
+        )
+
         # Randomly select one of the regions
-        selected_region = np_random.choice(self.regions[region_name]["ranges"])
+        selected_range = np_random.choice(region["ranges"])
 
         # Validate the selected region
-        if len(selected_region) != 4:  # type: ignore[arg-type]
+        if len(selected_range) != 4:  # type: ignore[arg-type]
             raise ValueError(
                 f"Each region must have exactly 4 values "
-                f"[x_start, y_start, x_end, y_end], got {len(selected_region)}"
+                f"[x_start, y_start, x_end, y_end], got {len(selected_range)}"
             )
 
-        x_start, y_start, x_end, y_end = selected_region  # type: ignore[misc]
+        x_start, y_start, x_end, y_end = selected_range  # type: ignore[misc]
 
         # Validate bounds
         if x_start >= x_end:
@@ -1227,20 +1346,9 @@ class Cupboard(MujocoFixture):
         x = np_random.uniform(x_start, x_end)
         y = np_random.uniform(y_start, y_end)
 
-        # Calculate the height of the top shelf
-        # Recalculate shelf positions for sampling
-        current_z = self.shelf_thickness / 2
-        for i in range(self.num_shelves - 1):
-            current_z += (
-                self.shelf_thickness / 2
-                + self.shelf_heights[i]
-                + self.shelf_thickness / 2
-            )
-
-        top_shelf_z = current_z
-        z = (
-            top_shelf_z + self.shelf_thickness / 2 + 0.1
-        )  # Slightly above the top shelf surface
+        # Get z position from precomputed shelf positions
+        shelf_z = self._shelf_z_positions[shelf]
+        z = shelf_z + 0.01  # Slightly above shelf surface
 
         # Offset by the cupboard's position to get world coordinates
         world_x = x + self.position[0]
@@ -1276,7 +1384,18 @@ class Cupboard(MujocoFixture):
         if region_name not in self.regions:
             raise ValueError(f"Region '{region_name}' not found")
 
-        region_ranges = self.regions[region_name]["ranges"]
+        region = self.regions[region_name]
+        region_ranges = region["ranges"]
+
+        # Get shelf index if specified
+        if "shelf" not in region:
+            raise ValueError(
+                f"Cupboard region '{region_name}' must specify 'shelf' for checking"
+            )
+        shelf = region["shelf"]
+
+        # Get z position from precomputed shelf positions
+        shelf_z = self._shelf_z_positions[shelf]
 
         for region_range in region_ranges:
             x_start, y_start, x_end, y_end = region_range
@@ -1284,9 +1403,7 @@ class Cupboard(MujocoFixture):
             if (
                 x_start <= cupboard_x <= x_end
                 and y_start <= cupboard_y <= y_end
-                and self.cupboard_height
-                <= cupboard_z
-                <= (self.cupboard_height + cupboard_placement_threshold)
+                and shelf_z <= cupboard_z <= (shelf_z + cupboard_placement_threshold)
             ):
                 return True
 
@@ -1298,7 +1415,45 @@ class Cupboard(MujocoFixture):
         This method adds visual elements to the MuJoCo XML to represent the regions
         defined for this cupboard.
         """
-        # Note: Cupboard region visualization not yet implemented
+        if self.regions is None:
+            return
+
+        for region_name, region_config in self.regions.items():
+            if "rgba" in region_config and "shelf" in region_config:
+                shelf = region_config["shelf"]
+                region_bounds_list = region_config["ranges"]
+
+                # Get z position from precomputed shelf positions
+                shelf_z = self._shelf_z_positions[shelf]
+
+                for i_region, region_bounds in enumerate(region_bounds_list):
+                    x_start, y_start, x_end, y_end = region_bounds
+                    region_center_x = (x_start + x_end) / 2
+                    region_center_y = (y_start + y_end) / 2
+                    region_center_z = shelf_z + 0.01  # Slightly above shelf surface
+
+                    region_size_x = (x_end - x_start) / 2
+                    region_size_y = (y_end - y_start) / 2
+                    region_size_z = 0.005  # Thin box for visualization
+
+                    # Create geom element for the region visualization
+                    region_geom = ET.SubElement(self.xml_element, "geom")
+                    region_geom.set(
+                        "name", f"{self.name}_{region_name}_region_{i_region}"
+                    )
+                    region_geom.set("type", "box")
+                    region_geom.set(
+                        "size",
+                        f"{region_size_x} {region_size_y} {region_size_z}",
+                    )
+                    region_geom.set(
+                        "pos",
+                        f"{region_center_x} {region_center_y} {region_center_z}",
+                    )
+                    region_geom.set("rgba", " ".join(map(str, region_config["rgba"])))
+                    # Disable collision for visual-only representation
+                    region_geom.set("contype", "0")
+                    region_geom.set("conaffinity", "0")
 
     def __str__(self) -> str:
         """String representation of the cupboard."""
