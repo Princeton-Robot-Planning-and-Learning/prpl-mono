@@ -454,3 +454,34 @@ def test_seed_with_other_hyperparameters():
             "Test prompt", hyperparameters={"temperature": 0.5}, seed=1
         )
         assert response3.text == "Response 0"
+
+
+def test_seed_with_file_cache():
+    """Test that seed works properly with FilePretrainedLargeModelCache."""
+    responses_data = [Response(f"Response {i}", {"index": i}) for i in range(10)]
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as cache_dir:
+        cache_path = Path(cache_dir)
+        cache = FilePretrainedLargeModelCache(cache_path)
+        llm = OrderedResponseModel(responses_data, cache)
+
+        # Query with seed=1
+        response1 = llm.query("Test prompt", seed=1)
+        assert response1.text == "Response 0"
+
+        # Query with seed=2 - should create different cache entry
+        response2 = llm.query("Test prompt", seed=2)
+        assert response2.text == "Response 1"
+
+        # Query again with seed=1 - should use cache
+        llm2 = OrderedResponseModel(responses_data, cache, use_cache_only=True)
+        response3 = llm2.query("Test prompt", seed=1)
+        assert response3.text == "Response 0"
+
+        # Query again with seed=2 - should use cache
+        response4 = llm2.query("Test prompt", seed=2)
+        assert response4.text == "Response 1"
+
+        # Verify different cache directories were created
+        cache_dirs = list(cache_path.iterdir())
+        assert len(cache_dirs) == 2  # Two different cache entries for different seeds
