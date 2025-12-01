@@ -12,7 +12,7 @@ import PIL.Image
 from google import genai
 from google.genai import types
 
-from prpl_llm_utils.cache import PretrainedLargeModelCache, ResponseNotFound
+from prpl_llm_utils.cache import PretrainedLargeModelCache
 from prpl_llm_utils.structs import Query, Response
 
 
@@ -58,22 +58,11 @@ class PretrainedLargeModel(abc.ABC):
 
     def run_query(self, query: Query, bypass_cache: bool = False) -> Response:
         """Run a built query."""
-        # Try to load from the cache.
-        model_id = self.get_id()
-        try:
-            if bypass_cache:
-                raise ResponseNotFound()
-            response = self._cache.try_load_response(query, model_id)
-            logging.debug("Loaded model response from cache.")
-        except ResponseNotFound as e:
-            # No response found, so we need to query.
-            if self._use_cache_only:
-                raise ValueError("No cached response found for prompt.") from e
-            logging.debug(f"Querying model {self.get_id()} with new prompt.")
-            response = self._run_query(query)
-            # Save the response to cache.
-            self._cache.save(query, model_id, response)
-        return response
+        # Use run_query_multi_response with num_responses=1 as a special case
+        responses = self.run_query_multi_response(
+            query, num_responses=1, bypass_cache=bypass_cache
+        )
+        return responses[0]
 
     def query(
         self,

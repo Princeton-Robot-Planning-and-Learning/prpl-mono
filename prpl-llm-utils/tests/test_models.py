@@ -40,7 +40,7 @@ def test_canned_response_model():
         assert llm.query("Hello!").text == "Hi!"
         with pytest.raises(ValueError) as e:
             llm.query("What's up?")
-        assert "No cached response found for prompt." in str(e)
+        assert "Missing cached responses" in str(e)
 
 
 @runllms
@@ -58,7 +58,7 @@ def test_openai_model():
         assert response.text == response2.text
         with pytest.raises(ValueError) as e:
             llm.query("What's up?")
-        assert "No cached response found for prompt." in str(e)
+        assert "Missing cached responses" in str(e)
 
 
 @runllms
@@ -76,7 +76,7 @@ def test_gemini_language():
         assert response.text == response2.text
         with pytest.raises(ValueError) as e:
             vlm.query("What's up?")
-        assert "No cached response found for prompt." in str(e)
+        assert "Missing cached responses" in str(e)
 
 
 @runllms
@@ -109,7 +109,7 @@ def test_gemini_vision():
         assert response.text == response3.text
         with pytest.raises(ValueError) as e:
             vlm.query("What's up?")
-        assert "No cached response found for prompt." in str(e)
+        assert "Missing cached responses" in str(e)
 
 
 def test_multi_response_basic():
