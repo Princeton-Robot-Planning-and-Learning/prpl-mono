@@ -62,7 +62,7 @@ class GroundPickController(Dynamic2dRobotController):
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
         """Get gripper actions for pick: keep open during movement, close to block width after reaching.
-        
+
         Returns:
             (delta_during, delta_after) where:
             - delta_during: 0.0 (keep current gap during movement)
@@ -71,13 +71,13 @@ class GroundPickController(Dynamic2dRobotController):
         curr_finger_gap = state.get(self._robot, "finger_gap")
         finger_width = state.get(self._robot, "finger_width")
         block_width = state.get(self._block, "width")
-        
+
         # Desired finger gap is slightly smaller than block width for grasping
         desired_finger_gap = max(0.0, block_width + finger_width - 0.175)
-        
+
         # Calculate delta needed (negative means closing)
         delta_needed = desired_finger_gap - curr_finger_gap
-        
+
         # During movement: keep gripper open (no change)
         # After reaching: close gripper to desired gap
         return 0.0, delta_needed
@@ -205,7 +205,7 @@ class GroundPlaceController(Dynamic2dRobotController):
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
         """Get gripper actions for place: keep closed during movement, open after placing.
-        
+
         Returns:
             (delta_during, delta_after) where:
             - delta_during: 0.0 (keep current gap during movement)
@@ -215,7 +215,7 @@ class GroundPlaceController(Dynamic2dRobotController):
         # Open gripper after placing (increase finger_gap)
         desired_finger_gap = self.finger_gap_max
         delta_to_open = desired_finger_gap - curr_finger_gap
-        
+
         return 0.0, delta_to_open
 
     def _generate_waypoints(
@@ -306,7 +306,7 @@ class GroundMoveToController(Dynamic2dRobotController):
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
         """Get gripper actions for move-to: keep current gap during movement, no change after.
-        
+
         Returns:
             (delta_during, delta_after) where:
             - delta_during: 0.0 (keep current gap during movement)
@@ -355,20 +355,22 @@ class GroundMoveToController(Dynamic2dRobotController):
         # Block bottom will be placed at the surface top, so block center is above that
         surface_top_y = tgt_pose_bottom.y
         print(f"surface top y {surface_top_y}")
-        block_center_y = surface_top_y + block_height  # Center of block when placed on surface
+        block_center_y = (
+            surface_top_y + block_height
+        )  # Center of block when placed on surface
         print(block_center_y)
         # Calculate gripper target position (above the block center for placement)
         # Gripper should be positioned above the block with some clearance
         gripper_clearance = gripper_height
         gripper_target_y = block_center_y + gripper_clearance
-        
+
         # Gripper target pose (above the block center, at same x as block center)
         print(f"gripper target y  {gripper_target_y} ")
         gripper_target_pose = SE2Pose(
             tgt_pose_bottom.x, tgt_pose_bottom.y + gripper_target_y, target_theta
         )
-        
-        robot_pose = gripper_target_pose 
+
+        robot_pose = gripper_target_pose
 
         # Check if the target pose is collision-free
         full_state = state.copy()
@@ -402,6 +404,80 @@ class GroundMoveToController(Dynamic2dRobotController):
         return final_waypoints
 
 
+class GroundPushController(Dynamic2dRobotController):
+    """Controller for moving the robot to a desired location while pushing objects along
+    the way."""
+
+    def __init__(
+        self,
+        objects: Sequence[Object],
+        action_space: KinRobotActionSpace,
+        init_constant_state: Optional[ObjectCentricState] = None,
+    ) -> None:
+        super().__init__(objects, action_space, init_constant_state)
+        self._block = objects[1]
+        self._action_space = action_space
+        env_config = DynObstruction2DEnvConfig()
+        self.world_x_min = env_config.world_min_x + env_config.robot_base_radius
+        self.world_x_max = env_config.world_max_x - env_config.robot_base_radius
+        self.world_y_min = env_config.world_min_y + env_config.robot_base_radius
+        self.world_y_max = env_config.world_max_y - env_config.robot_base_radius
+
+    def sample_parameters(
+        self, x: ObjectCentricState, rng: np.random.Generator
+    ) -> tuple[float, float, float]:
+        # Sample robot pose
+        abs_x = rng.uniform(self.world_x_min, self.world_x_max)
+        abs_y = rng.uniform(self.world_y_min, self.world_y_max)
+        abs_theta = rng.uniform(-np.pi, np.pi)
+
+        rel_x = (abs_x - self.world_x_min) / (self.world_x_max - self.world_x_min)
+        rel_y = (abs_y - self.world_y_min) / (self.world_y_max - self.world_y_min)
+        rel_theta = (abs_theta + np.pi) / (2 * np.pi)
+
+        return (rel_x, rel_y, rel_theta)
+
+    def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
+        """Get gripper actions for pushing: keep closed during and after movement.
+
+        Returns:
+            (delta_during, delta_after) where:
+            - delta_during: 0.0 (keep current gap during movement)
+            - delta_after: 0.0 (keep current gap after movement)
+        """
+        return 0.0, 0.0
+
+    def _generate_waypoints(
+        self, state: ObjectCentricState
+    ) -> list[tuple[SE2Pose, float]]:
+        robot_x = state.get(self._robot, "x")
+        robot_y = state.get(self._robot, "y")
+        robot_theta = state.get(self._robot, "theta")
+        robot_arm_joint = state.get(self._robot, "arm_joint")
+        # Calculate place position
+        params = cast(tuple[float, ...], self._current_params)
+        final_robot_x = (
+            self.world_x_min + (self.world_x_max - self.world_x_min) * params[0]
+        )
+        final_robot_y = (
+            self.world_y_min + (self.world_y_max - self.world_y_min) * params[1]
+        )
+        final_robot_theta = -np.pi + (2 * np.pi) * params[2]
+        final_robot_pose = SE2Pose(final_robot_x, final_robot_y, final_robot_theta)
+
+        current_wp = (
+            SE2Pose(robot_x, robot_y, robot_theta),
+            robot_arm_joint,
+        )
+
+        # IMPORTANT - Do not check if target pose is collision-free
+
+        # Simple waypoint generation
+        final_waypoints: list[tuple[SE2Pose, float]] = [current_wp]
+        final_waypoints.append((final_robot_pose, robot_arm_joint))
+        return final_waypoints
+
+
 def create_lifted_controllers(
     action_space: KinRobotActionSpace,
     init_constant_state: Optional[ObjectCentricState] = None,
@@ -432,6 +508,11 @@ def create_lifted_controllers(
         high=np.array([1.0]),
         dtype=np.float32,
     )
+    push_params_space = Box(
+        low=np.array([0.0, 0.0, 0.0]),
+        high=np.array([1.0, 1.0, 1.0]),
+        dtype=np.float32,
+    )
 
     # Create partial controller classes that include the action_space
     class PickController(GroundPickController):
@@ -452,6 +533,12 @@ def create_lifted_controllers(
         def __init__(self, objects):
             super().__init__(objects, action_space, init_constant_state)
 
+    class PushController(GroundPushController):
+        """Controller for robot to push objects on the way to the target region."""
+
+        def __init__(self, objects):
+            super().__init__(objects, action_space, init_constant_state)
+
     # Create variables for lifted controllers
     robot = Variable("?robot", KinRobotType)
     target_block = Variable("?target_block", TargetBlockType)
@@ -466,9 +553,7 @@ def create_lifted_controllers(
     )
 
     place_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
-        [robot, target_block],
-        PlaceController,
-        place_params_space
+        [robot, target_block], PlaceController, place_params_space
     )
 
     pick_obstruction_controller: LiftedParameterizedController = (
@@ -487,10 +572,26 @@ def create_lifted_controllers(
         )
     )
 
-    move_to_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
-        [robot, target_block, target_surface],
-        MoveToTgtController,
-        move_to_params_space,
+    move_to_tgt_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, target_block, target_surface],
+            MoveToTgtController,
+            move_to_params_space,
+        )
+    )
+
+    push_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
+        [robot, target_block],
+        PushController,
+        push_params_space,
+    )
+
+    push_obstruction_controller: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, obstruction],
+            PushController,
+            push_params_space,
+        )
     )
 
     return {
@@ -499,4 +600,6 @@ def create_lifted_controllers(
         "pick_obstruction": pick_obstruction_controller,
         "place_obstruction": place_obstruction_controller,
         "move_to_tgt": move_to_tgt_controller,
+        "push_tgt": push_tgt_controller,
+        "push_obstruction": push_obstruction_controller,
     }
