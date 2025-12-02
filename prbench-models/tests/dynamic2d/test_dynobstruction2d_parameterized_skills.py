@@ -49,7 +49,7 @@ def test_pick_target_controller():
     params = controller.sample_parameters(state, rng)
 
     # Reset and execute the controller until it terminates.
-    controller.reset(state, params)
+    controller.reset(state, (0, 0.6, params[2]))
     for _ in range(500):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
@@ -150,7 +150,9 @@ def test_place_target_controller():
 
     rng = np.random.default_rng(123)
     params = controller.sample_parameters(state, rng)
-    controller.reset(state, params)
+
+    # Ensure that the robot grasps the block from the top
+    controller.reset(state, (0, 0.6, params[2]))
     for _ in range(500):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
@@ -162,22 +164,47 @@ def test_place_target_controller():
     else:
         assert False, "Pick controller did not terminate"
 
-    # Now move to target surface and place
-    place_controller = controllers["place_tgt"]
+    # Now move to target surface
+    move_controller = controllers["move_to_tgt"]
     object_parameters_place = (robot, target_block, target_surface)
-    controller = place_controller.ground(object_parameters_place)
+    controller = move_controller.ground(object_parameters_place)
     params = controller.sample_parameters(state, rng)
 
-    controller.reset(state, params)
+    # Ensure that the robot has no rotation
+    controller.reset(state, (0.25))
     for _ in range(500):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
         state = next_state
+
         if controller.terminated():
             break
     else:
         assert False, "Place controller did not terminate"
+    
+    # Finally, place target
+    place_controller = controllers["place_tgt"]
+    object_parameters_place = (robot, target_block)
+    controller = place_controller.ground(object_parameters_place)
+    params = controller.sample_parameters(state, rng)
 
+    # Ensure that the robot has no rotation
+    controller.reset(state, (0.1, 0.6, 0.25))
+    is_successful = False
+    for _ in range(500):
+        action = controller.step()
+        obs, _, terminated, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+
+        if controller.terminated():
+            is_successful = terminated
+            break
+    else:
+        assert False, "Place controller did not terminate"
+
+    assert is_successful, "Task was not successfully completed"
     env.close()

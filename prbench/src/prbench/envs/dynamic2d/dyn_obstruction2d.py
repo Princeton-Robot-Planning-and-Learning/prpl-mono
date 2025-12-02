@@ -57,6 +57,7 @@ class DynObstruction2DEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMe
     robot_arm_length_max: float = 2 * robot_base_radius
     gripper_base_width: float = 0.06
     gripper_base_height: float = 0.32
+    finger_gap_max = 0.32
     gripper_finger_width: float = 0.2
     gripper_finger_height: float = 0.06
 

@@ -17,11 +17,8 @@ from prbench.envs.dynamic2d.object_types import DynRectangleType, KinRobotType
 from prbench.envs.dynamic2d.utils import KinRobotActionSpace
 from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.utils import state_2d_has_collision
-from relational_structs import (
-    Object,
-    ObjectCentricState,
-    Variable,
-)
+from relational_structs.object_centric_state import ObjectCentricState
+from relational_structs.objects import Object, Variable
 
 from prbench_models.dynamic2d.utils import Dynamic2dRobotController
 
@@ -46,8 +43,8 @@ class GroundPickController(Dynamic2dRobotController):
         # Sample grasp ratio and side
         # grasp_ratio: determines position along the side ([0.0, 1.0])
         # side: 0~0.25 left, 0.25~0.5 right, 0.5~0.75 top, 0.75~1.0 bottom
-        grasp_ratio = 0  # rng.uniform(0.0, 0.1)
-        side = rng.uniform(0.5, 0.75)
+        grasp_ratio = rng.uniform(0.0, 0.1)
+        side = rng.uniform(0.0, 1.0)
         max_arm_length = x.get(self._robot, "arm_length")
         min_arm_length = (
             x.get(self._robot, "base_radius")
@@ -59,8 +56,31 @@ class GroundPickController(Dynamic2dRobotController):
         # Pack parameters: side determines grasp approach, ratio determines position
         return (grasp_ratio, side, arm_length)
 
-    def _get_gripper_actions(self) -> tuple[float, float]:
-        return 0.02, 0.02  # Open during movement, close after reaching
+    def _requires_multi_phase_gripper(self, state: ObjectCentricState) -> bool:
+        """Pick controller always uses two phases: move to block, then close gripper."""
+        return True
+
+    def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
+        """Get gripper actions for pick: keep open during movement, close to block width after reaching.
+        
+        Returns:
+            (delta_during, delta_after) where:
+            - delta_during: 0.0 (keep current gap during movement)
+            - delta_after: change needed to close gripper to block_width
+        """
+        curr_finger_gap = state.get(self._robot, "finger_gap")
+        finger_width = state.get(self._robot, "finger_width")
+        block_width = state.get(self._block, "width")
+        
+        # Desired finger gap is slightly smaller than block width for grasping
+        desired_finger_gap = max(0.0, block_width + finger_width - 0.175)
+        
+        # Calculate delta needed (negative means closing)
+        delta_needed = desired_finger_gap - curr_finger_gap
+        
+        # During movement: keep gripper open (no change)
+        # After reaching: close gripper to desired gap
+        return 0.0, delta_needed
 
     def _calculate_grasp_robot_pose(
         self,
@@ -92,7 +112,7 @@ class GroundPickController(Dynamic2dRobotController):
             # import ipdb
 
             # ipdb.set_trace()
-            custom_dy = arm_length + gripper_height
+            custom_dy = arm_length + gripper_height - 0.05
             custom_dtheta = -np.pi / 2
         else:  # bottom side
             custom_dx = ratio * block_width
@@ -183,8 +203,20 @@ class GroundPlaceController(Dynamic2dRobotController):
 
         return (rel_x, rel_y, rel_theta)
 
-    def _get_gripper_actions(self) -> tuple[float, float]:
-        return -0.01, 0.02  # Keep closed during movement, open after placing
+    def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
+        """Get gripper actions for place: keep closed during movement, open after placing.
+        
+        Returns:
+            (delta_during, delta_after) where:
+            - delta_during: 0.0 (keep current gap during movement)
+            - delta_after: change needed to open gripper (positive)
+        """
+        curr_finger_gap = state.get(self._robot, "finger_gap")
+        # Open gripper after placing (increase finger_gap)
+        desired_finger_gap = self.finger_gap_max
+        delta_to_open = desired_finger_gap - curr_finger_gap
+        
+        return 0.0, delta_to_open
 
     def _generate_waypoints(
         self, state: ObjectCentricState
@@ -192,7 +224,7 @@ class GroundPlaceController(Dynamic2dRobotController):
         robot_x = state.get(self._robot, "x")
         robot_y = state.get(self._robot, "y")
         robot_theta = state.get(self._robot, "theta")
-        robot_radius = state.get(self._robot, "base_radius")
+        robot_arm_joint = state.get(self._robot, "arm_joint")
         # Calculate place position
         params = cast(tuple[float, ...], self._current_params)
         final_robot_x = (
@@ -206,7 +238,7 @@ class GroundPlaceController(Dynamic2dRobotController):
 
         current_wp = (
             SE2Pose(robot_x, robot_y, robot_theta),
-            robot_radius,
+            robot_arm_joint,
         )
 
         # Check if the target pose is collision-free
@@ -242,7 +274,7 @@ class GroundPlaceController(Dynamic2dRobotController):
 
         # Simple waypoint generation
         final_waypoints: list[tuple[SE2Pose, float]] = [current_wp]
-        final_waypoints.append((final_robot_pose, robot_radius))
+        final_waypoints.append((final_robot_pose, robot_arm_joint))
         return final_waypoints
 
 
@@ -272,8 +304,16 @@ class GroundMoveToController(Dynamic2dRobotController):
 
         return rel_theta
 
-    def _get_gripper_actions(self) -> tuple[float, float]:
-        return -0.005, 0  # Keep closed during movement, open after moving
+    def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
+        """Get gripper actions for move-to: keep current gap during movement, no change after.
+        
+        Returns:
+            (delta_during, delta_after) where:
+            - delta_during: 0.0 (keep current gap during movement)
+            - delta_after: 0.0 (no change after moving)
+        """
+        # Keep gripper at current gap during movement, no change after
+        return 0.0, 0.0
 
     def _generate_waypoints(
         self, state: ObjectCentricState
@@ -288,9 +328,13 @@ class GroundMoveToController(Dynamic2dRobotController):
         block_width = state.get(self._tgt_block, "width")
         block_height = state.get(self._tgt_block, "height")
 
+        print(tgt_x, tgt_y, block_height)
+
         target_region_pose = SE2Pose(tgt_x, tgt_y, tgt_theta) * SE2Pose(
             tgt_width / 2, tgt_height / 2, 0.0
         )
+
+        print(f"target region pose {target_region_pose}")
 
         # Calculate target position from parameters
         params = cast(float, self._current_params)
@@ -298,13 +342,33 @@ class GroundMoveToController(Dynamic2dRobotController):
         tgt_pose_center = SE2Pose(
             target_region_pose.x, target_region_pose.y, target_theta
         )
+
+        print(f"tgt pose center {tgt_pose_center}")
         bottom2center = SE2Pose(block_width / 2, block_height / 2, 0.0)
         tgt_pose_bottom = tgt_pose_center * bottom2center.inverse
 
+        print(f"tgt pose bottom {tgt_pose_bottom}")
+
         # Calculate robot pose to place block on surface
-        # The robot should position itself so the gripper can place the block
-        robot2gripper = SE2Pose(x=robot_arm_joint + gripper_height, y=0.0, theta=0.0)
-        robot_pose = tgt_pose_bottom * robot2gripper.inverse
+        # The robot should be positioned above the surface so the gripper can place the block
+        # target_region_pose.y is already at the top edge of the surface (tgt_y + tgt_height/2)
+        # Block bottom will be placed at the surface top, so block center is above that
+        surface_top_y = tgt_pose_bottom.y
+        print(f"surface top y {surface_top_y}")
+        block_center_y = surface_top_y + block_height  # Center of block when placed on surface
+        print(block_center_y)
+        # Calculate gripper target position (above the block center for placement)
+        # Gripper should be positioned above the block with some clearance
+        gripper_clearance = gripper_height
+        gripper_target_y = block_center_y + gripper_clearance
+        
+        # Gripper target pose (above the block center, at same x as block center)
+        print(f"gripper target y  {gripper_target_y} ")
+        gripper_target_pose = SE2Pose(
+            tgt_pose_bottom.x, tgt_pose_bottom.y + gripper_target_y, target_theta
+        )
+        
+        robot_pose = gripper_target_pose 
 
         # Check if the target pose is collision-free
         full_state = state.copy()
@@ -401,6 +465,12 @@ def create_lifted_controllers(
         pick_params_space,
     )
 
+    place_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
+        [robot, target_block],
+        PlaceController,
+        place_params_space
+    )
+
     pick_obstruction_controller: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, obstruction],
@@ -417,7 +487,7 @@ def create_lifted_controllers(
         )
     )
 
-    place_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
+    move_to_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
         [robot, target_block, target_surface],
         MoveToTgtController,
         move_to_params_space,
@@ -425,7 +495,8 @@ def create_lifted_controllers(
 
     return {
         "pick_tgt": pick_tgt_controller,
+        "place_tgt": place_tgt_controller,
         "pick_obstruction": pick_obstruction_controller,
         "place_obstruction": place_obstruction_controller,
-        "place_tgt": place_tgt_controller,
+        "move_to_tgt": move_to_tgt_controller,
     }

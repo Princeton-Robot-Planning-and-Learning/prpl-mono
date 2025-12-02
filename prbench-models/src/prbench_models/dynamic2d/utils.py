@@ -48,6 +48,7 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
         self.world_x_max = env_config.world_max_x - env_config.robot_base_radius
         self.world_y_min = env_config.world_min_y + env_config.robot_base_radius
         self.world_y_max = env_config.world_max_y - env_config.robot_base_radius
+        self.finger_gap_max = env_config.finger_gap_max
 
     @abc.abstractmethod
     def _generate_waypoints(
@@ -56,15 +57,36 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
         """Generate a waypoint plan with SE2 pose and arm length values."""
 
     @abc.abstractmethod
-    def _get_gripper_actions(self) -> tuple[float, float]:
-        """Get gripper actions for during and after waypoint movement.
+    def _get_gripper_actions(
+        self, state: ObjectCentricState
+    ) -> tuple[float, float]:
+        """Get gripper actions (deltas) for during and after waypoint movement.
+
+        Args:
+            state: Current state to calculate gripper delta from.
 
         Returns:
-            Tuple of (gripper_during_plan, gripper_after_plan) where values are:
-            - Positive values mean opening the gripper
-            - Negative values mean closing the gripper
+            Tuple of (delta_during_plan, delta_after_plan) where values are:
+            - Positive values mean opening the gripper (increasing finger_gap)
+            - Negative values mean closing the gripper (decreasing finger_gap)
             - 0.0 means no change
+            These are changes (deltas) in finger_gap, not absolute values.
         """
+    
+    def _requires_multi_phase_gripper(self, state: ObjectCentricState) -> bool:
+        """Check if this controller requires multi-phase gripper execution.
+        
+        Override this method to force multi-phase execution (e.g., for pick controllers
+        that need to move to target first, then close gripper).
+        
+        Args:
+            state: Current state.
+            
+        Returns:
+            True if multi-phase execution is required, False otherwise.
+        """
+        return False
+
 
     def _waypoints_to_plan(
         self,
@@ -261,10 +283,37 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
 
     def _generate_plan(self, x: ObjectCentricState) -> list[NDArray[np.float32]]:
         waypoints = self._generate_waypoints(x)
-        gripper_during_plan, gripper_after_plan = self._get_gripper_actions()
-        waypoint_plan = self._waypoints_to_plan(x, waypoints, gripper_during_plan)
-        plan_suffix: list[NDArray[np.float32]] = [
-            # Change the gripper.
-            np.array([0, 0, 0, 0, gripper_after_plan], dtype=np.float32),
-        ]
-        return waypoint_plan + plan_suffix
+        gripper_delta_during_plan, gripper_delta_after_plan = self._get_gripper_actions(x)
+        
+        max_gripper_delta = abs(self._max_delta_gripper)
+        
+        # Check if we need multi-phase execution
+        # Either explicitly requested or if gripper_after_plan requires multiple steps
+        requires_multi_phase = (
+            self._requires_multi_phase_gripper(x)
+            or abs(gripper_delta_after_plan) > max_gripper_delta
+        )
+        
+        if requires_multi_phase:
+            # Multi-phase: move to waypoint, then adjust gripper
+            # Phase 1: Move to final waypoint with gripper_delta_during_plan (typically 0.0 for pick)
+            waypoint_plan = self._waypoints_to_plan(x, waypoints, gripper_delta_during_plan)
+            
+            # Phase 2: Adjust gripper gradually
+            gripper_plan: list[NDArray[np.float32]] = []
+            remaining_delta = gripper_delta_after_plan
+            while abs(remaining_delta) > 1e-6:
+                step_delta = np.clip(
+                    remaining_delta, -max_gripper_delta, max_gripper_delta
+                )
+                gripper_plan.append(
+                    np.array([0, 0, 0, 0, step_delta], dtype=np.float32)
+                )
+                remaining_delta -= step_delta
+            
+            return waypoint_plan + gripper_plan
+        else:
+            # Single phase: move with gripper action without final gripper adjustment
+            waypoint_plan = self._waypoints_to_plan(x, waypoints, gripper_delta_during_plan)
+            
+            return waypoint_plan
