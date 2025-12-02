@@ -1089,6 +1089,17 @@ def create_lifted_controllers(
         )
     )
 
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
+    target = Variable("?target", MujocoObjectType)
+    prev_target = Variable("?prev_target", MujocoObjectType)
+    
+    LiftedMoveToTargetFromOtherTargetController: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, target, prev_target],
+            MoveToTargetGroundController,
+        )
+    )
+
     # Move arm to conf controller.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
 
@@ -1154,6 +1165,7 @@ def create_lifted_controllers(
 
     return {
         "move_to_target": LiftedMoveToTargetController,
+        "move_to_target_from_other_target": LiftedMoveToTargetFromOtherTargetController,
         "move_arm_to_conf": LiftedMoveArmToConfController,
         "move_arm_to_end_effector": LiftedMoveArmToEndEffectorController,
         "close_gripper": LiftedCloseGripperController,
