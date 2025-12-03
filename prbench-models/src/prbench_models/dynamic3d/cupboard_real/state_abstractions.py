@@ -86,19 +86,8 @@ class CupboardRealStateAbstractor:
         if np.isclose(gripper_val, 0.0, atol=handempty_tol):
             atoms.add(GroundAtom(HandEmpty, [robot]))
 
-        # Holding.
-        # checking the ee pose and target pose.
-        GraspThreshold = 0.1
-        gripper_val = state.get(robot, "pos_gripper")
-        if gripper_val > GraspThreshold:
-            for target in movables:
-                if state.get(target, "z") > 0.1:  # this is a hack.
-                    atoms.add(GroundAtom(Holding, [robot, target]))
-
         # OnFixture.
         for movable in movables:
-            if GroundAtom(Holding, [robot, movable]) in atoms:
-                continue
             for fixture in fixtures:
                 if (
                     abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.1
@@ -106,14 +95,35 @@ class CupboardRealStateAbstractor:
                 ):
                     atoms.add(GroundAtom(OnFixture, [movable, fixture]))
 
+        # Holding.
+        # checking the ee pose and target pose.
+        GraspThreshold = 0.1
+        gripper_val = state.get(robot, "pos_gripper")
+        current_fixture = fixtures[0]
+        if gripper_val > GraspThreshold:
+            for target in movables:
+                if (
+                    state.get(target, "z") > 0.1
+                    and GroundAtom(OnFixture, [target, current_fixture]) not in atoms
+                ):
+                    atoms.add(GroundAtom(Holding, [robot, target]))
+
         # AtPremanipulationTarget.
         for target in fixtures + movables:
             if target in fixtures:
-                premanipulation_distance_threshold = 0.95  # should be within this cardinal dist
-                premanipulation_angle_threshold = 3 * 1e-2  # should be facing the target object
+                premanipulation_distance_threshold = (
+                    0.95  # should be within this cardinal dist
+                )
+                premanipulation_angle_threshold = (
+                    3 * 1e-2
+                )  # should be facing the target object
             else:
-                premanipulation_distance_threshold = 0.6  # should be within this cardinal dist
-                premanipulation_angle_threshold = 1e-2  # should be facing the target object
+                premanipulation_distance_threshold = (
+                    0.6  # should be within this cardinal dist
+                )
+                premanipulation_angle_threshold = (
+                    1e-2  # should be facing the target object
+                )
             target_x = state.get(target, "x")
             target_y = state.get(target, "y")
             robot_x = state.get(robot, "pos_base_x")
@@ -128,9 +138,7 @@ class CupboardRealStateAbstractor:
             target_angle = np.arctan2(dy, dx)
 
             # Smallest signed angular difference
-            angle_error = abs(
-                (target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi
-            )
+            angle_error = abs((target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi)
             if angle_error < premanipulation_angle_threshold:
                 atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
                 break  # only one target can be at the premanipulation target
@@ -189,7 +197,9 @@ class CupboardRealStateAbstractor:
             atoms.add(GroundAtom(OnGround, [state.get_object_from_name("cube2")]))
         return RelationalAbstractGoal(atoms, self.state_abstractor)
 
-    def goal_deriver_place_cube2(self, state: ObjectCentricState) -> RelationalAbstractGoal:
+    def goal_deriver_place_cube2(
+        self, state: ObjectCentricState
+    ) -> RelationalAbstractGoal:
         """The goal is to place the target in the cupboard."""
         target = state.get_object_from_name("cube2")
         cupboard = state.get_object_from_name("cupboard_1")
@@ -201,7 +211,9 @@ class CupboardRealStateAbstractor:
         }
         return RelationalAbstractGoal(atoms, self.state_abstractor)
 
-    def goal_deriver_place_two_cubes(self, state: ObjectCentricState) -> RelationalAbstractGoal:
+    def goal_deriver_place_two_cubes(
+        self, state: ObjectCentricState
+    ) -> RelationalAbstractGoal:
         """The goal is to place the target in the cupboard."""
         target = state.get_object_from_name("cube1")
         target2 = state.get_object_from_name("cube2")

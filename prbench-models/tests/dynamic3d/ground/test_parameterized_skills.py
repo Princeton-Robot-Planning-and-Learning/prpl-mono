@@ -842,6 +842,7 @@ def test_pick_place_skill():
 
     env.close()
 
+
 def test_pick_place_skill_two_cubes():
     """Test pick and place skill in ground environment with 1 cube."""
 
@@ -1035,5 +1036,5 @@ def test_pick_place_skill_two_cubes():
             break
     else:
         assert False, "Controller did not terminate"
-    
+
     env.close()

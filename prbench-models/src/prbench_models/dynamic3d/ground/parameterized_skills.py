@@ -105,7 +105,12 @@ class MoveToTargetGroundController(
         self, x: ObjectCentricState, rng: np.random.Generator, rotate: bool = False
     ) -> Any:
         if rotate:
-            distance = 0.9
+            if self.objects[2].name == "cube1":
+                distance = 0.85
+            elif self.objects[2].name == "cube2":
+                distance = 0.92
+            else:
+                raise ValueError(f"Unknown target object: {self.objects[2].name}")
             rot = -np.pi / 2
         else:
             distance = 0.5  # for stable grasp
@@ -1092,7 +1097,7 @@ def create_lifted_controllers(
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
     target = Variable("?target", MujocoObjectType)
     prev_target = Variable("?prev_target", MujocoObjectType)
-    
+
     LiftedMoveToTargetFromOtherTargetController: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, target, prev_target],

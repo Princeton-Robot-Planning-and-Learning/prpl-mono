@@ -81,7 +81,6 @@ class SesamePlanner(BilevelPlanner[_X, _U, _S, _A]):
             if remaining_time < 0:
                 break
             # Try to refine this abstract plan.
-            import ipdb; ipdb.set_trace()
             plan = self._refiner(x0, s_plan, a_plan, remaining_time, bpg)
             # Plan successfully found.
             if plan is not None:
