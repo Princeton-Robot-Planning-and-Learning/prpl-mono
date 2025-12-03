@@ -514,21 +514,18 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         """Check if episode should terminate."""
         return self._reward_calculator.is_terminated(obs)
 
-    def render(self) -> NDArray[np.uint8] | None:  # type: ignore
+    def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the environment."""
         if self.render_mode == "rgb_array":
             assert self._robot_env is not None, "Robot environment not initialized"
-            obs = self._robot_env.get_obs()
-            # If a specific camera is requested, use it.
-            if self._render_camera_name:
-                key = f"{self._render_camera_name}_image"
-                if key in obs:
-                    return obs[key]
-            # Otherwise, fall back to the first available image.
-            for key, value in obs.items():
-                if key.endswith("_image"):
+            images = self._robot_env.get_camera_images()
+            if images is not None:
+                if self._render_camera_name and self._render_camera_name in images:
+                    return images[self._render_camera_name]
+                # Otherwise, return the first available image.
+                for key, value in images.items():
                     return value
-            return None
+            raise RuntimeError("No camera image available in observation.")
         raise NotImplementedError(f"Render mode {self.render_mode} not supported")
 
     def close(self) -> None:

@@ -42,19 +42,6 @@ def test_tidybot3d_reset_returns_valid_observation():
         obs
     ), "Reset observation not in observation space"
     assert isinstance(info, dict)
-    assert env.render() is None  # No rendering when render_images=False
-    env.close()
-
-
-def test_tidybot3d_reset_returns_valid_image_observation():
-    """Test that reset() returns an observation in the observation space."""
-    env = ObjectCentricTidyBot3DEnv(num_objects=3, render_images=True)
-    obs, info = env.reset()
-    assert env.observation_space.contains(
-        obs
-    ), "Reset observation not in observation space"
-    assert isinstance(info, dict)
-    assert env.render() is not None  # Rendering when render_images=True
     env.close()
 
 

@@ -237,13 +237,13 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         # Render images and update obs_dict
         if self.render_images:
-            images: dict[str, NDArray[Any]] | None = self._get_camera_images()
+            images: dict[str, NDArray[Any]] | None = self.get_camera_images()
             if images is not None:
                 obs_dict.update(images)
 
         return obs_dict
 
-    def _get_camera_images(self) -> dict[str, NDArray[np.uint8]] | None:
+    def get_camera_images(self) -> dict[str, NDArray[np.uint8]] | None:
         """Get images from cameras in simulation."""
         if not self.camera_names or self.sim is None:
             return None
