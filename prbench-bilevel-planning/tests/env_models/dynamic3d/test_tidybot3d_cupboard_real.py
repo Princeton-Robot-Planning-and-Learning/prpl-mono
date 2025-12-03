@@ -23,6 +23,7 @@ def test_tidybot3d_cupboard_bilevel_planning():
         env.observation_space,
         env.action_space,
         num_objects=2,
+        render_images=MAKE_VIDEOS,
     )
     seed = 123
     agent = BilevelPlanningAgent(
