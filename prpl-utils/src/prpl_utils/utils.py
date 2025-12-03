@@ -68,17 +68,18 @@ def fig2data(fig: plt.Figure) -> Image:
 
 def wrap_angle(angle: float) -> float:
     """Wrap an angle in radians to [-pi, pi]."""
-    return np.arctan2(np.sin(angle), np.cos(angle))
+    return np.clip(
+        np.arctan2(np.sin(angle), np.cos(angle)), -np.pi, np.pi
+    )  # for numerical safety
 
 
 def get_signed_angle_distance(target: float, source: float) -> float:
-    """Given two angles between [-pi, pi] ± epsilon, get the smallest signed
-    angle d s.t.
+    """Given two angles between [-pi, pi], get the smallest signed angle d s.t.
 
     source + d = target.
     """
-    assert -np.pi - 1e-4 <= source <= np.pi + 1e-4
-    assert -np.pi - 1e-4 <= target <= np.pi + 1e-4
+    assert -np.pi <= source <= np.pi
+    assert -np.pi <= target <= np.pi
     a = target - source
     return (a + np.pi) % (2 * np.pi) - np.pi
 
