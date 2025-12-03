@@ -71,7 +71,7 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
             These are changes (deltas) in finger_gap, not absolute values.
         """
 
-    def _requires_multi_phase_gripper(self, state: ObjectCentricState) -> bool:
+    def _requires_multi_phase_gripper(self) -> bool:
         """Check if this controller requires multi-phase gripper execution.
 
         Override this method to force multi-phase execution (e.g., for pick controllers
@@ -295,7 +295,8 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
 
         if requires_multi_phase:
             # Multi-phase: move to waypoint, then adjust gripper
-            # Phase 1: Move to final waypoint with gripper_delta_during_plan (typically 0.0 for pick)
+            # Phase 1: Move to final waypoint with gripper_delta_during_plan
+            # (typically 0.0 for pick)
             waypoint_plan = self._waypoints_to_plan(
                 x, waypoints, gripper_delta_during_plan
             )
@@ -313,10 +314,8 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
                 remaining_delta -= step_delta
 
             return waypoint_plan + gripper_plan
-        else:
-            # Single phase: move with gripper action without final gripper adjustment
-            waypoint_plan = self._waypoints_to_plan(
-                x, waypoints, gripper_delta_during_plan
-            )
 
-            return waypoint_plan
+        # Single phase: move with gripper action without final gripper adjustment
+        waypoint_plan = self._waypoints_to_plan(x, waypoints, gripper_delta_during_plan)
+
+        return waypoint_plan

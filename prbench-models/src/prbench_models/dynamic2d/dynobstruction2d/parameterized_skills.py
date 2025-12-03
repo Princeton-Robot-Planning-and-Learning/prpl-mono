@@ -56,12 +56,13 @@ class GroundPickController(Dynamic2dRobotController):
         # Pack parameters: side determines grasp approach, ratio determines position
         return (grasp_ratio, side, arm_length)
 
-    def _requires_multi_phase_gripper(self, state: ObjectCentricState) -> bool:
+    def _requires_multi_phase_gripper(self) -> bool:
         """Pick controller always uses two phases: move to block, then close gripper."""
         return True
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
-        """Get gripper actions for pick: keep open during movement, close to block width after reaching.
+        """Get gripper actions for pick: keep open during movement,
+        close to block width after reaching.
 
         Returns:
             (delta_during, delta_after) where:
@@ -204,7 +205,8 @@ class GroundPlaceController(Dynamic2dRobotController):
         return (rel_x, rel_y, rel_theta)
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
-        """Get gripper actions for place: keep closed during movement, open after placing.
+        """Get gripper actions for place: keep closed during movement,
+        open after placing.
 
         Returns:
             (delta_during, delta_after) where:
@@ -305,7 +307,8 @@ class GroundMoveToController(Dynamic2dRobotController):
         return rel_theta
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
-        """Get gripper actions for move-to: keep current gap during movement, no change after.
+        """Get gripper actions for move-to: keep current gap during movement,
+        no change after.
 
         Returns:
             (delta_during, delta_after) where:
@@ -350,9 +353,6 @@ class GroundMoveToController(Dynamic2dRobotController):
         print(f"tgt pose bottom {tgt_pose_bottom}")
 
         # Calculate robot pose to place block on surface
-        # The robot should be positioned above the surface so the gripper can place the block
-        # target_region_pose.y is already at the top edge of the surface (tgt_y + tgt_height/2)
-        # Block bottom will be placed at the surface top, so block center is above that
         surface_top_y = tgt_pose_bottom.y
         print(f"surface top y {surface_top_y}")
         block_center_y = (
@@ -471,7 +471,6 @@ class GroundPushController(Dynamic2dRobotController):
         )
 
         # IMPORTANT - Do not check if target pose is collision-free
-
         # Simple waypoint generation
         final_waypoints: list[tuple[SE2Pose, float]] = [current_wp]
         final_waypoints.append((final_robot_pose, robot_arm_joint))
