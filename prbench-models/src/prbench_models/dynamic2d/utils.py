@@ -289,7 +289,7 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
         # Check if we need multi-phase execution
         # Either explicitly requested or if gripper_after_plan requires multiple steps
         requires_multi_phase = (
-            self._requires_multi_phase_gripper(x)
+            self._requires_multi_phase_gripper()
             or abs(gripper_delta_after_plan) > max_gripper_delta
         )
 
