@@ -70,7 +70,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         scene_type: str = "ground",
         num_objects: int = 3,
         task_config_path: str | None = None,
-        render_images: bool = True,
+        render_images: bool = False,
         show_images: bool = False,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first

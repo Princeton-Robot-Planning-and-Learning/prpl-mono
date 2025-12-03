@@ -113,10 +113,10 @@ class MoveToTargetGroundController(
                 raise ValueError(f"Unknown target object: {self.objects[2].name}")
             rot = -np.pi / 2
         else:
-            # distance = 0.5  # for stable grasp
-            # rot = 0.0
-            distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
-            rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
+            distance = 0.5  # for stable grasp
+            rot = 0.0
+            # distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
+            # rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
     def reset(
@@ -193,7 +193,6 @@ class MoveToTargetGroundController(
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
