@@ -453,7 +453,6 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -595,7 +594,6 @@ class MoveArmToEndEffectorController(
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -885,7 +883,6 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -1065,10 +1062,9 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        return x.get(robot_obj, "pos_gripper")
-        # if x.get(robot_obj, "pos_gripper") > 0.2:
-        #     return GRASP_CLOSE_THRESHOLD
-        # return 0.0
+        if x.get(robot_obj, "pos_gripper") > 0.2:
+            return GRASP_CLOSE_THRESHOLD
+        return 0.0
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
         current_conf = self._get_current_robot_arm_conf()
