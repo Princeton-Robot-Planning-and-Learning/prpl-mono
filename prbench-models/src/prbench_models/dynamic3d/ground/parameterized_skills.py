@@ -113,10 +113,10 @@ class MoveToTargetGroundController(
                 raise ValueError(f"Unknown target object: {self.objects[2].name}")
             rot = -np.pi / 2
         else:
-            distance = 0.5  # for stable grasp
-            rot = 0.0
-            # distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
-            # rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
+            # distance = 0.5  # for stable grasp
+            # rot = 0.0
+            distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
+            rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
     def reset(

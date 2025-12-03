@@ -759,7 +759,7 @@ def test_pick_place_skill():
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
     target_distance = 0.5
-    target_rotation = 0
+    target_rotation = np.pi / 4
     params = np.array([target_distance, target_rotation])
 
     # Reset and execute the controller until it terminates.
@@ -843,7 +843,7 @@ def test_pick_place_skill():
     env.close()
 
 
-def test_pick_place_skill_two_cubes():
+def test_pick_place_two_cubes_skill():
     """Test pick and place skill in ground environment with 1 cube."""
 
     # Create the environment.

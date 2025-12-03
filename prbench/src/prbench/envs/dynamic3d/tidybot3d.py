@@ -70,7 +70,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         scene_type: str = "ground",
         num_objects: int = 3,
         task_config_path: str | None = None,
-        render_images: bool = False,
+        render_images: bool = True,
         show_images: bool = False,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
@@ -296,7 +296,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 if region_config["target"] == "ground":
                     # Sample pose directly on the ground using utility function
                     assert obj_name.startswith("cube"), "TODO"
-                    size = self.task_config["objects"]["cube"][obj_name]["size"]
+                    if isinstance(self.task_config["objects"]["cube"][obj_name]["size"], list):
+                        z_coordinate = self.task_config["objects"]["cube"][obj_name]["size"][2]
+                    else:
+                        size = self.task_config["objects"]["cube"][obj_name]["size"]
                     pos_x, pos_y, pos_z = sample_pose_in_region(
                         region_ranges,
                         self.np_random,
