@@ -47,6 +47,7 @@ class RBY1ARobotEnv(RobotEnv):
         camera_width: int = 640,
         camera_height: int = 480,
         seed: Optional[int] = None,
+        render_images: bool = False,
         show_viewer: bool = False,
     ) -> None:
         """
@@ -66,6 +67,7 @@ class RBY1ARobotEnv(RobotEnv):
             camera_width=camera_width,
             camera_height=camera_height,
             seed=seed,
+            render_images=render_images,
             show_viewer=show_viewer,
         )
 
