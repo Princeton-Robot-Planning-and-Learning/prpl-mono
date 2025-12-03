@@ -86,6 +86,23 @@ class CupboardRealStateAbstractor:
         if np.isclose(gripper_val, 0.0, atol=handempty_tol):
             atoms.add(GroundAtom(HandEmpty, [robot]))
 
+        # Holding.
+        # checking the ee pose and target pose.
+        GraspThreshold = 0.1
+        gripper_val = state.get(robot, "pos_gripper")
+        if gripper_val > GraspThreshold:
+            for target in movables:
+                target_ee_pose = self._pybullet_sim.get_ee_pose()
+                if state.get(target, "z") > 0.1:
+                    if (
+                        abs(target_ee_pose.position[0] - state.get(target, "x")) < 0.05
+                        and abs(target_ee_pose.position[1] - state.get(target, "y"))
+                        < 0.05
+                        and abs(target_ee_pose.position[2] - state.get(target, "z"))
+                        < 0.05
+                    ):
+                        atoms.add(GroundAtom(Holding, [robot, target]))
+
         # OnFixture.
         for movable in movables:
             for fixture in fixtures:
@@ -93,20 +110,8 @@ class CupboardRealStateAbstractor:
                     abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.1
                     and abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.1
                 ):
-                    atoms.add(GroundAtom(OnFixture, [movable, fixture]))
-
-        # Holding.
-        # checking the ee pose and target pose.
-        GraspThreshold = 0.1
-        gripper_val = state.get(robot, "pos_gripper")
-        current_fixture = fixtures[0]
-        if gripper_val > GraspThreshold:
-            for target in movables:
-                if (
-                    state.get(target, "z") > 0.1
-                    and GroundAtom(OnFixture, [target, current_fixture]) not in atoms
-                ):
-                    atoms.add(GroundAtom(Holding, [robot, target]))
+                    if GroundAtom(Holding, [robot, movable]) not in atoms:
+                        atoms.add(GroundAtom(OnFixture, [movable, fixture]))
 
         # AtPremanipulationTarget.
         for target in fixtures + movables:

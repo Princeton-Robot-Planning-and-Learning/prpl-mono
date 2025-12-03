@@ -89,7 +89,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         self.show_viewer: bool = show_viewer
         self.control_frequency: float = control_frequency
         self.horizon: int = horizon
-        self.camera_names: list[str] = camera_names if camera_names is not None else []
+        self.camera_names: list[str] = [] # camera_names if camera_names is not None else []
         self.camera_width: int = camera_width
         self.camera_height: int = camera_height
 

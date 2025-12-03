@@ -343,6 +343,10 @@ class PyBulletSim:
                 self._cupboard1_shelf_id, cupboard1_shelf_pose, self._physics_client_id
             )
 
+    def get_ee_pose(self) -> Pose:
+        """Get the end effector pose."""
+        return self._robot.get_end_effector_pose()
+
     def get_collision_bodies(self) -> set[int]:
         """Get pybullet IDs for collision bodies."""
         return {self._cube1}
