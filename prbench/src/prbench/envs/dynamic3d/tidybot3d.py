@@ -514,7 +514,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         """Check if episode should terminate."""
         return self._reward_calculator.is_terminated(obs)
 
-    def render(self) -> NDArray[np.uint8]:  # type: ignore
+    def render(self) -> NDArray[np.uint8] | None:  # type: ignore
         """Render the environment."""
         if self.render_mode == "rgb_array":
             assert self._robot_env is not None, "Robot environment not initialized"
