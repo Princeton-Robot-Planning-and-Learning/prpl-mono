@@ -30,14 +30,14 @@ def test_tidybot3d_cupboard_bilevel_planning():
         seed=seed,
         max_abstract_plans=1,
         samples_per_step=1,
-        planning_timeout=70.0,
+        planning_timeout=120.0,
         max_skill_horizon=200,
     )
     obs, info = env.reset(seed=seed)
     total_reward = 0
 
     agent.reset(obs, info)
-    for _ in range(600):
+    for _ in range(1200):
         action = agent.step()
         obs, reward, terminated, truncated, info = env.step(action)
         total_reward += reward

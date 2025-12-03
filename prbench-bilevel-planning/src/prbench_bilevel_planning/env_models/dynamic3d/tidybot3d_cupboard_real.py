@@ -16,13 +16,13 @@ from prbench.envs.dynamic3d.object_types import (
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBot3DRobotActionSpace
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 from prbench_models.dynamic3d.cupboard_real.state_abstractions import (
+    AtHome,
     AtPremanipulationTarget,
     CupboardRealStateAbstractor,
     HandEmpty,
     Holding,
     OnFixture,
     OnGround,
-    AtHome,
 )
 from prbench_models.dynamic3d.ground.parameterized_skills import (
     create_lifted_controllers,
@@ -54,7 +54,7 @@ def create_bilevel_planning_models(
     # State and goal abstractors.
     abstractor = CupboardRealStateAbstractor(sim)
     state_abstractor = abstractor.state_abstractor
-    goal_deriver = abstractor.goal_deriver_place_cube2
+    goal_deriver = abstractor.goal_deriver_place_two_cubes
 
     # Need to call reset to initialize the qpos, qvel.
     sim.reset()
@@ -87,7 +87,14 @@ def create_bilevel_planning_models(
     state_space = ObjectCentricStateSpace(types)
 
     # Predicates.
-    predicates = {AtPremanipulationTarget, Holding, HandEmpty, OnGround, OnFixture, AtHome}
+    predicates = {
+        AtPremanipulationTarget,
+        Holding,
+        HandEmpty,
+        OnGround,
+        OnFixture,
+        AtHome,
+    }
 
     # Move to target from home operator.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
@@ -157,14 +164,19 @@ def create_bilevel_planning_models(
     # Controllers.
     controllers = create_lifted_controllers(action_space, sim.initial_constant_state)
     LiftedMoveToTargetController = controllers["move_to_target"]
-    LiftedMoveToTargetFromOtherTargetController = controllers["move_to_target_from_other_target"]
+    LiftedMoveToTargetFromOtherTargetController = controllers[
+        "move_to_target_from_other_target"
+    ]
     LiftedPickGroundController = controllers["pick_ground"]
     LiftedPlaceGroundController = controllers["place_ground"]
 
     # Finalize the skills.
     skills = {
         LiftedSkill(MoveToTargetOperatorFromHome, LiftedMoveToTargetController),
-        LiftedSkill(MoveToTargetOperatorFromOtherTarget, LiftedMoveToTargetFromOtherTargetController),
+        LiftedSkill(
+            MoveToTargetOperatorFromOtherTarget,
+            LiftedMoveToTargetFromOtherTargetController,
+        ),
         LiftedSkill(PickTargetOperator, LiftedPickGroundController),
         LiftedSkill(PlaceTargetOperator, LiftedPlaceGroundController),
     }
