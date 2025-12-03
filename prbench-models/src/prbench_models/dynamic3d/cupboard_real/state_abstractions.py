@@ -119,18 +119,6 @@ class CupboardRealStateAbstractor:
         atoms = {GroundAtom(Holding, [robot, target])}
         return RelationalAbstractGoal(atoms, self.state_abstractor)
 
-    def goal_deriver_grasp_move(
-        self, state: ObjectCentricState
-    ) -> RelationalAbstractGoal:
-        """The goal is to grasp the target and move to the target."""
-        target = state.get_object_from_name("cube1")
-        target_cupboard = state.get_object_from_name("cupboard_1")
-        robot = state.get_object_from_name("robot")
-        atoms = {
-            GroundAtom(Holding, [robot, target]),
-        }
-        return RelationalAbstractGoal(atoms, self.state_abstractor)
-
     def goal_deriver_place(self, state: ObjectCentricState) -> RelationalAbstractGoal:
         """The goal is to place the target in the cupboard."""
         target = state.get_object_from_name("cube1")

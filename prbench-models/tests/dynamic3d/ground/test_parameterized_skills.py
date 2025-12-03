@@ -788,7 +788,7 @@ def test_pick_place_skill():
     params = np.array([target_distance, target_rotation])
 
     # Reset and execute the controller until it terminates.
-    controller.reset(state, params, disable_collision_objects=["cube1"])
+    controller.reset(state, params)
     for _ in range(400):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
@@ -858,7 +858,7 @@ def test_pick_place_two_cubes_skill():
     params = np.array([target_distance, target_rotation])
 
     # Reset and execute the controller until it terminates.
-    controller.reset(state, params, disable_collision_objects=["cube1"])
+    controller.reset(state, params)
     for _ in range(400):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
@@ -905,7 +905,7 @@ def test_pick_place_two_cubes_skill():
     params = np.array([target_distance, target_rotation])
 
     # Reset and execute the controller until it terminates.
-    controller.reset(state, params, disable_collision_objects=["cube2"])
+    controller.reset(state, params)
     for _ in range(400):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)

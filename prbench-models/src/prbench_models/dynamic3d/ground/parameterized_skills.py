@@ -720,22 +720,11 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
         )  # retract configuration
 
-    def sample_parameters(
-        self, x: ObjectCentricState, rng: np.random.Generator, rotate: bool = False
-    ) -> Any:
-        if rotate:
-            if self.objects[2].name == "cube1":
-                distance = 0.85
-            elif self.objects[2].name == "cube2":
-                distance = 0.92
-            else:
-                raise ValueError(f"Unknown target object: {self.objects[2].name}")
-            rot = -np.pi / 2
-        else:
-            distance = 0.5  # for stable grasp
-            rot = 0.0
-            # distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
-            # rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        distance = 0.5  # for stable grasp
+        rot = 0.0
+        # distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
+        # rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
     def reset(
@@ -744,7 +733,6 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         params: Any,
         extend_xy_magnitude: float = 0.025,
         extend_rot_magnitude: float = np.pi / 8,
-        disable_collision_objects: list[str] | None = None,
     ) -> None:
         # Initialize the PyBullet interface if this is the first time ever.
         if self._pybullet_sim is None:
@@ -770,7 +758,6 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             seed=0,  # use a constant seed to effectively make this "deterministic"
             extend_xy_magnitude=extend_xy_magnitude,
             extend_rot_magnitude=extend_rot_magnitude,
-            disable_collision_objects=disable_collision_objects,
         )
         assert base_motion_plan is not None
         self._current_base_motion_plan = base_motion_plan
@@ -1015,22 +1002,14 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
         )  # retract configuration
 
-    def sample_parameters(
-        self, x: ObjectCentricState, rng: np.random.Generator, rotate: bool = False
-    ) -> Any:
-        if rotate:
-            if self.objects[2].name == "cube1":
-                distance = 0.85
-            elif self.objects[2].name == "cube2":
-                distance = 0.92
-            else:
-                raise ValueError(f"Unknown target object: {self.objects[2].name}")
-            rot = -np.pi / 2
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        if self.objects[2].name == "cube1":
+            distance = 0.85
+        elif self.objects[2].name == "cube2":
+            distance = 0.92
         else:
-            distance = 0.5  # for stable grasp
-            rot = 0.0
-            # distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
-            # rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
+            raise ValueError(f"Unknown target object: {self.objects[2].name}")
+        rot = -np.pi / 2
         return np.array([distance, rot])
 
     def reset(
@@ -1039,7 +1018,6 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         params: Any,
         extend_xy_magnitude: float = 0.025,
         extend_rot_magnitude: float = np.pi / 8,
-        disable_collision_objects: list[str] | None = None,
     ) -> None:
         # Initialize the PyBullet interface if this is the first time ever.
         if self._pybullet_sim is None:
@@ -1065,7 +1043,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             seed=0,  # use a constant seed to effectively make this "deterministic"
             extend_xy_magnitude=extend_xy_magnitude,
             extend_rot_magnitude=extend_rot_magnitude,
-            disable_collision_objects=disable_collision_objects,
+            disable_collision_objects=[self.objects[1].name],
         )
         assert base_motion_plan is not None
         self._current_base_motion_plan = base_motion_plan
