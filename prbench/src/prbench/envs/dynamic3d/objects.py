@@ -380,7 +380,7 @@ class Cuboid(MujocoObject):
 @register_object
 class Cube(Cuboid):
     """A cube object for TidyBot environments.
-    
+
     This is a special case of Cuboid where all dimensions are equal.
     """
 

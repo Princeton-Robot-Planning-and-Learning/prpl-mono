@@ -70,7 +70,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         scene_type: str = "ground",
         num_objects: int = 3,
         task_config_path: str | None = None,
-        render_images: bool = True,
+        render_images: bool = False,
         show_images: bool = False,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
@@ -111,6 +111,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             camera_width=self.config.camera_width,
             camera_height=self.config.camera_height,
             seed=seed if seed is not None else self.seed,
+            render_images=self.render_images,
             show_viewer=self.config.show_viewer,
         )
 
@@ -297,7 +298,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     assert obj_name.startswith("cube"), "TODO"
                     size = self.task_config["objects"]["cube"][obj_name]["size"]
                     pos_x, pos_y, pos_z = sample_pose_in_region(
-                        region_ranges, self.np_random, z_coordinate=size,
+                        region_ranges,
+                        self.np_random,
+                        z_coordinate=size,
                     )
                 else:
                     # Sample pose on a fixture (table, etc.)
@@ -525,7 +528,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             for key, value in obs.items():
                 if key.endswith("_image"):
                     return value
-            raise RuntimeError("No camera image available in observation.")
+            return None
         raise NotImplementedError(f"Render mode {self.render_mode} not supported")
 
     def close(self) -> None:
