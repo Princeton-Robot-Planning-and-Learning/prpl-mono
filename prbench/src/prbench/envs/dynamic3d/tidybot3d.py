@@ -523,7 +523,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 if self._render_camera_name and self._render_camera_name in images:
                     return images[self._render_camera_name]
                 # Otherwise, return the first available image.
-                for key, value in images.items():
+                for _, value in images.items():
                     return value
             raise RuntimeError("No camera image available in observation.")
         raise NotImplementedError(f"Render mode {self.render_mode} not supported")
