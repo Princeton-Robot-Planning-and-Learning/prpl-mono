@@ -47,13 +47,13 @@ def create_bilevel_planning_models(
     sim = ObjectCentricTidyBot3DEnv(
         scene_type="cupboard_real",
         num_objects=num_objects,
-        render_images=render_images,
+        render_images=False,
     )
 
     # State and goal abstractors.
     abstractor = CupboardRealStateAbstractor(sim)
     state_abstractor = abstractor.state_abstractor
-    goal_deriver = abstractor.goal_deriver_place
+    goal_deriver = abstractor.goal_deriver_place_two_cubes
 
     # Need to call reset to initialize the qpos, qvel.
     sim.reset()

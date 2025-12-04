@@ -737,7 +737,7 @@ def test_pick_place_skill():
     """Test pick and place skill in ground environment with 1 cube."""
 
     # Create the environment.
-    num_cubes = 1
+    num_cubes = 2
     env = prbench.make(
         f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0", render_mode="rgb_array"
     )
@@ -759,9 +759,7 @@ def test_pick_place_skill():
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
-    target_distance = 0.5
-    target_rotation = 0.0
-    params = np.array([target_distance, target_rotation])
+    params = controller.sample_parameters(state, np.random.default_rng(123))
 
     # Reset and execute the controller until it terminates.
     controller.reset(state, params)
@@ -783,9 +781,7 @@ def test_pick_place_skill():
     cupboard = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube, cupboard)
     controller = lifted_controller.ground(object_parameters)
-    target_distance = 0.9
-    target_rotation = -np.pi / 2
-    params = np.array([target_distance, target_rotation])
+    params = controller.sample_parameters(state, np.random.default_rng(123))
 
     # Reset and execute the controller until it terminates.
     controller.reset(state, params)

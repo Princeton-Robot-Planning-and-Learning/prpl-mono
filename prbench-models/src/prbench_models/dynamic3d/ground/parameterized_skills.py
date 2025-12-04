@@ -45,7 +45,7 @@ from prbench_models.dynamic3d.utils import (
 # Constants.
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
 GRIPPER_OPEN_THRESHOLD = 0.01
-GRASP_CLOSE_THRESHOLD = 0.6  # for stable grasp
+GRASP_CLOSE_THRESHOLD = 1.0  # for stable grasp
 GRIPPER_CLOSED_THRESHOLD = 0.02
 WAYPOINT_TOL = 1e-2
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.3, 0.6)
@@ -721,9 +721,9 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         )  # retract configuration
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
-        distance = 0.5  # for stable grasp
+        # distance = 0.48  # for stable grasp
         rot = 0.0
-        # distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
+        distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
         # rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
@@ -954,6 +954,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
+        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -1003,12 +1004,12 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         )  # retract configuration
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
-        if self.objects[2].name == "cube1":
+        if self.objects[1].name == "cube1":
             distance = 0.85
-        elif self.objects[2].name == "cube2":
+        elif self.objects[1].name == "cube2":
             distance = 0.92
         else:
-            raise ValueError(f"Unknown target object: {self.objects[2].name}")
+            raise ValueError(f"Unknown target object: {self.objects[1].name}")
         rot = -np.pi / 2
         return np.array([distance, rot])
 
@@ -1220,6 +1221,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
+        # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
