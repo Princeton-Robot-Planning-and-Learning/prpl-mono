@@ -28,6 +28,7 @@ OnFixture = Predicate("OnFixture", [MujocoObjectType, MujocoFixtureObjectType])
 OnGround = Predicate("OnGround", [MujocoObjectType])
 Holding = Predicate("Holding", [MujocoTidyBotRobotObjectType, MujocoMovableObjectType])
 HandEmpty = Predicate("HandEmpty", [MujocoTidyBotRobotObjectType])
+AtHome = Predicate("AtHome", [MujocoTidyBotRobotObjectType])
 
 
 class CupboardRealStateAbstractor:
@@ -91,24 +92,43 @@ class CupboardRealStateAbstractor:
         gripper_val = state.get(robot, "pos_gripper")
         if gripper_val > GraspThreshold:
             for target in movables:
-                if state.get(target, "z") > 0.1:  # this is a hack.
-                    atoms.add(GroundAtom(Holding, [robot, target]))
+                target_ee_pose = self._pybullet_sim.get_ee_pose()
+                if state.get(target, "z") > 0.1:
+                    if (
+                        abs(target_ee_pose.position[0] - state.get(target, "x")) < 0.05
+                        and abs(target_ee_pose.position[1] - state.get(target, "y"))
+                        < 0.05
+                        and abs(target_ee_pose.position[2] - state.get(target, "z"))
+                        < 0.05
+                    ):
+                        atoms.add(GroundAtom(Holding, [robot, target]))
 
         # OnFixture.
         for movable in movables:
-            if GroundAtom(Holding, [robot, movable]) in atoms:
-                continue
             for fixture in fixtures:
                 if (
                     abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.1
                     and abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.1
                 ):
-                    atoms.add(GroundAtom(OnFixture, [movable, fixture]))
+                    if GroundAtom(Holding, [robot, movable]) not in atoms:
+                        atoms.add(GroundAtom(OnFixture, [movable, fixture]))
 
         # AtPremanipulationTarget.
-        premanipulation_distance_threshold = 0.95  # should be within this cardinal dist
-        premanipulation_angle_threshold = 3 * 1e-2  # should be facing the target object
-        for target in all_mujoco_objects:
+        for target in fixtures + movables:
+            if target in fixtures:
+                premanipulation_distance_threshold = (
+                    0.95  # should be within this cardinal dist
+                )
+                premanipulation_angle_threshold = (
+                    3 * 1e-2
+                )  # should be facing the target object
+            else:
+                premanipulation_distance_threshold = (
+                    0.6  # should be within this cardinal dist
+                )
+                premanipulation_angle_threshold = (
+                    1e-2  # should be facing the target object
+                )
             target_x = state.get(target, "x")
             target_y = state.get(target, "y")
             robot_x = state.get(robot, "pos_base_x")
@@ -122,16 +142,22 @@ class CupboardRealStateAbstractor:
             # Desired direction from robot -> target
             target_angle = np.arctan2(dy, dx)
 
-            if target in fixtures or (
-                target in movables and GroundAtom(Holding, [robot, target]) not in atoms
-            ):
-                # Smallest signed angular difference
-                angle_error = abs(
-                    (target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi
-                )
-                if angle_error < premanipulation_angle_threshold:
-                    atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
+            # Smallest signed angular difference
+            angle_error = abs((target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi)
+            if angle_error < premanipulation_angle_threshold:
+                atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
+                break  # only one target can be at the premanipulation target
 
+        at_home = True
+        for target in all_mujoco_objects:
+            if GroundAtom(AtPremanipulationTarget, [robot, target]) in atoms:
+                at_home = False
+                break  # found a target, so we are not at home
+            if target in movables and GroundAtom(Holding, [robot, target]) in atoms:
+                at_home = False
+                break  # found a target, so we are not at home
+        if at_home:
+            atoms.add(GroundAtom(AtHome, [robot]))
         objects = {robot} | all_mujoco_objects
         return RelationalAbstractState(atoms, objects)
 
@@ -168,9 +194,40 @@ class CupboardRealStateAbstractor:
         cupboard = state.get_object_from_name("cupboard_1")
         robot = state.get_object_from_name("robot")
         atoms = {
-            GroundAtom(AtPremanipulationTarget, [robot, target]),
             GroundAtom(AtPremanipulationTarget, [robot, cupboard]),
             GroundAtom(HandEmpty, [robot]),
             GroundAtom(OnFixture, [target, cupboard]),
+        }
+        if "cube2" in state.get_object_names():
+            atoms.add(GroundAtom(OnGround, [state.get_object_from_name("cube2")]))
+        return RelationalAbstractGoal(atoms, self.state_abstractor)
+
+    def goal_deriver_place_cube2(
+        self, state: ObjectCentricState
+    ) -> RelationalAbstractGoal:
+        """The goal is to place the target in the cupboard."""
+        target = state.get_object_from_name("cube2")
+        cupboard = state.get_object_from_name("cupboard_1")
+        robot = state.get_object_from_name("robot")
+        atoms = {
+            GroundAtom(AtPremanipulationTarget, [robot, cupboard]),
+            GroundAtom(HandEmpty, [robot]),
+            GroundAtom(OnFixture, [target, cupboard]),
+        }
+        return RelationalAbstractGoal(atoms, self.state_abstractor)
+
+    def goal_deriver_place_two_cubes(
+        self, state: ObjectCentricState
+    ) -> RelationalAbstractGoal:
+        """The goal is to place the target in the cupboard."""
+        target = state.get_object_from_name("cube1")
+        target2 = state.get_object_from_name("cube2")
+        cupboard = state.get_object_from_name("cupboard_1")
+        robot = state.get_object_from_name("robot")
+        atoms = {
+            GroundAtom(AtPremanipulationTarget, [robot, cupboard]),
+            GroundAtom(HandEmpty, [robot]),
+            GroundAtom(OnFixture, [target, cupboard]),
+            GroundAtom(OnFixture, [target2, cupboard]),
         }
         return RelationalAbstractGoal(atoms, self.state_abstractor)

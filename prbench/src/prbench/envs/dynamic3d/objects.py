@@ -353,6 +353,7 @@ class Cuboid(MujocoObject):
             "geom",
             type="box",
             size=size_str,
+            friction="0.95 0.3 0.1",
             rgba=self.rgba,
             mass=str(self.mass),
         )
@@ -380,7 +381,7 @@ class Cuboid(MujocoObject):
 @register_object
 class Cube(Cuboid):
     """A cube object for TidyBot environments.
-    
+
     This is a special case of Cuboid where all dimensions are equal.
     """
 

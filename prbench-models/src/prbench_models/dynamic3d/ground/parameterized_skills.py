@@ -105,7 +105,12 @@ class MoveToTargetGroundController(
         self, x: ObjectCentricState, rng: np.random.Generator, rotate: bool = False
     ) -> Any:
         if rotate:
-            distance = 0.9
+            if self.objects[2].name == "cube1":
+                distance = 0.85
+            elif self.objects[2].name == "cube2":
+                distance = 0.92
+            else:
+                raise ValueError(f"Unknown target object: {self.objects[2].name}")
             rot = -np.pi / 2
         else:
             distance = 0.5  # for stable grasp
@@ -336,6 +341,10 @@ class PyBulletSim:
             set_pose(
                 self._cupboard1_shelf_id, cupboard1_shelf_pose, self._physics_client_id
             )
+
+    def get_ee_pose(self) -> Pose:
+        """Get the end effector pose."""
+        return self._robot.get_end_effector_pose()
 
     def get_collision_bodies(self) -> set[int]:
         """Get pybullet IDs for collision bodies."""
@@ -743,7 +752,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         target_end_effector_pose = multiply_poses(
             target_grap_pose_world,
             Pose(
-                (0.005, 0, 0.03),  # offsets in end-effector local frame
+                (0.005, 0, 0.035),  # offsets in end-effector local frame
                 (0.707, 0.707, 0, 0),  # orientation
             ),
         )
@@ -774,6 +783,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         )
 
         assert plan is not None, "Motion planning failed"
+        assert retract_plan is not None, "Motion planning failed"
         self._current_arm_joint_plan = plan
         self._current_retract_plan = retract_plan
 
@@ -956,6 +966,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         )
 
         assert plan is not None, "Motion planning failed"
+        assert retract_plan is not None, "Motion planning failed"
         self._current_arm_joint_plan = plan
         self._current_retract_plan = retract_plan
 
@@ -1082,6 +1093,17 @@ def create_lifted_controllers(
         )
     )
 
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
+    target = Variable("?target", MujocoObjectType)
+    prev_target = Variable("?prev_target", MujocoObjectType)
+
+    LiftedMoveToTargetFromOtherTargetController: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, target, prev_target],
+            MoveToTargetGroundController,
+        )
+    )
+
     # Move arm to conf controller.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
 
@@ -1147,6 +1169,7 @@ def create_lifted_controllers(
 
     return {
         "move_to_target": LiftedMoveToTargetController,
+        "move_to_target_from_other_target": LiftedMoveToTargetFromOtherTargetController,
         "move_arm_to_conf": LiftedMoveArmToConfController,
         "move_arm_to_end_effector": LiftedMoveArmToEndEffectorController,
         "close_gripper": LiftedCloseGripperController,

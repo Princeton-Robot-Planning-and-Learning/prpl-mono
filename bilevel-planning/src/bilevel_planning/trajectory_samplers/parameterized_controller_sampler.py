@@ -67,7 +67,7 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
 
         if rotate:
             params = controller.sample_parameters(x, rng, rotate=True)  # type: ignore
-            controller.reset(x, params, disable_collision_objects=["cube1"])  # type: ignore # pylint: disable=line-too-long
+            controller.reset(x, params, disable_collision_objects=[a.parameters[2].name])  # type: ignore # pylint: disable=line-too-long
         else:
             params = controller.sample_parameters(x, rng)
             controller.reset(x, params)

@@ -70,7 +70,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         scene_type: str = "ground",
         num_objects: int = 3,
         task_config_path: str | None = None,
-        render_images: bool = True,
+        render_images: bool = False,
         show_images: bool = False,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
@@ -111,6 +111,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             camera_width=self.config.camera_width,
             camera_height=self.config.camera_height,
             seed=seed if seed is not None else self.seed,
+            render_images=self.render_images,
             show_viewer=self.config.show_viewer,
         )
 
@@ -297,7 +298,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     assert obj_name.startswith("cube"), "TODO"
                     size = self.task_config["objects"]["cube"][obj_name]["size"]
                     pos_x, pos_y, pos_z = sample_pose_in_region(
-                        region_ranges, self.np_random, z_coordinate=size,
+                        region_ranges,
+                        self.np_random,
+                        z_coordinate=size,
                     )
                 else:
                     # Sample pose on a fixture (table, etc.)
@@ -515,15 +518,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         """Render the environment."""
         if self.render_mode == "rgb_array":
             assert self._robot_env is not None, "Robot environment not initialized"
-            obs = self._robot_env.get_obs()
-            # If a specific camera is requested, use it.
-            if self._render_camera_name:
-                key = f"{self._render_camera_name}_image"
-                if key in obs:
-                    return obs[key]
-            # Otherwise, fall back to the first available image.
-            for key, value in obs.items():
-                if key.endswith("_image"):
+            images = self._robot_env.get_camera_images()
+            if images is not None:
+                if self._render_camera_name and self._render_camera_name in images:
+                    return images[self._render_camera_name]
+                # Otherwise, return the first available image.
+                for _, value in images.items():
                     return value
             raise RuntimeError("No camera image available in observation.")
         raise NotImplementedError(f"Render mode {self.render_mode} not supported")

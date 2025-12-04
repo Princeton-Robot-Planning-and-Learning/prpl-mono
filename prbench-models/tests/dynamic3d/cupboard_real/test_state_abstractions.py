@@ -39,7 +39,10 @@ def test_cupboard_real_state_abstraction():
     state = env.observation_space.devectorize(obs)
     assert isinstance(state, ObjectCentricState)
     abstract_state = abstractor.state_abstractor(state)
-    assert str(sorted(abstract_state.atoms)) == "[(HandEmpty robot), (OnGround cube1)]"
+    assert (
+        str(sorted(abstract_state.atoms))
+        == "[(AtHome robot), (HandEmpty robot), (OnGround cube1)]"
+    )
 
     # Run move base to cube.
     controllers = create_lifted_controllers(env.action_space)
@@ -95,7 +98,10 @@ def test_cupboard_real_state_abstraction():
 
     # Check updated state abstraction: the robot should be Holding the cube.
     abstract_state = abstractor.state_abstractor(state)
-    assert str(sorted(abstract_state.atoms)) == "[(Holding robot cube1)]"
+    assert (
+        str(sorted(abstract_state.atoms))
+        == "[(AtPremanipulationTarget robot cube1), (Holding robot cube1)]"
+    )
 
     # Run move base to cube.
     controllers = create_lifted_controllers(env.action_space)
@@ -153,7 +159,7 @@ def test_cupboard_real_state_abstraction():
     abstract_state = abstractor.state_abstractor(state)
     assert (
         str(sorted(abstract_state.atoms))
-        == "[(AtPremanipulationTarget robot cube1), (AtPremanipulationTarget robot cupboard_1), (HandEmpty robot), (OnFixture cube1 cupboard_1)]"  # pylint: disable=line-too-long
+        == "[(AtPremanipulationTarget robot cupboard_1), (HandEmpty robot), (OnFixture cube1 cupboard_1)]"  # pylint: disable=line-too-long
     )
 
     env.close()

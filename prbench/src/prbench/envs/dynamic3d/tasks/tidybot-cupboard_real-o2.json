@@ -36,11 +36,27 @@
                     0.1
                 ]
             ]
+        },
+        "ground_2_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    -0.3,
+                    -0.1,
+                    -0.2,
+                    0.1
+                ]
+            ]
         }
     },
     "objects": {
         "cube": {
             "cube1": {
+                "size": 0.03,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.1
+            },
+            "cube2": {
                 "size": 0.03,
                 "rgba": [0.5, 0.1, 0.1, 1],
                 "mass": 0.1
@@ -57,6 +73,11 @@
             "on",
             "cube1",
             "ground_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube2",
+            "ground_2_object_init_region"
         ]
     ]
 }
