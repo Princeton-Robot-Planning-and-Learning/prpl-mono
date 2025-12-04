@@ -42,9 +42,9 @@ class GroundPickController(Dynamic2dRobotController):
     ) -> tuple[float, float, float]:
         # Sample grasp ratio and side
         # grasp_ratio: determines position along the side ([0.0, 1.0])
-        # side: 0~0.25 left, 0.25~0.5 right, 0.5~0.75 top, 0.75~1.0 bottom
+        # we assume we will always pick from the top side
         grasp_ratio = rng.uniform(0.0, 0.1)
-        side = rng.uniform(0.0, 1.0)
+        side = rng.uniform(0.5, 0.75)
         max_arm_length = x.get(self._robot, "arm_length")
         min_arm_length = (
             x.get(self._robot, "base_radius")

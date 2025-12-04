@@ -48,7 +48,7 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
         self.world_x_max = env_config.world_max_x - env_config.robot_base_radius
         self.world_y_min = env_config.world_min_y + env_config.robot_base_radius
         self.world_y_max = env_config.world_max_y - env_config.robot_base_radius
-        self.finger_gap_max = env_config.finger_gap_max
+        self.finger_gap_max = env_config.gripper_base_height
 
     @abc.abstractmethod
     def _generate_waypoints(
