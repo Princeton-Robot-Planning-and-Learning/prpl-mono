@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pybullet as p
 
-from pybullet_helpers.geometry import SE2Pose
+from pybullet_helpers.geometry import Pose, SE2Pose
 from pybullet_helpers.robots.single_arm import SingleArmPyBulletRobot
 
 
@@ -52,14 +52,45 @@ class SingleArmPyBulletMobileManipulator(abc.ABC):
 
     def __init__(
         self,
-        arm: SingleArmPyBulletRobot,
-        base: MobilePyBulletBase,
+        physics_client_id: int,
+        base_z: float,
+        base_pose_lower_bound: SE2Pose,
+        base_pose_upper_bound: SE2Pose,
+        base_home_pose: SE2Pose = SE2Pose.identity(),
     ) -> None:
+        base_se3_pose = base_home_pose.to_pose(base_z)
+        arm = self.create_arm(physics_client_id, base_pose=base_se3_pose)
+        base = self.create_base(
+            physics_client_id,
+            base_z,
+            base_pose_lower_bound,
+            base_pose_upper_bound,
+            home_pose=base_home_pose,
+        )
         assert not arm.fixed_base, "Set fixed_base=True in arm"
         assert arm.physics_client_id == base.physics_client_id
 
         self.arm = arm
         self.base = base
+
+    @classmethod
+    @abc.abstractmethod
+    def create_arm(
+        cls, physics_client_id: int, base_pose: Pose = Pose.identity()
+    ) -> SingleArmPyBulletRobot:
+        """Create the arm."""
+
+    @classmethod
+    @abc.abstractmethod
+    def create_base(
+        cls,
+        physics_client_id: int,
+        z: float,  # mobile bases have a fixed z position in the 3D world
+        pose_lower_bound: SE2Pose,
+        pose_upper_bound: SE2Pose,
+        home_pose: SE2Pose,
+    ) -> MobilePyBulletBase:
+        """Create the base."""
 
     @classmethod
     @abc.abstractmethod
