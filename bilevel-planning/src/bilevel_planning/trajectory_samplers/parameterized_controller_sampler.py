@@ -92,7 +92,6 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
         final_abstract_state = self._state_abstractor(final_state)
         bpg.add_abstract_state_node(final_abstract_state)
         bpg.add_state_abstractor_edge(final_state, final_abstract_state)
-        import ipdb; ipdb.set_trace()
         if final_abstract_state == ns:
             # Success!
             return x_traj, u_traj

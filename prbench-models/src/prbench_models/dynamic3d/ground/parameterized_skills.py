@@ -722,10 +722,28 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         # distance = 0.48  # for stable grasp
-        rot = 0.0
-        distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
-        # rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
-        return np.array([distance, rot])
+        # rot = 0
+        target_object = self.objects[1]
+        target_object_pose = get_overhead_object_se2_pose(x, target_object)
+        
+        for _ in range(100):
+            distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
+            rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
+            target_base_pose = get_target_robot_pose_from_parameters(
+                target_object_pose, distance, rot
+            )
+            collision = False
+            for other_object in x.get_objects('MujocoMovableObjectType'):
+                if 'cube' in other_object.name and other_object.name != target_object.name:
+                    other_object_pose = get_overhead_object_se2_pose(x, other_object)
+                    distance = np.linalg.norm(target_base_pose.xy() - other_object_pose.xy())
+                    if distance < 0.7:
+                        collision = True
+                        break
+            if not collision:
+                return np.array([distance, rot])
+        
+        raise ValueError("No valid parameters found")
 
     def reset(
         self,
@@ -862,8 +880,12 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             while len(self._current_arm_joint_plan) > 1:
                 peek_conf = self._current_arm_joint_plan[0]
                 # Close enough, pop and continue.
-                if self._robot_is_close_to_conf(peek_conf):
-                    self._current_arm_joint_plan.pop(0)
+                if len(self._current_arm_joint_plan) == 2:
+                    if self._robot_is_close_to_conf(peek_conf, atol=0.01):
+                        self._current_arm_joint_plan.pop(0)
+                else:
+                    if self._robot_is_close_to_conf(peek_conf):
+                        self._current_arm_joint_plan.pop(0)
                 # Not close enough, stop popping.
                 break
             if self._robot_is_close_to_conf(self._current_arm_joint_plan[-1]):
@@ -959,11 +981,11 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             return GRASP_CLOSE_THRESHOLD
         return 0.0
 
-    def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
+    def _robot_is_close_to_conf(self, conf: JointPositions, atol: float = 4 * 1e-2) -> bool:
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 3 * 1e-2
+        return dist < atol
 
     def _robot_is_close_to_pose(self, pose: SE2, atol: float = WAYPOINT_TOL) -> bool:
         robot_pose = self._get_current_robot_pose()
@@ -1004,14 +1026,34 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         )  # retract configuration
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
-        if self.objects[1].name == "cube1":
-            distance = 0.85
-        elif self.objects[1].name == "cube2":
-            distance = 0.92
-        else:
-            raise ValueError(f"Unknown target object: {self.objects[1].name}")
+        cupboard_obj = x.get_object_from_name("cupboard_1")
+        cupboard_pose = get_overhead_object_se2_pose(x, cupboard_obj)
         rot = -np.pi / 2
-        return np.array([distance, rot])
+        # sample placements
+        for _ in range(100):
+            pose_x_offset = rng.uniform(-0.05, 0.05)
+            pose_y_offset = rng.uniform(-0.15, 0.15)
+            collision = False
+            for other_obj in x.get_objects(MujocoMovableObjectType):
+                if other_obj.name == self.objects[1].name:
+                    continue
+                other_object_pose = get_overhead_object_se2_pose(x, other_obj)
+                if np.linalg.norm(np.array([pose_x_offset + cupboard_pose.x, pose_y_offset + cupboard_pose.y]) - np.array([other_object_pose.x, other_object_pose.y])) < 0.05:
+                    collision = True
+                    break
+            if not collision:
+                return np.array([0.9 + pose_x_offset, pose_y_offset, rot])
+        raise ValueError("No valid parameters found")
+        # if self.objects[1].name == "cube1":
+        #     distance = 0.9
+        #     offset = -0.05
+        # elif self.objects[1].name == "cube2":
+        #     distance = 0.9
+        #     offset = 0.05
+        # else:
+        #     raise ValueError(f"Unknown target object: {self.objects[1].name}")
+        # rot = -np.pi / 2
+        # return np.array([distance, offset, rot])
 
     def reset(
         self,
@@ -1029,9 +1071,10 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         assert isinstance(params, np.ndarray)
         self._current_params = params.copy()
         # Derive the target pose for the robot.
-        target_distance, target_rot = self._current_params
+        target_distance, target_offset, target_rot = self._current_params
         target_object = self.objects[2]
-        target_object_pose = get_overhead_object_se2_pose(x, target_object)
+        target_object_pose_temp = get_overhead_object_se2_pose(x, target_object)
+        target_object_pose = SE2(target_object_pose_temp.x, target_object_pose_temp.y + target_offset, target_object_pose_temp.theta())
         target_base_pose = get_target_robot_pose_from_parameters(
             target_object_pose, target_distance, target_rot
         )

@@ -103,8 +103,8 @@ class CupboardRealStateAbstractor:
         for movable in movables:
             for fixture in fixtures:
                 if (
-                    abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.1
-                    and abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.1
+                    abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.15
+                    and abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.25
                 ):
                     if GroundAtom(Holding, [robot, movable]) not in atoms:
                         atoms.add(GroundAtom(OnFixture, [movable, fixture]))
@@ -157,5 +157,24 @@ class CupboardRealStateAbstractor:
             GroundAtom(HandEmpty, [robot]),
             GroundAtom(OnFixture, [target, cupboard]),
             GroundAtom(OnFixture, [target2, cupboard]),
+        }
+        return RelationalAbstractGoal(atoms, self.state_abstractor)
+
+    def goal_deriver_place_four_cubes(
+        self, state: ObjectCentricState
+    ) -> RelationalAbstractGoal:
+        """The goal is to place the target in the cupboard."""
+        target = state.get_object_from_name("cube1")
+        target2 = state.get_object_from_name("cube2")
+        target3 = state.get_object_from_name("cube3")
+        target4 = state.get_object_from_name("cube4")
+        cupboard = state.get_object_from_name("cupboard_1")
+        robot = state.get_object_from_name("robot")
+        atoms = {
+            GroundAtom(HandEmpty, [robot]),
+            GroundAtom(OnFixture, [target, cupboard]),
+            GroundAtom(OnFixture, [target2, cupboard]),
+            GroundAtom(OnFixture, [target3, cupboard]),
+            GroundAtom(OnFixture, [target4, cupboard]),
         }
         return RelationalAbstractGoal(atoms, self.state_abstractor)
