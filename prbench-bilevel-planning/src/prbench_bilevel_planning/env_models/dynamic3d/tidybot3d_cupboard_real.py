@@ -38,7 +38,6 @@ def create_bilevel_planning_models(
     observation_space: Space,
     action_space: Space,
     num_objects: int = 1,
-    render_images: bool = False,
 ) -> SesameModels:
     """Create the env models for TidyBot base motion."""
     assert isinstance(observation_space, ObjectCentricBoxSpace)

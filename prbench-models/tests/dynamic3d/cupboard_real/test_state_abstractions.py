@@ -81,8 +81,9 @@ def test_cupboard_real_state_abstraction():
     object_parameters = (robot, cube, cupboard)
     controller = lifted_controller.ground(object_parameters)
     target_distance = 0.9
+    offset = 0.0
     target_rotation = -np.pi / 2
-    params = np.array([target_distance, target_rotation])
+    params = np.array([target_distance, offset, target_rotation])
 
     # Reset and execute the controller until it terminates.
     controller.reset(state, params)

@@ -257,7 +257,7 @@ class PyBulletSim:
                     color=(0.5, 0.5, 0.5, 1.0),
                     shelf_width=0.60198,
                     shelf_depth=0.254,
-                    shelf_height=0.02, # in sim, we were using 0.0127.
+                    shelf_height=0.02,  # in sim, we were using 0.0127.
                     spacing=0.254,
                     support_width=0.0127,
                     num_layers=4,
@@ -340,7 +340,7 @@ class PyBulletSim:
                 ),
             )
             set_pose(
-                self._cupboard1_shelf_id, cupboard1_shelf_pose, self._physics_client_id
+                self._cupboard1_shelf_id, cupboard1_shelf_pose, self._physics_client_id  # type: ignore # pylint: disable=line-too-long
             )
 
     def get_ee_pose(self) -> Pose:
@@ -352,13 +352,10 @@ class PyBulletSim:
         if self._cupboard1_shelf_id is not None:
             if on_hand_object is not None:
                 return {self._cupboard1_shelf_id}
-            else:
-                return {self._cube1, self._cupboard1_shelf_id}
-        else:
-            if on_hand_object is not None:
-                return {self._cube1}
-            else:
-                return {}
+            return {self._cube1, self._cupboard1_shelf_id}
+        if on_hand_object is not None:
+            return {self._cube1}
+        return {}  # type: ignore
 
     def get_joint_distance(self, conf1: JointPositions, conf2: JointPositions) -> float:
         """Get the distance between two arm confs."""
@@ -735,24 +732,34 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         # rot = 0
         target_object = self.objects[1]
         target_object_pose = get_overhead_object_se2_pose(x, target_object)
-        
+
         for _ in range(100):
-            distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
+            distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)  # type: ignore
             rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
             target_base_pose = get_target_robot_pose_from_parameters(
                 target_object_pose, distance, rot
             )
             collision = False
-            for other_object in x.get_objects('MujocoMovableObjectType'):
-                if 'cube' in other_object.name and other_object.name != target_object.name:
+            for other_object in x.get_objects(MujocoMovableObjectType):
+                if (
+                    "cube" in other_object.name
+                    and other_object.name != target_object.name
+                ):
                     other_object_pose = get_overhead_object_se2_pose(x, other_object)
-                    distance = np.linalg.norm(target_base_pose.xy() - other_object_pose.xy())
-                    if distance < 0.7:
+                    collision_distance = float(
+                        np.linalg.norm(
+                            [
+                                target_base_pose.x - other_object_pose.x,
+                                target_base_pose.y - other_object_pose.y,
+                            ]
+                        )
+                    )
+                    if collision_distance < 0.7:
                         collision = True
                         break
             if not collision:
                 return np.array([distance, rot])
-        
+
         raise ValueError("No valid parameters found")
 
     def reset(
@@ -844,7 +851,9 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             self._pybullet_sim.robot,
             target_joints,
             self.home_joints.tolist(),
-            collision_bodies=self._pybullet_sim.get_collision_bodies(on_hand_object=target_object.name),
+            collision_bodies=self._pybullet_sim.get_collision_bodies(
+                on_hand_object=target_object.name
+            ),
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
@@ -891,7 +900,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
                 peek_conf = self._current_arm_joint_plan[0]
                 # Close enough, pop and continue.
                 if len(self._current_arm_joint_plan) == 2:
-                    if self._robot_is_close_to_conf(peek_conf, atol=0.01):
+                    if self._robot_is_close_to_conf(peek_conf, atol=0.02):
                         self._current_arm_joint_plan.pop(0)
                 else:
                     if self._robot_is_close_to_conf(peek_conf):
@@ -991,7 +1000,9 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             return GRASP_CLOSE_THRESHOLD
         return 0.0
 
-    def _robot_is_close_to_conf(self, conf: JointPositions, atol: float = 4 * 1e-2) -> bool:
+    def _robot_is_close_to_conf(
+        self, conf: JointPositions, atol: float = 4 * 1e-2
+    ) -> bool:
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
@@ -1048,7 +1059,18 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
                 if other_obj.name == self.objects[1].name:
                     continue
                 other_object_pose = get_overhead_object_se2_pose(x, other_obj)
-                if np.linalg.norm(np.array([pose_x_offset + cupboard_pose.x, pose_y_offset + cupboard_pose.y]) - np.array([other_object_pose.x, other_object_pose.y])) < 0.05:
+                if (
+                    np.linalg.norm(
+                        np.array(
+                            [
+                                pose_x_offset + cupboard_pose.x,
+                                pose_y_offset + cupboard_pose.y,
+                            ]
+                        )
+                        - np.array([other_object_pose.x, other_object_pose.y])
+                    )
+                    < 0.05
+                ):
                     collision = True
                     break
             if not collision:
@@ -1084,7 +1106,11 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         target_distance, target_offset, target_rot = self._current_params
         target_object = self.objects[2]
         target_object_pose_temp = get_overhead_object_se2_pose(x, target_object)
-        target_object_pose = SE2(target_object_pose_temp.x, target_object_pose_temp.y + target_offset, target_object_pose_temp.theta())
+        target_object_pose = SE2(
+            target_object_pose_temp.x,
+            target_object_pose_temp.y + target_offset,
+            target_object_pose_temp.theta(),
+        )
         target_base_pose = get_target_robot_pose_from_parameters(
             target_object_pose, target_distance, target_rot
         )
@@ -1131,7 +1157,9 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             self._pybullet_sim.robot,
             self._pybullet_sim.get_robot_joints(),
             target_joints,
-            collision_bodies=self._pybullet_sim.get_collision_bodies(on_hand_object=target_object.name),
+            collision_bodies=self._pybullet_sim.get_collision_bodies(
+                on_hand_object=target_object.name
+            ),
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
