@@ -250,13 +250,14 @@ class PyBulletSim:
             physics_client_id=self._physics_client_id,
         )
 
+        self._cupboard1_shelf_id = None
         if "cupboard_1" in initial_state.get_object_names():
             self._cupboard1_shelf_id, self._cupboard1_surface_ids = (
                 create_pybullet_shelf(
                     color=(0.5, 0.5, 0.5, 1.0),
                     shelf_width=0.60198,
                     shelf_depth=0.254,
-                    shelf_height=0.0127,
+                    shelf_height=0.02, # in sim, we were using 0.0127.
                     spacing=0.254,
                     support_width=0.0127,
                     num_layers=4,
@@ -346,9 +347,18 @@ class PyBulletSim:
         """Get the end effector pose."""
         return self._robot.get_end_effector_pose()
 
-    def get_collision_bodies(self) -> set[int]:
+    def get_collision_bodies(self, on_hand_object: str | None = None) -> set[int]:
         """Get pybullet IDs for collision bodies."""
-        return {self._cube1}
+        if self._cupboard1_shelf_id is not None:
+            if on_hand_object is not None:
+                return {self._cupboard1_shelf_id}
+            else:
+                return {self._cube1, self._cupboard1_shelf_id}
+        else:
+            if on_hand_object is not None:
+                return {self._cube1}
+            else:
+                return {}
 
     def get_joint_distance(self, conf1: JointPositions, conf2: JointPositions) -> float:
         """Get the distance between two arm confs."""
@@ -834,7 +844,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             self._pybullet_sim.robot,
             target_joints,
             self.home_joints.tolist(),
-            collision_bodies={},
+            collision_bodies=self._pybullet_sim.get_collision_bodies(on_hand_object=target_object.name),
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
@@ -1121,7 +1131,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             self._pybullet_sim.robot,
             self._pybullet_sim.get_robot_joints(),
             target_joints,
-            collision_bodies={},
+            collision_bodies=self._pybullet_sim.get_collision_bodies(on_hand_object=target_object.name),
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
