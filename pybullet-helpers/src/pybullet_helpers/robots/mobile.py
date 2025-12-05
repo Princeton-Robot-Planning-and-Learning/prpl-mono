@@ -1,18 +1,67 @@
 """Base classes for mobile bases and mobile manipulators."""
 
 import abc
-from dataclasses import dataclass
+from pathlib import Path
 
+import pybullet as p
+
+from pybullet_helpers.geometry import SE2Pose
 from pybullet_helpers.robots.single_arm import SingleArmPyBulletRobot
 
 
-class MobileBase(abc.ABC):
+class MobilePyBulletBase(abc.ABC):
     """Base class for a mobile base."""
 
+    def __init__(
+        self,
+        physics_client_id: int,
+        z: float,  # mobile bases have a fixed z position in the 3D world
+        pose_lower_bound: SE2Pose,
+        pose_upper_bound: SE2Pose,
+        home_pose: SE2Pose = SE2Pose.identity(),
+    ) -> None:
+        self.physics_client_id = physics_client_id
+        self.z = z
+        self.pose_lower_bound = pose_lower_bound
+        self.pose_upper_bound = pose_upper_bound
+        self.home_pose = home_pose
 
-@dataclass
-class SingleArmMobileManipulator:
+        se3_pose = home_pose.to_pose(z=z)
+        self.robot_id = p.loadURDF(
+            str(self.urdf_path),
+            basePosition=se3_pose.position,
+            baseOrientation=se3_pose.orientation,
+            # We always use reset() rather than let PyBullet physics act on the base.
+            useFixedBase=True,
+            physicsClientId=self.physics_client_id,
+        )
+
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls) -> str:
+        """Get the name of the base."""
+
+    @property
+    @abc.abstractmethod
+    def urdf_path(self) -> Path:
+        """Get the path to the URDF file for the robot."""
+
+
+class SingleArmPyBulletMobileManipulator(abc.ABC):
     """A single arm mounted on a mobile base."""
 
-    arm: SingleArmPyBulletRobot
-    base: MobileBase
+    def __init__(
+        self,
+        arm: SingleArmPyBulletRobot,
+        base: MobilePyBulletBase,
+    ) -> None:
+        assert not arm.fixed_base, "Set fixed_base=True in arm"
+        assert arm.physics_client_id == base.physics_client_id
+
+        self.arm = arm
+        self.base = base
+
+    @classmethod
+    @abc.abstractmethod
+    def get_name(cls) -> str:
+        """Get the name of the base."""

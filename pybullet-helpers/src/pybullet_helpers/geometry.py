@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Iterator, NamedTuple
 
 import numpy as np
@@ -75,6 +76,27 @@ class Pose(NamedTuple):
         return np.allclose(
             self.position, other.position, atol=atol
         ) and orientations_allclose(self.orientation, other.orientation, atol=atol)
+
+
+@dataclass(frozen=True)
+class SE2Pose:
+    """Pose in SE2, i.e., (x, y, rotation), e.g., for mobile bases."""
+
+    x: float
+    y: float
+    rot: float  # must be between -np.pi and np.pi
+
+    def __post_init__(self):
+        assert -np.pi <= self.rot <= np.pi
+
+    def to_pose(self, z: float) -> Pose:
+        """Convert into a Pose."""
+        return Pose.from_rpy((self.x, self.y, z), (0, 0, self.rot))
+
+    @classmethod
+    def identity(cls) -> SE2Pose:
+        """Unit pose."""
+        return cls(0.0, 0.0, 0.0)
 
 
 def multiply_poses(*poses: Pose) -> Pose:
