@@ -3,12 +3,6 @@
 from typing import Callable, Hashable, TypeVar
 
 import numpy as np
-from prbench.envs.dynamic3d.object_types import (
-    MujocoFixtureObjectType,
-)
-from prbench_models.dynamic3d.ground.parameterized_skills import (
-    MoveToTargetGroundController,
-)
 
 from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
 from bilevel_planning.structs import ParameterizedController, TransitionFailure
