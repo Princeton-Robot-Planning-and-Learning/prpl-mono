@@ -39,7 +39,10 @@ def test_cupboard_real_state_abstraction():
     state = env.observation_space.devectorize(obs)
     assert isinstance(state, ObjectCentricState)
     abstract_state = abstractor.state_abstractor(state)
-    assert str(sorted(abstract_state.atoms)) == "[(HandEmpty robot), (OnGround cube1)]"
+    assert (
+        str(sorted(abstract_state.atoms))
+        == "[(AtHome robot), (HandEmpty robot), (OnGround cube1)]"
+    )
 
     # create controllers.
     controllers = create_lifted_controllers(env.action_space)
@@ -70,7 +73,10 @@ def test_cupboard_real_state_abstraction():
 
     # Check updated state abstraction: the robot should be Holding the cube.
     abstract_state = abstractor.state_abstractor(state)
-    assert str(sorted(abstract_state.atoms)) == "[(Holding robot cube1)]"
+    assert (
+        str(sorted(abstract_state.atoms))
+        == "[(AtPremanipulationTarget robot cube1), (Holding robot cube1)]"
+    )
 
     # Plce the cube.
     controllers = create_lifted_controllers(env.action_space)

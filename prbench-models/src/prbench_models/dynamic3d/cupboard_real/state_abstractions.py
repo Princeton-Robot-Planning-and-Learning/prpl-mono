@@ -25,6 +25,7 @@ OnFixture = Predicate("OnFixture", [MujocoObjectType, MujocoFixtureObjectType])
 OnGround = Predicate("OnGround", [MujocoObjectType])
 Holding = Predicate("Holding", [MujocoTidyBotRobotObjectType, MujocoMovableObjectType])
 HandEmpty = Predicate("HandEmpty", [MujocoTidyBotRobotObjectType])
+AtHome = Predicate("AtHome", [MujocoTidyBotRobotObjectType])
 
 
 class CupboardRealStateAbstractor:
@@ -109,6 +110,16 @@ class CupboardRealStateAbstractor:
                     if GroundAtom(Holding, [robot, movable]) not in atoms:
                         atoms.add(GroundAtom(OnFixture, [movable, fixture]))
 
+        at_home = True
+        for target in all_mujoco_objects:
+            if GroundAtom(AtPremanipulationTarget, [robot, target]) in atoms:
+                at_home = False
+                break  # found a target, so we are not at home
+            if target in movables and GroundAtom(Holding, [robot, target]) in atoms:
+                at_home = False
+                break  # found a target, so we are not at home
+        if at_home:
+            atoms.add(GroundAtom(AtHome, [robot]))
         objects = {robot} | all_mujoco_objects
         return RelationalAbstractState(atoms, objects)
 
@@ -176,5 +187,37 @@ class CupboardRealStateAbstractor:
             GroundAtom(OnFixture, [target2, cupboard]),
             GroundAtom(OnFixture, [target3, cupboard]),
             GroundAtom(OnFixture, [target4, cupboard]),
+        }
+        if "cube2" in state.get_object_names():
+            atoms.add(GroundAtom(OnGround, [state.get_object_from_name("cube2")]))
+        return RelationalAbstractGoal(atoms, self.state_abstractor)
+
+    def goal_deriver_place_cube2(
+        self, state: ObjectCentricState
+    ) -> RelationalAbstractGoal:
+        """The goal is to place the target in the cupboard."""
+        target = state.get_object_from_name("cube2")
+        cupboard = state.get_object_from_name("cupboard_1")
+        robot = state.get_object_from_name("robot")
+        atoms = {
+            GroundAtom(AtPremanipulationTarget, [robot, cupboard]),
+            GroundAtom(HandEmpty, [robot]),
+            GroundAtom(OnFixture, [target, cupboard]),
+        }
+        return RelationalAbstractGoal(atoms, self.state_abstractor)
+
+    def goal_deriver_place_two_cubes(
+        self, state: ObjectCentricState
+    ) -> RelationalAbstractGoal:
+        """The goal is to place the target in the cupboard."""
+        target = state.get_object_from_name("cube1")
+        target2 = state.get_object_from_name("cube2")
+        cupboard = state.get_object_from_name("cupboard_1")
+        robot = state.get_object_from_name("robot")
+        atoms = {
+            GroundAtom(AtPremanipulationTarget, [robot, cupboard]),
+            GroundAtom(HandEmpty, [robot]),
+            GroundAtom(OnFixture, [target, cupboard]),
+            GroundAtom(OnFixture, [target2, cupboard]),
         }
         return RelationalAbstractGoal(atoms, self.state_abstractor)
