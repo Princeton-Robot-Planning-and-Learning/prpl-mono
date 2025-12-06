@@ -47,7 +47,7 @@ class TidyBotRewardCalculator:
 class BaseMotionRewardCalculator(TidyBotRewardCalculator):
     """Terminate when the robot is close enough to the target."""
 
-    dist_thresh: ClassVar[float] = 5 * 1e-2
+    dist_thresh: ClassVar[float] = 8 * 1e-2
 
     def __init__(self) -> None:
         super().__init__(scene_type="base_motion", num_objects=1)
