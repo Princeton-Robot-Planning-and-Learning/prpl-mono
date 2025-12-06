@@ -7,6 +7,7 @@ import pybullet as p
 
 from pybullet_helpers.geometry import Pose, SE2Pose
 from pybullet_helpers.robots.single_arm import SingleArmPyBulletRobot
+import numpy as np
 
 
 class MobilePyBulletBase(abc.ABC):
@@ -16,8 +17,8 @@ class MobilePyBulletBase(abc.ABC):
         self,
         physics_client_id: int,
         z: float,  # mobile bases have a fixed z position in the 3D world
-        pose_lower_bound: SE2Pose,
-        pose_upper_bound: SE2Pose,
+        pose_lower_bound: SE2Pose = SE2Pose(-np.inf, -np.inf, -np.pi),
+        pose_upper_bound: SE2Pose= SE2Pose(np.inf, np.inf, np.pi),
         home_pose: SE2Pose = SE2Pose.identity(),
     ) -> None:
         self.physics_client_id = physics_client_id
