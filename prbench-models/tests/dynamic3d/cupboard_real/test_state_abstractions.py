@@ -41,7 +41,7 @@ def test_cupboard_real_state_abstraction():
     abstract_state = abstractor.state_abstractor(state)
     assert str(sorted(abstract_state.atoms)) == "[(HandEmpty robot), (OnGround cube1)]"
 
-    # create controllers.
+    # Create controllers.
     controllers = create_lifted_controllers(env.action_space)
 
     # Pick up the cube.

@@ -235,18 +235,23 @@ class PyBulletSim:
             "kinova-gen3", self._physics_client_id, fixed_base=False
         )
 
-        # Create the cube.
-        cube1_obj = initial_state.get_object_from_name("cube1")
-        cube_half_extents = (
-            initial_state.get(cube1_obj, "bb_x") / 2,
-            initial_state.get(cube1_obj, "bb_y") / 2,
-            initial_state.get(cube1_obj, "bb_z") / 2,
-        )
-        self._cube1 = create_pybullet_block(
-            color=(1.0, 0.0, 0.0, 1.0),  # doesn't matter,
-            half_extents=cube_half_extents,
-            physics_client_id=self._physics_client_id,
-        )
+        self.base_link_to_held_obj: Pose | None = None
+
+        # Create all the cubes.
+        self._cubes: dict[str, int] = {}
+        for cube_name in initial_state.get_object_names():
+            if "cube" in cube_name:
+                cube_obj = initial_state.get_object_from_name(cube_name)
+                cube_half_extents = (
+                    initial_state.get(cube_obj, "bb_x") / 2,
+                    initial_state.get(cube_obj, "bb_y") / 2,
+                    initial_state.get(cube_obj, "bb_z") / 2,
+                )
+                self._cubes[cube_name] = create_pybullet_block(
+                    color=(1.0, 0.0, 0.0, 1.0),  # doesn't matter,
+                    half_extents=cube_half_extents,
+                    physics_client_id=self._physics_client_id,
+                )
 
         self._cupboard1_shelf_id = None
         if "cupboard_1" in initial_state.get_object_names():
@@ -255,7 +260,7 @@ class PyBulletSim:
                     color=(0.5, 0.5, 0.5, 1.0),
                     shelf_width=0.60198,
                     shelf_depth=0.254,
-                    shelf_height=0.02,  # in sim, we were using 0.0127.
+                    shelf_height=0.0127,  # in sim, we were using 0.0127.
                     spacing=0.254,
                     support_width=0.0127,
                     num_layers=4,
@@ -310,17 +315,19 @@ class PyBulletSim:
         self._robot.set_joints(arm_conf)
 
         # Update the cube state.
-        cube1_obj = x.get_object_from_name("cube1")
-        cube_pose = Pose(
-            (x.get(cube1_obj, "x"), x.get(cube1_obj, "y"), x.get(cube1_obj, "z")),
-            (
-                x.get(cube1_obj, "qx"),
-                x.get(cube1_obj, "qy"),
-                x.get(cube1_obj, "qz"),
-                x.get(cube1_obj, "qw"),
-            ),
-        )
-        set_pose(self._cube1, cube_pose, self._physics_client_id)
+        for cube_name in x.get_object_names():
+            if "cube" in cube_name:
+                cube_obj = x.get_object_from_name(cube_name)
+                cube_pose = Pose(
+                    (x.get(cube_obj, "x"), x.get(cube_obj, "y"), x.get(cube_obj, "z")),
+                    (
+                        x.get(cube_obj, "qx"),
+                        x.get(cube_obj, "qy"),
+                        x.get(cube_obj, "qz"),
+                        x.get(cube_obj, "qw"),
+                    ),
+                )
+                set_pose(self._cubes[cube_name], cube_pose, self._physics_client_id)
 
         if "cupboard_1" in x.get_object_names():
             cupboard1_obj = x.get_object_from_name("cupboard_1")
@@ -348,15 +355,15 @@ class PyBulletSim:
         """Get the end effector pose."""
         return self._robot.get_end_effector_pose()
 
-    def get_collision_bodies(self, on_hand_object: str | None = None) -> set[int]:
+    def get_collision_bodies(self, held_object: int | None = None) -> set[int]:
         """Get pybullet IDs for collision bodies."""
+        collision_bodies: set[int] = set()
+        collision_bodies.update(self._cubes.values())
         if self._cupboard1_shelf_id is not None:
-            if on_hand_object is not None:
-                return {self._cupboard1_shelf_id}
-            return {self._cube1, self._cupboard1_shelf_id}
-        if on_hand_object is not None:
-            return {self._cube1}
-        return {}  # type: ignore
+            collision_bodies.add(self._cupboard1_shelf_id)
+        if held_object is not None:
+            collision_bodies.discard(held_object)
+        return collision_bodies
 
     def get_joint_distance(self, conf1: JointPositions, conf2: JointPositions) -> float:
         """Get the distance between two arm confs."""
@@ -830,6 +837,11 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             ),
         )
 
+        self._pybullet_sim.base_link_to_held_obj = multiply_poses(
+            target_end_effector_pose.invert(),
+            target_grap_pose_world,
+        )
+
         target_joints = inverse_kinematics(
             self._pybullet_sim.robot,
             target_end_effector_pose,
@@ -850,9 +862,15 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             self._pybullet_sim.robot,
             target_joints,
             self.home_joints.tolist(),
-            collision_bodies=self._pybullet_sim.get_collision_bodies(
-                on_hand_object=target_object.name
+            collision_bodies=self._pybullet_sim.get_collision_bodies(  # pylint: disable=protected-access
+                held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
+                    target_object.name
+                ]
             ),
+            held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
+                target_object.name
+            ],
+            base_link_to_held_obj=self._pybullet_sim.base_link_to_held_obj,  # pylint: disable=protected-access
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
@@ -1141,15 +1159,40 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             set_joints=False,
         )
 
+        target_object_place = self.objects[1]
+
+        self._pybullet_sim.base_link_to_held_obj = multiply_poses(
+            self._pybullet_sim.get_ee_pose().invert(),
+            Pose(
+                (
+                    x.get(target_object_place, "x"),
+                    x.get(target_object_place, "y"),
+                    x.get(target_object_place, "z"),
+                ),
+                (
+                    x.get(target_object_place, "qx"),
+                    x.get(target_object_place, "qy"),
+                    x.get(target_object_place, "qz"),
+                    x.get(target_object_place, "qw"),
+                ),
+            ),
+        )
+
         # Run motion planning.
         plan = run_motion_planning(
             self._pybullet_sim.robot,
             self._pybullet_sim.get_robot_joints(),
             target_joints,
             collision_bodies=self._pybullet_sim.get_collision_bodies(
-                on_hand_object=target_object.name
+                held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
+                    target_object_place.name
+                ]
             ),
             seed=0,  # use a constant seed to make this effectively deterministic
+            held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
+                target_object_place.name
+            ],
+            base_link_to_held_obj=self._pybullet_sim.base_link_to_held_obj,
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
 
