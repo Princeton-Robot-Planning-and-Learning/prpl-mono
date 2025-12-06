@@ -52,7 +52,7 @@ def create_bilevel_planning_models(
     # State and goal abstractors.
     abstractor = CupboardRealStateAbstractor(sim)
     state_abstractor = abstractor.state_abstractor
-    goal_deriver = abstractor.goal_deriver_place_four_cubes
+    goal_deriver = abstractor.goal_deriver_place_cupboard
 
     # Need to call reset to initialize the qpos, qvel.
     sim.reset()

@@ -115,8 +115,6 @@ class MoveToTargetGroundController(
         else:
             distance = 0.5  # for stable grasp
             rot = 0.0
-            # distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
-            # rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
     def reset(
@@ -339,8 +337,11 @@ class PyBulletSim:
                     x.get(cupboard1_obj, "qw"),
                 ),
             )
+            assert self._cupboard1_shelf_id is not None
             set_pose(
-                self._cupboard1_shelf_id, cupboard1_shelf_pose, self._physics_client_id  # type: ignore # pylint: disable=line-too-long
+                self._cupboard1_shelf_id,
+                cupboard1_shelf_pose,
+                self._physics_client_id,
             )
 
     def get_ee_pose(self) -> Pose:
@@ -728,8 +729,6 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         )  # retract configuration
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
-        # distance = 0.48  # for stable grasp
-        # rot = 0
         target_object = self.objects[1]
         target_object_pose = get_overhead_object_se2_pose(x, target_object)
 
@@ -1076,16 +1075,6 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             if not collision:
                 return np.array([0.9 + pose_x_offset, pose_y_offset, rot])
         raise ValueError("No valid parameters found")
-        # if self.objects[1].name == "cube1":
-        #     distance = 0.9
-        #     offset = -0.05
-        # elif self.objects[1].name == "cube2":
-        #     distance = 0.9
-        #     offset = 0.05
-        # else:
-        #     raise ValueError(f"Unknown target object: {self.objects[1].name}")
-        # rot = -np.pi / 2
-        # return np.array([distance, offset, rot])
 
     def reset(
         self,
