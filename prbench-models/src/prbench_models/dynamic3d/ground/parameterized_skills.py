@@ -9,6 +9,8 @@ from bilevel_planning.structs import (
     LiftedParameterizedController,
 )
 from prbench.envs.dynamic3d.object_types import (
+    MujocoFixtureObjectType,
+    MujocoMovableObjectType,
     MujocoObjectType,
     MujocoTidyBotRobotObjectType,
 )
@@ -18,7 +20,7 @@ from prbench.envs.dynamic3d.robots.tidybot_robot_env import (
 from prpl_utils.utils import get_signed_angle_distance
 from pybullet_helpers.geometry import Pose, multiply_poses, set_pose
 from pybullet_helpers.inverse_kinematics import inverse_kinematics
-from pybullet_helpers.joint import JointPositions
+from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
     run_motion_planning,
@@ -42,10 +44,11 @@ from prbench_models.dynamic3d.utils import (
 
 # Constants.
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
+GRIPPER_OPEN_THRESHOLD = 0.01
+GRASP_CLOSE_THRESHOLD = 1.0  # for stable grasp
 GRIPPER_CLOSED_THRESHOLD = 0.02
-GRIPPER_CLOSED_VALUE = 0.6
 WAYPOINT_TOL = 1e-2
-MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.1, 0.3)
+MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.3, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi, np.pi)
 WORLD_X_BOUNDS = (-2.5, 2.5)  # we should move these later
 WORLD_Y_BOUNDS = (-2.5, 2.5)  # we should move these later
@@ -98,9 +101,20 @@ class MoveToTargetGroundController(
         self._current_params: np.ndarray | None = None
         self._current_base_motion_plan: list[SE2] | None = None
 
-    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
-        distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
-        rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
+    def sample_parameters(
+        self, x: ObjectCentricState, rng: np.random.Generator, rotate: bool = False
+    ) -> Any:
+        if rotate:
+            if self.objects[2].name == "cube1":
+                distance = 0.85
+            elif self.objects[2].name == "cube2":
+                distance = 0.92
+            else:
+                raise ValueError(f"Unknown target object: {self.objects[2].name}")
+            rot = -np.pi / 2
+        else:
+            distance = 0.5  # for stable grasp
+            rot = 0.0
         return np.array([distance, rot])
 
     def reset(
@@ -178,7 +192,7 @@ class MoveToTargetGroundController(
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
         if x.get(robot_obj, "pos_gripper") > 0.2:
-            return GRIPPER_CLOSED_VALUE
+            return GRASP_CLOSE_THRESHOLD
         return 0.0
 
     def _robot_is_close_to_pose(self, pose: SE2, atol: float = WAYPOINT_TOL) -> bool:
@@ -221,26 +235,32 @@ class PyBulletSim:
             "kinova-gen3", self._physics_client_id, fixed_base=False
         )
 
-        # Create the cube.
-        cube1_obj = initial_state.get_object_from_name("cube1")
-        cube_half_extents = (
-            initial_state.get(cube1_obj, "bb_x") / 2,
-            initial_state.get(cube1_obj, "bb_y") / 2,
-            initial_state.get(cube1_obj, "bb_z") / 2,
-        )
-        self._cube1 = create_pybullet_block(
-            color=(1.0, 0.0, 0.0, 1.0),  # doesn't matter,
-            half_extents=cube_half_extents,
-            physics_client_id=self._physics_client_id,
-        )
+        self.base_link_to_held_obj: Pose | None = None
 
+        # Create all the cubes.
+        self._cubes: dict[str, int] = {}
+        for cube_name in initial_state.get_object_names():
+            if "cube" in cube_name:
+                cube_obj = initial_state.get_object_from_name(cube_name)
+                cube_half_extents = (
+                    initial_state.get(cube_obj, "bb_x") / 2,
+                    initial_state.get(cube_obj, "bb_y") / 2,
+                    initial_state.get(cube_obj, "bb_z") / 2,
+                )
+                self._cubes[cube_name] = create_pybullet_block(
+                    color=(1.0, 0.0, 0.0, 1.0),  # doesn't matter,
+                    half_extents=cube_half_extents,
+                    physics_client_id=self._physics_client_id,
+                )
+
+        self._cupboard1_shelf_id = None
         if "cupboard_1" in initial_state.get_object_names():
             self._cupboard1_shelf_id, self._cupboard1_surface_ids = (
                 create_pybullet_shelf(
                     color=(0.5, 0.5, 0.5, 1.0),
                     shelf_width=0.60198,
                     shelf_depth=0.254,
-                    shelf_height=0.0127,
+                    shelf_height=0.0127,  # in sim, we were using 0.0127.
                     spacing=0.254,
                     support_width=0.0127,
                     num_layers=4,
@@ -295,17 +315,19 @@ class PyBulletSim:
         self._robot.set_joints(arm_conf)
 
         # Update the cube state.
-        cube1_obj = x.get_object_from_name("cube1")
-        cube_pose = Pose(
-            (x.get(cube1_obj, "x"), x.get(cube1_obj, "y"), x.get(cube1_obj, "z")),
-            (
-                x.get(cube1_obj, "qx"),
-                x.get(cube1_obj, "qy"),
-                x.get(cube1_obj, "qz"),
-                x.get(cube1_obj, "qw"),
-            ),
-        )
-        set_pose(self._cube1, cube_pose, self._physics_client_id)
+        for cube_name in x.get_object_names():
+            if "cube" in cube_name:
+                cube_obj = x.get_object_from_name(cube_name)
+                cube_pose = Pose(
+                    (x.get(cube_obj, "x"), x.get(cube_obj, "y"), x.get(cube_obj, "z")),
+                    (
+                        x.get(cube_obj, "qx"),
+                        x.get(cube_obj, "qy"),
+                        x.get(cube_obj, "qz"),
+                        x.get(cube_obj, "qw"),
+                    ),
+                )
+                set_pose(self._cubes[cube_name], cube_pose, self._physics_client_id)
 
         if "cupboard_1" in x.get_object_names():
             cupboard1_obj = x.get_object_from_name("cupboard_1")
@@ -322,13 +344,26 @@ class PyBulletSim:
                     x.get(cupboard1_obj, "qw"),
                 ),
             )
+            assert self._cupboard1_shelf_id is not None
             set_pose(
-                self._cupboard1_shelf_id, cupboard1_shelf_pose, self._physics_client_id
+                self._cupboard1_shelf_id,
+                cupboard1_shelf_pose,
+                self._physics_client_id,
             )
 
-    def get_collision_bodies(self) -> set[int]:
+    def get_ee_pose(self) -> Pose:
+        """Get the end effector pose."""
+        return self._robot.get_end_effector_pose()
+
+    def get_collision_bodies(self, held_object: int | None = None) -> set[int]:
         """Get pybullet IDs for collision bodies."""
-        return {self._cube1}
+        collision_bodies: set[int] = set()
+        collision_bodies.update(self._cubes.values())
+        if self._cupboard1_shelf_id is not None:
+            collision_bodies.add(self._cupboard1_shelf_id)
+        if held_object is not None:
+            collision_bodies.discard(held_object)
+        return collision_bodies
 
     def get_joint_distance(self, conf1: JointPositions, conf2: JointPositions) -> float:
         """Get the distance between two arm confs."""
@@ -434,7 +469,7 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
         if x.get(robot_obj, "pos_gripper") > 0.2:
-            return GRIPPER_CLOSED_VALUE
+            return GRASP_CLOSE_THRESHOLD
         return 0.0
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
@@ -492,22 +527,19 @@ class MoveArmToEndEffectorController(
                     self._current_params[1],
                     self._current_params[2],
                 ),
-                (0, 0, 0, 1),
+                (
+                    self._current_params[3],
+                    self._current_params[4],
+                    self._current_params[5],
+                    self._current_params[6],
+                ),
             ),
         )
 
-        target_end_effector_pose = Pose(
-            (
-                target_end_effector_pose_temp.position[0],
-                target_end_effector_pose_temp.position[1],
-                target_end_effector_pose_temp.position[2],
-            ),
-            (
-                self._current_params[3],
-                self._current_params[4],
-                self._current_params[5],
-                self._current_params[6],
-            ),
+        rotation = Pose.from_rpy((0, 0, 0), (0, 0, self._current_params[7]))
+        target_end_effector_pose = multiply_poses(
+            target_end_effector_pose_temp,
+            rotation,
         )
 
         target_joints = inverse_kinematics(
@@ -577,10 +609,8 @@ class MoveArmToEndEffectorController(
         x = self._last_state
         assert x is not None
         robot_obj = x.get_object_from_name("robot")
-        if (
-            x.get(robot_obj, "pos_gripper") > 0.2
-        ):  # to mitigate the pos_gripper not accurate
-            return GRIPPER_CLOSED_VALUE
+        if x.get(robot_obj, "pos_gripper") > 0.2:
+            return GRASP_CLOSE_THRESHOLD
         return 0.0
 
     def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
@@ -675,9 +705,657 @@ class OpenGripperController(GroundParameterizedController[ObjectCentricState, Ar
         robot = self.objects[0]
         return state.get(robot, "pos_gripper")
 
-    def _robot_gripper_is_open(self, atol: float = GRIPPER_CLOSED_THRESHOLD) -> bool:
+    def _robot_gripper_is_open(self, atol: float = GRIPPER_OPEN_THRESHOLD) -> bool:
         current_gripper_pose = self._get_current_gripper_pose()
         return current_gripper_pose < atol
+
+
+class PickGroundController(GroundParameterizedController[ObjectCentricState, Array]):
+    """Controller for motion planning to pick up a target.
+
+    The object parameters are:
+        robot: The robot itself.
+        object: The target object.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_state: ObjectCentricState | None = None
+        self._current_params: np.ndarray | None = None
+        self._current_arm_joint_plan: list[JointPositions] | None = None
+        self._current_retract_plan: list[JointPositions] | None = None
+        self._current_base_motion_plan: list[SE2] | None = None
+        self._pybullet_sim: PyBulletSim | None = None
+        self._navigated: bool = False
+        self._pre_grasp: bool = False
+        self._closed_gripper: bool = False
+        self._lifted: bool = False
+        self._last_gripper_state: float = 0.0
+        self.home_joints = np.deg2rad(
+            [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
+        )  # retract configuration
+
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        target_object = self.objects[1]
+        target_object_pose = get_overhead_object_se2_pose(x, target_object)
+
+        for _ in range(100):
+            distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)  # type: ignore
+            rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
+            target_base_pose = get_target_robot_pose_from_parameters(
+                target_object_pose, distance, rot
+            )
+            collision = False
+            for other_object in x.get_objects(MujocoMovableObjectType):
+                if (
+                    "cube" in other_object.name
+                    and other_object.name != target_object.name
+                ):
+                    other_object_pose = get_overhead_object_se2_pose(x, other_object)
+                    collision_distance = float(
+                        np.linalg.norm(
+                            [
+                                target_base_pose.x - other_object_pose.x,
+                                target_base_pose.y - other_object_pose.y,
+                            ]
+                        )
+                    )
+                    if collision_distance < 0.7:
+                        collision = True
+                        break
+            if not collision:
+                return np.array([distance, rot])
+
+        raise ValueError("No valid parameters found")
+
+    def reset(
+        self,
+        x: ObjectCentricState,
+        params: Any,
+        extend_xy_magnitude: float = 0.025,
+        extend_rot_magnitude: float = np.pi / 8,
+    ) -> None:
+        # Initialize the PyBullet interface if this is the first time ever.
+        if self._pybullet_sim is None:
+            self._pybullet_sim = PyBulletSim(x)
+        # Update the current state and parameters.
+        self._last_state = x
+
+        assert isinstance(params, np.ndarray)
+        self._current_params = params.copy()
+        # Derive the target pose for the robot.
+        target_distance, target_rot = self._current_params
+        target_object = self.objects[1]
+        target_object_pose = get_overhead_object_se2_pose(x, target_object)
+        target_base_pose = get_target_robot_pose_from_parameters(
+            target_object_pose, target_distance, target_rot
+        )
+        # Run motion planning.
+        base_motion_plan = run_base_motion_planning(
+            state=x,
+            target_base_pose=target_base_pose,
+            x_bounds=WORLD_X_BOUNDS,
+            y_bounds=WORLD_Y_BOUNDS,
+            seed=0,  # use a constant seed to effectively make this "deterministic"
+            extend_xy_magnitude=extend_xy_magnitude,
+            extend_rot_magnitude=extend_rot_magnitude,
+        )
+        assert base_motion_plan is not None
+        self._current_base_motion_plan = base_motion_plan
+
+        plan_x = x.copy()
+        robot = plan_x.get_object_from_name("robot")
+        target_base_pose = self._current_base_motion_plan[-1]
+        plan_x.set(robot, "pos_base_x", target_base_pose.x)
+        plan_x.set(robot, "pos_base_y", target_base_pose.y)
+        plan_x.set(robot, "pos_base_rot", target_base_pose.theta())
+
+        # Reset PyBullet given the current state.
+        self._pybullet_sim.set_state(plan_x)
+
+        target_object = self.objects[1]
+
+        target_grap_pose_world = Pose(
+            (
+                plan_x.get(target_object, "x"),
+                plan_x.get(target_object, "y"),
+                plan_x.get(target_object, "z"),
+            ),
+            (
+                plan_x.get(target_object, "qx"),
+                plan_x.get(target_object, "qy"),
+                plan_x.get(target_object, "qz"),
+                plan_x.get(target_object, "qw"),
+            ),
+        )
+
+        target_end_effector_pose = multiply_poses(
+            target_grap_pose_world,
+            Pose(
+                (0.005, 0, 0.035),  # offsets in end-effector local frame
+                (0.707, 0.707, 0, 0),  # orientation
+            ),
+        )
+
+        self._pybullet_sim.base_link_to_held_obj = multiply_poses(
+            target_end_effector_pose.invert(),
+            target_grap_pose_world,
+        )
+
+        target_joints = inverse_kinematics(
+            self._pybullet_sim.robot,
+            target_end_effector_pose,
+            set_joints=False,
+        )
+
+        # Run motion planning.
+        plan = run_motion_planning(
+            self._pybullet_sim.robot,
+            self._pybullet_sim.get_robot_joints(),
+            target_joints,
+            collision_bodies=self._pybullet_sim.get_collision_bodies(),
+            seed=0,  # use a constant seed to make this effectively deterministic
+            physics_client_id=self._pybullet_sim.physics_client_id,
+        )
+
+        retract_plan = run_motion_planning(
+            self._pybullet_sim.robot,
+            target_joints,
+            self.home_joints.tolist(),
+            collision_bodies=self._pybullet_sim.get_collision_bodies(  # pylint: disable=protected-access
+                held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
+                    target_object.name
+                ]
+            ),
+            held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
+                target_object.name
+            ],
+            base_link_to_held_obj=self._pybullet_sim.base_link_to_held_obj,  # pylint: disable=protected-access
+            seed=0,  # use a constant seed to make this effectively deterministic
+            physics_client_id=self._pybullet_sim.physics_client_id,
+        )
+
+        assert plan is not None, "Motion planning failed"
+        assert retract_plan is not None, "Motion planning failed"
+        self._current_arm_joint_plan = plan
+        self._current_retract_plan = retract_plan
+
+    def terminated(self) -> bool:
+        assert (
+            self._current_arm_joint_plan is not None
+            and self._current_retract_plan is not None
+        )
+        return self._lifted
+
+    def step(self) -> Array:
+        assert self._current_arm_joint_plan is not None
+        assert self._current_base_motion_plan is not None
+        # first substep
+        if not self._navigated:
+            while len(self._current_base_motion_plan) > 1:
+                peek_pose = self._current_base_motion_plan[0]
+                # Close enough, pop and continue.
+                if self._robot_is_close_to_pose(peek_pose):
+                    self._current_base_motion_plan.pop(0)
+                # Not close enough, stop popping.
+                break
+            if self._robot_is_close_to_pose(self._current_base_motion_plan[-1]):
+                self._navigated = True
+            robot_pose = self._get_current_robot_pose()
+            next_pose = self._current_base_motion_plan[0]
+            dx = next_pose.x - robot_pose.x
+            dy = next_pose.y - robot_pose.y
+            drot = get_signed_angle_distance(next_pose.theta(), robot_pose.theta())
+            action = np.zeros(11, dtype=np.float32)
+            action[0] = dx
+            action[1] = dy
+            action[2] = drot
+            action[-1] = self._get_current_robot_gripper_pose()
+            return action
+        if self._navigated and not self._pre_grasp and not self._closed_gripper:
+            while len(self._current_arm_joint_plan) > 1:
+                peek_conf = self._current_arm_joint_plan[0]
+                # Close enough, pop and continue.
+                if len(self._current_arm_joint_plan) == 2:
+                    if self._robot_is_close_to_conf(peek_conf, atol=0.02):
+                        self._current_arm_joint_plan.pop(0)
+                else:
+                    if self._robot_is_close_to_conf(peek_conf):
+                        self._current_arm_joint_plan.pop(0)
+                # Not close enough, stop popping.
+                break
+            if self._robot_is_close_to_conf(self._current_arm_joint_plan[-1]):
+                self._pre_grasp = True
+            robot_conf = self._get_current_robot_arm_conf()
+            gripper_pose = self._get_current_robot_gripper_pose()
+            next_conf = self._current_arm_joint_plan[0]
+            action = np.zeros(11, dtype=np.float32)
+            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
+            free_joints_infos = [
+                joint_info for joint_info in joint_infos if joint_info.qIndex > -1
+            ]
+            action[3:10] = get_jointwise_difference(
+                free_joints_infos[:7], next_conf[:7], robot_conf[:7]
+            )
+            action[-1] = gripper_pose
+            return action
+        if self._pre_grasp and not self._closed_gripper:
+            if self._get_current_robot_gripper_pose() > 0.2 and np.isclose(
+                self._get_current_robot_gripper_pose(),
+                self._last_gripper_state,
+                atol=0.02,
+            ):
+                self._closed_gripper = True
+            action = np.zeros(11, dtype=np.float32)
+            action[-1] = 1
+            self._last_gripper_state = self._get_current_robot_gripper_pose()
+            return action
+        if self._pre_grasp and self._closed_gripper:
+            while len(self._current_retract_plan) > 1:  # type: ignore
+                peek_conf = self._current_retract_plan[0]  # type: ignore
+                # Close enough, pop and continue.
+                if self._robot_is_close_to_conf(peek_conf):
+                    self._current_retract_plan.pop(0)  # type: ignore
+                # Not close enough, stop popping.
+                break
+            if self._robot_is_close_to_conf(self._current_retract_plan[-1]):  # type: ignore # pylint: disable=line-too-long
+                self._lifted = True
+            robot_conf = self._get_current_robot_arm_conf()
+            gripper_pose = self._get_current_robot_gripper_pose()
+            next_conf = self._current_retract_plan[0]  # type: ignore
+            action = np.zeros(11, dtype=np.float32)
+            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
+            free_joints_infos = [
+                joint_info for joint_info in joint_infos if joint_info.qIndex > -1
+            ]
+            action[3:10] = get_jointwise_difference(
+                free_joints_infos[:7], next_conf[:7], robot_conf[:7]
+            )
+            action[-1] = gripper_pose
+            return action
+        raise ValueError("Invalid state")
+
+    def observe(self, x: ObjectCentricState) -> None:
+        self._last_state = x
+
+    def _get_current_robot_pose(self) -> SE2:
+        assert self._last_state is not None
+        state = self._last_state
+        robot = self.objects[0]
+        return SE2(
+            state.get(robot, "pos_base_x"),
+            state.get(robot, "pos_base_y"),
+            state.get(robot, "pos_base_rot"),
+        )
+
+    def _get_current_robot_arm_conf(self) -> JointPositions:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        return [
+            x.get(robot_obj, "pos_arm_joint1"),
+            x.get(robot_obj, "pos_arm_joint2"),
+            x.get(robot_obj, "pos_arm_joint3"),
+            x.get(robot_obj, "pos_arm_joint4"),
+            x.get(robot_obj, "pos_arm_joint5"),
+            x.get(robot_obj, "pos_arm_joint6"),
+            x.get(robot_obj, "pos_arm_joint7"),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ]
+
+    def _get_current_robot_gripper_pose(self) -> float:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        # return x.get(robot_obj, "pos_gripper")
+        if x.get(robot_obj, "pos_gripper") > 0.2:
+            return GRASP_CLOSE_THRESHOLD
+        return 0.0
+
+    def _robot_is_close_to_conf(
+        self, conf: JointPositions, atol: float = 4 * 1e-2
+    ) -> bool:
+        current_conf = self._get_current_robot_arm_conf()
+        assert self._pybullet_sim is not None
+        dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
+        return dist < atol
+
+    def _robot_is_close_to_pose(self, pose: SE2, atol: float = WAYPOINT_TOL) -> bool:
+        robot_pose = self._get_current_robot_pose()
+        return bool(
+            np.isclose(robot_pose.x, pose.x, atol=atol)
+            and np.isclose(robot_pose.y, pose.y, atol=atol)
+            and np.isclose(
+                get_signed_angle_distance(robot_pose.theta(), pose.theta()),
+                0.0,
+                atol=atol,
+            )
+        )
+
+
+class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Array]):
+    """Controller for motion planning to place a target.
+
+    The object parameters are:
+        robot: The robot itself.
+        object: The target object.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_state: ObjectCentricState | None = None
+        self._current_params: np.ndarray | None = None
+        self._current_arm_joint_plan: list[JointPositions] | None = None
+        self._current_retract_plan: list[JointPositions] | None = None
+        self._current_base_motion_plan: list[SE2] | None = None
+        self._pybullet_sim: PyBulletSim | None = None
+        self._navigated: bool = False
+        self._pre_place: bool = False
+        self._open_gripper: bool = False
+        self._returned: bool = False
+        self._last_gripper_state: float = 0.0
+        self.home_joints = np.deg2rad(
+            [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
+        )  # retract configuration
+
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        cupboard_obj = x.get_object_from_name("cupboard_1")
+        cupboard_pose = get_overhead_object_se2_pose(x, cupboard_obj)
+        rot = -np.pi / 2
+        # sample placements
+        for _ in range(100):
+            pose_x_offset = rng.uniform(-0.05, 0.05)
+            pose_y_offset = rng.uniform(-0.15, 0.15)
+            collision = False
+            for other_obj in x.get_objects(MujocoMovableObjectType):
+                if other_obj.name == self.objects[1].name:
+                    continue
+                other_object_pose = get_overhead_object_se2_pose(x, other_obj)
+                if (
+                    np.linalg.norm(
+                        np.array(
+                            [
+                                pose_x_offset + cupboard_pose.x,
+                                pose_y_offset + cupboard_pose.y,
+                            ]
+                        )
+                        - np.array([other_object_pose.x, other_object_pose.y])
+                    )
+                    < 0.05
+                ):
+                    collision = True
+                    break
+            if not collision:
+                return np.array([0.9 + pose_x_offset, pose_y_offset, rot])
+        raise ValueError("No valid parameters found")
+
+    def reset(
+        self,
+        x: ObjectCentricState,
+        params: Any,
+        extend_xy_magnitude: float = 0.025,
+        extend_rot_magnitude: float = np.pi / 8,
+    ) -> None:
+        # Initialize the PyBullet interface if this is the first time ever.
+        if self._pybullet_sim is None:
+            self._pybullet_sim = PyBulletSim(x)
+        # Update the current state and parameters.
+        self._last_state = x
+
+        assert isinstance(params, np.ndarray)
+        self._current_params = params.copy()
+        # Derive the target pose for the robot.
+        target_distance, target_offset, target_rot = self._current_params
+        target_object = self.objects[2]
+        target_object_pose_temp = get_overhead_object_se2_pose(x, target_object)
+        target_object_pose = SE2(
+            target_object_pose_temp.x,
+            target_object_pose_temp.y + target_offset,
+            target_object_pose_temp.theta(),
+        )
+        target_base_pose = get_target_robot_pose_from_parameters(
+            target_object_pose, target_distance, target_rot
+        )
+        # Run motion planning.
+        base_motion_plan = run_base_motion_planning(
+            state=x,
+            target_base_pose=target_base_pose,
+            x_bounds=WORLD_X_BOUNDS,
+            y_bounds=WORLD_Y_BOUNDS,
+            seed=0,  # use a constant seed to effectively make this "deterministic"
+            extend_xy_magnitude=extend_xy_magnitude,
+            extend_rot_magnitude=extend_rot_magnitude,
+            disable_collision_objects=[self.objects[1].name],
+        )
+        assert base_motion_plan is not None
+        self._current_base_motion_plan = base_motion_plan
+
+        plan_x = x.copy()
+        robot = plan_x.get_object_from_name("robot")
+        target_base_pose = self._current_base_motion_plan[-1]
+        plan_x.set(robot, "pos_base_x", target_base_pose.x)
+        plan_x.set(robot, "pos_base_y", target_base_pose.y)
+        plan_x.set(robot, "pos_base_rot", target_base_pose.theta())
+
+        # Reset PyBullet given the current state.
+        self._pybullet_sim.set_state(plan_x)
+
+        current_arm_base_pose = self._pybullet_sim.robot.get_base_pose()
+
+        target_end_effector_pose = Pose((0.7, 0.0, 0.03), (0.5, 0.5, 0.5, 0.5))
+
+        target_end_effector_pose = multiply_poses(
+            current_arm_base_pose, target_end_effector_pose
+        )
+
+        target_joints = inverse_kinematics(
+            self._pybullet_sim.robot,
+            target_end_effector_pose,
+            set_joints=False,
+        )
+
+        target_object_place = self.objects[1]
+
+        self._pybullet_sim.base_link_to_held_obj = multiply_poses(
+            self._pybullet_sim.get_ee_pose().invert(),
+            Pose(
+                (
+                    x.get(target_object_place, "x"),
+                    x.get(target_object_place, "y"),
+                    x.get(target_object_place, "z"),
+                ),
+                (
+                    x.get(target_object_place, "qx"),
+                    x.get(target_object_place, "qy"),
+                    x.get(target_object_place, "qz"),
+                    x.get(target_object_place, "qw"),
+                ),
+            ),
+        )
+
+        # Run motion planning.
+        plan = run_motion_planning(
+            self._pybullet_sim.robot,
+            self._pybullet_sim.get_robot_joints(),
+            target_joints,
+            collision_bodies=self._pybullet_sim.get_collision_bodies(
+                held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
+                    target_object_place.name
+                ]
+            ),
+            seed=0,  # use a constant seed to make this effectively deterministic
+            held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
+                target_object_place.name
+            ],
+            base_link_to_held_obj=self._pybullet_sim.base_link_to_held_obj,
+            physics_client_id=self._pybullet_sim.physics_client_id,
+        )
+
+        retract_plan = run_motion_planning(
+            self._pybullet_sim.robot,
+            target_joints,
+            self.home_joints.tolist(),
+            collision_bodies=self._pybullet_sim.get_collision_bodies(),
+            seed=0,  # use a constant seed to make this effectively deterministic
+            physics_client_id=self._pybullet_sim.physics_client_id,
+        )
+
+        assert plan is not None, "Motion planning failed"
+        assert retract_plan is not None, "Motion planning failed"
+        self._current_arm_joint_plan = plan
+        self._current_retract_plan = retract_plan
+
+    def terminated(self) -> bool:
+        assert (
+            self._current_arm_joint_plan is not None
+            and self._current_retract_plan is not None
+        )
+        return self._returned
+
+    def step(self) -> Array:
+        assert self._current_arm_joint_plan is not None
+        assert self._current_base_motion_plan is not None
+        # first substep
+        if not self._navigated:
+            while len(self._current_base_motion_plan) > 1:
+                peek_pose = self._current_base_motion_plan[0]
+                # Close enough, pop and continue.
+                if self._robot_is_close_to_pose(peek_pose):
+                    self._current_base_motion_plan.pop(0)
+                # Not close enough, stop popping.
+                break
+            if self._robot_is_close_to_pose(self._current_base_motion_plan[-1]):
+                self._navigated = True
+            robot_pose = self._get_current_robot_pose()
+            next_pose = self._current_base_motion_plan[0]
+            dx = next_pose.x - robot_pose.x
+            dy = next_pose.y - robot_pose.y
+            drot = get_signed_angle_distance(next_pose.theta(), robot_pose.theta())
+            action = np.zeros(11, dtype=np.float32)
+            action[0] = dx
+            action[1] = dy
+            action[2] = drot
+            action[-1] = self._get_current_robot_gripper_pose()
+            return action
+        if self._navigated and not self._pre_place and not self._open_gripper:
+            while len(self._current_arm_joint_plan) > 1:
+                peek_conf = self._current_arm_joint_plan[0]
+                # Close enough, pop and continue.
+                if self._robot_is_close_to_conf(peek_conf):
+                    self._current_arm_joint_plan.pop(0)
+                # Not close enough, stop popping.
+                break
+            if self._robot_is_close_to_conf(self._current_arm_joint_plan[-1]):
+                self._pre_place = True
+            robot_conf = self._get_current_robot_arm_conf()
+            gripper_pose = self._get_current_robot_gripper_pose()
+            next_conf = self._current_arm_joint_plan[0]
+            action = np.zeros(11, dtype=np.float32)
+            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
+            free_joints_infos = [
+                joint_info for joint_info in joint_infos if joint_info.qIndex > -1
+            ]
+            action[3:10] = get_jointwise_difference(
+                free_joints_infos[:7], next_conf[:7], robot_conf[:7]
+            )
+            action[-1] = gripper_pose
+            return action
+        if self._pre_place and not self._open_gripper:
+            if self._get_current_robot_gripper_pose() < GRIPPER_OPEN_THRESHOLD:
+                self._open_gripper = True
+            action = np.zeros(11, dtype=np.float32)
+            action[-1] = 0
+            self._last_gripper_state = self._get_current_robot_gripper_pose()
+            return action
+        if self._pre_place and self._open_gripper:
+            while len(self._current_retract_plan) > 1:  # type: ignore
+                peek_conf = self._current_retract_plan[0]  # type: ignore
+                # Close enough, pop and continue.
+                if self._robot_is_close_to_conf(peek_conf):
+                    self._current_retract_plan.pop(0)  # type: ignore
+                # Not close enough, stop popping.
+                break
+            if self._robot_is_close_to_conf(self._current_retract_plan[-1]):  # type: ignore # pylint: disable=line-too-long
+                self._returned = True
+            robot_conf = self._get_current_robot_arm_conf()
+            gripper_pose = self._get_current_robot_gripper_pose()
+            next_conf = self._current_retract_plan[0]  # type: ignore
+            action = np.zeros(11, dtype=np.float32)
+            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
+            free_joints_infos = [
+                joint_info for joint_info in joint_infos if joint_info.qIndex > -1
+            ]
+            action[3:10] = get_jointwise_difference(
+                free_joints_infos[:7], next_conf[:7], robot_conf[:7]
+            )
+            action[-1] = gripper_pose
+            return action
+        raise ValueError("Invalid state")
+
+    def observe(self, x: ObjectCentricState) -> None:
+        self._last_state = x
+
+    def _get_current_robot_pose(self) -> SE2:
+        assert self._last_state is not None
+        state = self._last_state
+        robot = self.objects[0]
+        return SE2(
+            state.get(robot, "pos_base_x"),
+            state.get(robot, "pos_base_y"),
+            state.get(robot, "pos_base_rot"),
+        )
+
+    def _get_current_robot_arm_conf(self) -> JointPositions:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        return [
+            x.get(robot_obj, "pos_arm_joint1"),
+            x.get(robot_obj, "pos_arm_joint2"),
+            x.get(robot_obj, "pos_arm_joint3"),
+            x.get(robot_obj, "pos_arm_joint4"),
+            x.get(robot_obj, "pos_arm_joint5"),
+            x.get(robot_obj, "pos_arm_joint6"),
+            x.get(robot_obj, "pos_arm_joint7"),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ]
+
+    def _get_current_robot_gripper_pose(self) -> float:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        # return x.get(robot_obj, "pos_gripper")
+        if x.get(robot_obj, "pos_gripper") > 0.2:
+            return GRASP_CLOSE_THRESHOLD
+        return 0.0
+
+    def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
+        current_conf = self._get_current_robot_arm_conf()
+        assert self._pybullet_sim is not None
+        dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
+        return dist < 4 * 1e-2
+
+    def _robot_is_close_to_pose(self, pose: SE2, atol: float = WAYPOINT_TOL) -> bool:
+        robot_pose = self._get_current_robot_pose()
+        return bool(
+            np.isclose(robot_pose.x, pose.x, atol=atol)
+            and np.isclose(robot_pose.y, pose.y, atol=atol)
+            and np.isclose(
+                get_signed_angle_distance(robot_pose.theta(), pose.theta()),
+                0.0,
+                atol=atol,
+            )
+        )
 
 
 def create_lifted_controllers(
@@ -696,6 +1374,17 @@ def create_lifted_controllers(
     LiftedMoveToTargetController: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, target],
+            MoveToTargetGroundController,
+        )
+    )
+
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
+    target = Variable("?target", MujocoObjectType)
+    prev_target = Variable("?prev_target", MujocoObjectType)
+
+    LiftedMoveToTargetFromOtherTargetController: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, target, prev_target],
             MoveToTargetGroundController,
         )
     )
@@ -740,10 +1429,36 @@ def create_lifted_controllers(
         )
     )
 
+    # Pick ground controller.
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
+    target = Variable("?target", MujocoMovableObjectType)
+
+    LiftedPickGroundController: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, target],
+            PickGroundController,
+        )
+    )
+
+    # Place controller.
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
+    target = Variable("?target", MujocoMovableObjectType)
+    target_place = Variable("?target_place", MujocoFixtureObjectType)
+
+    LiftedPlaceGroundController: LiftedParameterizedController = (
+        LiftedParameterizedController(
+            [robot, target, target_place],
+            PlaceGroundController,
+        )
+    )
+
     return {
         "move_to_target": LiftedMoveToTargetController,
+        "move_to_target_from_other_target": LiftedMoveToTargetFromOtherTargetController,
         "move_arm_to_conf": LiftedMoveArmToConfController,
         "move_arm_to_end_effector": LiftedMoveArmToEndEffectorController,
         "close_gripper": LiftedCloseGripperController,
         "open_gripper": LiftedOpenGripperController,
+        "pick_ground": LiftedPickGroundController,
+        "place_ground": LiftedPlaceGroundController,
     }

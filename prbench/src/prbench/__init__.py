@@ -138,8 +138,9 @@ def register_all_environments() -> None:
         robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[config_name.split("-")[0]]
         scene_type = config_name.split("-")[1]
         num_task_objects = int(config_name.split("-")[2][1:])
+        task_cfg = "-".join(config_name.split("-")[1:])
         register(
-            id=f"prbench/{robot}-{scene_type}-o{num_task_objects}-v0",
+            id=f"prbench/{robot}-{task_cfg}-v0",
             entry_point=f"prbench.envs.dynamic3d.tidybot3d:{robot}Env",
             kwargs={
                 "scene_type": scene_type,

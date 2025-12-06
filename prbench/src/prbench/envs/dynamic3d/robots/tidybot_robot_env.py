@@ -43,6 +43,7 @@ class TidyBotRobotEnv(RobotEnv):
         camera_width: int = 640,
         camera_height: int = 480,
         seed: Optional[int] = None,
+        render_images: bool = False,
         show_viewer: bool = False,
     ) -> None:
         """
@@ -64,6 +65,7 @@ class TidyBotRobotEnv(RobotEnv):
             camera_width=camera_width,
             camera_height=camera_height,
             seed=seed,
+            render_images=render_images,
             show_viewer=show_viewer,
         )
 
@@ -264,9 +266,8 @@ class TidyBotRobotEnv(RobotEnv):
         assert self.qpos is not None, "Base qpos must be initialized first"
         assert self.ctrl is not None, "Base ctrl must be initialized first"
 
-        # Sample random values within limits
-        num_joints: int = self.qpos["arm"].shape[0]
-        theta = self.np_random.uniform(-np.pi, np.pi, num_joints).astype(np.float64)
+        # set to the retract configuration
+        theta = np.deg2rad([0, -20, 180, -146, 0, -50, 90])
         # Set the arm joint positions in the simulation
         self.qpos["arm"][:] = theta
         self.ctrl["arm"][:] = theta

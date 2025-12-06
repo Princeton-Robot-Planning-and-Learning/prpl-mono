@@ -52,10 +52,10 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
         x_traj: list[_X] = [x]
         u_traj: list[_U] = []
 
-        # Sample parameters for the controller.
+        # Reset the controller.
         params = controller.sample_parameters(x, rng)
 
-        # Reset the controller.
+        # Sample parameters for the controller.
         controller.reset(x, params)
 
         # Simulate until termination.
