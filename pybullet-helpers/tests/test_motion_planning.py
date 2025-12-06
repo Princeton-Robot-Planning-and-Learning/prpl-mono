@@ -546,7 +546,7 @@ def test_run_single_arm_mobile_base_motion_planning():
     )
     assert plan is not None
 
-    # Make sure collision-free with arm. This is currently FAILING. TODO
+    # Make sure collision-free with arm.
     for base_pose in plan:
         robot.set_base(base_pose)
         assert not check_collisions_with_held_object(
