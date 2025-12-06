@@ -589,16 +589,24 @@ def run_single_arm_mobile_base_motion_planning(
     hyperparameters: MotionPlanningHyperparameters | None = None,
 ) -> Optional[list[SE2Pose]]:
     """Run motion planning for a SingleArmPyBulletMobileManipulator()."""
-    arm_z = robot.arm.get_base_pose().position[2]
-    initial_se3_pose = initial_pose.to_se3(arm_z)
+    # Convert mobile base SE2 poses to arm base SE3 poses
+    initial_se3_pose = multiply_poses(
+        initial_pose.to_se3(robot.base.z), robot.base_to_arm_transform
+    )
     se3_goal: Pose | Callable[[Pose], bool]
     if isinstance(goal, SE2Pose):
-        se3_goal = goal.to_se3(arm_z)
+        se3_goal = multiply_poses(
+            goal.to_se3(robot.base.z), robot.base_to_arm_transform
+        )
     else:
 
         def se3_goal(se3_pose: Pose) -> bool:
             """Goal check in SE3."""
-            return goal(se3_pose.to_se2())
+            # Convert arm base SE3 pose back to mobile base SE2 pose
+            base_se3_pose = multiply_poses(
+                se3_pose, robot.base_to_arm_transform.invert()
+            )
+            return goal(base_se3_pose.to_se2())
 
     pos_lower_bounds = (robot.base.pose_lower_bound.x, robot.base.pose_lower_bound.y)
     pos_upper_bounds = (robot.base.pose_upper_bound.x, robot.base.pose_upper_bound.y)
@@ -620,6 +628,8 @@ def run_single_arm_mobile_base_motion_planning(
     if se3_plan is None:
         return None
 
-    print(se3_plan[0])
-
-    return [se3_pose.to_se2() for se3_pose in se3_plan]
+    # Convert arm base SE3 poses back to mobile base SE2 poses
+    return [
+        multiply_poses(se3_pose, robot.base_to_arm_transform.invert()).to_se2()
+        for se3_pose in se3_plan
+    ]
