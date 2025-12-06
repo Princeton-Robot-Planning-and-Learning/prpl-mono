@@ -211,7 +211,5 @@ def test_ppo_agent_training_with_fixed_environment():
     episodic_returns = train_metric["eval"]["episodic_return"]
     assert len(episodic_returns) > 5
     mean_r_after = np.mean(episodic_returns[-5:])  # Mean of last 5 episodes
-    assert (
-        mean_r_after > -300
-    ), f"Agent did not improve: final mean return {mean_r_after}"
+    assert mean_r_after > -300.0, f"Agent did not improve: mean return {mean_r_after}"
     agent.close()
