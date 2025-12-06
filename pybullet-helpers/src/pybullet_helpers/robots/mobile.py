@@ -3,11 +3,11 @@
 import abc
 from pathlib import Path
 
+import numpy as np
 import pybullet as p
 
-from pybullet_helpers.geometry import Pose, SE2Pose
+from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
 from pybullet_helpers.robots.single_arm import SingleArmPyBulletRobot
-import numpy as np
 
 
 class MobilePyBulletBase(abc.ABC):
@@ -18,7 +18,7 @@ class MobilePyBulletBase(abc.ABC):
         physics_client_id: int,
         z: float,  # mobile bases have a fixed z position in the 3D world
         pose_lower_bound: SE2Pose = SE2Pose(-np.inf, -np.inf, -np.pi),
-        pose_upper_bound: SE2Pose= SE2Pose(np.inf, np.inf, np.pi),
+        pose_upper_bound: SE2Pose = SE2Pose(np.inf, np.inf, np.pi),
         home_pose: SE2Pose = SE2Pose.identity(),
     ) -> None:
         self.physics_client_id = physics_client_id
@@ -55,29 +55,37 @@ class SingleArmPyBulletMobileManipulator(abc.ABC):
         self,
         physics_client_id: int,
         base_z: float,
-        base_pose_lower_bound: SE2Pose,
-        base_pose_upper_bound: SE2Pose,
+        base_pose_lower_bound: SE2Pose = SE2Pose(-np.inf, -np.inf, -np.pi),
+        base_pose_upper_bound: SE2Pose = SE2Pose(np.inf, np.inf, np.pi),
         base_home_pose: SE2Pose = SE2Pose.identity(),
     ) -> None:
-        base_se3_pose = base_home_pose.to_pose(base_z)
-        arm = self.create_arm(physics_client_id, base_pose=base_se3_pose)
         base = self.create_base(
             physics_client_id,
             base_z,
-            base_pose_lower_bound,
-            base_pose_upper_bound,
+            pose_lower_bound=base_pose_lower_bound,
+            pose_upper_bound=base_pose_upper_bound,
             home_pose=base_home_pose,
         )
+        base_se3_pose = base_home_pose.to_pose(base_z)
+        arm_base_pose = multiply_poses(base_se3_pose, self.base_to_arm_transform)
+        arm = self.create_arm(physics_client_id, base_pose=arm_base_pose)
         assert not arm.fixed_base, "Set fixed_base=True in arm"
         assert arm.physics_client_id == base.physics_client_id
 
         self.arm = arm
         self.base = base
 
+    @property
+    @abc.abstractmethod
+    def base_to_arm_transform(self) -> Pose:
+        """Pose from base to arm."""
+
     @classmethod
     @abc.abstractmethod
     def create_arm(
-        cls, physics_client_id: int, base_pose: Pose = Pose.identity()
+        cls,
+        physics_client_id: int,
+        base_pose: Pose,
     ) -> SingleArmPyBulletRobot:
         """Create the arm."""
 
