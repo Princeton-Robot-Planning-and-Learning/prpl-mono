@@ -21,14 +21,10 @@ from relational_structs import (
 from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
 
 # Predicates.
-AtPremanipulationTarget = Predicate(
-    "AtPremanipulationTarget", [MujocoTidyBotRobotObjectType, MujocoObjectType]
-)
 OnFixture = Predicate("OnFixture", [MujocoObjectType, MujocoFixtureObjectType])
 OnGround = Predicate("OnGround", [MujocoObjectType])
 Holding = Predicate("Holding", [MujocoTidyBotRobotObjectType, MujocoMovableObjectType])
 HandEmpty = Predicate("HandEmpty", [MujocoTidyBotRobotObjectType])
-AtHome = Predicate("AtHome", [MujocoTidyBotRobotObjectType])
 
 
 class CupboardRealStateAbstractor:
@@ -107,66 +103,14 @@ class CupboardRealStateAbstractor:
         for movable in movables:
             for fixture in fixtures:
                 if (
-                    abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.1
-                    and abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.1
+                    abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.15
+                    and abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.25
                 ):
                     if GroundAtom(Holding, [robot, movable]) not in atoms:
                         atoms.add(GroundAtom(OnFixture, [movable, fixture]))
 
-        # AtPremanipulationTarget.
-        for target in fixtures + movables:
-            if target in fixtures:
-                premanipulation_distance_threshold = (
-                    0.95  # should be within this cardinal dist
-                )
-                premanipulation_angle_threshold = (
-                    3 * 1e-2
-                )  # should be facing the target object
-            else:
-                premanipulation_distance_threshold = (
-                    0.6  # should be within this cardinal dist
-                )
-                premanipulation_angle_threshold = (
-                    1e-2  # should be facing the target object
-                )
-            target_x = state.get(target, "x")
-            target_y = state.get(target, "y")
-            robot_x = state.get(robot, "pos_base_x")
-            robot_y = state.get(robot, "pos_base_y")
-            robot_rot = state.get(robot, "pos_base_rot")
-            dx = target_x - robot_x
-            dy = target_y - robot_y
-            dist = (dx**2 + dy**2) ** 0.5
-            if dist > premanipulation_distance_threshold:
-                continue  # too far away
-            # Desired direction from robot -> target
-            target_angle = np.arctan2(dy, dx)
-
-            # Smallest signed angular difference
-            angle_error = abs((target_angle - robot_rot + np.pi) % (2 * np.pi) - np.pi)
-            if angle_error < premanipulation_angle_threshold:
-                atoms.add(GroundAtom(AtPremanipulationTarget, [robot, target]))
-                break  # only one target can be at the premanipulation target
-
-        at_home = True
-        for target in all_mujoco_objects:
-            if GroundAtom(AtPremanipulationTarget, [robot, target]) in atoms:
-                at_home = False
-                break  # found a target, so we are not at home
-            if target in movables and GroundAtom(Holding, [robot, target]) in atoms:
-                at_home = False
-                break  # found a target, so we are not at home
-        if at_home:
-            atoms.add(GroundAtom(AtHome, [robot]))
         objects = {robot} | all_mujoco_objects
         return RelationalAbstractState(atoms, objects)
-
-    def goal_deriver(self, state: ObjectCentricState) -> RelationalAbstractGoal:
-        """The goal is to have the robot on the target."""
-        target = state.get_object_from_name("cube1")
-        robot = state.get_object_from_name("robot")
-        atoms = {GroundAtom(AtPremanipulationTarget, [robot, target])}
-        return RelationalAbstractGoal(atoms, self.state_abstractor)
 
     def goal_deriver_grasp(self, state: ObjectCentricState) -> RelationalAbstractGoal:
         """The goal is to grasp the target."""
@@ -175,26 +119,12 @@ class CupboardRealStateAbstractor:
         atoms = {GroundAtom(Holding, [robot, target])}
         return RelationalAbstractGoal(atoms, self.state_abstractor)
 
-    def goal_deriver_grasp_move(
-        self, state: ObjectCentricState
-    ) -> RelationalAbstractGoal:
-        """The goal is to grasp the target and move to the target."""
-        target = state.get_object_from_name("cube1")
-        target_cupboard = state.get_object_from_name("cupboard_1")
-        robot = state.get_object_from_name("robot")
-        atoms = {
-            GroundAtom(Holding, [robot, target]),
-            GroundAtom(AtPremanipulationTarget, [robot, target_cupboard]),
-        }
-        return RelationalAbstractGoal(atoms, self.state_abstractor)
-
     def goal_deriver_place(self, state: ObjectCentricState) -> RelationalAbstractGoal:
         """The goal is to place the target in the cupboard."""
         target = state.get_object_from_name("cube1")
         cupboard = state.get_object_from_name("cupboard_1")
         robot = state.get_object_from_name("robot")
         atoms = {
-            GroundAtom(AtPremanipulationTarget, [robot, cupboard]),
             GroundAtom(HandEmpty, [robot]),
             GroundAtom(OnFixture, [target, cupboard]),
         }
@@ -210,7 +140,6 @@ class CupboardRealStateAbstractor:
         cupboard = state.get_object_from_name("cupboard_1")
         robot = state.get_object_from_name("robot")
         atoms = {
-            GroundAtom(AtPremanipulationTarget, [robot, cupboard]),
             GroundAtom(HandEmpty, [robot]),
             GroundAtom(OnFixture, [target, cupboard]),
         }
@@ -225,9 +154,26 @@ class CupboardRealStateAbstractor:
         cupboard = state.get_object_from_name("cupboard_1")
         robot = state.get_object_from_name("robot")
         atoms = {
-            GroundAtom(AtPremanipulationTarget, [robot, cupboard]),
             GroundAtom(HandEmpty, [robot]),
             GroundAtom(OnFixture, [target, cupboard]),
             GroundAtom(OnFixture, [target2, cupboard]),
         }
+        return RelationalAbstractGoal(atoms, self.state_abstractor)
+
+    def goal_deriver_place_cupboard(
+        self, state: ObjectCentricState
+    ) -> RelationalAbstractGoal:
+        """The goal is to place the target in the cupboard."""
+        cupboard = state.get_object_from_name("cupboard_1")
+        robot = state.get_object_from_name("robot")
+        atoms = {
+            GroundAtom(HandEmpty, [robot]),
+        }
+        for object_name in state.get_object_names():
+            if "cube" in object_name:
+                atoms.add(
+                    GroundAtom(
+                        OnFixture, [state.get_object_from_name(object_name), cupboard]
+                    )
+                )
         return RelationalAbstractGoal(atoms, self.state_abstractor)

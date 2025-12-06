@@ -39,14 +39,14 @@ def test_cupboard_real_state_abstraction():
     state = env.observation_space.devectorize(obs)
     assert isinstance(state, ObjectCentricState)
     abstract_state = abstractor.state_abstractor(state)
-    assert (
-        str(sorted(abstract_state.atoms))
-        == "[(AtHome robot), (HandEmpty robot), (OnGround cube1)]"
-    )
+    assert str(sorted(abstract_state.atoms)) == "[(HandEmpty robot), (OnGround cube1)]"
 
-    # Run move base to cube.
+    # Create controllers.
     controllers = create_lifted_controllers(env.action_space)
-    lifted_controller = controllers["move_to_target"]
+
+    # Pick up the cube.
+    controllers = create_lifted_controllers(env.action_space)
+    lifted_controller = controllers["pick_ground"]
     robot = state.get_object_from_name("robot")
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
@@ -57,35 +57,7 @@ def test_cupboard_real_state_abstraction():
 
     # Reset and execute the controller until it terminates.
     controller.reset(state, params)
-    for _ in range(200):
-        action = controller.step()
-        obs, _, _, _, _ = env.step(action)
-        next_state = env.observation_space.devectorize(obs)
-        controller.observe(next_state)
-        state = next_state
-        if controller.terminated():
-            break
-    else:
-        assert False, "Controller did not terminate"
-
-    # Check updated state abstraction: the robot should be AtPremanipulationTarget.
-    abstract_state = abstractor.state_abstractor(state)
-    assert (
-        str(sorted(abstract_state.atoms))
-        == "[(AtPremanipulationTarget robot cube1), (HandEmpty robot), (OnGround cube1)]"
-    )
-
-    # Pick up the cube.
-    controllers = create_lifted_controllers(env.action_space)
-    lifted_controller = controllers["pick_ground"]
-    robot = state.get_object_from_name("robot")
-    cube = state.get_object_from_name("cube1")
-    object_parameters = (robot, cube)
-    controller = lifted_controller.ground(object_parameters)
-
-    # Reset and execute the controller until it terminates.
-    controller.reset(state)
-    for _ in range(200):
+    for _ in range(400):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
@@ -98,41 +70,7 @@ def test_cupboard_real_state_abstraction():
 
     # Check updated state abstraction: the robot should be Holding the cube.
     abstract_state = abstractor.state_abstractor(state)
-    assert (
-        str(sorted(abstract_state.atoms))
-        == "[(AtPremanipulationTarget robot cube1), (Holding robot cube1)]"
-    )
-
-    # Run move base to cube.
-    controllers = create_lifted_controllers(env.action_space)
-    lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot")
-    cupboard = state.get_object_from_name("cupboard_1")
-    object_parameters = (robot, cupboard)
-    controller = lifted_controller.ground(object_parameters)
-    target_distance = 0.9
-    target_rotation = -np.pi / 2
-    params = np.array([target_distance, target_rotation])
-
-    # Reset and execute the controller until it terminates.
-    controller.reset(state, params, disable_collision_objects=["cube1"])
-    for _ in range(200):
-        action = controller.step()
-        obs, _, _, _, _ = env.step(action)
-        next_state = env.observation_space.devectorize(obs)
-        controller.observe(next_state)
-        state = next_state
-        if controller.terminated():
-            break
-    else:
-        assert False, "Controller did not terminate"
-
-    # Check updated state abstraction: the robot should be AtPremanipulationTarget.
-    abstract_state = abstractor.state_abstractor(state)
-    assert (
-        str(sorted(abstract_state.atoms))
-        == "[(AtPremanipulationTarget robot cupboard_1), (Holding robot cube1)]"  # pylint: disable=line-too-long
-    )
+    assert str(sorted(abstract_state.atoms)) == "[(Holding robot cube1)]"
 
     # Plce the cube.
     controllers = create_lifted_controllers(env.action_space)
@@ -142,10 +80,14 @@ def test_cupboard_real_state_abstraction():
     cupboard = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube, cupboard)
     controller = lifted_controller.ground(object_parameters)
+    target_distance = 0.9
+    offset = 0.0
+    target_rotation = -np.pi / 2
+    params = np.array([target_distance, offset, target_rotation])
 
     # Reset and execute the controller until it terminates.
-    controller.reset(state)
-    for _ in range(200):
+    controller.reset(state, params)
+    for _ in range(400):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
@@ -159,7 +101,7 @@ def test_cupboard_real_state_abstraction():
     abstract_state = abstractor.state_abstractor(state)
     assert (
         str(sorted(abstract_state.atoms))
-        == "[(AtPremanipulationTarget robot cupboard_1), (HandEmpty robot), (OnFixture cube1 cupboard_1)]"  # pylint: disable=line-too-long
+        == "[(HandEmpty robot), (OnFixture cube1 cupboard_1)]"
     )
 
     env.close()

@@ -24,7 +24,7 @@ from relational_structs import Array
 
 # This value is then used by the physics engine to determine how much time
 # to simulate for each step.
-SIMULATION_TIMESTEP = 0.002  # (in seconds)
+SIMULATION_TIMESTEP = 0.0005  # (in seconds)
 
 # Set macros needed for MuJoCo rendering
 _SYSTEM = platform.system()

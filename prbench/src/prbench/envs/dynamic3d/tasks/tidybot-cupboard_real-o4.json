@@ -47,6 +47,28 @@
                     1.0
                 ]
             ]
+        },
+        "ground_3_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    -0.1,
+                    -0.8,
+                    0.1,
+                    -0.6
+                ]
+            ]
+        },
+        "ground_4_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.1,
+                    -0.8,
+                    0.3,
+                    -0.6
+                ]
+            ]
         }
     },
     "objects": {
@@ -58,7 +80,17 @@
             },
             "cube2": {
                 "size": 0.02,
-                "rgba": [0.1, 0.5, 0.1, 1],
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.01
+            },
+            "cube3": {
+                "size": 0.02,
+                "rgba": [0.5, 0.1, 0.1, 1],
+                "mass": 0.01
+            },
+            "cube4": {
+                "size": 0.02,
+                "rgba": [0.5, 0.1, 0.1, 1],
                 "mass": 0.01
             }
         }
@@ -78,6 +110,16 @@
             "on",
             "cube2",
             "ground_2_object_init_region"
+        ],
+        [
+            "on",
+            "cube3",
+            "ground_3_object_init_region"
+        ],
+        [
+            "on",
+            "cube4",
+            "ground_4_object_init_region"
         ]
     ]
 }

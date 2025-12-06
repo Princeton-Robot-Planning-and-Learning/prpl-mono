@@ -353,7 +353,7 @@ class Cuboid(MujocoObject):
             "geom",
             type="box",
             size=size_str,
-            friction="0.95 0.3 0.1",
+            # friction="2.0 0.2 0.02",
             rgba=self.rgba,
             mass=str(self.mass),
         )

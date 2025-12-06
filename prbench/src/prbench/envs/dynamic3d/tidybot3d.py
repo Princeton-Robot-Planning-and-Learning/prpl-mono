@@ -49,7 +49,7 @@ from prbench.envs.dynamic3d.utils import check_in_region
 class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
     """Configuration for TidyBot3D environment."""
 
-    control_frequency: int = 20
+    control_frequency: int = 10
     horizon: int = 1000
     camera_names: list[str] = field(default_factory=lambda: ["overview"])
     camera_width: int = 640
