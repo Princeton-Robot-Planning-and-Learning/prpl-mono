@@ -1,7 +1,7 @@
 """A perceiver for the PRBench Dynamic 3D Ground environment."""
 
 from prbench.envs.dynamic3d.object_types import (
-    MujocoObjectType,
+    MujocoMovableObjectType,
     MujocoObjectTypeFeatures,
     MujocoTidyBotRobotObjectType,
 )
@@ -57,7 +57,7 @@ class PRBenchGroundPerceiver(Perceiver[ObjectCentricState]):
         }
 
         # Placeholder for actual object detection! Coming soon!!!
-        cube = Object("cube1", MujocoObjectType)
+        cube = Object("cube1", MujocoMovableObjectType)
         state_dict[cube] = {
             "x": 0.0,
             "y": 0.0,
@@ -72,9 +72,9 @@ class PRBenchGroundPerceiver(Perceiver[ObjectCentricState]):
             "wx": 0.0,
             "wy": 0.0,
             "wz": 0.0,
-            "bb_x": 0.1,
-            "bb_y": 0.1,
-            "bb_z": 0.1,
+            "bb_x": 0.03,
+            "bb_y": 0.03,
+            "bb_z": 0.03,
         }
 
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
