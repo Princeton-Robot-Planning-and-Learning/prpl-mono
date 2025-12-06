@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
+from pybullet_helpers.geometry import Pose, SE2Pose
 from pybullet_helpers.robots.kinova import KinovaGen3RobotiqGripperPyBulletRobot
 from pybullet_helpers.robots.mobile import (
     MobilePyBulletBase,
