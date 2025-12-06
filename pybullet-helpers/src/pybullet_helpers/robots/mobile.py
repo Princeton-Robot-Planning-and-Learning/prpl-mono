@@ -117,3 +117,11 @@ class SingleArmPyBulletMobileManipulator(abc.ABC):
     @abc.abstractmethod
     def get_name(cls) -> str:
         """Get the name of the base."""
+
+    def set_base(self, pose: SE2Pose) -> None:
+        """Set the base pose."""
+        self.base.set_pose(pose)
+        arm_base_pose = multiply_poses(
+            pose.to_se3(self.base.z), self.base_to_arm_transform
+        )
+        self.arm.set_base(arm_base_pose)
