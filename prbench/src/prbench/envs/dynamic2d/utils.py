@@ -477,13 +477,13 @@ class KinRobot:
         relative_finger_pose_l = self.gripper_base_pose.inverse * self.finger_poses_l
         relative_finger_pose_r = self.gripper_base_pose.inverse * self.finger_poses_r
         return relative_finger_pose_l.y - relative_finger_pose_r.y
-    
+
     @property
     def curr_l_finger_gap(self) -> float:
         """Get the current left finger gap from gripper base."""
         relative_finger_pose_l = self.gripper_base_pose.inverse * self.finger_poses_l
         return relative_finger_pose_l.y
-    
+
     @property
     def curr_r_finger_gap(self) -> float:
         """Get the current right finger gap from gripper base."""
