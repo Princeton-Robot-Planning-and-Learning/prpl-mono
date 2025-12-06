@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pybullet_helpers.geometry import Pose, SE2Pose
+from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
 from pybullet_helpers.robots.kinova import KinovaGen3RobotiqGripperPyBulletRobot
 from pybullet_helpers.robots.mobile import (
     MobilePyBulletBase,
@@ -58,3 +58,11 @@ class TidyBotKinova(SingleArmPyBulletMobileManipulator):
     @classmethod
     def get_name(cls) -> str:
         return "tidybot-kinova"
+
+    def set_base(self, pose: SE2Pose) -> None:
+        """Set the base pose."""
+        self.base.set_pose(pose)
+        arm_base_pose = multiply_poses(
+            pose.to_se3(self.base.z), self.base_to_arm_transform
+        )
+        self.arm.set_base(arm_base_pose)

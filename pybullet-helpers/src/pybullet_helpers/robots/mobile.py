@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pybullet as p
 
-from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
+from pybullet_helpers.geometry import Pose, SE2Pose, get_pose, multiply_poses, set_pose
 from pybullet_helpers.robots.single_arm import SingleArmPyBulletRobot
 
 
@@ -46,6 +46,17 @@ class MobilePyBulletBase(abc.ABC):
     @abc.abstractmethod
     def urdf_path(self) -> Path:
         """Get the path to the URDF file for the robot."""
+
+    def get_pose(self) -> SE2Pose:
+        """Get the SE2Pose of the base."""
+        se3_pose = get_pose(self.robot_id, self.physics_client_id)
+        assert np.isclose(se3_pose.position[2], self.z)
+        return se3_pose.to_se2()
+
+    def set_pose(self, pose: SE2Pose) -> None:
+        """Set the pose of the base."""
+        se3_pose = pose.to_se3(self.z)
+        set_pose(self.robot_id, se3_pose, self.physics_client_id)
 
 
 class SingleArmPyBulletMobileManipulator(abc.ABC):

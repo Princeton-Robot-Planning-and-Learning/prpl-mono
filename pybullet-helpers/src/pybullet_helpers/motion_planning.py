@@ -501,6 +501,7 @@ def run_base_motion_planning(
     # The joint positions and z position of the robot won't change.
     base_z = robot.get_base_pose().position[2]
     joint_state = robot.get_joint_positions()
+    assert np.isclose(base_z, initial_pose.position[2])
 
     def _set_robot(pt: Pose) -> None:
         robot.set_base(pt)
@@ -586,12 +587,13 @@ def run_single_arm_mobile_base_motion_planning(
     held_object: int | None = None,
     base_link_to_held_obj: Pose | None = None,
     hyperparameters: MotionPlanningHyperparameters | None = None,
-) -> Optional[list[Pose]]:
+) -> Optional[list[SE2Pose]]:
     """Run motion planning for a SingleArmPyBulletMobileManipulator()."""
-    initial_se3_pose = initial_pose.to_se3(robot.base.z)
+    arm_z = robot.arm.get_base_pose().position[2]
+    initial_se3_pose = initial_pose.to_se3(arm_z)
     se3_goal: Pose | Callable[[Pose], bool]
     if isinstance(goal, SE2Pose):
-        se3_goal = goal.to_se3(robot.base.z)
+        se3_goal = goal.to_se3(arm_z)
     else:
 
         def se3_goal(se3_pose: Pose) -> bool:
@@ -601,7 +603,7 @@ def run_single_arm_mobile_base_motion_planning(
     pos_lower_bounds = (robot.base.pose_lower_bound.x, robot.base.pose_lower_bound.y)
     pos_upper_bounds = (robot.base.pose_upper_bound.x, robot.base.pose_upper_bound.y)
 
-    return run_base_motion_planning(
+    se3_plan = run_base_motion_planning(
         robot.arm,
         initial_pose=initial_se3_pose,
         goal=se3_goal,
@@ -615,3 +617,9 @@ def run_single_arm_mobile_base_motion_planning(
         platform=robot.base.robot_id,
         hyperparameters=hyperparameters,
     )
+    if se3_plan is None:
+        return None
+
+    print(se3_plan[0])
+
+    return [se3_pose.to_se2() for se3_pose in se3_plan]
