@@ -12,6 +12,7 @@ from prpl_utils.motion_planning import RRT, BiRRT
 
 from pybullet_helpers.geometry import (
     Pose,
+    SE2Pose,
     get_pose,
     iter_between_poses,
     multiply_poses,
@@ -34,6 +35,7 @@ from pybullet_helpers.joint import (
     iter_between_joint_positions,
 )
 from pybullet_helpers.math_utils import geometric_sequence
+from pybullet_helpers.robots.mobile import SingleArmPyBulletMobileManipulator
 from pybullet_helpers.robots.single_arm import (
     FingeredSingleArmPyBulletRobot,
     SingleArmPyBulletRobot,
@@ -573,3 +575,43 @@ def run_base_motion_planning(
     )
 
     return rrt.query_to_goal_fn(initial_pose, goal)
+
+
+def run_single_arm_mobile_base_motion_planning(
+    robot: SingleArmPyBulletMobileManipulator,
+    initial_pose: SE2Pose,
+    goal: SE2Pose | Callable[[SE2Pose], bool],
+    collision_bodies: Collection[int],
+    seed: int,
+    held_object: int | None = None,
+    base_link_to_held_obj: Pose | None = None,
+    hyperparameters: MotionPlanningHyperparameters | None = None,
+) -> Optional[list[Pose]]:
+    """Run motion planning for a SingleArmPyBulletMobileManipulator()."""
+    initial_se3_pose = initial_pose.to_se3(robot.base.z)
+    se3_goal: Pose | Callable[[Pose], bool]
+    if isinstance(goal, SE2Pose):
+        se3_goal = goal.to_se3(robot.base.z)
+    else:
+
+        def se3_goal(se3_pose: Pose) -> bool:
+            """Goal check in SE3."""
+            return goal(se3_pose.to_se2())
+
+    pos_lower_bounds = (robot.base.pose_lower_bound.x, robot.base.pose_lower_bound.y)
+    pos_upper_bounds = (robot.base.pose_upper_bound.x, robot.base.pose_upper_bound.y)
+
+    return run_base_motion_planning(
+        robot.arm,
+        initial_pose=initial_se3_pose,
+        goal=se3_goal,
+        position_lower_bounds=pos_lower_bounds,
+        position_upper_bounds=pos_upper_bounds,
+        collision_bodies=collision_bodies,
+        seed=seed,
+        physics_client_id=robot.physics_client_id,
+        held_object=held_object,
+        base_link_to_held_obj=base_link_to_held_obj,
+        platform=robot.base.robot_id,
+        hyperparameters=hyperparameters,
+    )

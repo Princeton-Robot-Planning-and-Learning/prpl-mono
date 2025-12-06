@@ -55,6 +55,10 @@ class Pose(NamedTuple):
         """Unit pose."""
         return cls((0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0))
 
+    def to_se2(self) -> SE2Pose:
+        """Extract the SE2Pose."""
+        return SE2Pose(self.position[0], self.position[1], self.rpy[2])
+
     def to_matrix(self) -> npt.NDArray:
         """Get the 4x4 homogenous matrix representation."""
         matrix = np.eye(4)
@@ -89,7 +93,7 @@ class SE2Pose:
     def __post_init__(self):
         assert -np.pi <= self.rot <= np.pi
 
-    def to_pose(self, z: float) -> Pose:
+    def to_se3(self, z: float) -> Pose:
         """Convert into a Pose."""
         return Pose.from_rpy((self.x, self.y, z), (0, 0, self.rot))
 

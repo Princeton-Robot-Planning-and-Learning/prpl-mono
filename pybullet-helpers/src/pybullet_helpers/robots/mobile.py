@@ -27,7 +27,7 @@ class MobilePyBulletBase(abc.ABC):
         self.pose_upper_bound = pose_upper_bound
         self.home_pose = home_pose
 
-        se3_pose = home_pose.to_pose(z=z)
+        se3_pose = home_pose.to_se3(z=z)
         self.robot_id = p.loadURDF(
             str(self.urdf_path),
             basePosition=se3_pose.position,
@@ -66,11 +66,12 @@ class SingleArmPyBulletMobileManipulator(abc.ABC):
             pose_upper_bound=base_pose_upper_bound,
             home_pose=base_home_pose,
         )
-        base_se3_pose = base_home_pose.to_pose(base_z)
+        base_se3_pose = base_home_pose.to_se3(base_z)
         arm_base_pose = multiply_poses(base_se3_pose, self.base_to_arm_transform)
         arm = self.create_arm(physics_client_id, base_pose=arm_base_pose)
         assert not arm.fixed_base, "Set fixed_base=True in arm"
         assert arm.physics_client_id == base.physics_client_id
+        self.physics_client_id = arm.physics_client_id
 
         self.arm = arm
         self.base = base

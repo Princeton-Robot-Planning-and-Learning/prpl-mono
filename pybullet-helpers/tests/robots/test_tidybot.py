@@ -1,6 +1,5 @@
 """Tests for tidybot robots."""
 
-# from pybullet_helpers.geometry import Pose
 from pybullet_helpers.robots.tidybot import TidyBotKinova, TidyBotMobileBase
 
 
