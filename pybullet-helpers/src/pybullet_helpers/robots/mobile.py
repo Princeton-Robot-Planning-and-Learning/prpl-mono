@@ -80,7 +80,7 @@ class SingleArmPyBulletMobileManipulator(abc.ABC):
         base_se3_pose = base_home_pose.to_se3(base_z)
         arm_base_pose = multiply_poses(base_se3_pose, self.base_to_arm_transform)
         arm = self.create_arm(physics_client_id, base_pose=arm_base_pose)
-        assert not arm.fixed_base, "Set fixed_base=True in arm"
+        assert not arm.fixed_base, "Set fixed_base=False in arm"
         assert arm.physics_client_id == base.physics_client_id
         self.physics_client_id = arm.physics_client_id
 
