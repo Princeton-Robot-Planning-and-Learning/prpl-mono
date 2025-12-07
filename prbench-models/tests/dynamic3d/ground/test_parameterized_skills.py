@@ -770,6 +770,7 @@ def test_pick_place_skill():
         controller.observe(next_state)
         state = next_state
         if controller.terminated():
+            controller._pybullet_sim.close()
             break
     else:
         assert False, "Controller did not terminate"

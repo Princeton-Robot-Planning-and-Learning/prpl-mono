@@ -259,7 +259,7 @@ class PyBulletSim:
                 create_pybullet_shelf(
                     color=(0.5, 0.5, 0.5, 1.0),
                     shelf_width=0.60198,
-                    shelf_depth=0.254,
+                    shelf_depth=0.254 + 0.02, # to account for the differences between mujoco and pybullet.
                     shelf_height=0.0127,  # in sim, we were using 0.0127.
                     spacing=0.254,
                     support_width=0.0127,
@@ -368,6 +368,10 @@ class PyBulletSim:
     def get_joint_distance(self, conf1: JointPositions, conf2: JointPositions) -> float:
         """Get the distance between two arm confs."""
         return self._joint_distance_fn(conf1, conf2)
+
+    def close(self) -> None:
+        """Close the PyBullet simulator."""
+        p.disconnect(self._physics_client_id)
 
 
 class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, Array]):
