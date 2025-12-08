@@ -19,9 +19,9 @@ from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
     run_motion_planning_for_crv_robot,
-    snap_suctioned_objects,
+    state_2d_has_collision,
+    snap_suctioned_objects
 )
-from prbench.envs.utils import state_2d_has_collision
 from relational_structs import (
     Object,
     ObjectCentricState,
@@ -60,7 +60,6 @@ class GroundPickController(Geom2dRobotController):
             + 1e-4
         )
         arm_length = rng.uniform(min_arm_length, max_arm_length)
-
         # Pack parameters: side determines grasp approach, ratio determines position
         return (grasp_ratio, side, arm_length)
 
@@ -192,11 +191,11 @@ class GroundPlaceController(Geom2dRobotController):
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
     ) -> tuple[float, float, float]:
-        # Sample robot pose
+        del x  # Unused
+        # Sample collision-free robot pose
         abs_x = rng.uniform(self.world_x_min, self.world_x_max)
         abs_y = rng.uniform(self.world_y_min, self.world_y_max)
         abs_theta = rng.uniform(-np.pi, np.pi)
-
         rel_x = (abs_x - self.world_x_min) / (self.world_x_max - self.world_x_min)
         rel_y = (abs_y - self.world_y_min) / (self.world_y_max - self.world_y_min)
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
@@ -294,11 +293,11 @@ class GroundMoveToController(Geom2dRobotController):
         self, x: ObjectCentricState, rng: np.random.Generator
     ) -> float:
         # Sample a random orientation
+        # (assuming the target block has overlapping x, y with target region)
+        del x  # Unused
         abs_theta = rng.uniform(-np.pi, np.pi)
-
         # Relative orientation
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
-
         return rel_theta
 
     def _get_vacuum_actions(self) -> tuple[float, float]:

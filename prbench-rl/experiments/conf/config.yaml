@@ -1,14 +1,14 @@
 # Default configuration for RL experiments
 defaults:
-  - agent: sac_humanoid_v4
+  - agent: ppo_motion2d_0_passage
   - _self_
 
-# Experiment mode: "train" or "eval"
-mode: train
-env_id: Humanoid-v4
+# Environment configuration
+env_id: prbench/Motion2D-p0-v0
 max_episode_steps: 300
-load_agent_path: null
-eval_episodes: 10
+
+# Evaluation configuration
+eval_episodes: 50
 
 # Random seed
 seed: 0

@@ -12,26 +12,24 @@ from gymnasium import spaces
 
 def make_env_ppo(
     env_id: str,
-    idx: int,
-    capture_video: bool,
-    run_name: str,
     max_episode_steps: int,
     gamma: float = 0.99,
 ):
-    """Create a single environment instance with appropriate wrappers for ppo."""
+    """Create a single environment instance with appropriate wrappers for PPO.
+
+    Note: Video recording should be added later via RecordVideo wrapper if needed.
+    """
 
     def thunk():
-        if capture_video and idx == 0:
-            if "prbench" in env_id:
-                env = prbench.make(env_id, render_mode="rgb_array")
-            else:
-                env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
+        # Create base environment with rgb_array render mode for potential
+        # video recording
+        if "prbench" in env_id:
+            env = prbench.make(env_id, render_mode="rgb_array")
+            env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
         else:
-            if "prbench" in env_id:
-                env = prbench.make(env_id)
-            else:
-                env = gym.make(env_id)
+            env = gym.make(env_id, render_mode="rgb_array")
+
+        # Apply standard wrappers
         env = gym.wrappers.FlattenObservation(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env = gym.wrappers.ClipAction(env)
@@ -39,9 +37,6 @@ def make_env_ppo(
         env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
         env = gym.wrappers.NormalizeReward(env, gamma=gamma)
         env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
-        # NOTE: PRBench by default has infinite horizon, so we set a time limit here
-        if "prbench" in env_id:
-            env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
         return env
 
     return thunk
@@ -49,29 +44,31 @@ def make_env_ppo(
 
 def make_env_sac(
     env_id: str,
-    idx: int,
-    capture_video: bool,
-    run_name: str,
     max_episode_steps: int,
+    gamma: float = 0.99,
 ):
-    """Create a single environment instance with appropriate wrappers for sac."""
+    """Create a single environment instance with appropriate wrappers for SAC.
+
+    Note: Video recording should be added later via RecordVideo wrapper if needed.
+    """
 
     def thunk():
-        if capture_video and idx == 0:
-            if "prbench" in env_id:
-                env = prbench.make(env_id, render_mode="rgb_array")
-            else:
-                env = gym.make(env_id, render_mode="rgb_array")
-            env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        else:
-            if "prbench" in env_id:
-                env = prbench.make(env_id)
-            else:
-                env = gym.make(env_id)
-        env = gym.wrappers.RecordEpisodeStatistics(env)
-        # NOTE: PRBench by default has infinite horizon, so we set a time limit here
+        # Create base environment with rgb_array render mode for potential
+        # video recording
         if "prbench" in env_id:
+            env = prbench.make(env_id, render_mode="rgb_array")
             env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
+        else:
+            env = gym.make(env_id, render_mode="rgb_array")
+
+        # Apply standard wrappers
+        env = gym.wrappers.FlattenObservation(env)
+        env = gym.wrappers.RecordEpisodeStatistics(env)
+        env = gym.wrappers.ClipAction(env)
+        env = gym.wrappers.NormalizeObservation(env)
+        env = gym.wrappers.TransformObservation(env, lambda obs: np.clip(obs, -10, 10))
+        env = gym.wrappers.NormalizeReward(env, gamma=gamma)
+        env = gym.wrappers.TransformReward(env, lambda reward: np.clip(reward, -10, 10))
         return env
 
     return thunk

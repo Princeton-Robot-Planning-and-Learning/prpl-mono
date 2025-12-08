@@ -10,7 +10,7 @@ import random
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, cast
 
 import dacite
 import gymnasium as gym
@@ -54,14 +54,12 @@ class SACArgs:
     """Whether to save trajectory data into the `videos` folder."""
     save_model: bool = True
     """Whether to save model into the `runs/{run_name}` folder."""
+    save_model_freq: int = 50000
+    """Frequency to save the model (in timesteps)."""
 
     # Environment specific arguments
     num_envs: int = 1
     """The number of parallel environments."""
-    num_eval_envs: int = 16
-    """The number of parallel evaluation environments."""
-    eval_freq: int = 10000
-    """Evaluation frequency in terms of steps."""
     save_train_video_freq: Optional[int] = None
     """Frequency to save training videos in terms of iterations."""
 
@@ -325,24 +323,39 @@ class SACAgent(BaseRLAgent[_O, _U]):
             action, _, _ = self.actor.get_action(obs, deterministic=True)
         return action
 
-    def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
-        """Evaluate the SAC agent."""
-        envs = gym.vector.SyncVectorEnv(
-            [
-                make_env_sac(
-                    self.env_id,
-                    0,
-                    render,
-                    self.cfg.exp_name + "_eval",
-                    self.max_episode_steps,
-                )
-            ]
-        )
+    def evaluate_on_env(
+        self,
+        train_envs: gym.vector.VectorEnv,
+        eval_episodes: int,
+        render_video: bool = False,
+    ) -> dict[str, Any]:
+        """Evaluate the SAC agent with video recording.
+
+        Wraps the training environments with RecordVideo to capture evaluation episodes.
+        The environments retain their normalization statistics from training.
+
+        Args:
+            train_envs: Training environments to wrap with video recording
+            eval_episodes: Number of episodes to evaluate
+
+        Returns:
+            Dictionary with evaluation metrics
+        """
+        # Wrap the first training environment with RecordVideo for evaluation
+        # This preserves the normalization statistics while enabling video recording
+        if render_video:
+            video_folder = f"videos/{self.cfg.exp_name}_eval"
+            sync_envs = cast(gym.vector.SyncVectorEnv, train_envs)
+            sync_envs.envs[0] = gym.wrappers.RecordVideo(
+                sync_envs.envs[0],
+                video_folder,
+                episode_trigger=lambda x: True,  # Record all episodes
+            )
 
         # Set agent to eval mode
         self.actor.eval()
 
-        obs, _ = envs.reset()
+        obs, _ = train_envs.reset()
         episodic_returns: list[float] = []
         step_lengths: list[int] = []
         step_length = 0
@@ -353,23 +366,20 @@ class SACAgent(BaseRLAgent[_O, _U]):
                 action, _, _ = self.actor.get_action(obs_tensor, deterministic=True)
                 actions = action.cpu().numpy()
 
-            obs, _, _, _, infos = envs.step(actions)
+            obs, _, _, _, infos = train_envs.step(actions)
             step_length += 1
 
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info is None or "episode" not in info:
                         continue
-                    print(
+                    logging.info(
                         f"eval_episode={len(episodic_returns)}, "
                         f"episodic_return={info['episode']['r']}"
                     )
                     episodic_returns.append(info["episode"]["r"])
                     step_lengths.append(step_length)
                     step_length = 0
-                obs, _ = envs.reset()
-
-        envs.close()  # type: ignore
 
         eval_metrics = {
             "episodic_return": episodic_returns,
@@ -377,7 +387,9 @@ class SACAgent(BaseRLAgent[_O, _U]):
         }
         return eval_metrics
 
-    def train(self, render: bool = False) -> dict[str, Any]:  # type: ignore
+    def train(  # type: ignore[override]
+        self, eval_episodes: int = 10, render_eval_video: bool = False
+    ) -> dict[str, Any]:
         """Training the agent with an interactive batched environment."""
         # Seeding
         random.seed(self.args.seed)
@@ -386,13 +398,12 @@ class SACAgent(BaseRLAgent[_O, _U]):
         torch.backends.cudnn.deterministic = self.args.torch_deterministic
 
         # env setup
+        episodic_returns: list[float] = []
+        # Create training environments (no video recording during training)
         envs = gym.vector.SyncVectorEnv(
             [
                 make_env_sac(
                     self.env_id,
-                    self.args.seed + i,
-                    render,
-                    self.cfg.exp_name + "_train",
                     self.max_episode_steps,
                 )
                 for i in range(self.args.num_envs)
@@ -436,24 +447,24 @@ class SACAgent(BaseRLAgent[_O, _U]):
             # TRY NOT TO MODIFY: record rewards for plotting purposes
             if "final_info" in infos:
                 for info in infos["final_info"]:
-                    if info is not None:
-                        episodic_return = info["episode"]["r"]
-                        print(
+                    if info and "episode" in info:
+                        episode_return = info["episode"]["r"]
+                        logging.info(
                             f"global_step={global_step}, "
-                            f"episodic_return={episodic_return}"
+                            f"episodic_return={episode_return}"
                         )
+                        episodic_returns.append(info["episode"]["r"])
                         if self.writer is not None:
-                            self.writer.add_scalar(  # type: ignore
+                            self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                 "charts/episodic_return",
                                 info["episode"]["r"],
                                 global_step,
                             )
-                            self.writer.add_scalar(  # type: ignore
+                            self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                 "charts/episodic_length",
                                 info["episode"]["l"],
                                 global_step,
                             )
-                        break
 
             # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
             real_next_obs = next_obs.copy()
@@ -543,6 +554,16 @@ class SACAgent(BaseRLAgent[_O, _U]):
                             + (1 - self.args.tau) * target_param.data
                         )
 
+                if (
+                    global_step % self.args.save_model_freq == 0
+                    and self.args.save_model
+                ):
+                    model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
+                    base_path = Path(self.log_path) / "policies"
+                    base_path.mkdir(parents=True, exist_ok=True)
+                    self.save(str(model_path))
+                    logging.info(f"model saved to {model_path}")
+
                 if global_step % 100 == 0 and self.writer is not None:
                     self.writer.add_scalar(  # type: ignore
                         "losses/qf1_values", qf1_a_values.mean().item(), global_step
@@ -576,32 +597,35 @@ class SACAgent(BaseRLAgent[_O, _U]):
                             "losses/alpha_loss", alpha_loss.item(), global_step
                         )
 
-            # Evaluation
-            if (
-                self.args.eval_freq > 0
-                and global_step > 0
-                and global_step % self.args.eval_freq == 0
-            ):
-                eval_metrics = self.evaluate(self.args.num_eval_envs)
-                logging.info(f"Evaluated {self.args.num_eval_envs} episodes")
-                for k, v in eval_metrics.items():
-                    mean = np.mean(v)
-                    if self.writer is not None:
-                        self.writer.add_scalar(  # type: ignore
-                            f"eval/{k}", mean, global_step
-                        )
-                    logging.info(f"eval_{k}_mean={mean}")
-
         if self.args.save_model:
             model_path = self.log_path / "final_ckpt.pt"
             self.save(str(model_path))
             logging.info(f"model saved to {model_path}")
 
+        # Evaluate on the training environment (shares the same normalizer)
+        logging.info(f"Starting evaluation for {eval_episodes} episodes...")
+        eval_metrics = self.evaluate_on_env(
+            envs, eval_episodes, render_video=render_eval_video
+        )
+
+        # Log evaluation results
+        if eval_metrics["episodic_return"]:
+            avg_return = np.mean(eval_metrics["episodic_return"])
+            logging.info(f"Evaluation average return: {avg_return}")
+            if self.writer is not None:
+                self.writer.add_scalar(  # type: ignore
+                    "eval/average_return", avg_return, global_step
+                )
+
+        # Close environments and writer
         envs.close()  # type: ignore
         if self.writer is not None:
             self.writer.close()  # type: ignore
 
-        return {}
+        return {
+            "train": {"episodic_return": episodic_returns},
+            "eval": eval_metrics,
+        }
 
     def save(self, filepath: str) -> None:
         """Save agent parameters."""
