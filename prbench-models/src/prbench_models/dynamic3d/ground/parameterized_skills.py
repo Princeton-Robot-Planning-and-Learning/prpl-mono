@@ -259,8 +259,8 @@ class PyBulletSim:
                 create_pybullet_shelf(
                     color=(0.5, 0.5, 0.5, 1.0),
                     shelf_width=0.60198,
-                    shelf_depth=0.254 + 0.02, # to account for the differences between mujoco and pybullet.
-                    shelf_height=0.0127,  # in sim, we were using 0.0127.
+                    shelf_depth=0.254, 
+                    shelf_height=0.0127,
                     spacing=0.254,
                     support_width=0.0127,
                     num_layers=4,
@@ -1073,8 +1073,8 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         rot = -np.pi / 2
         # sample placements
         for _ in range(100):
-            pose_x_offset = rng.uniform(-0.05, 0.05)
-            pose_y_offset = rng.uniform(-0.15, 0.15)
+            pose_x_offset = rng.uniform(-0.1, 0)
+            pose_y_offset = rng.uniform(-0.18, 0.18)
             collision = False
             for other_obj in x.get_objects(MujocoMovableObjectType):
                 if other_obj.name == self.objects[1].name:
@@ -1084,7 +1084,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
                     np.linalg.norm(
                         np.array(
                             [
-                                pose_x_offset + cupboard_pose.x,
+                                pose_x_offset + cupboard_pose.x - 0.03, # the offset of the cupboard from the cubes.
                                 pose_y_offset + cupboard_pose.y,
                             ]
                         )
@@ -1095,7 +1095,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
                     collision = True
                     break
             if not collision:
-                return np.array([0.9 + pose_x_offset, pose_y_offset, rot])
+                return np.array([0.85 + pose_x_offset, pose_y_offset, rot])
         raise ValueError("No valid parameters found")
 
     def reset(
