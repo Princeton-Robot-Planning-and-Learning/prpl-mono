@@ -23,6 +23,7 @@ from prbench_models.dynamic3d.cupboard_real.state_abstractions import (
     OnGround,
 )
 from prbench_models.dynamic3d.ground.parameterized_skills import (
+    PyBulletSim,
     create_lifted_controllers,
 )
 from relational_structs import (
@@ -132,10 +133,12 @@ def create_bilevel_planning_models(
     )
 
     # Create the PyBullet simulator.
-    from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
-    pybullet_sim = PyBulletSim(initial_state)
-    controllers = create_lifted_controllers(action_space, sim.initial_constant_state, pybullet_sim=pybullet_sim)
-    
+    assert initial_state is not None
+    pybullet_sim = PyBulletSim(initial_state, rendering=False)
+    controllers = create_lifted_controllers(
+        action_space, sim.initial_constant_state, pybullet_sim=pybullet_sim
+    )
+
     # Controllers.
     LiftedPickGroundController = controllers["pick_ground"]
     LiftedPlaceGroundController = controllers["place_ground"]

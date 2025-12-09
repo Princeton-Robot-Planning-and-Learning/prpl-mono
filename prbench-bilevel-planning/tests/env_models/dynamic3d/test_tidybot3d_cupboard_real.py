@@ -38,7 +38,6 @@ def test_tidybot3d_cupboard_bilevel_planning():
         planning_timeout=120.0,
         max_skill_horizon=400,
     )
-    
 
     agent.reset(obs, info)
     for _ in range(2000):

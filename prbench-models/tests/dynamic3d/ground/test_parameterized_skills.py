@@ -13,6 +13,7 @@ from prbench_models.dynamic3d.ground.parameterized_skills import (
     create_lifted_controllers,
     get_target_robot_pose_from_parameters,
 )
+from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
 
 prbench.register_all_environments()
 
@@ -751,7 +752,6 @@ def test_pick_place_skill():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
     pybullet_sim = PyBulletSim(state)
 
     controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim)

@@ -218,7 +218,7 @@ class PyBulletSim:
     We should generalize and move this out later.
     """
 
-    def __init__(self, initial_state: ObjectCentricState) -> None:
+    def __init__(self, initial_state: ObjectCentricState, rendering: bool = False) -> None:
         """NOTE: for now, this is extremely specific to the Ground environment where
         there is exactly one cube. We will generalize this later."""
 
@@ -227,12 +227,14 @@ class PyBulletSim:
         self._base_to_arm_pose = Pose((0.12, 0.0, 0.4))
 
         # Create the PyBullet simulator.
-        # Uncomment for debugging.
-        # from pybullet_helpers.gui import create_gui_connection
-        # self._physics_client_id = create_gui_connection(
-        #     camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0)
-        # )  # pylint: disable=line-too-long
-        self._physics_client_id = p.connect(p.DIRECT)
+        if rendering:
+            # Uncomment for debugging.
+            from pybullet_helpers.gui import create_gui_connection
+            self._physics_client_id = create_gui_connection(
+                camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0)
+            )  # pylint: disable=line-too-long
+        else:
+            self._physics_client_id = p.connect(p.DIRECT)
 
         # Create the robot, assuming that it is a kinova gen3.
         self._robot = create_pybullet_robot(
@@ -1110,7 +1112,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
                     collision = True
                     break
             if not collision:
-                return np.array([0.85 + pose_x_offset, pose_y_offset, rot])
+                return np.array([0.95 + pose_x_offset, pose_y_offset, rot])
         raise ValueError("No valid parameters found")
 
     def reset(
@@ -1168,7 +1170,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
 
         current_arm_base_pose = self._pybullet_sim.robot.get_base_pose()
 
-        target_end_effector_pose = Pose((0.7, 0.0, 0.25), (0.5, 0.5, 0.5, 0.5))
+        target_end_effector_pose = Pose((0.8, 0.0, 0.25), (0.5, 0.5, 0.5, 0.5))
 
         target_end_effector_pose = multiply_poses(
             current_arm_base_pose, target_end_effector_pose
