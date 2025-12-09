@@ -34,6 +34,7 @@
     </body>
 
     <!-- Third-person overview camera for complete scene view -->
-    <camera name="overview" pos="0.8 -2.0 1.7" euler="1.0 0.0 0" fovy="42" resolution="640 480"/>
+    <camera name="overview" pos="-0.8 -2.0 1.7" euler="1 -0.5 0" fovy="42" resolution="640 480"/>
+    <!-- <camera name="overview" pos="-0.8 -2.0 1.7" quat="0.87 0.45 0 0" fovy="42" resolution="640 480"/> -->
   </worldbody>
 </mujoco>

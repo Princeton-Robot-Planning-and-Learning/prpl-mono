@@ -38,6 +38,7 @@ def create_bilevel_planning_models(
     observation_space: Space,
     action_space: Space,
     num_objects: int = 1,
+    initial_state: ObjectCentricState | None = None,
 ) -> SesameModels:
     """Create the env models for TidyBot base motion."""
     assert isinstance(observation_space, ObjectCentricBoxSpace)
@@ -130,8 +131,12 @@ def create_bilevel_planning_models(
         },
     )
 
+    # Create the PyBullet simulator.
+    from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
+    pybullet_sim = PyBulletSim(initial_state)
+    controllers = create_lifted_controllers(action_space, sim.initial_constant_state, pybullet_sim=pybullet_sim)
+    
     # Controllers.
-    controllers = create_lifted_controllers(action_space, sim.initial_constant_state)
     LiftedPickGroundController = controllers["pick_ground"]
     LiftedPlaceGroundController = controllers["place_ground"]
 

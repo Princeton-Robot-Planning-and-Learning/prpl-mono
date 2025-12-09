@@ -18,13 +18,18 @@ def test_tidybot3d_cupboard_bilevel_planning():
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TidyBot3D-cupboard")
 
+    seed = 123
+    obs, info = env.reset(seed=seed)
+    total_reward = 0
+    state = env.observation_space.devectorize(obs)
+
     env_models = create_bilevel_planning_models(
         "tidybot3d_cupboard_real",
         env.observation_space,
         env.action_space,
         num_objects=4,
+        initial_state=state,
     )
-    seed = 123
     agent = BilevelPlanningAgent(
         env_models,
         seed=seed,
@@ -33,8 +38,7 @@ def test_tidybot3d_cupboard_bilevel_planning():
         planning_timeout=120.0,
         max_skill_horizon=400,
     )
-    obs, info = env.reset(seed=seed)
-    total_reward = 0
+    
 
     agent.reset(obs, info)
     for _ in range(2000):
