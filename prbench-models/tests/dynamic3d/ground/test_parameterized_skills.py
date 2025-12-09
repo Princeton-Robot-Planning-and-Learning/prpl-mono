@@ -751,7 +751,10 @@ def test_pick_place_skill():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    controllers = create_lifted_controllers(env.action_space)
+    from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
+    pybullet_sim = PyBulletSim(state)
+
+    controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim)
 
     # create the pick ground controller.
     lifted_controller = controllers["pick_ground"]
@@ -770,7 +773,6 @@ def test_pick_place_skill():
         controller.observe(next_state)
         state = next_state
         if controller.terminated():
-            controller._pybullet_sim.close()
             break
     else:
         assert False, "Controller did not terminate"
