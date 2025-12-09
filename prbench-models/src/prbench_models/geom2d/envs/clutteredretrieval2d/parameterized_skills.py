@@ -19,8 +19,8 @@ from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
     run_motion_planning_for_crv_robot,
+    snap_suctioned_objects,
     state_2d_has_collision,
-    snap_suctioned_objects
 )
 from relational_structs import (
     Object,

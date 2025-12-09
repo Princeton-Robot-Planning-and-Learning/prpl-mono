@@ -10,10 +10,10 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2
 
 from prbench_models.dynamic3d.ground.parameterized_skills import (
+    PyBulletSim,
     create_lifted_controllers,
     get_target_robot_pose_from_parameters,
 )
-from prbench_models.dynamic3d.ground.parameterized_skills import PyBulletSim
 
 prbench.register_all_environments()
 
@@ -752,7 +752,8 @@ def test_pick_place_skill():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    pybullet_sim = PyBulletSim(state)
+    assert state is not None
+    pybullet_sim = PyBulletSim(state, rendering=False)
 
     controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim)
 
@@ -820,8 +821,11 @@ def test_pick_place_two_cubes_skill():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
+    assert state is not None
+    pybullet_sim = PyBulletSim(state, rendering=False)
+
     # Create the move-base controller.
-    controllers = create_lifted_controllers(env.action_space)
+    controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim)
     # create the pick ground controller.
     lifted_controller = controllers["pick_ground"]
     robot = state.get_object_from_name("robot")

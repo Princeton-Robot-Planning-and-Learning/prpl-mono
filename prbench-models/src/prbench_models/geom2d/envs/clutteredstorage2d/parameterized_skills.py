@@ -21,7 +21,7 @@ from prbench.envs.geom2d.utils import (
     get_tool_tip_position,
     run_motion_planning_for_crv_robot,
     snap_suctioned_objects,
-    state_2d_has_collision
+    state_2d_has_collision,
 )
 from relational_structs import (
     Object,

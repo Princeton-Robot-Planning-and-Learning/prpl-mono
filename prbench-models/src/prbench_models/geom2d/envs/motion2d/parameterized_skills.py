@@ -14,7 +14,7 @@ from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
     run_motion_planning_for_crv_robot,
-    state_2d_has_collision
+    state_2d_has_collision,
 )
 from relational_structs import (
     Object,

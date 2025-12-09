@@ -17,9 +17,14 @@ from prbench.envs.dynamic3d.object_types import (
 from prbench.envs.dynamic3d.robots.tidybot_robot_env import (
     TidyBot3DRobotActionSpace,
 )
+from prbench.envs.geom3d.utils import extend_joints_to_include_fingers
 from prpl_utils.utils import get_signed_angle_distance
 from pybullet_helpers.geometry import Pose, multiply_poses, set_pose
-from pybullet_helpers.inverse_kinematics import inverse_kinematics
+from pybullet_helpers.gui import create_gui_connection
+from pybullet_helpers.inverse_kinematics import (
+    inverse_kinematics,
+    set_robot_joints_with_held_object,
+)
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
@@ -32,6 +37,7 @@ from pybullet_helpers.utils import (
 )
 from relational_structs import (
     Array,
+    Object,
     ObjectCentricState,
     Variable,
 )
@@ -41,10 +47,6 @@ from prbench_models.dynamic3d.utils import (
     get_overhead_object_se2_pose,
     run_base_motion_planning,
 )
-
-from prbench.envs.dynamic3d.objects import MujocoObject
-from pybullet_helpers.inverse_kinematics import set_robot_joints_with_held_object
-from prbench.envs.geom3d.utils import extend_joints_to_include_fingers
 
 # Constants.
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
@@ -218,7 +220,9 @@ class PyBulletSim:
     We should generalize and move this out later.
     """
 
-    def __init__(self, initial_state: ObjectCentricState, rendering: bool = False) -> None:
+    def __init__(
+        self, initial_state: ObjectCentricState, rendering: bool = False
+    ) -> None:
         """NOTE: for now, this is extremely specific to the Ground environment where
         there is exactly one cube. We will generalize this later."""
 
@@ -228,8 +232,6 @@ class PyBulletSim:
 
         # Create the PyBullet simulator.
         if rendering:
-            # Uncomment for debugging.
-            from pybullet_helpers.gui import create_gui_connection
             self._physics_client_id = create_gui_connection(
                 camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0)
             )  # pylint: disable=line-too-long
@@ -238,7 +240,10 @@ class PyBulletSim:
 
         # Create the robot, assuming that it is a kinova gen3.
         self._robot = create_pybullet_robot(
-            "kinova-gen3", self._physics_client_id, fixed_base=False, control_mode="reset"
+            "kinova-gen3",
+            self._physics_client_id,
+            fixed_base=False,
+            control_mode="reset",
         )
 
         self.base_link_to_held_obj: Pose | None = None
@@ -265,7 +270,7 @@ class PyBulletSim:
                 create_pybullet_shelf(
                     color=(0.5, 0.5, 0.5, 1.0),
                     shelf_width=0.60198,
-                    shelf_depth=0.254, 
+                    shelf_depth=0.254,
                     shelf_height=0.0127,
                     spacing=0.254,
                     support_width=0.0127,
@@ -291,7 +296,9 @@ class PyBulletSim:
         """Get the current robot joints from the simulator."""
         return self._robot.get_joint_positions()
 
-    def set_state(self, x: ObjectCentricState, held_object: MujocoObject | None = None) -> None:
+    def set_state(
+        self, x: ObjectCentricState, held_object: Object | None = None
+    ) -> None:
         """Update the internal state of the simulator from an object-centric state."""
         # Update the robot state.
         robot_obj = x.get_object_from_name("robot")
@@ -356,7 +363,7 @@ class PyBulletSim:
                 cupboard1_shelf_pose,
                 self._physics_client_id,
             )
-        
+
         if held_object:
             held_object_id = self._cubes[held_object.name]
             set_robot_joints_with_held_object(
@@ -738,7 +745,9 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         object: The target object.
     """
 
-    def __init__(self, pybullet_sim: PyBulletSim | None = None, *args, **kwargs) -> None:
+    def __init__(
+        self, *args, pybullet_sim: PyBulletSim | None = None, **kwargs
+    ) -> None:
         super().__init__(*args, **kwargs)
         self._last_state: ObjectCentricState | None = None
         self._current_params: np.ndarray | None = None
@@ -877,7 +886,6 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
-
 
         retract_plan = run_motion_planning(
             self._pybullet_sim.robot,
@@ -1067,7 +1075,9 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         object: The target object.
     """
 
-    def __init__(self, pybullet_sim: PyBulletSim | None = None, *args, **kwargs) -> None:
+    def __init__(
+        self, *args, pybullet_sim: PyBulletSim | None = None, **kwargs
+    ) -> None:
         super().__init__(*args, **kwargs)
         self._last_state: ObjectCentricState | None = None
         self._current_params: np.ndarray | None = None
@@ -1101,7 +1111,9 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
                     np.linalg.norm(
                         np.array(
                             [
-                                pose_x_offset + cupboard_pose.x - 0.03, # the offset of the cupboard from the cubes.
+                                pose_x_offset
+                                + cupboard_pose.x
+                                - 0.03,  # the offset of the cupboard from the cubes.
                                 pose_y_offset + cupboard_pose.y,
                             ]
                         )
@@ -1165,6 +1177,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
 
         target_object_place = self.objects[1]
 
+        assert target_object_place is not None
         # Reset PyBullet given the current state.
         self._pybullet_sim.set_state(plan_x, target_object_place)
 
@@ -1181,7 +1194,6 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             target_end_effector_pose,
             set_joints=False,
         )
-
 
         # Run motion planning.
         plan = run_motion_planning(
@@ -1442,16 +1454,16 @@ def create_lifted_controllers(
     # Create wrapper class that captures pybullet_sim
     class PickController(PickGroundController):
         """Pick controller with pre-configured PyBullet sim."""
-        
+
         def __init__(self, objects):
             super().__init__(pybullet_sim=pybullet_sim, objects=objects)
 
     class PlaceController(PlaceGroundController):
         """Place controller with pre-configured PyBullet sim."""
-        
+
         def __init__(self, objects):
             super().__init__(pybullet_sim=pybullet_sim, objects=objects)
-    
+
     # Pick ground controller.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
     target = Variable("?target", MujocoMovableObjectType)
