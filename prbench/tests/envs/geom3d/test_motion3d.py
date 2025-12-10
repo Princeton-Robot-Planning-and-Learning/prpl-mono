@@ -60,8 +60,15 @@ def test_motion_planning_in_motion3d_env():
     else:
         max_candidate_plans = 1
 
+    # Uncomment to debug target pose.
+    # from pybullet_helpers.gui import visualize_pose
+    # import pybullet as p
+    # visualize_pose(Pose(obs.target_position, (1, 0, 0, 0)), sim.physics_client_id)
+    # while True:
+    #     p.getMouseEvents(sim.physics_client_id)
+
     joint_plan = run_smooth_motion_planning_to_pose(
-        Pose(obs.target_position, (np.sqrt(2)/ 2, 0, 0, np.sqrt(2)/ 2)),
+        Pose(obs.target_position, (1, 0, 0, 0)),
         sim.robot.arm,
         collision_ids=set(),
         end_effector_frame_to_plan_frame=Pose.identity(),
