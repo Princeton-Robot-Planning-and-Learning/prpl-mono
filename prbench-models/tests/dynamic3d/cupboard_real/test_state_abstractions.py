@@ -11,6 +11,7 @@ from prbench_models.dynamic3d.cupboard_real.state_abstractions import (
     CupboardRealStateAbstractor,
 )
 from prbench_models.dynamic3d.ground.parameterized_skills import (
+    PyBulletSim,
     create_lifted_controllers,
 )
 
@@ -41,11 +42,11 @@ def test_cupboard_real_state_abstraction():
     abstract_state = abstractor.state_abstractor(state)
     assert str(sorted(abstract_state.atoms)) == "[(HandEmpty robot), (OnGround cube1)]"
 
+    pybullet_sim = PyBulletSim(state, rendering=False)
     # Create controllers.
-    controllers = create_lifted_controllers(env.action_space)
+    controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim)
 
     # Pick up the cube.
-    controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["pick_ground"]
     robot = state.get_object_from_name("robot")
     cube = state.get_object_from_name("cube1")
@@ -73,7 +74,6 @@ def test_cupboard_real_state_abstraction():
     assert str(sorted(abstract_state.atoms)) == "[(Holding robot cube1)]"
 
     # Plce the cube.
-    controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["place_ground"]
     robot = state.get_object_from_name("robot")
     cube = state.get_object_from_name("cube1")

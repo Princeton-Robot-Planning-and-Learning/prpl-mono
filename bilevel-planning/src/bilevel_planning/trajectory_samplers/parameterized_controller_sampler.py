@@ -90,5 +90,6 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
             # Success!
             return x_traj, u_traj
 
+
         # Failure.
         raise TrajectorySamplingFailure()

@@ -33,7 +33,7 @@ class CupboardRealStateAbstractor:
     def __init__(self, sim: ObjectCentricTidyBot3DEnv) -> None:
         """Initialize the state abstractor."""
         initial_state, _ = sim.reset()  # just need to access the objects
-        self._pybullet_sim = PyBulletSim(initial_state)
+        self._pybullet_sim = PyBulletSim(initial_state, rendering=False)
 
     def state_abstractor(self, state: ObjectCentricState) -> RelationalAbstractState:
         """Get the abstract state for the current state."""
@@ -105,6 +105,7 @@ class CupboardRealStateAbstractor:
                 if (
                     abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.15
                     and abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.25
+                    and state.get(movable, "z") > 0.3
                 ):
                     if GroundAtom(Holding, [robot, movable]) not in atoms:
                         atoms.add(GroundAtom(OnFixture, [movable, fixture]))

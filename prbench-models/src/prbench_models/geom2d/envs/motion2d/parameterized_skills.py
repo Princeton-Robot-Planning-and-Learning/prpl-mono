@@ -42,7 +42,8 @@ class GroundMoveToTgtController(Geom2dRobotController):
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
     ) -> tuple[float, float, float]:
-        # Sample relative position within the target region
+        del x  # Unused
+        # Sample a point within the target region and a random orientation
         rel_x = rng.uniform(0.1, 0.9)
         rel_y = rng.uniform(0.1, 0.9)
         # Sample random orientation
@@ -123,11 +124,11 @@ class GroundMoveToPassageController(GroundMoveToTgtController):
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
     ) -> tuple[float, float, float]:
+        del x  # Unused
         # Sample a point between the two obstacles
         rel_x = rng.uniform(0.1, 0.9)
         rel_y = rng.uniform(0.1, 0.9)
         abs_theta = rng.uniform(-np.pi, np.pi)
-
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
         return (rel_x, rel_y, rel_theta)
 
