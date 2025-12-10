@@ -89,6 +89,12 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
         if final_abstract_state == ns:
             # Success!
             return x_traj, u_traj
+        else:
+            assert False, "final_abstract_state != ns"
+            print(f"final_abstract_state: {final_abstract_state}")
+            print(f"ns: {ns}")
+            print('last state: ', x_traj[-1])
+
 
         # Failure.
         raise TrajectorySamplingFailure()

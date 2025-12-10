@@ -105,6 +105,7 @@ class CupboardRealStateAbstractor:
                 if (
                     abs(state.get(movable, "x") - state.get(fixture, "x")) < 0.15
                     and abs(state.get(movable, "y") - state.get(fixture, "y")) < 0.25
+                    and state.get(movable, "z") > 0.3
                 ):
                     if GroundAtom(Holding, [robot, movable]) not in atoms:
                         atoms.add(GroundAtom(OnFixture, [movable, fixture]))

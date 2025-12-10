@@ -54,7 +54,7 @@ GRIPPER_OPEN_THRESHOLD = 0.01
 GRASP_CLOSE_THRESHOLD = 1.0  # for stable grasp
 GRIPPER_CLOSED_THRESHOLD = 0.02
 WAYPOINT_TOL = 1e-2
-MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.3, 0.6)
+MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi, np.pi)
 WORLD_X_BOUNDS = (-2.5, 2.5)  # we should move these later
 WORLD_Y_BOUNDS = (-2.5, 2.5)  # we should move these later
@@ -789,7 +789,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
                             ]
                         )
                     )
-                    if collision_distance < 0.7:
+                    if collision_distance < 0.6:
                         collision = True
                         break
             if not collision:
@@ -1100,8 +1100,8 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         rot = -np.pi / 2
         # sample placements
         for _ in range(100):
-            pose_x_offset = rng.uniform(-0.1, 0)
-            pose_y_offset = rng.uniform(-0.18, 0.18)
+            pose_x_offset = rng.uniform(-0.10, 0)
+            pose_y_offset = rng.uniform(-0.15, 0.15)
             collision = False
             for other_obj in x.get_objects(MujocoMovableObjectType):
                 if other_obj.name == self.objects[1].name:
