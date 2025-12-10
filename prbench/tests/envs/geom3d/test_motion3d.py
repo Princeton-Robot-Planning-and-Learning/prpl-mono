@@ -61,7 +61,7 @@ def test_motion_planning_in_motion3d_env():
         max_candidate_plans = 1
 
     joint_plan = run_smooth_motion_planning_to_pose(
-        Pose(obs.target_position),
+        Pose(obs.target_position, (np.sqrt(2)/ 2, 0, 0, np.sqrt(2)/ 2)),
         sim.robot.arm,
         collision_ids=set(),
         end_effector_frame_to_plan_frame=Pose.identity(),
