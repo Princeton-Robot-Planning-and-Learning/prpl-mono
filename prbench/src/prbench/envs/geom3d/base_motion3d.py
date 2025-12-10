@@ -53,7 +53,7 @@ class BaseMotion3DObjectCentricState(Geom3DObjectCentricState):
         )
 
 
-class ObjectCentricMotion3DEnv(
+class ObjectCentricBaseMotion3DEnv(
     ObjectCentricGeom3DRobotEnv[BaseMotion3DObjectCentricState, BaseMotion3DEnvConfig]
 ):
     """Environment where only base motion planning is needed to reach a goal."""
@@ -165,7 +165,7 @@ class BaseMotion3DEnv(ConstantObjectPRBenchEnv):
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom3DRobotEnv:
-        return ObjectCentricMotion3DEnv(*args, **kwargs)
+        return ObjectCentricBaseMotion3DEnv(*args, **kwargs)
 
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
