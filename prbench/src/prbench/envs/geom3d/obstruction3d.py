@@ -8,7 +8,7 @@ from typing import Type as TypingType
 
 import numpy as np
 import pybullet as p
-from pybullet_helpers.geometry import Pose, set_pose, SE2Pose
+from pybullet_helpers.geometry import Pose, SE2Pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import create_pybullet_block
 from relational_structs import Object, ObjectCentricState

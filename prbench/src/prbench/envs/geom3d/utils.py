@@ -1,7 +1,7 @@
 """Utilities."""
 
 import numpy as np
-from pybullet_helpers.geometry import Pose
+from pybullet_helpers.geometry import Pose, SE2Pose
 from pybullet_helpers.joint import JointPositions
 from relational_structs import Object, ObjectCentricState
 
@@ -60,11 +60,24 @@ class Geom3DObjectCentricState(ObjectCentricState):
         grasp_tf = Pose((x, y, z), (qx, qy, qz, qw))
         return grasp_tf
 
+    @property
+    def base_pose(self) -> SE2Pose:
+        """The pose of the base."""
+        robot = self.get_object_from_name("robot")
+        se2_pose = SE2Pose(
+            self.get(robot, "pos_base_x"),
+            self.get(robot, "pos_base_y"),
+            self.get(robot, "pos_base_rot"),
+        )
+        return se2_pose
+
 
 class Geom3DRobotActionSpace(RobotActionSpace):
-    """An action space for a mobile manipulation with a 7 DOF robot that can open and close its gripper.
+    """An action space for a mobile manipulation with a 7 DOF robot that can open and
+    close its gripper.
 
-    Actions are bounded relative base position, rotation, and joint positions, and open / close.
+    Actions are bounded relative base position, rotation, and joint positions, and open
+    / close.
 
     The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
     """

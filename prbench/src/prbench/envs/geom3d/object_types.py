@@ -9,6 +9,9 @@ Geom3DEnvTypeFeatures: dict[Type, list[str]] = {}
 # different sized objects.
 Geom3DRobotType = Type("Geom3DRobot")
 Geom3DEnvTypeFeatures[Geom3DRobotType] = [
+    "pos_base_x",
+    "pos_base_y",
+    "pos_base_rot",
     "joint_1",
     "joint_2",
     "joint_3",

@@ -101,7 +101,9 @@ class ObjectCentricMotion3DEnv(
             except InverseKinematicsError:
                 continue
             self._set_robot_and_held_object(
-                self.config.initial_joints, self.config.initial_finger_state
+                self.robot.get_base(),
+                self.config.initial_joints,
+                self.config.initial_finger_state,
             )
             # If the goal is already reached, keep sampling.
             if not self._goal_reached():

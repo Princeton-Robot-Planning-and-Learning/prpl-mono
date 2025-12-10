@@ -7,7 +7,7 @@ from typing import Type as TypingType
 
 import numpy as np
 import pybullet as p
-from pybullet_helpers.geometry import SE2Pose, get_pose, set_pose
+from pybullet_helpers.geometry import Pose, SE2Pose, get_pose, set_pose
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
@@ -48,9 +48,11 @@ class BaseMotion3DObjectCentricState(Geom3DObjectCentricState):
     def target_base_pose(self) -> SE2Pose:
         """The pose of the base target, assuming the name "target"."""
         target = self.get_object_from_name("target")
-        return SE2Pose(
-            self.get(target, "x"), self.get(target, "y"), self.get(target, "theta")
+        pose = Pose(
+            (self.get(target, "x"), self.get(target, "y"), self.get(target, "z"))
         )
+        se2_pose = pose.to_se2()
+        return se2_pose
 
 
 class ObjectCentricBaseMotion3DEnv(
@@ -94,9 +96,10 @@ class ObjectCentricBaseMotion3DEnv(
         target_pose: SE2Pose | None = None
         lb = self.config.target_lower_bound
         ub = self.config.target_upper_bound
-        # TODO reset robot base position!
         self._set_robot_and_held_object(
-            self.config.initial_joints, self.config.initial_finger_state
+            self.config.robot_base_home_pose,
+            self.config.initial_joints,
+            self.config.initial_finger_state,
         )
         for _ in range(100_000):
             x, y, rot = self.np_random.uniform(
@@ -176,24 +179,25 @@ class BaseMotion3DEnv(ConstantObjectPRBenchEnv):
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
         # pylint: disable=line-too-long
-        config = self._object_centric_env.config
-        assert isinstance(config, BaseMotion3DEnv)
-        # TODO
-        return """TODO"""
+        return (
+            """Environment where only base motion planning is needed to reach a goal."""
+        )
 
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""
         # pylint: disable=line-too-long
-        # TODO
-        return """TODO"""
+        return """Observations consist of:
+- **base_pose**: The pose of the base.
+- **joint_positions**: The joint positions of the robot arm.
+- **finger_state**: The state of the fingers.
+- **target**: The pose of the target.
+"""
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        # TODO
-        return """TODO"""
+        return """The reward is a small negative reward (-0.01) per timestep to encourage exploration."""
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
-        # TODO
-        return """TODO"""
+        return """This is a very common kind of environment."""
