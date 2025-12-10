@@ -58,6 +58,15 @@ MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi, np.pi)
 WORLD_X_BOUNDS = (-2.5, 2.5)  # we should move these later
 WORLD_Y_BOUNDS = (-2.5, 2.5)  # we should move these later
+ROBOT_ARM_POSE_TO_BASE = Pose((0.12, 0.0, 0.4))
+GRASP_TRANSFORM_TO_OBJECT = Pose((0.005, 0, 0.035), (0.707, 0.707, 0, 0))
+BASE_DISTANCE_TO_CUPBOARD = 0.95
+ARM_MOVEMENT_CUPBOARD = Pose((0.8, 0.0, 0.25), (0.5, 0.5, 0.5, 0.5))
+PLACE_SAMPLER_COLLISION_THRESHOLD = 0.05
+PLACE_SAMPLER_X_OFFSET_BOUNDS = (-0.10, 0)
+PLACE_SAMPLER_Y_OFFSET_BOUNDS = (-0.15, 0.15)
+MAX_SAMPLER_ATTEMPTS = 100
+BASE_TO_CUPBOARD_ROTATION = -np.pi / 2
 
 
 # Utility functions.
@@ -227,14 +236,13 @@ class PyBulletSim:
         there is exactly one cube. We will generalize this later."""
 
         # Hardcode the transform from the base pose to the arm pose.
-        # check if this is correct......
-        self._base_to_arm_pose = Pose((0.12, 0.0, 0.4))
+        self._base_to_arm_pose = ROBOT_ARM_POSE_TO_BASE
 
         # Create the PyBullet simulator.
         if rendering:
             self._physics_client_id = create_gui_connection(
                 camera_pitch=-90, background_rgb=(1.0, 1.0, 1.0)
-            )  # pylint: disable=line-too-long
+            )
         else:
             self._physics_client_id = p.connect(p.DIRECT)
 
@@ -768,7 +776,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         target_object = self.objects[1]
         target_object_pose = get_overhead_object_se2_pose(x, target_object)
 
-        for _ in range(100):
+        for _ in range(MAX_SAMPLER_ATTEMPTS):
             distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)  # type: ignore
             rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
             target_base_pose = get_target_robot_pose_from_parameters(
@@ -860,10 +868,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
 
         target_end_effector_pose = multiply_poses(
             target_grap_pose_world,
-            Pose(
-                (0.005, 0, 0.035),  # offsets in end-effector local frame
-                (0.707, 0.707, 0, 0),  # orientation
-            ),
+            GRASP_TRANSFORM_TO_OBJECT,
         )
 
         self._pybullet_sim.base_link_to_held_obj = multiply_poses(
@@ -1097,11 +1102,11 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         cupboard_obj = x.get_object_from_name("cupboard_1")
         cupboard_pose = get_overhead_object_se2_pose(x, cupboard_obj)
-        rot = -np.pi / 2
+        rot = BASE_TO_CUPBOARD_ROTATION
         # sample placements
-        for _ in range(100):
-            pose_x_offset = rng.uniform(-0.10, 0)
-            pose_y_offset = rng.uniform(-0.15, 0.15)
+        for _ in range(MAX_SAMPLER_ATTEMPTS):
+            pose_x_offset = rng.uniform(*PLACE_SAMPLER_X_OFFSET_BOUNDS)
+            pose_y_offset = rng.uniform(*PLACE_SAMPLER_Y_OFFSET_BOUNDS)
             collision = False
             for other_obj in x.get_objects(MujocoMovableObjectType):
                 if other_obj.name == self.objects[1].name:
@@ -1113,18 +1118,24 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
                             [
                                 pose_x_offset
                                 + cupboard_pose.x
-                                - 0.03,  # the offset of the cupboard from the cubes.
+                                + (
+                                    ARM_MOVEMENT_CUPBOARD.position[0]
+                                    + ROBOT_ARM_POSE_TO_BASE.position[0]
+                                    - BASE_DISTANCE_TO_CUPBOARD
+                                ),  # the offset of the cupboard from the cubes.
                                 pose_y_offset + cupboard_pose.y,
                             ]
                         )
                         - np.array([other_object_pose.x, other_object_pose.y])
                     )
-                    < 0.05
+                    < PLACE_SAMPLER_COLLISION_THRESHOLD
                 ):
                     collision = True
                     break
             if not collision:
-                return np.array([0.95 + pose_x_offset, pose_y_offset, rot])
+                return np.array(
+                    [BASE_DISTANCE_TO_CUPBOARD + pose_x_offset, pose_y_offset, rot]
+                )
         raise ValueError("No valid parameters found")
 
     def reset(
@@ -1183,7 +1194,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
 
         current_arm_base_pose = self._pybullet_sim.robot.get_base_pose()
 
-        target_end_effector_pose = Pose((0.8, 0.0, 0.25), (0.5, 0.5, 0.5, 0.5))
+        target_end_effector_pose = ARM_MOVEMENT_CUPBOARD
 
         target_end_effector_pose = multiply_poses(
             current_arm_base_pose, target_end_effector_pose
