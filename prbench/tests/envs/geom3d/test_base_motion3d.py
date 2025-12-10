@@ -30,6 +30,7 @@ def test_base_motion3d_env():
 
     # Uncomment to debug.
     import pybullet as p
+
     while True:
         p.getMouseEvents(env.physics_client_id)
 

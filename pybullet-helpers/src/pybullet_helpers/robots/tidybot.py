@@ -35,7 +35,7 @@ class TidyBotKinova(SingleArmPyBulletMobileManipulator):
         base_pose: Pose,
     ) -> SingleArmPyBulletRobot:
         return KinovaGen3RobotiqGripperPyBulletRobot(
-            physics_client_id, base_pose, fixed_base=False
+            physics_client_id, base_pose, fixed_base=False, control_mode="reset",
         )
 
     @classmethod

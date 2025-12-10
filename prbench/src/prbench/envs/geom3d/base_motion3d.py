@@ -94,6 +94,7 @@ class ObjectCentricBaseMotion3DEnv(
         target_pose: SE2Pose | None = None
         lb = self.config.target_lower_bound
         ub = self.config.target_upper_bound
+        # TODO reset robot base position!
         self._set_robot_and_held_object(
             self.config.initial_joints, self.config.initial_finger_state
         )
@@ -145,7 +146,7 @@ class ObjectCentricBaseMotion3DEnv(
     def _goal_reached(self) -> bool:
         target_se3_pose = get_pose(self.target_id, self.physics_client_id)
         target_pose = target_se3_pose.to_se2()
-        robot_base_pose = self.robot.get_base_pose().to_se2()
+        robot_base_pose = self.robot.base.get_pose()
         dist = float(
             np.linalg.norm(
                 [

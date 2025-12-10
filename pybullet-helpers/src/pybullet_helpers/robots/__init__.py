@@ -19,6 +19,8 @@ from pybullet_helpers.robots.single_arm import SingleArmPyBulletRobot
 from pybullet_helpers.robots.spot import SpotPyBulletRobot
 from pybullet_helpers.robots.stretch import StretchPyBulletRobot
 from pybullet_helpers.robots.two_link import TwoLinkPyBulletRobot
+from pybullet_helpers.robots.mobile import SingleArmPyBulletMobileManipulator
+from pybullet_helpers.robots.tidybot import TidyBotKinova
 
 _BUILT_IN_ROBOT_CLASSES: list[Type[SingleArmPyBulletRobot]] = [
     FetchPyBulletRobot,
@@ -35,6 +37,10 @@ _BUILT_IN_ROBOT_CLASSES: list[Type[SingleArmPyBulletRobot]] = [
     SpotPyBulletRobot,
 ]
 
+_BUILT_IN_MOBILE_ROBOT_CLASSES: list[Type[SingleArmPyBulletMobileManipulator]] = [
+    TidyBotKinova,
+]
+
 
 def create_pybullet_robot(
     robot_name: str, physics_client_id: int, *args, **kwargs
@@ -44,3 +50,14 @@ def create_pybullet_robot(
         if robot_name == cls.get_name():
             return cls(physics_client_id, *args, **kwargs)
     raise NotImplementedError(f"Unknown robot {robot_name}")
+
+
+def create_pybullet_mobile_robot(
+    robot_name: str, physics_client_id: int, *args, **kwargs
+) -> SingleArmPyBulletMobileManipulator:
+    """Create a mobile robot in pybullet with its name."""
+    for cls in _BUILT_IN_MOBILE_ROBOT_CLASSES:
+        if robot_name == cls.get_name():
+            return cls(physics_client_id, *args, **kwargs)
+    raise NotImplementedError(f"Unknown robot {robot_name}")
+    

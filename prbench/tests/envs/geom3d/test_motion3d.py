@@ -33,7 +33,7 @@ def test_motion3d_env():
     # Uncomment to debug.
     # import pybullet as p
     # while True:
-    #     p.getMouseEvents(env.physics_client_id)
+    #     p.getMouseEvents(env._object_centric_env.physics_client_id)
 
 
 def test_motion_planning_in_motion3d_env():
@@ -62,7 +62,7 @@ def test_motion_planning_in_motion3d_env():
 
     joint_plan = run_smooth_motion_planning_to_pose(
         Pose(obs.target_position),
-        sim.robot,
+        sim.robot.arm,
         collision_ids=set(),
         end_effector_frame_to_plan_frame=Pose.identity(),
         seed=123,
@@ -71,7 +71,7 @@ def test_motion_planning_in_motion3d_env():
     assert joint_plan is not None
     # Make sure we stay below the required max_action_mag by a fair amount.
     joint_plan = remap_joint_position_plan_to_constant_distance(
-        joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+        joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
 
     env.action_space.seed(123)
