@@ -13,6 +13,7 @@ import pybullet as p
 from pybullet_helpers.geometry import Pose, SE2Pose, get_pose, set_pose
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
+from pybullet_helpers.utils import create_pybullet_block
 
 from prbench.core import ConstantObjectPRBenchEnv, FinalConfigMeta
 from prbench.envs.geom3d.base_env import (
@@ -40,7 +41,7 @@ class Ground3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Blocks.
     block_size: float = 0.02  # cubes (height = width = length)
-    block_rgba: tuple[float, float, float, float] = PURPLE
+    block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
 
 
@@ -51,7 +52,7 @@ class Ground3DObjectCentricState(Geom3DObjectCentricState):
     """
 
 
-class ObjectCentricBaseMotion3DEnv(
+class ObjectCentricGround3DEnv(
     ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Ground3DEnvConfig]
 ):
     """PyBullet environment where an object must be picked from the ground.
@@ -66,9 +67,16 @@ class ObjectCentricBaseMotion3DEnv(
         super().__init__(config=config, **kwargs)
         self._num_cubes = num_cubes
 
-        # TODO create the cubes
-        import ipdb; ipdb.set_trace()
-
+        # Create the cubes, but their poses will be reset (with collision checking) in
+        # the reset() method.
+        self._cubes: dict[str, int] = {}
+        for idx in range(self._num_cubes):
+            cube_id = create_pybullet_block(self.config.block_rgba,
+                                            (self.config.block_size / 2,
+                                             self.config.block_size / 2,
+                                             self.config.block_size / 2),
+                                             physics_client_id=self.physics_client_id)
+            self._cubes[f"cube{idx}"] = cube_id
 
     @property
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
@@ -79,113 +87,89 @@ class ObjectCentricBaseMotion3DEnv(
         return {}
 
     def _reset_objects(self) -> None:
-        # TODO: reset the cubes
+        # Randomly sample collision-free positions for the cubes.
+        # Also ensure that they are not in collision with the robot.
+        import ipdb; ipdb.set_trace()
+        while True:
+            p.getMouseEvents(self.physics_client_id)
 
-        target_pose: SE2Pose | None = None
-        lb = self.config.target_lower_bound
-        ub = self.config.target_upper_bound
-        self._set_robot_and_held_object(
-            self.config.robot_base_home_pose,
-            self.config.initial_joints,
-            self.config.initial_finger_state,
-        )
-        for _ in range(100_000):
-            x, y, rot = self.np_random.uniform(
-                (lb.x, lb.y, lb.rot), (ub.x, ub.y, ub.rot)
-            )
-            target_pose = SE2Pose(x, y, rot)
-            # If the goal is already reached, keep sampling.
-            if not self._goal_reached():
-                break
-        if target_pose is None:
-            raise RuntimeError("Failed to find reachable target position")
-        target_se3_pose = target_pose.to_se3(0.0)
-        set_pose(self.target_id, target_se3_pose, self.physics_client_id)
-
-    def _set_object_states(self, obs: BaseMotion3DObjectCentricState) -> None:
-        assert self.target_id is not None
-        target_se3_pose = obs.target_base_pose.to_se3(0.0)
-        set_pose(self.target_id, target_se3_pose, self.physics_client_id)
+    def _set_object_states(self, obs: Ground3DObjectCentricState) -> None:
+        # TODO set the cube states
+        import ipdb; ipdb.set_trace()
 
     def _object_name_to_pybullet_id(self, object_name: str) -> int:
-        if object_name == "target":
-            return self.target_id
+        # TODO
+        import ipdb; ipdb.set_trace()
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
+        # TODO
+        import ipdb; ipdb.set_trace()
         return set()
 
     def _get_movable_object_names(self) -> set[str]:
-        return set()
+        # TODO
+        import ipdb; ipdb.set_trace()
 
     def _get_surface_object_names(self) -> set[str]:
         return set()
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
-        raise NotImplementedError("No objects have half extents")
+        # TODO
+        import ipdb; ipdb.set_trace()
 
-    def _get_obs(self) -> BaseMotion3DObjectCentricState:
+    def _get_obs(self) -> Ground3DObjectCentricState:
+        # TODO add cubes
+        import ipdb; ipdb.set_trace()
         state_dict = self._create_state_dict(
-            [("robot", Geom3DRobotType), ("target", Geom3DPointType)]
+            [("robot", Geom3DRobotType)]
         )
         state = create_state_from_dict(
-            state_dict, Geom3DEnvTypeFeatures, state_cls=BaseMotion3DObjectCentricState
+            state_dict, Geom3DEnvTypeFeatures, state_cls=Ground3DObjectCentricState
         )
-        assert isinstance(state, BaseMotion3DObjectCentricState)
+        assert isinstance(state, Ground3DObjectCentricState)
         return state
 
     def _goal_reached(self) -> bool:
-        target_se3_pose = get_pose(self.target_id, self.physics_client_id)
-        target_pose = target_se3_pose.to_se2()
-        robot_base_pose = self.robot.base.get_pose()
-        dist = float(
-            np.linalg.norm(
-                [
-                    target_pose.x - robot_base_pose.x,
-                    target_pose.y,
-                    robot_base_pose.y,
-                    target_pose.rot - robot_base_pose.rot,
-                ]
-            )
-        )
-        return dist < self.config.target_radius
+        # TODO
+        import ipdb; ipdb.set_trace()
 
 
-class BaseMotion3DEnv(ConstantObjectPRBenchEnv):
-    """Base motion 3D env with a constant number of objects."""
+class Ground3DEnv(ConstantObjectPRBenchEnv):
+    """Ground 3D env with a constant number of objects."""
 
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom3DRobotEnv:
-        return ObjectCentricBaseMotion3DEnv(*args, **kwargs)
+        return ObjectCentricGround3DEnv(*args, **kwargs)
 
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
     ) -> list[str]:
-        return ["robot", "target"]
+        # TODO
+        import ipdb; ipdb.set_trace()
+        return []
 
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
         # pylint: disable=line-too-long
-        return (
-            """Environment where only base motion planning is needed to reach a goal."""
-        )
+        # TODO
+        return "TODO"
 
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""
         # pylint: disable=line-too-long
-        return """Observations consist of:
-- **base_pose**: The pose of the base.
-- **joint_positions**: The joint positions of the robot arm.
-- **finger_state**: The state of the fingers.
-- **target**: The pose of the target.
-"""
+        # TODO
+        return "TODO"
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        return """The reward is a small negative reward (-0.01) per timestep to encourage exploration."""
+        # TODO
+        return "TODO"
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
-        return """This is a very common kind of environment."""
+        # pylint: disable=line-too-long
+        # TODO
+        return "TODO"
