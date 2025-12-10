@@ -14,7 +14,9 @@ def test_tidybot3d_cupboard_bilevel_planning():
     """Tests for bilevel planning in the TidyBot3D cupboard real environment."""
 
     num_objects = 4
-    env = prbench.make(f"prbench/TidyBot3D-cupboard_real-o{num_objects}-v0", render_mode="rgb_array")
+    env = prbench.make(
+        f"prbench/TidyBot3D-cupboard_real-o{num_objects}-v0", render_mode="rgb_array"
+    )
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TidyBot3D-cupboard")
