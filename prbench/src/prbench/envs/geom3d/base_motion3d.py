@@ -96,11 +96,6 @@ class ObjectCentricBaseMotion3DEnv(
         target_pose: SE2Pose | None = None
         lb = self.config.target_lower_bound
         ub = self.config.target_upper_bound
-        self._set_robot_and_held_object(
-            self.config.robot_base_home_pose,
-            self.config.initial_joints,
-            self.config.initial_finger_state,
-        )
         for _ in range(100_000):
             x, y, rot = self.np_random.uniform(
                 (lb.x, lb.y, lb.rot), (ub.x, ub.y, ub.rot)
