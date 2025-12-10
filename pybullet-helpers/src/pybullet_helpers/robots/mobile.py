@@ -125,7 +125,7 @@ class SingleArmPyBulletMobileManipulator(abc.ABC):
             pose.to_se3(self.base.z), self.base_to_arm_transform
         )
         self.arm.set_base(arm_base_pose)
-    
+
     def get_base(self) -> SE2Pose:
         """Get the base pose."""
         return self.base.get_pose()
