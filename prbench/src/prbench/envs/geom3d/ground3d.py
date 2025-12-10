@@ -1,4 +1,7 @@
-"""Environment where only base motion is required to reach some goal."""
+"""PyBullet environment where an object must be picked from the ground.
+
+There may be other obstructing objects in the environment.
+"""
 
 from __future__ import annotations
 
@@ -22,80 +25,70 @@ from prbench.envs.geom3d.object_types import (
     Geom3DRobotType,
 )
 from prbench.envs.geom3d.utils import Geom3DObjectCentricState
+from prbench.envs.utils import PURPLE
 
 
 @dataclass(frozen=True)
-class BaseMotion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
-    """Config for BaseMotion3DEnv()."""
+class Ground3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
+    """Config for Ground3DEnv()."""
 
-    # Robot.
-    robot_name: str = "tidybot-kinova"
+    # World bounds.
+    x_lb: float = -2.5
+    x_ub: float = 2.5
+    y_lb: float = -2.5
+    y_ub: float = 2.5
 
-    # Target.
-    target_radius: float = 0.01
-    target_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    target_lower_bound: SE2Pose = SE2Pose(-1, 1, -np.pi)
-    target_upper_bound: SE2Pose = SE2Pose(-1, 1, np.pi)
+    # Blocks.
+    block_size: float = 0.02  # cubes (height = width = length)
+    block_rgba: tuple[float, float, float, float] = PURPLE
 
 
-class BaseMotion3DObjectCentricState(Geom3DObjectCentricState):
-    """A state in the BaseMotion3DEnv().
+
+class Ground3DObjectCentricState(Geom3DObjectCentricState):
+    """A state in the GroundMotion3DEnv().
 
     Adds convenience methods on top of Geom3DObjectCentricState().
     """
 
-    @property
-    def target_base_pose(self) -> SE2Pose:
-        """The pose of the base target, assuming the name "target"."""
-        target = self.get_object_from_name("target")
-        pose = Pose(
-            (self.get(target, "x"), self.get(target, "y"), self.get(target, "z"))
-        )
-        se2_pose = pose.to_se2()
-        return se2_pose
-
 
 class ObjectCentricBaseMotion3DEnv(
-    ObjectCentricGeom3DRobotEnv[BaseMotion3DObjectCentricState, BaseMotion3DEnvConfig]
+    ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Ground3DEnvConfig]
 ):
-    """Environment where only base motion planning is needed to reach a goal."""
+    """PyBullet environment where an object must be picked from the ground.
 
+    There may be other obstructing objects in the environment.
+    """
     def __init__(
-        self, config: BaseMotion3DEnvConfig = BaseMotion3DEnvConfig(), **kwargs
+        self,
+        num_cubes: int = 2,
+        config: Ground3DEnvConfig = Ground3DEnvConfig(), **kwargs
     ) -> None:
         super().__init__(config=config, **kwargs)
+        self._num_cubes = num_cubes
 
-        # Create target.
-        visual_id = p.createVisualShape(
-            p.GEOM_SPHERE,
-            radius=self.config.target_radius,
-            rgbaColor=self.config.target_color,
-            physicsClientId=self.physics_client_id,
-        )
+        # TODO create the cubes
+        import ipdb; ipdb.set_trace()
 
-        # Create the body.
-        self.target_id = p.createMultiBody(
-            baseMass=0,
-            baseCollisionShapeIndex=-1,
-            baseVisualShapeIndex=visual_id,
-            basePosition=(0, 0, 0),  # set in reset()
-            baseOrientation=(0, 0, 0, 1),
-            physicsClientId=self.physics_client_id,
-        )
 
     @property
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
-        return BaseMotion3DObjectCentricState
+        return Ground3DObjectCentricState
 
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
-        # Neither the target nor the robot are constant in this env.
+        # No constant objects.
         return {}
 
     def _reset_objects(self) -> None:
-        # Reset the target. Sample and check that the robot has not already reachd it.
+        # TODO: reset the cubes
+
         target_pose: SE2Pose | None = None
         lb = self.config.target_lower_bound
         ub = self.config.target_upper_bound
+        self._set_robot_and_held_object(
+            self.config.robot_base_home_pose,
+            self.config.initial_joints,
+            self.config.initial_finger_state,
+        )
         for _ in range(100_000):
             x, y, rot = self.np_random.uniform(
                 (lb.x, lb.y, lb.rot), (ub.x, ub.y, ub.rot)
