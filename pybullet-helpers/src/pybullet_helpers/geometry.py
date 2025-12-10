@@ -15,6 +15,7 @@ from pybullet_utils.transformations import (
 )
 from scipy.spatial.transform import Rotation as ScipyRotation
 from scipy.spatial.transform import Slerp
+from prpl_utils.utils import wrap_angle
 
 Pose3D = tuple[float, float, float]
 Quaternion = tuple[float, float, float, float]
@@ -101,6 +102,10 @@ class SE2Pose:
     def identity(cls) -> SE2Pose:
         """Unit pose."""
         return cls(0.0, 0.0, 0.0)
+    
+    def __add__(self, other: SE2Pose) -> SE2Pose:
+        """Add two SE2 poses."""
+        return SE2Pose(self.x + other.x, self.y + other.y, wrap_angle(self.rot + other.rot))
 
 
 def multiply_poses(*poses: Pose) -> Pose:

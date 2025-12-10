@@ -62,9 +62,9 @@ class Geom3DObjectCentricState(ObjectCentricState):
 
 
 class Geom3DRobotActionSpace(RobotActionSpace):
-    """An action space for a 7 DOF robot that can open and close its gripper.
+    """An action space for a mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+    Actions are bounded relative base position, rotation, and joint positions, and open / close.
 
     The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
     """
@@ -73,8 +73,8 @@ class Geom3DRobotActionSpace(RobotActionSpace):
         self,
         max_magnitude: float = 0.05,
     ) -> None:
-        low = np.array([-max_magnitude] * 7 + [-1])
-        high = np.array([max_magnitude] * 7 + [-1])
+        low = np.array([-max_magnitude] * 3 + [-max_magnitude] * 7 + [-1.0])
+        high = np.array([max_magnitude] * 3 + [max_magnitude] * 7 + [1.0])
         super().__init__(low, high)
 
     def create_markdown_description(self) -> str:

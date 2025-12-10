@@ -85,7 +85,7 @@ def test_motion_planning_in_motion3d_env():
     for target_joints in joint_plan[1:]:
         delta = np.subtract(target_joints[:7], obs.joint_positions)
         delta_lst = [wrap_angle(a) for a in delta]
-        action_lst = delta_lst + [0.0]
+        action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
         vec_obs, _, done, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.

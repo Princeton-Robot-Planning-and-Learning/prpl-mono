@@ -264,6 +264,12 @@ class ObjectCentricGeom3DRobotEnv(
         self._set_object_states(obs)
 
     def step(self, action: Array) -> tuple[_ObsType, float, bool, bool, dict]:
+        # execute the base action
+        base_action = action[:3]
+        current_base_pose = self.robot.get_base()
+        next_base_pose = current_base_pose + SE2Pose(base_action[0], base_action[1], base_action[2])
+        self.robot.set_base(next_base_pose)
+
         # Store the current robot joints because we may need to revert in collision.
         current_joints = remove_fingers_from_extended_joints(
             self._robot_arm.get_joint_positions()
@@ -271,7 +277,7 @@ class ObjectCentricGeom3DRobotEnv(
         current_finger_state = self._robot_arm.get_finger_state()
 
         # Tentatively apply robot action.
-        delta_arm_joints = action[:7]
+        delta_arm_joints = action[-8:-1]
         # Clip the action to be within the allowed limits.
         delta_joints = np.clip(
             delta_arm_joints,
@@ -291,9 +297,9 @@ class ObjectCentricGeom3DRobotEnv(
             self._set_robot_and_held_object(current_joints, current_finger_state)
 
         # Check for grasping.
-        if action[7] < -0.5:
+        if action[-1] < -0.5:
             gripper_action = "close"
-        elif action[7] > 0.5:
+        elif action[-1] > 0.5:
             gripper_action = "open"
         else:
             gripper_action = "none"
