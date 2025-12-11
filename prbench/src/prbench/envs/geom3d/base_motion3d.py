@@ -147,12 +147,10 @@ class ObjectCentricBaseMotion3DEnv(
         robot_base_pose = self.robot.base.get_pose()
         dist = float(
             np.linalg.norm(
-                [
+                np.array([
                     target_pose.x - robot_base_pose.x,
-                    target_pose.y,
-                    robot_base_pose.y,
-                    target_pose.rot - robot_base_pose.rot,
-                ]
+                    target_pose.y - robot_base_pose.y,
+                ])
             )
         )
         return dist < self.config.target_radius

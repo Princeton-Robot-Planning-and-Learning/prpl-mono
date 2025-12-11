@@ -122,6 +122,7 @@ class ObjectCentricGround3DEnv(
         # Samples the poses of the cubes
         for _ in range(100_000):
             for cube_name, cube_id in self._cubes.items():
+                # add orientation later
                 cube_pose = Pose(
                     (
                         np.random.uniform(self.config.x_lb, self.config.x_ub),

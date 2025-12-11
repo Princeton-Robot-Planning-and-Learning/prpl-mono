@@ -32,7 +32,7 @@ def test_base_motion3d_env():
     # while True:
     #     p.getMouseEvents(env._object_centric_env.physics_client_id)
 
-def test_grasp_motion_planning_in_ground3d_env():
+def test_motion_planning_in_ground3d_env():
     """Proof of concept that motion planning works in this environment."""
 
     # Create the real environment.
