@@ -1,0 +1,324 @@
+"""Tests for packing3d.py."""
+
+import numpy as np
+from conftest import MAKE_VIDEOS
+from gymnasium.wrappers import RecordVideo
+from prpl_utils.utils import wrap_angle
+from pybullet_helpers.geometry import Pose, multiply_poses
+from pybullet_helpers.motion_planning import (
+    create_joint_distance_fn,
+    remap_joint_position_plan_to_constant_distance,
+    run_smooth_motion_planning_to_pose,
+    smoothly_follow_end_effector_path,
+)
+from relational_structs import Object
+from relational_structs.spaces import ObjectCentricBoxSpace
+
+from prbench.envs.geom3d.packing3d import (
+    ObjectCentricPacking3DEnv,
+    Packing3DEnv,
+    Packing3DObjectCentricState,
+)
+
+
+def test_packing3d_env_basic():
+    """Basic smoke test for the packing3d environment."""
+
+    for num_parts in [1, 2, 3]:
+        env = Packing3DEnv(
+            num_parts=num_parts, use_gui=False
+        )  # set use_gui=True to debug
+        obs, _ = env.reset(seed=123)
+        assert isinstance(obs, np.ndarray)
+
+        for _ in range(10):
+            act = env.action_space.sample()
+            assert isinstance(obs, np.ndarray)
+            obs, _, _, _, _ = env.step(act)
+
+        env.close()
+
+
+def get_target_object_from_obs(
+    obs: Packing3DObjectCentricState,
+) -> Object | None:
+    """Get the target object from the observation."""
+    available_parts = obs.available_parts
+    if not available_parts:
+        return None
+    # For simplicity, just choose the first available part.
+    target_part_name = available_parts[0]
+    return obs.get_object_from_name(target_part_name)
+
+
+def test_pick_place_on_rack():
+    """Test that picking and placing can be executed for any object."""
+    # Create the real environment.
+
+    num_parts = 2
+    env = Packing3DEnv(num_parts=num_parts, use_gui=False, render_mode="rgb_array")
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    config = env._object_centric_env.config  # pylint: disable=protected-access
+    if MAKE_VIDEOS:
+        env = RecordVideo(env, "unit_test_videos")
+
+    vec_obs, _ = env.reset(seed=123)
+    # NOTE: we should soon make this smoother.
+    oc_obs = env.observation_space.devectorize(vec_obs)
+    obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+
+    sim = ObjectCentricPacking3DEnv(num_parts=num_parts, config=config)
+    sim.reset()
+    sim.set_state(obs)
+
+    home_pos = sim.robot.arm.get_end_effector_pose()
+    home_pos = Pose(
+        (home_pos.position[0], home_pos.position[1], home_pos.position[2] + 0.2),
+        home_pos.orientation,
+    )
+
+    # Run motion planning.
+    if MAKE_VIDEOS:  # make a smooth motion plan for videos
+        max_candidate_plans = 10
+    else:
+        max_candidate_plans = 10
+
+    # sample placement coefficients for each part
+    x_coeffs = np.linspace(-0.35, 0.35, num_parts)
+    y_coeffs = np.linspace(-0.35, 0.35, num_parts)
+
+    # First, move to pre-grasp pose (top-down).
+    selected_object = get_target_object_from_obs(obs)
+    assert selected_object is not None, "No target object selected"
+
+    peg_height = 0.05
+
+    while selected_object is not None:
+        x, y, z = obs.part_poses[selected_object.name].position
+        dz = 0.025 + peg_height * 2  # pre-grasp height
+        pre_grasp_pose = Pose.from_rpy((x, y, z + dz), (np.pi, 0, np.pi / 2))
+        joint_plan = run_smooth_motion_planning_to_pose(
+            pre_grasp_pose,
+            sim.robot.arm,
+            collision_ids=sim._get_collision_object_ids(),  # pylint: disable=protected-access
+            end_effector_frame_to_plan_frame=Pose.identity(),
+            seed=123,
+            max_candidate_plans=max_candidate_plans,
+        )
+        assert joint_plan is not None
+
+        # Make sure we stay below the required max_action_mag by a fair amount.
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
+        )
+
+        for target_joints in joint_plan[1:]:
+            delta = np.subtract(target_joints[:7], obs.joint_positions)
+            delta_lst = [wrap_angle(a) for a in delta]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
+            vec_obs, _, _, _, _ = env.step(action)
+            # NOTE: we should soon make this smoother.
+            oc_obs = env.observation_space.devectorize(vec_obs)
+            obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+
+        # Move down to grasp pose.
+        sim.set_state(obs)
+        current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
+        grasp_pose = Pose(
+            (
+                current_end_effector_pose.position[0],
+                current_end_effector_pose.position[1],
+                current_end_effector_pose.position[2] - peg_height - 0.02,
+            ),
+            current_end_effector_pose.orientation,
+        )
+        joint_plan = smoothly_follow_end_effector_path(
+            sim.robot.arm,
+            [current_end_effector_pose, grasp_pose],
+            sim.robot.arm.get_joint_positions(),
+            collision_ids=set(),
+            joint_distance_fn=create_joint_distance_fn(sim.robot.arm),
+            max_smoothing_iters_per_step=max_candidate_plans,
+        )
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
+        )
+        for target_joints in joint_plan[1:]:
+            delta = np.subtract(target_joints[:7], obs.joint_positions)
+            delta_lst = [wrap_angle(a) for a in delta]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
+            vec_obs, _, _, _, _ = env.step(action)
+            # NOTE: we should soon make this smoother.
+            oc_obs = env.observation_space.devectorize(vec_obs)
+            obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+
+        # Close the gripper to grasp.
+        action = np.array([0.0] * 7 + [-1.0], dtype=np.float32)
+        vec_obs, _, _, _, _ = env.step(action)
+        # NOTE: we should soon make this smoother.
+        oc_obs = env.observation_space.devectorize(vec_obs)
+        obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+
+        assert obs.grasped_object == selected_object.name, "Object not grasped"
+
+        # Move up slightly to break contact with the table.
+        sim.set_state(obs)
+        current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
+        post_grasp_pose = Pose(
+            (
+                current_end_effector_pose.position[0],
+                current_end_effector_pose.position[1],
+                current_end_effector_pose.position[2] + 0.1,
+            ),
+            current_end_effector_pose.orientation,
+        )
+        joint_distance_fn = create_joint_distance_fn(sim.robot.arm)
+        joint_plan = smoothly_follow_end_effector_path(
+            sim.robot.arm,
+            [current_end_effector_pose, post_grasp_pose],
+            sim.robot.arm.get_joint_positions(),
+            collision_ids=set(),
+            joint_distance_fn=joint_distance_fn,
+            max_smoothing_iters_per_step=max_candidate_plans,
+        )
+
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
+        )
+
+        for target_joints in joint_plan[1:]:
+            delta = np.subtract(target_joints[:7], obs.joint_positions)
+            delta_lst = [wrap_angle(a) for a in delta]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
+            vec_obs, _, _, _, _ = env.step(action)
+            # NOTE: we should soon make this smoother.
+            oc_obs = env.observation_space.devectorize(vec_obs)
+            obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+
+        # Determine placement pose and pre-placement pose.
+        # Place directly in the center of the target region for this test.
+        placement_padding = 1e-5  # leave some room to prevent collisions with surface
+        rack_pose = obs.rack_pose
+        rack_half_extents = obs.rack_half_extents
+        block_placement_pose = Pose(
+            (
+                rack_pose.position[0] + x_coeffs[0] * rack_half_extents[0],
+                rack_pose.position[1] + y_coeffs[0] * rack_half_extents[1],
+                rack_pose.position[2]
+                - obs.rack_half_extents[2]
+                + 0.01
+                + obs.get_object_half_extents(obs.grasped_object)[2]
+                + placement_padding,
+            ),
+            obs.rack_pose.orientation,
+        )
+        end_effector_placement_pose = multiply_poses(
+            block_placement_pose,
+            obs.grasped_object_transform,
+        )
+        end_effector_pre_placement_pose = Pose(
+            (
+                end_effector_placement_pose.position[0],
+                end_effector_placement_pose.position[1],
+                end_effector_placement_pose.position[2] + 0.1,
+            ),
+            end_effector_placement_pose.orientation,
+        )
+
+        # We don't really have to motion plan here because there
+        # are no other objects, but in general we would motion plan.
+        sim.set_state(obs)
+        current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
+        joint_plan = smoothly_follow_end_effector_path(
+            sim.robot.arm,
+            [
+                current_end_effector_pose,
+                end_effector_pre_placement_pose,
+                end_effector_placement_pose,
+            ],
+            sim.robot.arm.get_joint_positions(),
+            collision_ids=set(),
+            joint_distance_fn=joint_distance_fn,
+            max_smoothing_iters_per_step=max_candidate_plans,
+        )
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
+        )
+
+        for target_joints in joint_plan[1:]:
+            delta = np.subtract(target_joints[:7], obs.joint_positions)
+            delta_lst = [wrap_angle(a) for a in delta]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
+            vec_obs, _, _, _, _ = env.step(action)
+            # NOTE: we should soon make this smoother.
+            oc_obs = env.observation_space.devectorize(vec_obs)
+            obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+
+        # Open the gripper to finish the placement. Should trigger "done" (goal reached).
+        action = np.array([0.0] * 7 + [1.0], dtype=np.float32)
+        vec_obs, _, done, _, _ = env.step(action)
+        # NOTE: we should soon make this smoother.
+        oc_obs = env.observation_space.devectorize(vec_obs)
+        obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+        assert obs.grasped_object is None, "Object not released"
+
+        sim.set_state(obs)
+        current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
+        end_effector_post_placement_pose = Pose(
+            (
+                current_end_effector_pose.position[0],
+                current_end_effector_pose.position[1],
+                current_end_effector_pose.position[2] + 0.05,
+            ),
+            current_end_effector_pose.orientation,
+        )
+
+        joint_plan = smoothly_follow_end_effector_path(
+            sim.robot.arm,
+            [
+                current_end_effector_pose,
+                end_effector_post_placement_pose,
+                home_pos,
+            ],
+            sim.robot.arm.get_joint_positions(),
+            collision_ids=sim._get_collision_object_ids(),  # pylint: disable=protected-access
+            joint_distance_fn=joint_distance_fn,
+            max_smoothing_iters_per_step=max_candidate_plans,
+        )
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
+        )
+
+        for target_joints in joint_plan[1:]:
+            delta = np.subtract(target_joints[:7], obs.joint_positions)
+            delta_lst = [wrap_angle(a) for a in delta]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
+            vec_obs, _, _, _, _ = env.step(action)
+            # NOTE: we should soon make this smoother.
+            oc_obs = env.observation_space.devectorize(vec_obs)
+            obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+
+        sim.set_state(obs)
+
+        target_object = get_target_object_from_obs(obs)
+
+        if target_object != selected_object:
+            selected_object = target_object
+            x_coeffs = x_coeffs[1:]
+            y_coeffs = y_coeffs[1:]
+
+    assert done, "Goal not reached"
+
+    # Uncomment to debug.
+    # import pybullet as p
+    # from pybullet_helpers.gui import visualize_pose
+    # visualize_pose(end_effector_placement_pose, env.physics_client_id)
+    # while True:
+    #     p.getMouseEvents(env.physics_client_id)
+
+    env.close()

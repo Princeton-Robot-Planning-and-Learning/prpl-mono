@@ -57,7 +57,7 @@ def test_motion_planning_in_ground3d_env():
     # Create a simulator for planning.
     sim = ObjectCentricGround3DEnv(config=config)
 
-    target_object_pose = obs.get_cuboid_pose("cube0")
+    target_object_pose = obs.get_object_pose("cube0")
     base_plan = run_single_arm_mobile_base_motion_planning(
         sim.robot,
         sim.robot.base.get_pose(),
@@ -108,7 +108,7 @@ def test_pick_place_after_moving():
         max_candidate_plans = 1
 
     # Step 1: Move the base in front of cube1
-    target_object_pose_temp = obs.get_cuboid_pose("cube1").to_se2()
+    target_object_pose_temp = obs.get_object_pose("cube1").to_se2()
     target_object_pose = SE2Pose(
         target_object_pose_temp.x - 0.3,
         target_object_pose_temp.y,
@@ -135,7 +135,7 @@ def test_pick_place_after_moving():
 
     # Step 2: Move arm to pre-grasp pose and then to grasp pose
     sim.set_state(obs)
-    x, y, z = obs.get_cuboid_pose("cube1").position
+    x, y, z = obs.get_object_pose("cube1").position
     dz = 0.05
     pre_grasp_pose = Pose.from_rpy((x, y, z + dz), (np.pi, 0, np.pi / 2))
     grasp_pose = Pose.from_rpy((x, y, z + 0.005), (np.pi, 0, np.pi / 2))
@@ -217,7 +217,7 @@ def test_pick_place_after_moving():
         (
             current_end_effector_pose.position[0] + 0.1,
             current_end_effector_pose.position[1],
-            obs.get_cuboid_half_extents("cube1")[2] + 0.01,
+            obs.get_object_half_extents("cube1")[2] + 0.01,
         ),
         current_end_effector_pose.orientation,
     )

@@ -11,7 +11,10 @@ import pybullet as p
 from prpl_utils.utils import get_signed_angle_distance, wrap_angle
 from pybullet_utils.transformations import (
     euler_from_quaternion,
-    quaternion_from_euler,
+)
+from pybullet_utils.transformations import (
+    quaternion_from_euler as putil_quat_from_euler,)
+from pybullet_utils.transformations import (
     quaternion_from_matrix,
 )
 from scipy.spatial.transform import Rotation as ScipyRotation
@@ -20,6 +23,12 @@ from scipy.spatial.transform import Slerp
 Pose3D = tuple[float, float, float]
 Quaternion = tuple[float, float, float, float]
 RollPitchYaw = tuple[float, float, float]
+
+
+def quaternion_from_euler(rpy: RollPitchYaw) -> Quaternion:
+    """Convert a euler angle into a quaternion."""
+    qx, qy, qz, qw = putil_quat_from_euler(*rpy)
+    return (qx, qy, qz, qw)
 
 
 class Pose(NamedTuple):
@@ -37,7 +46,7 @@ class Pose(NamedTuple):
     @classmethod
     def from_rpy(cls, translation: Pose3D, rpy: RollPitchYaw) -> Pose:
         """Create a Pose from translation and Euler roll-pitch-yaw angles."""
-        return cls(translation, quaternion_from_euler(*rpy))
+        return cls(translation, quaternion_from_euler(rpy))
 
     @classmethod
     def from_matrix(cls, matrix: npt.NDArray) -> Pose:
@@ -162,8 +171,10 @@ def rotate_pose(
     pose: Pose, roll: float = 0.0, pitch: float = 0.0, yaw: float = 0.0
 ) -> Pose:
     """Rotate a pose by the given rpy to make a new pose."""
+    # Ensure we have tuple quaternions when passed to matrix_from_quat which
+    # expects a Quaternion typed value.
     current_orn = pose.orientation
-    rot_orn = quaternion_from_euler(roll, pitch, yaw)
+    rot_orn = quaternion_from_euler((roll, pitch, yaw))
     current_mat = matrix_from_quat(current_orn)
     rot_mat = matrix_from_quat(rot_orn)
     new_mat = current_mat @ rot_mat
@@ -196,11 +207,14 @@ def iter_between_quats(
     include_start: bool = True,
 ) -> Iterator[Quaternion]:
     """Interpolate quaternions using slerp."""
-    slerp = Slerp([0, num_interp], ScipyRotation.from_quat([q1, q2]))
+    # Use float key times and call Slerp with 1-D array-like times.
+    slerp = Slerp([0.0, 1.0], ScipyRotation.from_quat([q1, q2]))
     time_start = 0 if include_start else 1
-    times = list(range(time_start, num_interp + 1))
-    for t in times:
-        yield tuple(slerp(t).as_quat())
+    times = np.linspace(0.0, 1.0, num=(num_interp + 1), endpoint=True)
+    for t in times[time_start:]:
+        rot = slerp([float(t)])
+        # rot.as_quat() is shape (n, 4) — extract first quat
+        yield tuple(rot.as_quat()[0])
 
 
 def iter_between_pose3ds(
@@ -241,8 +255,9 @@ def iter_between_poses(
 def interpolate_quats(q1: Quaternion, q2: Quaternion, t: float) -> Quaternion:
     """Interpolate between q1 and q2 given 0 <= t <= 1."""
     assert 0 <= t <= 1
-    slerp = Slerp([0, 1], ScipyRotation.from_quat([q1, q2]))
-    return tuple(slerp(t).as_quat())
+    slerp = Slerp([0.0, 1.0], ScipyRotation.from_quat([q1, q2]))
+    rot = slerp([float(t)])
+    return tuple(rot.as_quat()[0])
 
 
 def interpolate_pose3d(p1: Pose3D, p2: Pose3D, t: float) -> Pose3D:
