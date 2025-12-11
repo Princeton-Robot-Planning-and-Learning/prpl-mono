@@ -7,7 +7,7 @@ from typing import Type as TypingType
 
 import numpy as np
 import pybullet as p
-from pybullet_helpers.geometry import Pose, get_pose, set_pose
+from pybullet_helpers.geometry import Pose, SE2Pose, get_pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import (
     create_pybullet_block,
@@ -42,6 +42,9 @@ from prbench.envs.utils import PURPLE
 @dataclass(frozen=True)
 class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Packing3DEnv()."""
+    # Robot.
+    robot_base_home_pose: SE2Pose = SE2Pose(-0.12, 0, 0)
+    robot_base_z: float = -0.4
 
     # Table.
     table_pose: Pose = Pose((0.3, 0.0, -0.175))
@@ -65,6 +68,15 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Probability a part is triangular
     part_triangular_prob: float = 0.5
+
+    def get_camera_kwargs(self) -> dict[str, Any]:
+        """Get kwargs to pass to PyBullet camera."""
+        return {
+            "camera_target": (0, 0, 0),
+            "camera_yaw": 90,
+            "camera_distance": 1.0,
+            "camera_pitch": -20,
+        }
 
     def _sample_block_on_block_pose(
         self,
@@ -361,14 +373,19 @@ class ObjectCentricPacking3DEnv(
             feats: dict[str, float] = {}
             # Handle robots.
             if object_type == Geom3DRobotType:
+                # Add base pose.
+                base_pose = self.robot.get_base()
+                feats["pos_base_x"] = base_pose.x
+                feats["pos_base_y"] = base_pose.y
+                feats["pos_base_rot"] = base_pose.rot
                 # Add joints.
                 joints = remove_fingers_from_extended_joints(
-                    self.robot.get_joint_positions()
+                    self._robot_arm.get_joint_positions()
                 )
                 for i, v in enumerate(joints):
                     feats[f"joint_{i+1}"] = v
                 # Add finger state.
-                feats["finger_state"] = self.robot.get_finger_state()
+                feats["finger_state"] = self._robot_arm.get_finger_state()
                 # Add grasp.
                 grasp_tf_feat_names = [
                     "grasp_tf_x",

@@ -71,7 +71,7 @@ def test_pick_place_on_rack():
     sim.reset()
     sim.set_state(obs)
 
-    home_pos = sim.robot.get_end_effector_pose()
+    home_pos = sim.robot.arm.get_end_effector_pose()
     home_pos = Pose(
         (home_pos.position[0], home_pos.position[1], home_pos.position[2] + 0.2),
         home_pos.orientation,
@@ -81,7 +81,7 @@ def test_pick_place_on_rack():
     if MAKE_VIDEOS:  # make a smooth motion plan for videos
         max_candidate_plans = 10
     else:
-        max_candidate_plans = 5
+        max_candidate_plans = 10
 
     # sample placement coefficients for each part
     x_coeffs = np.linspace(-0.35, 0.35, num_parts)
@@ -99,7 +99,7 @@ def test_pick_place_on_rack():
         pre_grasp_pose = Pose.from_rpy((x, y, z + dz), (np.pi, 0, np.pi / 2))
         joint_plan = run_smooth_motion_planning_to_pose(
             pre_grasp_pose,
-            sim.robot,
+            sim.robot.arm,
             collision_ids=sim._get_collision_object_ids(),  # pylint: disable=protected-access
             end_effector_frame_to_plan_frame=Pose.identity(),
             seed=123,
@@ -109,13 +109,13 @@ def test_pick_place_on_rack():
 
         # Make sure we stay below the required max_action_mag by a fair amount.
         joint_plan = remap_joint_position_plan_to_constant_distance(
-            joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
         )
 
         for target_joints in joint_plan[1:]:
             delta = np.subtract(target_joints[:7], obs.joint_positions)
             delta_lst = [wrap_angle(a) for a in delta]
-            action_lst = delta_lst + [0.0]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
             vec_obs, _, _, _, _ = env.step(action)
             # NOTE: we should soon make this smoother.
@@ -124,7 +124,7 @@ def test_pick_place_on_rack():
 
         # Move down to grasp pose.
         sim.set_state(obs)
-        current_end_effector_pose = sim.robot.get_end_effector_pose()
+        current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
         grasp_pose = Pose(
             (
                 current_end_effector_pose.position[0],
@@ -134,20 +134,20 @@ def test_pick_place_on_rack():
             current_end_effector_pose.orientation,
         )
         joint_plan = smoothly_follow_end_effector_path(
-            sim.robot,
+            sim.robot.arm,
             [current_end_effector_pose, grasp_pose],
-            sim.robot.get_joint_positions(),
+            sim.robot.arm.get_joint_positions(),
             collision_ids=set(),
-            joint_distance_fn=create_joint_distance_fn(sim.robot),
+            joint_distance_fn=create_joint_distance_fn(sim.robot.arm),
             max_smoothing_iters_per_step=max_candidate_plans,
         )
         joint_plan = remap_joint_position_plan_to_constant_distance(
-            joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
         )
         for target_joints in joint_plan[1:]:
             delta = np.subtract(target_joints[:7], obs.joint_positions)
             delta_lst = [wrap_angle(a) for a in delta]
-            action_lst = delta_lst + [0.0]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
             vec_obs, _, _, _, _ = env.step(action)
             # NOTE: we should soon make this smoother.
@@ -165,7 +165,7 @@ def test_pick_place_on_rack():
 
         # Move up slightly to break contact with the table.
         sim.set_state(obs)
-        current_end_effector_pose = sim.robot.get_end_effector_pose()
+        current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
         post_grasp_pose = Pose(
             (
                 current_end_effector_pose.position[0],
@@ -174,24 +174,24 @@ def test_pick_place_on_rack():
             ),
             current_end_effector_pose.orientation,
         )
-        joint_distance_fn = create_joint_distance_fn(sim.robot)
+        joint_distance_fn = create_joint_distance_fn(sim.robot.arm)
         joint_plan = smoothly_follow_end_effector_path(
-            sim.robot,
+            sim.robot.arm,
             [current_end_effector_pose, post_grasp_pose],
-            sim.robot.get_joint_positions(),
+            sim.robot.arm.get_joint_positions(),
             collision_ids=set(),
             joint_distance_fn=joint_distance_fn,
             max_smoothing_iters_per_step=max_candidate_plans,
         )
 
         joint_plan = remap_joint_position_plan_to_constant_distance(
-            joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
         )
 
         for target_joints in joint_plan[1:]:
             delta = np.subtract(target_joints[:7], obs.joint_positions)
             delta_lst = [wrap_angle(a) for a in delta]
-            action_lst = delta_lst + [0.0]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
             vec_obs, _, _, _, _ = env.step(action)
             # NOTE: we should soon make this smoother.
@@ -231,27 +231,27 @@ def test_pick_place_on_rack():
         # We don't really have to motion plan here because there
         # are no other objects, but in general we would motion plan.
         sim.set_state(obs)
-        current_end_effector_pose = sim.robot.get_end_effector_pose()
+        current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
         joint_plan = smoothly_follow_end_effector_path(
-            sim.robot,
+            sim.robot.arm,
             [
                 current_end_effector_pose,
                 end_effector_pre_placement_pose,
                 end_effector_placement_pose,
             ],
-            sim.robot.get_joint_positions(),
+            sim.robot.arm.get_joint_positions(),
             collision_ids=set(),
             joint_distance_fn=joint_distance_fn,
             max_smoothing_iters_per_step=max_candidate_plans,
         )
         joint_plan = remap_joint_position_plan_to_constant_distance(
-            joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
         )
 
         for target_joints in joint_plan[1:]:
             delta = np.subtract(target_joints[:7], obs.joint_positions)
             delta_lst = [wrap_angle(a) for a in delta]
-            action_lst = delta_lst + [0.0]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
             vec_obs, _, _, _, _ = env.step(action)
             # NOTE: we should soon make this smoother.
@@ -267,36 +267,36 @@ def test_pick_place_on_rack():
         assert obs.grasped_object is None, "Object not released"
 
         sim.set_state(obs)
-        current_end_effector_pose = sim.robot.get_end_effector_pose()
+        current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
         end_effector_post_placement_pose = Pose(
             (
                 current_end_effector_pose.position[0],
                 current_end_effector_pose.position[1],
-                current_end_effector_pose.position[2] + 0.2,
+                current_end_effector_pose.position[2] + 0.05,
             ),
             current_end_effector_pose.orientation,
         )
 
         joint_plan = smoothly_follow_end_effector_path(
-            sim.robot,
+            sim.robot.arm,
             [
                 current_end_effector_pose,
-                end_effector_post_placement_pose,
+                # end_effector_post_placement_pose,
                 home_pos,
             ],
-            sim.robot.get_joint_positions(),
+            sim.robot.arm.get_joint_positions(),
             collision_ids=sim._get_collision_object_ids(),  # pylint: disable=protected-access
             joint_distance_fn=joint_distance_fn,
             max_smoothing_iters_per_step=max_candidate_plans,
         )
         joint_plan = remap_joint_position_plan_to_constant_distance(
-            joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+            joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
         )
 
         for target_joints in joint_plan[1:]:
             delta = np.subtract(target_joints[:7], obs.joint_positions)
             delta_lst = [wrap_angle(a) for a in delta]
-            action_lst = delta_lst + [0.0]
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
             vec_obs, _, _, _, _ = env.step(action)
             # NOTE: we should soon make this smoother.
