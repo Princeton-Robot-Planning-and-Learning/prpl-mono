@@ -162,10 +162,9 @@ class ObjectCentricGround3DEnv(
         assert isinstance(obs, Ground3DObjectCentricState)
         for cube_name, cube_id in self._cubes.items():
             assert cube_id is not None
-            cube_obj = obs.get_object_from_name(cube_name)
             set_pose(
                 cube_id,
-                obs.get(cube_obj, "pose"),
+                obs.get_cuboid_pose(cube_name),
                 self.physics_client_id,
             )
 
