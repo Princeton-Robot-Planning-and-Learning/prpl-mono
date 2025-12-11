@@ -15,7 +15,7 @@ from prbench.envs.geom3d.ground3d import (
 def test_base_motion3d_env():
     """Tests for basic methods in base motion3D env."""
 
-    env = Ground3DEnv(use_gui=True)  # set use_gui=True to debug
+    env = Ground3DEnv(use_gui=False)  # set use_gui=True to debug
     obs, _ = env.reset(seed=123)
     assert isinstance(obs, np.ndarray)
 
@@ -25,6 +25,7 @@ def test_base_motion3d_env():
         obs, _, _, _, _ = env.step(act)
 
     # Uncomment to debug.
-    import pybullet as p
-    while True:
-        p.getMouseEvents(env._object_centric_env.physics_client_id)
+    # import pybullet as p
+
+    # while True:
+    #     p.getMouseEvents(env._object_centric_env.physics_client_id)
