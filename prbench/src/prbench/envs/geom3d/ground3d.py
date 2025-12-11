@@ -50,11 +50,30 @@ class Ground3DObjectCentricState(Geom3DObjectCentricState):
     Adds convenience methods on top of Geom3DObjectCentricState().
     """
 
-    @property
-    def target_position(self) -> tuple[float, float, float]:
-        """The position of the target, assuming the name "target"."""
-        target = self.get_object_from_name("target")
-        return (self.get(target, "x"), self.get(target, "y"), self.get(target, "z"))
+    def get_cuboid_half_extents(self, name: str) -> tuple[float, float, float]:
+        """The half extents of the cuboid."""
+        obj = self.get_object_from_name(name)
+        return (
+            self.get(obj, "half_extent_x"),
+            self.get(obj, "half_extent_y"),
+            self.get(obj, "half_extent_z"),
+        )
+
+    def get_cuboid_pose(self, name: str) -> Pose:
+        """The pose of the cuboid."""
+        obj = self.get_object_from_name(name)
+        position = (
+            self.get(obj, "pose_x"),
+            self.get(obj, "pose_y"),
+            self.get(obj, "pose_z"),
+        )
+        orientation = (
+            self.get(obj, "pose_qx"),
+            self.get(obj, "pose_qy"),
+            self.get(obj, "pose_qz"),
+            self.get(obj, "pose_qw"),
+        )
+        return Pose(position, orientation)
 
 
 class ObjectCentricGround3DEnv(
@@ -155,7 +174,7 @@ class ObjectCentricGround3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        return set(self._cubes.values()) | {self.robot.base.robot_id}
+        return set() # set(self._cubes.values()) | {self.robot.base.robot_id}
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys())
@@ -202,7 +221,7 @@ class Ground3DEnv(ConstantObjectPRBenchEnv):
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
     ) -> list[str]:
-        constant_objects = ["robot"]
+        constant_objects = ["robot"] + [f"cube{i}" for i in range(self._object_centric_env._num_cubes)]
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
