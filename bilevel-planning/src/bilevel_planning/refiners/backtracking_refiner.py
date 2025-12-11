@@ -70,7 +70,6 @@ class BacktrackingRefiner(Refiner[_X, _U, _S, _A]):
 
         if index == len(a_plan):
             return True, []  # successfully refined all transitions
-
         s = s_plan[index]
         a = a_plan[index]
         ns = s_plan[index + 1]

@@ -35,8 +35,8 @@ class Motion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     # Target.
     target_radius: float = 0.1
     target_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    target_lower_bound: tuple[float, float, float] = (0.0, 0.1, 0.0)
-    target_upper_bound: tuple[float, float, float] = (0.5, 0.8, 0.5)
+    target_lower_bound: tuple[float, float, float] = (0.12, 0.1, 0.4)
+    target_upper_bound: tuple[float, float, float] = (0.62, 0.9, 0.9)
 
 
 class Motion3DObjectCentricState(Geom3DObjectCentricState):
@@ -97,11 +97,13 @@ class ObjectCentricMotion3DEnv(
             )
             target_pose = Pose(tuple(target_position))
             try:
-                inverse_kinematics(self.robot, target_pose, validate=True)
+                inverse_kinematics(self._robot_arm, target_pose, validate=True)
             except InverseKinematicsError:
                 continue
             self._set_robot_and_held_object(
-                self.config.initial_joints, self.config.initial_finger_state
+                self.robot.get_base(),
+                self.config.initial_joints,
+                self.config.initial_finger_state,
             )
             # If the goal is already reached, keep sampling.
             if not self._goal_reached():
@@ -143,7 +145,7 @@ class ObjectCentricMotion3DEnv(
 
     def _goal_reached(self) -> bool:
         target = get_pose(self.target_id, self.physics_client_id).position
-        end_effector_pose = self.robot.get_end_effector_pose()
+        end_effector_pose = self._robot_arm.get_end_effector_pose()
         dist = float(np.linalg.norm(np.subtract(target, end_effector_pose.position)))
         return dist < self.config.target_radius
 

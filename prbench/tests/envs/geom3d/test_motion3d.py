@@ -33,7 +33,7 @@ def test_motion3d_env():
     # Uncomment to debug.
     # import pybullet as p
     # while True:
-    #     p.getMouseEvents(env.physics_client_id)
+    #     p.getMouseEvents(env._object_centric_env.physics_client_id)
 
 
 def test_motion_planning_in_motion3d_env():
@@ -60,9 +60,16 @@ def test_motion_planning_in_motion3d_env():
     else:
         max_candidate_plans = 1
 
+    # Uncomment to debug target pose.
+    # from pybullet_helpers.gui import visualize_pose
+    # import pybullet as p
+    # visualize_pose(Pose(obs.target_position, (1, 0, 0, 0)), sim.physics_client_id)
+    # while True:
+    #     p.getMouseEvents(sim.physics_client_id)
+
     joint_plan = run_smooth_motion_planning_to_pose(
-        Pose(obs.target_position),
-        sim.robot,
+        Pose(obs.target_position, (1, 0, 0, 0)),
+        sim.robot.arm,
         collision_ids=set(),
         end_effector_frame_to_plan_frame=Pose.identity(),
         seed=123,
@@ -71,14 +78,14 @@ def test_motion_planning_in_motion3d_env():
     assert joint_plan is not None
     # Make sure we stay below the required max_action_mag by a fair amount.
     joint_plan = remap_joint_position_plan_to_constant_distance(
-        joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+        joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
 
     env.action_space.seed(123)
     for target_joints in joint_plan[1:]:
         delta = np.subtract(target_joints[:7], obs.joint_positions)
         delta_lst = [wrap_angle(a) for a in delta]
-        action_lst = delta_lst + [0.0]
+        action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
         vec_obs, _, done, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.

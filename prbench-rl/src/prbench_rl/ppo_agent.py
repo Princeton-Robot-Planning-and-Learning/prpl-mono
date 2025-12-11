@@ -9,7 +9,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, cast
 
 import dacite
 import gymnasium as gym
@@ -57,11 +57,9 @@ class PPOArgs:
     # Environment specific arguments
     num_envs: int = 1
     """The number of parallel environments."""
-    num_eval_envs: int = 16
-    """The number of parallel evaluation environments."""
     num_steps: int = 2048
     """The number of steps to run in each environment per policy rollout."""
-    eval_freq: int = 25
+    save_model_freq: int = 25
     """Evaluation frequency in terms of iterations."""
     save_train_video_freq: Optional[int] = None
     """Frequency to save training videos in terms of iterations."""
@@ -279,24 +277,39 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             action = self.agent.get_action(obs, deterministic=True)
         return action
 
-    def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
-        """Evaluate the PPO agent."""
-        envs = gym.vector.SyncVectorEnv(
-            [
-                make_env_ppo(
-                    self.env_id,
-                    0,
-                    render,
-                    self.cfg.exp_name + "_eval",
-                    self.max_episode_steps,
-                )
-            ]
-        )
+    def evaluate_on_env(
+        self,
+        train_envs: gym.vector.VectorEnv,
+        eval_episodes: int,
+        render_video: bool = False,
+    ) -> dict[str, Any]:
+        """Evaluate the PPO agent with video recording.
+
+        Wraps the training environments with RecordVideo to capture evaluation episodes.
+        The environments retain their normalization statistics from training.
+
+        Args:
+            train_envs: Training environments to wrap with video recording
+            eval_episodes: Number of episodes to evaluate
+
+        Returns:
+            Dictionary with evaluation metrics
+        """
+        # Wrap the first training environment with RecordVideo for evaluation
+        # This preserves the normalization statistics while enabling video recording
+        if render_video:
+            video_folder = f"videos/{self.cfg.exp_name}_eval"
+            sync_envs = cast(gym.vector.SyncVectorEnv, train_envs)
+            sync_envs.envs[0] = gym.wrappers.RecordVideo(
+                sync_envs.envs[0],
+                video_folder,
+                episode_trigger=lambda x: True,  # Record all episodes
+            )
 
         # Set agent to eval mode
         self.agent.eval()
 
-        obs, _ = envs.reset()
+        obs, _ = train_envs.reset()
         episodic_returns: list[float] = []
         step_lengths: list[int] = []
         step_length = 0
@@ -307,7 +320,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 action = self.agent(obs_tensor)
                 actions = action.cpu().numpy()
 
-            obs, _, _, _, infos = envs.step(actions)
+            obs, _, _, _, infos = train_envs.step(actions)
             step_length += 1
 
             if "final_info" in infos:
@@ -321,9 +334,6 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                     episodic_returns.append(info["episode"]["r"])
                     step_lengths.append(step_length)
                     step_length = 0
-                obs, _ = envs.reset()
-
-        envs.close()  # type: ignore
 
         eval_metrics = {
             "episodic_return": episodic_returns,
@@ -331,19 +341,19 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         }
         return eval_metrics
 
-    def train(self, render: bool = False) -> dict[str, Any]:  # type: ignore
+    def train(  # type: ignore[override]
+        self, eval_episodes: int = 10, render_eval_video: bool = False
+    ) -> dict[str, Any]:
         """Training the agent with an interactive batched environment."""
         # Initialize observation normalization variables
         # update the args with the environment-specific values
         # env setup
         episodic_returns = []
+        # Create training environments (no video recording during training)
         envs = gym.vector.SyncVectorEnv(
             [
                 make_env_ppo(
                     self.env_id,
-                    i,
-                    render,
-                    self.cfg.exp_name + "_train",
                     self.max_episode_steps,
                 )
                 for i in range(self.args.num_envs)
@@ -385,24 +395,12 @@ class PPOAgent(BaseRLAgent[_O, _U]):
 
         for iteration in range(1, self.args.num_iterations + 1):
             logging.info(f"Epoch: {iteration}, global_step={global_step}")
-            # self.agent.eval()
-            # Evaluate episode performance
-            # if iteration % self.args.eval_freq == 0:
-            #     eval_metrics = self.evaluate(self.args.num_eval_envs)
-            #     logging.info(
-            #         f"Evaluated {self.args.num_eval_envs} episodes"
-            #     )
-            #     for k, v in eval_metrics.items():
-            #         mean = np.stack(v).mean()
-            #         if self.writer is not None:
-            #             self.writer.add_scalar(f"eval/{k}", mean, global_step)
-            #         logging.info(f"eval_{k}_mean={mean}")
-            # if self.args.save_model and iteration % self.args.eval_freq == 1:
-            #     model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
-            #     base_path = Path(self.log_path) / "policies"
-            #     base_path.mkdir(parents=True, exist_ok=True)
-            #     self.save(str(model_path))
-            #     logging.info(f"model saved to {model_path}")
+            if self.args.save_model and iteration % self.args.save_model_freq == 1:
+                model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
+                base_path = Path(self.log_path) / "policies"
+                base_path.mkdir(parents=True, exist_ok=True)
+                self.save(str(model_path))
+                logging.info(f"model saved to {model_path}")
             # Annealing the rate if instructed to do so.
             if self.args.anneal_lr:
                 frac = 1.0 - (iteration - 1.0) / self.args.num_iterations
@@ -629,14 +627,31 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             model_path = self.log_path / "final_ckpt.pt"
             self.save(str(model_path))
             logging.info(f"model saved to {model_path}")
+
+        # Evaluate on the training environment (shares the same normalizer)
+        logging.info(f"Starting evaluation for {eval_episodes} episodes...")
+        eval_metrics = self.evaluate_on_env(
+            envs, eval_episodes, render_video=render_eval_video
+        )
+
+        # Log evaluation results
+        if eval_metrics["episodic_return"]:
+            avg_return = np.mean(eval_metrics["episodic_return"])
+            logging.info(f"Evaluation average return: {avg_return}")
+            if self.writer is not None:
+                self.writer.add_scalar(  # type: ignore[no-untyped-call]
+                    "eval/average_return", avg_return, global_step
+                )
+
+        # Close environments and writer
         envs.close()  # type: ignore[no-untyped-call]
         if self.writer is not None:
             self.writer.close()  # type: ignore[no-untyped-call]
 
-        train_metrics = {
-            "episodic_return": episodic_returns,
+        return {
+            "train": {"episodic_return": episodic_returns},
+            "eval": eval_metrics,
         }
-        return train_metrics
 
     def save(self, filepath: str) -> None:
         """Save agent parameters."""

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Iterator, NamedTuple
 
 import numpy as np
 import numpy.typing as npt
 import pybullet as p
+from prpl_utils.utils import get_signed_angle_distance, wrap_angle
 from pybullet_utils.transformations import (
     euler_from_quaternion,
 )
@@ -63,6 +65,10 @@ class Pose(NamedTuple):
         """Unit pose."""
         return cls((0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0))
 
+    def to_se2(self) -> SE2Pose:
+        """Extract the SE2Pose."""
+        return SE2Pose(self.position[0], self.position[1], self.rpy[2])
+
     def to_matrix(self) -> npt.NDArray:
         """Get the 4x4 homogenous matrix representation."""
         matrix = np.eye(4)
@@ -84,6 +90,41 @@ class Pose(NamedTuple):
         return np.allclose(
             self.position, other.position, atol=atol
         ) and orientations_allclose(self.orientation, other.orientation, atol=atol)
+
+
+@dataclass(frozen=True)
+class SE2Pose:
+    """Pose in SE2, i.e., (x, y, rotation), e.g., for mobile bases."""
+
+    x: float
+    y: float
+    rot: float  # must be between -np.pi and np.pi
+
+    def __post_init__(self):
+        assert -np.pi <= self.rot <= np.pi
+
+    def to_se3(self, z: float) -> Pose:
+        """Convert into a Pose."""
+        return Pose.from_rpy((self.x, self.y, z), (0, 0, self.rot))
+
+    @classmethod
+    def identity(cls) -> SE2Pose:
+        """Unit pose."""
+        return cls(0.0, 0.0, 0.0)
+
+    def __add__(self, other: SE2Pose) -> SE2Pose:
+        """Add two SE2 poses."""
+        return SE2Pose(
+            self.x + other.x, self.y + other.y, wrap_angle(self.rot + other.rot)
+        )
+
+    def __sub__(self, other: SE2Pose) -> SE2Pose:
+        """Subtract two SE2 poses."""
+        return SE2Pose(
+            self.x - other.x,
+            self.y - other.y,
+            get_signed_angle_distance(self.rot, other.rot),
+        )
 
 
 def multiply_poses(*poses: Pose) -> Pose:

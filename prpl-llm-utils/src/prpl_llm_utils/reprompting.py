@@ -44,11 +44,27 @@ def query_with_reprompts(
     query: Query,
     reprompt_checks: list[RepromptCheck],
     max_attempts: int = 5,
+    seed: int | None = None,
 ) -> Response:
     """Query the model until all reprompt checks pass.
 
-    Raise a RuntimeError if still failing after max_attempts.
+    Args:
+        model: The model to query
+        query: The initial query
+        reprompt_checks: List of checks to run on each response
+        max_attempts: Maximum number of attempts before raising an error
+        seed: Optional seed for reproducibility. Different seeds with the
+              same prompt will be cached separately.
+
+    Raises:
+        RuntimeError: If still failing after max_attempts.
     """
+    # Add seed to query hyperparameters if provided
+    if seed is not None:
+        hyperparameters = query.hyperparameters or {}
+        hyperparameters = {**hyperparameters, "seed": seed}
+        query = Query(query.prompt, query.imgs, hyperparameters)
+
     all_queries: list[Query] = [query]
     all_responses: list[Response] = []
     for _ in range(max_attempts):

@@ -479,6 +479,18 @@ class KinRobot:
         return relative_finger_pose_l.y - relative_finger_pose_r.y
 
     @property
+    def curr_l_finger_gap(self) -> float:
+        """Get the current left finger gap from gripper base."""
+        relative_finger_pose_l = self.gripper_base_pose.inverse * self.finger_poses_l
+        return relative_finger_pose_l.y
+
+    @property
+    def curr_r_finger_gap(self) -> float:
+        """Get the current right finger gap from gripper base."""
+        relative_finger_pose_r = self.gripper_base_pose.inverse * self.finger_poses_r
+        return relative_finger_pose_r.y
+
+    @property
     def curr_arm_length(self) -> float:
         """Get the current arm length."""
         relative_pose = self.base_pose.inverse * self.gripper_base_pose
@@ -741,8 +753,10 @@ class PDController:
         # If available (recommended), provide current gripper opening and its rate:
         tgt_gripper_l = tgt_gripper / 2
         tgt_gripper_r = -tgt_gripper / 2
-        g_curr_l = robot.curr_gripper / 2
-        g_curr_r = -robot.curr_gripper / 2
+        # NOTE: Should use the actual finger's pos as current
+        # instead of using current gripper gap (will have translation error)
+        g_curr_l = robot.curr_l_finger_gap
+        g_curr_r = robot.curr_r_finger_gap
         finger_vel_abs_w_l = robot.finger_vel_l[0]  # Vec2d
         finger_vel_abs_w_r = robot.finger_vel_r[0]  # Vec2d
 

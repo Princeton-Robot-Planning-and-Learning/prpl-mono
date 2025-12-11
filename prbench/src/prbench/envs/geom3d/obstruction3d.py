@@ -8,7 +8,7 @@ from typing import Type as TypingType
 
 import numpy as np
 import pybullet as p
-from pybullet_helpers.geometry import Pose, set_pose
+from pybullet_helpers.geometry import Pose, SE2Pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import create_pybullet_block
 from relational_structs import Object, ObjectCentricState
@@ -31,6 +31,10 @@ from prbench.envs.utils import PURPLE
 @dataclass(frozen=True)
 class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Obstruction3DEnv()."""
+
+    # Robot.
+    robot_base_home_pose: SE2Pose = SE2Pose(-0.12, 0, 0)
+    robot_base_z: float = -0.4
 
     # Table.
     table_pose: Pose = Pose((0.3, 0.0, -0.175))
@@ -59,7 +63,7 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
         return {
-            "camera_target": self.robot_base_pose.position,
+            "camera_target": (0, 0, 0),
             "camera_yaw": 90,
             "camera_distance": 1.0,
             "camera_pitch": -20,

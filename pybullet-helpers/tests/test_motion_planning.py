@@ -5,8 +5,9 @@ from functools import partial
 import numpy as np
 import pybullet as p
 
-from pybullet_helpers.geometry import Pose, set_pose
+from pybullet_helpers.geometry import Pose, SE2Pose, set_pose
 from pybullet_helpers.inverse_kinematics import (
+    check_collisions_with_held_object,
     inverse_kinematics,
     sample_joints_from_task_space_bounds,
 )
@@ -17,11 +18,13 @@ from pybullet_helpers.motion_planning import (
     get_joint_positions_distance,
     run_base_motion_planning,
     run_motion_planning,
+    run_single_arm_mobile_base_motion_planning,
     select_shortest_motion_plan,
     smoothly_follow_end_effector_path,
 )
 from pybullet_helpers.robots.fetch import FetchPyBulletRobot
 from pybullet_helpers.robots.kinova import KinovaGen3RobotiqGripperPyBulletRobot
+from pybullet_helpers.robots.tidybot import TidyBotKinova
 from pybullet_helpers.utils import create_pybullet_block, get_assets_path
 
 
@@ -501,6 +504,70 @@ def test_smoothly_follow_end_effector_path(physics_client_id):
     #     for s in interpolate_joints(joint_infos, pt1, pt2, num_interp_per_unit=100):
     #         robot.set_joints(s)
     #         import time; time.sleep(0.01)
+
+
+def test_run_single_arm_mobile_base_motion_planning():
+    """Tests for run_single_arm_mobile_base_motion_planning()."""
+
+    # Uncomment for debugging.
+    # from pybullet_helpers.gui import create_gui_connection
+    # physics_client_id = create_gui_connection(camera_yaw=210, camera_distance=1.0)
+    physics_client_id = p.connect(p.DIRECT)
+
+    robot = TidyBotKinova(
+        physics_client_id,
+        base_z=-0.5,
+        base_pose_lower_bound=SE2Pose(-5.0, -5.0, -np.pi),
+        base_pose_upper_bound=SE2Pose(5.0, 5.0, np.pi),
+    )
+
+    obstacle = create_pybullet_block(
+        (1.0, 0.0, 0.0, 1.0), (0.1, 0.1, 0.1), physics_client_id
+    )
+    obstacle_pose = Pose((1.0, 0.0, 0.0))
+    set_pose(obstacle, obstacle_pose, physics_client_id)
+
+    collision_bodies = {obstacle}
+    seed = 123
+
+    initial_pose = robot.base.get_pose()
+    target_pose = SE2Pose(2.0, 0.0, np.pi / 2)
+
+    plan = run_single_arm_mobile_base_motion_planning(
+        robot,
+        initial_pose,
+        target_pose,
+        collision_bodies,
+        seed,
+        hyperparameters=MotionPlanningHyperparameters(
+            birrt_extend_num_interp=50,
+            birrt_smooth_amt=100,
+        ),
+    )
+    assert plan is not None
+
+    # Make sure collision-free with arm.
+    for base_pose in plan:
+        robot.set_base(base_pose)
+        assert not check_collisions_with_held_object(
+            robot.arm,
+            collision_bodies,
+            physics_client_id,
+            None,
+            None,
+            robot.arm.get_joint_positions(),
+        )
+
+    # Uncomment to visualize.
+    # from pybullet_helpers.camera import capture_image
+    # import imageio.v2 as iio
+    # img = capture_image(physics_client_id, camera_distance=1.0, camera_yaw=210)
+    # imgs = [img]
+    # for base_pose in plan:
+    #     robot.set_base(base_pose)
+    #     img = capture_image(physics_client_id, camera_distance=1.0, camera_yaw=210)
+    #     imgs.append(img)
+    # iio.mimsave("mobile_base_motion_planning.mp4", imgs)
 
 
 def test_base_motion_planning_to_goal():

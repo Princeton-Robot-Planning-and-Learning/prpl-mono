@@ -16,9 +16,6 @@ def test_make_env_truncation():
     max_steps = 50
     env_fn = make_env_ppo(
         env_id="prbench/Obstruction2D-o0-v0",
-        idx=0,
-        capture_video=False,
-        run_name="test_truncation",
         max_episode_steps=max_steps,
     )
     env = env_fn()

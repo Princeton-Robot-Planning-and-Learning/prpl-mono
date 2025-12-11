@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from pybullet_helpers.geometry import Pose
+from pybullet_helpers.geometry import Pose, SE2Pose
 from pybullet_helpers.joint import JointPositions
 from relational_structs import Object, ObjectCentricState
 from scipy.spatial.transform import Rotation
@@ -65,11 +65,24 @@ class Geom3DObjectCentricState(ObjectCentricState):
         grasp_tf = Pose((x, y, z), (qx, qy, qz, qw))
         return grasp_tf
 
+    @property
+    def base_pose(self) -> SE2Pose:
+        """The pose of the base."""
+        robot = self.get_object_from_name("robot")
+        se2_pose = SE2Pose(
+            self.get(robot, "pos_base_x"),
+            self.get(robot, "pos_base_y"),
+            self.get(robot, "pos_base_rot"),
+        )
+        return se2_pose
+
 
 class Geom3DRobotActionSpace(RobotActionSpace):
-    """An action space for a 7 DOF robot that can open and close its gripper.
+    """An action space for a mobile manipulation with a 7 DOF robot that can open and
+    close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+    Actions are bounded relative base position, rotation, and joint positions, and open
+    / close.
 
     The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
     """
@@ -78,8 +91,8 @@ class Geom3DRobotActionSpace(RobotActionSpace):
         self,
         max_magnitude: float = 0.05,
     ) -> None:
-        low = np.array([-max_magnitude] * 7 + [-1])
-        high = np.array([max_magnitude] * 7 + [-1])
+        low = np.array([-max_magnitude] * 3 + [-max_magnitude] * 7 + [-1.0])
+        high = np.array([max_magnitude] * 3 + [max_magnitude] * 7 + [1.0])
         super().__init__(low, high)
 
     def create_markdown_description(self) -> str:

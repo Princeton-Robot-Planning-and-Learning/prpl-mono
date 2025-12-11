@@ -19,21 +19,98 @@
             "target": "ground",
             "ranges": [
                 [
-                    -2,
-                    -0.5,
-                    2,
-                    2.5
+                    1.5,
+                    0.0,
+                    1.5,
+                    0.0
                 ]
             ]
         },
-        "ground_object_init_region": {
+        "ground_1_object_init_region": {
             "target": "ground",
             "ranges": [
                 [
-                    -1,
-                    -1,
-                    1,
-                    1
+                    -0.1,
+                    0.8,
+                    0.1,
+                    0.85
+                ]
+            ]
+        },
+        "ground_2_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.1,
+                    0.8,
+                    0.3,
+                    1.0
+                ]
+            ]
+        },
+        "ground_3_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    -0.1,
+                    -0.7,
+                    0.1,
+                    -0.65
+                ]
+            ]
+        },
+        "ground_4_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.1,
+                    -0.7,
+                    0.3,
+                    -0.65
+                ]
+            ]
+        },
+        "ground_5_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.3,
+                    0.8,
+                    0.5,
+                    0.85
+                ]
+            ]
+        },
+        "ground_6_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.5,
+                    0.8,
+                    0.7,
+                    0.85
+                ]
+            ]
+        },
+        "ground_7_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.3,
+                    -0.7,
+                    0.5,
+                    -0.65
+                ]
+            ]
+        },
+        "ground_8_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.5,
+                    -0.7,
+                    0.7,
+                    -0.65
                 ]
             ]
         }
@@ -91,42 +168,42 @@
         [
             "on",
             "cube1",
-            "ground_object_init_region"
+            "ground_1_object_init_region"
         ],
         [
             "on",
             "cube2",
-            "ground_object_init_region"
+            "ground_2_object_init_region"
         ],
         [
             "on",
             "cube3",
-            "ground_object_init_region"
+            "ground_3_object_init_region"
         ],
         [
             "on",
             "cube4",
-            "ground_object_init_region"
+            "ground_4_object_init_region"
         ],
         [
             "on",
             "cube5",
-            "ground_object_init_region"
+            "ground_5_object_init_region"
         ],
         [
             "on",
             "cube6",
-            "ground_object_init_region"
+            "ground_6_object_init_region"
         ],
         [
             "on",
             "cube7",
-            "ground_object_init_region"
+            "ground_7_object_init_region"
         ],
         [
             "on",
             "cube8",
-            "ground_object_init_region"
+            "ground_8_object_init_region"
         ]
     ]
 }
