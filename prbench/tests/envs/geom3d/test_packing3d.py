@@ -81,7 +81,7 @@ def test_pick_place_on_rack():
     if MAKE_VIDEOS:  # make a smooth motion plan for videos
         max_candidate_plans = 10
     else:
-        max_candidate_plans = 1
+        max_candidate_plans = 5
 
     # sample placement coefficients for each part
     x_coeffs = np.linspace(-0.35, 0.35, num_parts)
