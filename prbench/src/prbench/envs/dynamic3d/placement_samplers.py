@@ -13,6 +13,7 @@ def sample_collision_free_positions(
     fixtures: dict[str, dict[str, dict[str, Any]]],
     np_random: np.random.Generator,
     fixture_ranges: dict[str, tuple[float, float, float, float]] | None = None,
+    fixture_yaw_ranges: dict[str, tuple[float, float]] | None = None,
 ) -> dict[str, dict[str, dict[str, Any]]]:
     """Sample collision-free positions and yaws for multiple fixtures.
 
@@ -23,6 +24,9 @@ def sample_collision_free_positions(
         fixture_ranges: Dictionary mapping fixture names to sampling ranges as
                        (x_min, y_min, x_max, y_max). If None, uses default range
                        (-2.0, 0.5, 2.0, 2.5) for all fixtures.
+        fixture_yaw_ranges: Dictionary mapping fixture names to yaw rotation ranges as
+                           (yaw_min, yaw_max) in radians. If None, uses default range
+                           (0.0, 2*pi) for all fixtures.
 
     Returns:
         Dictionary mapping fixture types to dictionaries of fixture poses
@@ -33,6 +37,7 @@ def sample_collision_free_positions(
 
     # Default range if none provided
     default_range = (-2.0, 0.5, 2.0, 2.5)
+    default_yaw_range = (0.0, 2 * np.pi)
 
     for fixture_type, fixture_configs in fixtures.items():
         fixture_poses[fixture_type] = {}
@@ -47,6 +52,12 @@ def sample_collision_free_positions(
                 x_range = (x_min, x_max)
                 y_range = (y_min, y_max)
 
+            # Get the yaw range for this fixture
+            if fixture_yaw_ranges and fixture_name in fixture_yaw_ranges:
+                yaw_range = fixture_yaw_ranges[fixture_name]
+            else:
+                yaw_range = default_yaw_range
+
             init_bbox = get_fixture_class(fixture_type).get_bounding_box_from_config(
                 np.array([0.0, 0.0, 0.0], dtype=np.float32), fixture_config
             )
@@ -57,6 +68,7 @@ def sample_collision_free_positions(
                 np_random=np_random,
                 x_range=x_range,
                 y_range=y_range,
+                yaw_range=yaw_range,
             )
             bbox = get_fixture_class(fixture_type).get_bounding_box_from_config(
                 position, fixture_config
@@ -76,6 +88,7 @@ def sample_collision_free_position(
     max_attempts: int = 100,
     x_range: tuple[float, float] = (-2.0, 2.0),
     y_range: tuple[float, float] = (0.5, 2.5),
+    yaw_range: tuple[float, float] = (0.0, 2 * np.pi),
 ) -> tuple[NDArray[np.float32], float]:
     """Sample a collision-free position and yaw for a fixture.
 
@@ -87,6 +100,7 @@ def sample_collision_free_position(
         max_attempts: Maximum number of sampling attempts
         x_range: Range for x coordinate sampling as (min, max)
         y_range: Range for y coordinate sampling as (min, max)
+        yaw_range: Range for yaw rotation sampling as (min, max) in radians
 
     Returns:
         Tuple of (position, yaw) where position is [x, y, z] array (z is always 0.0)
@@ -109,8 +123,8 @@ def sample_collision_free_position(
             ]
         )
 
-        # Sample a random yaw angle
-        candidate_yaw = np.pi / 2  # np_random.uniform(0, 2 * np.pi)
+        # Sample a random yaw angle from the specified range
+        candidate_yaw = np_random.uniform(yaw_range[0], yaw_range[1])
 
         # Translate the bounding box to the candidate position
         translation = candidate_pos - np.array(

@@ -189,6 +189,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
                 # Create fixture ranges dict based on initial state predicates
                 fixture_ranges = {}
+                fixture_yaw_ranges = {}
                 init_predicates = self.task_config.get("initial_state", [])
                 for pred in init_predicates:
                     if pred[0] == "on" and len(pred) == 3:
@@ -226,10 +227,15 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                             )
                             ranges = available_ranges[selected_range]
                             fixture_ranges[fixture_name] = tuple(ranges)
+                            
+                            # Extract yaw rotation range if specified
+                            if "yaw_rotation" in region_config:
+                                yaw_rotation = region_config["yaw_rotation"]
+                                fixture_yaw_ranges[fixture_name] = tuple(yaw_rotation)
 
                 # Sample collision-free positions for all fixtures
                 fixture_poses = sample_collision_free_positions(
-                    fixtures, self.np_random, fixture_ranges
+                    fixtures, self.np_random, fixture_ranges, fixture_yaw_ranges
                 )
 
                 # Insert filtered fixtures
