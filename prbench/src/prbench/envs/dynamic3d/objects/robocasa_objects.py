@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-import os
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import ClassVar
 
 import numpy as np
-from numpy.typing import NDArray
+from relational_structs import Object
 
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
-from prbench.envs.dynamic3d.objects.base import MujocoObject, register_object
-from relational_structs import Object
 from prbench.envs.dynamic3d.object_types import MujocoMovableObjectType
+from prbench.envs.dynamic3d.objects.base import (
+    MujocoObject,
+    REGISTERED_OBJECTS,
+    register_object,
+)
 
 
 # Get the path to the robocasa objects directory relative to this file
@@ -39,8 +41,8 @@ class RoboCasaObject(MujocoObject):
 
         Args:
             name: Name of the object body in the XML
-            env: Reference to the environment (needed for position get/set operations)
-            options: Dictionary of object options (currently unused but kept for compatibility)
+            env: Reference to the environment
+            options: Dictionary of object options
         """
         # Initialize base class
         super().__init__(name, env, options)
@@ -298,10 +300,9 @@ def _create_robocasa_object_classes() -> None:
 
         # Register the class with multiple names for flexibility
         register_object(new_class)  # Registers as lowercase class name
-        
+
         # Also register with the exact object type name (e.g., "apple_0")
         # and with "robocasa_" prefix (e.g., "robocasa_apple_0")
-        from prbench.envs.dynamic3d.objects.base import REGISTERED_OBJECTS
         REGISTERED_OBJECTS[object_type_name] = new_class
         REGISTERED_OBJECTS[f"robocasa_{object_type_name}"] = new_class
 

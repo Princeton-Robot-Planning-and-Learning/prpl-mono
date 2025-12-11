@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+from relational_structs import Object
 
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
-from prbench.envs.dynamic3d.objects.base import MujocoObject, register_object
-from relational_structs import Object
 from prbench.envs.dynamic3d.object_types import MujocoMovableObjectType
+from prbench.envs.dynamic3d.objects.base import MujocoObject, register_object
 
 
 @register_object

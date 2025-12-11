@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import abc
-from typing import TypeVar, Union
+import xml.etree.ElementTree as ET
+from typing import TYPE_CHECKING, TypeVar, Union
 
 import numpy as np
 from numpy.typing import NDArray
@@ -14,6 +15,9 @@ from prbench.envs.dynamic3d.object_types import (
     MujocoFixtureObjectType,
     MujocoMovableObjectType,
 )
+
+if TYPE_CHECKING:
+    from prbench.envs.dynamic3d import utils
 
 # Type variables for decorator type preservation
 FixtureT = TypeVar("FixtureT", bound="MujocoFixture")
@@ -102,7 +106,7 @@ class MujocoObject:
         # Create the corresponding Object for state representation key
         self.symbolic_object = Object(self.name, MujocoMovableObjectType)
 
-        self.xml_element: ...  # To be defined in subclasses
+        self.xml_element: ET.Element  # To be defined in subclasses
 
     def get_position(self) -> NDArray[np.float32]:
         """Get the object's current position.
@@ -305,7 +309,7 @@ class MujocoFixture(abc.ABC):
         # Create the corresponding Object for state representation key
         self.symbolic_object = Object(self.name, MujocoFixtureObjectType)
 
-        self.xml_element: ...  # To be defined in subclasses
+        self.xml_element: ET.Element  # To be defined in subclasses
 
     def get_position(self) -> NDArray[np.float32]:
         """Get the fixture's position.
@@ -321,6 +325,8 @@ class MujocoFixture(abc.ABC):
         Returns:
             Orientation as quaternion [w, x, y, z] list
         """
+        # Import here to avoid circular dependency
+        # pylint: disable=import-outside-toplevel
         from prbench.envs.dynamic3d import utils
 
         return utils.convert_yaw_to_quaternion(self.yaw)
@@ -365,7 +371,7 @@ class MujocoFixture(abc.ABC):
         return obj_data
 
     @abc.abstractmethod
-    def _create_xml_element(self) -> ...:
+    def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this fixture.
 
         Returns:
