@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 from typing import Type as TypingType
 
 import numpy as np
@@ -42,6 +43,7 @@ from prbench.envs.utils import PURPLE
 @dataclass(frozen=True)
 class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Packing3DEnv()."""
+
     # Robot.
     robot_base_home_pose: SE2Pose = SE2Pose(-0.12, 0, 0)
     robot_base_z: float = -0.4

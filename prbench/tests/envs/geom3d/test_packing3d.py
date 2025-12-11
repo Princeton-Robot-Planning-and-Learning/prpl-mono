@@ -281,7 +281,7 @@ def test_pick_place_on_rack():
             sim.robot.arm,
             [
                 current_end_effector_pose,
-                # end_effector_post_placement_pose,
+                end_effector_post_placement_pose,
                 home_pos,
             ],
             sim.robot.arm.get_joint_positions(),
