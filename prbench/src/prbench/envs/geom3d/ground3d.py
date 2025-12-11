@@ -50,31 +50,6 @@ class Ground3DObjectCentricState(Geom3DObjectCentricState):
     Adds convenience methods on top of Geom3DObjectCentricState().
     """
 
-    def get_cuboid_half_extents(self, name: str) -> tuple[float, float, float]:
-        """The half extents of the cuboid."""
-        obj = self.get_object_from_name(name)
-        return (
-            self.get(obj, "half_extent_x"),
-            self.get(obj, "half_extent_y"),
-            self.get(obj, "half_extent_z"),
-        )
-
-    def get_cuboid_pose(self, name: str) -> Pose:
-        """The pose of the cuboid."""
-        obj = self.get_object_from_name(name)
-        position = (
-            self.get(obj, "pose_x"),
-            self.get(obj, "pose_y"),
-            self.get(obj, "pose_z"),
-        )
-        orientation = (
-            self.get(obj, "pose_qx"),
-            self.get(obj, "pose_qy"),
-            self.get(obj, "pose_qz"),
-            self.get(obj, "pose_qw"),
-        )
-        return Pose(position, orientation)
-
 
 class ObjectCentricGround3DEnv(
     ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Ground3DEnvConfig]
@@ -164,7 +139,7 @@ class ObjectCentricGround3DEnv(
             assert cube_id is not None
             set_pose(
                 cube_id,
-                obs.get_cuboid_pose(cube_name),
+                obs.get_object_pose(cube_name),
                 self.physics_client_id,
             )
 
