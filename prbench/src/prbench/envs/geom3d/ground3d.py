@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Type as TypingType
 
 import numpy as np
-from pybullet_helpers.geometry import Pose, get_pose, set_pose
+from pybullet_helpers.geometry import Pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import create_pybullet_block
 from relational_structs import Object, ObjectCentricState
@@ -203,22 +203,6 @@ class ObjectCentricGround3DEnv(
         return state
 
     def _goal_reached(self) -> bool:
-        for _, cube_id in self._cubes.items():
-            target_se3_pose = get_pose(cube_id, self.physics_client_id)
-            target_pose = target_se3_pose.to_se2()
-            robot_base_pose = self.robot.base.get_pose()
-            dist = float(
-                np.linalg.norm(
-                    np.array(
-                        [
-                            target_pose.x - robot_base_pose.x,
-                            target_pose.y - robot_base_pose.y,
-                        ]
-                    )
-                )
-            )
-            if dist < self.config.block_size / 2:
-                return True
         return False
 
 
