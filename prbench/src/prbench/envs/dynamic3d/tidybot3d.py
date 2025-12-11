@@ -154,6 +154,19 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Insert objects in scene
         tree = ET.parse(str(absolute_model_path))
         root = tree.getroot()
+        
+        # Get or create asset section for adding meshes/textures/materials
+        asset_section = root.find("asset")
+        if asset_section is None:
+            asset_section = ET.Element("asset")
+            # Insert asset section after visual section if it exists
+            visual_section = root.find("visual")
+            if visual_section is not None:
+                visual_index = list(root).index(visual_section)
+                root.insert(visual_index + 1, asset_section)
+            else:
+                root.insert(0, asset_section)
+        
         worldbody = root.find("worldbody")
         if worldbody is not None:
             # Remove all existing cube bodies
@@ -255,9 +268,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     for object_name, object_config in object_configs.items():
                         obj_cls = get_object_class(object_type)
                         obj_options = {
-                            "size": object_config["size"],
-                            "rgba": " ".join(map(str, object_config["rgba"])),
-                            "mass": object_config["mass"],
+                            "size": object_config.get("size"),
+                            "rgba": " ".join(map(str, object_config.get("rgba", [0.5, 0.5, 0.5, 1]))),
+                            "mass": object_config.get("mass", 0.1),
                         }
                         obj = obj_cls(
                             name=object_name,
@@ -268,6 +281,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         worldbody.append(body)
                         self._objects.append(obj)
                         self._objects_dict[object_name] = obj
+                        
+                        # Add assets if this is a RoboCasa object
+                        if hasattr(obj, "get_assets"):
+                            obj_assets = obj.get_assets()
+                            # Add all mesh, texture, and material elements to asset section
+                            for asset_elem in obj_assets:
+                                asset_section.append(asset_elem)
 
             # Get XML string from tree
             xml_string = ET.tostring(root, encoding="unicode")
@@ -295,12 +315,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
                 if region_config["target"] == "ground":
                     # Sample pose directly on the ground using utility function
-                    assert obj_name.startswith("cube"), "TODO"
-                    size = self.task_config["objects"]["cube"][obj_name]["size"]
+                    # Get the object's bounding box to determine proper z-coordinate
+                    obj = self._objects_dict[obj_name]
+                    _, _, height = obj.get_bounding_box_dimensions()
+                    # Place object so its bottom is on the ground (z = height/2)
                     pos_x, pos_y, pos_z = sample_pose_in_region(
                         region_ranges,
                         self.np_random,
-                        z_coordinate=size,
+                        z_coordinate=height / 2,
                     )
                 else:
                     # Sample pose on a fixture (table, etc.)
