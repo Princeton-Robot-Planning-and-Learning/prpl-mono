@@ -154,7 +154,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Insert objects in scene
         tree = ET.parse(str(absolute_model_path))
         root = tree.getroot()
-        
+
         # Get or create asset section for adding meshes/textures/materials
         asset_section = root.find("asset")
         if asset_section is None:
@@ -166,7 +166,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 root.insert(visual_index + 1, asset_section)
             else:
                 root.insert(0, asset_section)
-        
+
         worldbody = root.find("worldbody")
         if worldbody is not None:
             # Remove all existing cube bodies
@@ -267,9 +267,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 for object_type, object_configs in objects.items():
                     for object_name, object_config in object_configs.items():
                         obj_cls = get_object_class(object_type)
+                        default_rgba = [0.5, 0.5, 0.5, 1]
+                        rgba_list = object_config.get("rgba", default_rgba)
                         obj_options = {
                             "size": object_config.get("size"),
-                            "rgba": " ".join(map(str, object_config.get("rgba", [0.5, 0.5, 0.5, 1]))),
+                            "rgba": " ".join(map(str, rgba_list)),
                             "mass": object_config.get("mass", 0.1),
                         }
                         obj = obj_cls(
@@ -281,11 +283,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         worldbody.append(body)
                         self._objects.append(obj)
                         self._objects_dict[object_name] = obj
-                        
+
                         # Add assets if this is a RoboCasa object
                         if hasattr(obj, "get_assets"):
                             obj_assets = obj.get_assets()
-                            # Add all mesh, texture, and material elements to asset section
+                            # Add all mesh, texture, and material elements
+                            # to asset section
                             for asset_elem in obj_assets:
                                 asset_section.append(asset_elem)
 
