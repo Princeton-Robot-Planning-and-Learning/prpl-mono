@@ -3,10 +3,11 @@
 import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
-from relational_structs.spaces import ObjectCentricBoxSpace
 from pybullet_helpers.motion_planning import (
     run_single_arm_mobile_base_motion_planning,
 )
+from relational_structs.spaces import ObjectCentricBoxSpace
+
 from prbench.envs.geom3d.ground3d import (
     Ground3DEnv,
     Ground3DObjectCentricState,
@@ -32,6 +33,7 @@ def test_base_motion3d_env():
     # while True:
     #     p.getMouseEvents(env._object_centric_env.physics_client_id)
 
+
 def test_motion_planning_in_ground3d_env():
     """Proof of concept that motion planning works in this environment."""
 
@@ -46,7 +48,6 @@ def test_motion_planning_in_ground3d_env():
     # NOTE: we should soon make this smoother.
     oc_obs = env.observation_space.devectorize(vec_obs)
     obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
-    
 
     # Create a simulator for planning.
     sim = ObjectCentricGround3DEnv(config=config)

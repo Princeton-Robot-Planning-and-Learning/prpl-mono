@@ -175,7 +175,7 @@ class ObjectCentricGround3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        return set() # set(self._cubes.values()) | {self.robot.base.robot_id}
+        return set()
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys())
@@ -210,13 +210,15 @@ class ObjectCentricGround3DEnv(
             robot_base_pose = self.robot.base.get_pose()
             dist = float(
                 np.linalg.norm(
-                    np.array([
-                        target_pose.x - robot_base_pose.x,
-                        target_pose.y - robot_base_pose.y,
-                    ])
+                    np.array(
+                        [
+                            target_pose.x - robot_base_pose.x,
+                            target_pose.y - robot_base_pose.y,
+                        ]
+                    )
                 )
             )
-            if dist < self.config.block_size/2:
+            if dist < self.config.block_size / 2:
                 return True
         return False
 
@@ -232,7 +234,10 @@ class Ground3DEnv(ConstantObjectPRBenchEnv):
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
     ) -> list[str]:
-        constant_objects = ["robot"] + [f"cube{i}" for i in range(self._object_centric_env._num_cubes)]
+        constant_objects = ["robot"]
+        for obj in exemplar_state:
+            if obj.name.startswith("cube"):
+                constant_objects.append(obj.name)
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
