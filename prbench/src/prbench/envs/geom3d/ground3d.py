@@ -205,8 +205,18 @@ class ObjectCentricGround3DEnv(
 
     def _goal_reached(self) -> bool:
         for _, cube_id in self._cubes.items():
-            object_pose = get_pose(cube_id, self.physics_client_id)
-            if object_pose.position[2] > 0.1:
+            target_se3_pose = get_pose(cube_id, self.physics_client_id)
+            target_pose = target_se3_pose.to_se2()
+            robot_base_pose = self.robot.base.get_pose()
+            dist = float(
+                np.linalg.norm(
+                    np.array([
+                        target_pose.x - robot_base_pose.x,
+                        target_pose.y - robot_base_pose.y,
+                    ])
+                )
+            )
+            if dist < self.config.block_size/2:
                 return True
         return False
 
