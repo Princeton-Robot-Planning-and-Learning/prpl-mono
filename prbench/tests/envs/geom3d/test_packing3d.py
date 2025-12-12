@@ -210,7 +210,7 @@ def test_pick_place_on_rack():
                 rack_pose.position[2]
                 - obs.rack_half_extents[2]
                 + 0.01
-                + obs.get_object_half_extents(obs.grasped_object)[2]
+                + obs.get_object_half_extents_packing3d(obs.grasped_object)[2]
                 + placement_padding,
             ),
             obs.rack_pose.orientation,
