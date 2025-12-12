@@ -20,11 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Disk status (before)
-        run: |
-          df -h
-          du -h -d 2 . | sort -h | tail -n 50 || true
-          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
       - uses: ./.github/actions/setup
       - name: Run autoformat
         run: uv run ./run_in_all_packages.sh "./run_autoformat.sh"
@@ -37,11 +32,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
       - uses: actions/checkout@v4
-      - name: Disk status (before)
-        run: |
-          df -h
-          du -h -d 2 . | sort -h | tail -n 50 || true
-          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
       - uses: ./.github/actions/setup
       - name: Lint
         run: |
@@ -51,11 +41,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Disk status (before)
-        run: |
-          df -h
-          du -h -d 2 . | sort -h | tail -n 50 || true
-          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
       - uses: ./.github/actions/setup
       - name: Mypy
         run: |
