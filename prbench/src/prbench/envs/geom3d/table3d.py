@@ -37,7 +37,7 @@ class Table3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_pose: Pose = Pose((0.6, 0.0, 0.25))
     table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.25)
-    
+
     # World bounds.
     x_lb: float = -1
     x_ub: float = 1
@@ -158,7 +158,6 @@ class Table3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         )
 
 
-
 class Table3DObjectCentricState(Geom3DObjectCentricState):
     """A state in the Table3DEnv().
 
@@ -222,7 +221,7 @@ class ObjectCentricTable3DEnv(
                 physics_client_id=self.physics_client_id,
             )
             self._cubes[f"cube{idx}"] = cube_id
-        
+
         # Create table.
         self.table_id = create_pybullet_block(
             self.config.table_rgba,
@@ -230,7 +229,6 @@ class ObjectCentricTable3DEnv(
             physics_client_id=self.physics_client_id,
         )
         set_pose(self.table_id, self.config.table_pose, self.physics_client_id)
-        
 
     @property
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
@@ -245,7 +243,11 @@ class ObjectCentricTable3DEnv(
         # Samples the poses of the cubes
         for _ in range(100_000):
             for cube_name, cube_id in self._cubes.items():
-                cube_half_extents = (self.config.block_size / 2, self.config.block_size / 2, self.config.block_size / 2)
+                cube_half_extents = (
+                    self.config.block_size / 2,
+                    self.config.block_size / 2,
+                    self.config.block_size / 2,
+                )
                 # add orientation later
                 cube_pose = self.config.sample_block_on_table_pose(
                     cube_half_extents, self.np_random
@@ -269,27 +271,41 @@ class ObjectCentricTable3DEnv(
 
         else:
             raise RuntimeError("Failed to sample collision-free cube poses")
-    
+
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
 
     def _object_name_to_pybullet_id(self, object_name: str) -> int:
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
 
     def _get_collision_object_ids(self) -> set[int]:
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
 
     def _get_movable_object_names(self) -> set[str]:
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
 
     def _get_surface_object_names(self) -> set[str]:
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
 
     def _get_obs(self) -> Table3DObjectCentricState:
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
 
     def _goal_reached(self) -> bool:
         return False
@@ -306,7 +322,9 @@ class Table3DEnv(ConstantObjectPRBenchEnv):
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
     ) -> list[str]:
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
 
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""

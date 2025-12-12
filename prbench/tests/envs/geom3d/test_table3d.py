@@ -14,9 +14,9 @@ from pybullet_helpers.motion_planning import (
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench.envs.geom3d.table3d import (
+    ObjectCentricTable3DEnv,
     Table3DEnv,
     Table3DObjectCentricState,
-    ObjectCentricTable3DEnv,
 )
 
 
@@ -37,4 +37,3 @@ def test_base_table3d_env():
 
     while True:
         p.getMouseEvents(env._object_centric_env.physics_client_id)
-
