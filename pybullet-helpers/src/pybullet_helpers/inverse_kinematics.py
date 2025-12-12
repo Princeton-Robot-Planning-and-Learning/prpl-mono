@@ -33,6 +33,7 @@ from pybullet_helpers.robots.single_arm import (
     FingerState,
     SingleArmPyBulletRobot,
 )
+from pybullet_helpers.robots.mobile import MobilePyBulletBase
 from pybullet_helpers.utils import get_closest_points_with_optional_links
 
 
@@ -194,6 +195,26 @@ def check_collisions_with_held_object(
             return True
         if held_object is not None and check_body_collisions(
             held_object,
+            body,
+            physics_client_id,
+            perform_collision_detection=False,
+            distance_threshold=distance_threshold,
+        ):
+            return True
+    return False
+
+
+def check_mobile_base_collisions(
+    mobile_base: MobilePyBulletBase,
+    collision_bodies: Collection[int],
+    physics_client_id: int,
+    distance_threshold: float = 1e-6,
+) -> bool:
+    """Check if the mobile base is currently in collision with certain bodies."""
+    p.performCollisionDetection(physicsClientId=physics_client_id)
+    for body in collision_bodies:
+        if check_body_collisions(
+            mobile_base.robot_id,
             body,
             physics_client_id,
             perform_collision_detection=False,
