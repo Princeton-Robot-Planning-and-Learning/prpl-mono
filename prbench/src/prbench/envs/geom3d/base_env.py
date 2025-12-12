@@ -18,6 +18,7 @@ from pybullet_helpers.gui import create_gui_connection
 from pybullet_helpers.inverse_kinematics import (
     check_body_collisions,
     check_collisions_with_held_object,
+    check_mobile_base_collisions,
     set_robot_joints_with_held_object,
 )
 from pybullet_helpers.joint import JointPositions
@@ -71,6 +72,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     end_effector_viz_radius: float = 0.01
     end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
     max_action_mag: float = 0.05
+    check_base_collisions: bool = False
 
     # This is used to check whether a grasped object can be placed on a surface.
     min_placement_dist: float = 5e-3
@@ -442,13 +444,21 @@ class ObjectCentricGeom3DRobotEnv(
         collision_bodies = self._get_collision_object_ids()
         if self._grasped_object_id is not None:
             collision_bodies.discard(self._grasped_object_id)
-        return check_collisions_with_held_object(
+        if check_collisions_with_held_object(
             self.robot.arm,
             collision_bodies,
             self.physics_client_id,
             self._grasped_object_id,
             self._grasped_object_transform,
             self.robot.arm.get_joint_positions(),
+        ):
+            return True
+        if not self.config.check_base_collisions:
+            return False
+        return check_mobile_base_collisions(
+            self.robot.base,
+            collision_bodies,
+            self.physics_client_id,
         )
 
     def _get_surfaces_supporting_object(self, object_id: int) -> set[int]:
