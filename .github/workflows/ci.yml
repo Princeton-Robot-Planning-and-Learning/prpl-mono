@@ -6,6 +6,10 @@ env:
   # Tell git/uv to NOT download LFS blobs, just keep pointer files
   GIT_LFS_SKIP_SMUDGE: "1"
 
+  # Prevent caches from filling the runner disk
+  UV_NO_CACHE: "1"
+  PIP_NO_CACHE_DIR: "1"
+
 jobs:
   autoformat:
     runs-on: ubuntu-latest

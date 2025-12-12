@@ -67,10 +67,12 @@ def test_motion_planning_in_base_motion3d_env():
         delta_lst = [delta.x, delta.y, delta.rot]
         action_lst = delta_lst + [0.0] * 7 + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, _, done, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = BaseMotion3DObjectCentricState(oc_obs.data, oc_obs.type_features)
-    # else:
-    #     assert False, "Plan did not reach goal"
+        if done:
+            break
+    else:
+        assert False, "Plan did not reach goal"
     env.close()

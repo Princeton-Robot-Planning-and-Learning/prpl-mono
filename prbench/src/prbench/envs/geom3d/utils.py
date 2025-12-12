@@ -76,6 +76,31 @@ class Geom3DObjectCentricState(ObjectCentricState):
         )
         return se2_pose
 
+    def get_object_half_extents(self, name: str) -> tuple[float, float, float]:
+        """The half extents of the object."""
+        obj = self.get_object_from_name(name)
+        return (
+            self.get(obj, "half_extent_x"),
+            self.get(obj, "half_extent_y"),
+            self.get(obj, "half_extent_z"),
+        )
+
+    def get_object_pose(self, name: str) -> Pose:
+        """The pose of the object."""
+        obj = self.get_object_from_name(name)
+        position = (
+            self.get(obj, "pose_x"),
+            self.get(obj, "pose_y"),
+            self.get(obj, "pose_z"),
+        )
+        orientation = (
+            self.get(obj, "pose_qx"),
+            self.get(obj, "pose_qy"),
+            self.get(obj, "pose_qz"),
+            self.get(obj, "pose_qw"),
+        )
+        return Pose(position, orientation)
+
 
 class Geom3DRobotActionSpace(RobotActionSpace):
     """An action space for a mobile manipulation with a 7 DOF robot that can open and

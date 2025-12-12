@@ -191,50 +191,25 @@ class Obstruction3DObjectCentricState(Geom3DObjectCentricState):
     Adds convenience methods on top of Geom3DObjectCentricState().
     """
 
-    def get_cuboid_half_extents(self, name: str) -> tuple[float, float, float]:
-        """The half extents of the cuboid."""
-        obj = self.get_object_from_name(name)
-        return (
-            self.get(obj, "half_extent_x"),
-            self.get(obj, "half_extent_y"),
-            self.get(obj, "half_extent_z"),
-        )
-
-    def get_cuboid_pose(self, name: str) -> Pose:
-        """The pose of the cuboid."""
-        obj = self.get_object_from_name(name)
-        position = (
-            self.get(obj, "pose_x"),
-            self.get(obj, "pose_y"),
-            self.get(obj, "pose_z"),
-        )
-        orientation = (
-            self.get(obj, "pose_qx"),
-            self.get(obj, "pose_qy"),
-            self.get(obj, "pose_qz"),
-            self.get(obj, "pose_qw"),
-        )
-        return Pose(position, orientation)
-
     @property
     def target_region_half_extents(self) -> tuple[float, float, float]:
         """The half extents of the target region, assuming the name "target_region"."""
-        return self.get_cuboid_half_extents("target_region")
+        return self.get_object_half_extents("target_region")
 
     @property
     def target_block_half_extents(self) -> tuple[float, float, float]:
         """The half extents of the target block, assuming the name "target_block"."""
-        return self.get_cuboid_half_extents("target_block")
+        return self.get_object_half_extents("target_block")
 
     @property
     def target_region_pose(self) -> Pose:
         """The pose of the target region, assuming the name "target_region"."""
-        return self.get_cuboid_pose("target_region")
+        return self.get_object_pose("target_region")
 
     @property
     def target_block_pose(self) -> Pose:
         """The pose of the target block, assuming the name "target_block"."""
-        return self.get_cuboid_pose("target_block")
+        return self.get_object_pose("target_block")
 
 
 class ObjectCentricObstruction3DEnv(
@@ -421,8 +396,8 @@ class ObjectCentricObstruction3DEnv(
         # Handle obstructions.
         for obstruction_idx in range(self._num_obstructions):
             obstruction_name = f"obstruction{obstruction_idx}"
-            obstruction_half_extents = obs.get_cuboid_half_extents(obstruction_name)
-            obstruction_pose = obs.get_cuboid_pose(obstruction_name)
+            obstruction_half_extents = obs.get_object_half_extents(obstruction_name)
+            obstruction_pose = obs.get_object_pose(obstruction_name)
             # Check if the block needs to be recreated.
             need_recreate = False
             need_destroy = False
