@@ -68,7 +68,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
         ]
     )
     initial_finger_state: float = 0.0
-    end_effector_viz_radius: float = 0.01
+    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.025)
     end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
     max_action_mag: float = 0.05
 
@@ -131,16 +131,16 @@ class ObjectCentricGeom3DRobotEnv(
 
         # Show a visualization of the end effector.
         visual_id = p.createVisualShape(
-            p.GEOM_SPHERE,
-            radius=self.config.end_effector_viz_radius,
+            p.GEOM_BOX,
+            halfExtents=self.config.end_effector_viz_half_extents,
             rgbaColor=self.config.end_effector_viz_color,
             physicsClientId=self.physics_client_id,
         )
 
         # Also create a collision body because we use it for grasp detection.
         collision_id = p.createCollisionShape(
-            p.GEOM_SPHERE,
-            radius=self.config.end_effector_viz_radius,
+            p.GEOM_BOX,
+            halfExtents=self.config.end_effector_viz_half_extents,
             physicsClientId=self.physics_client_id,
         )
 
