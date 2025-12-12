@@ -10,11 +10,6 @@ env:
   UV_NO_CACHE: "1"
   PIP_NO_CACHE_DIR: "1"
 
-  # If anything tries to download HF models/datasets, keep them off the workspace
-  HF_HOME: ${{ runner.temp }}/hf
-  TRANSFORMERS_CACHE: ${{ runner.temp }}/hf/transformers
-  HUGGINGFACE_HUB_CACHE: ${{ runner.temp }}/hf/hub
-
 jobs:
   autoformat:
     runs-on: ubuntu-latest
