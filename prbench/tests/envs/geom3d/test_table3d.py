@@ -23,7 +23,7 @@ from prbench.envs.geom3d.table3d import (
 def test_base_table3d_env():
     """Tests for basic methods in base table3D env."""
 
-    env = Table3DEnv(use_gui=True)  # set use_gui=True to debug
+    env = Table3DEnv(use_gui=False)  # set use_gui=True to debug
     obs, _ = env.reset(seed=123)
     assert isinstance(obs, np.ndarray)
 
