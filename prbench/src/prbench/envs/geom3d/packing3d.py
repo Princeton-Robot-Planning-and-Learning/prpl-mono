@@ -195,7 +195,9 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
 
         return Pose(position, orientation)
 
-    def get_object_half_extents(self, name: str) -> tuple[float, float, float, float]:
+    def get_object_half_extents_packing3d(
+        self, name: str
+    ) -> tuple[float, float, float, float]:
         """Get the half extents of a cuboid object."""
         obj = self.get_object_from_name(name)
         return (
@@ -236,7 +238,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
     @property
     def rack_half_extents(self) -> tuple[float, float, float]:
         """Get the half extents of the rack."""
-        return self.get_object_half_extents("rack")[:3]
+        return self.get_object_half_extents_packing3d("rack")[:3]
 
     @property
     def rack_pose(self) -> Pose:
@@ -273,7 +275,9 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
         for obj in self.objects:
             if obj.name.startswith("part"):
                 if obj.type == Geom3DCuboidType:
-                    features[obj.name] = self.get_object_half_extents(obj.name)
+                    features[obj.name] = self.get_object_half_extents_packing3d(
+                        obj.name
+                    )
                 elif obj.type == Geom3DTriangleType:
                     features[obj.name] = self.get_object_triangle_features(obj.name)
                 else:
@@ -291,7 +295,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
                     self.rack_pose,
                     self.rack_half_extents,
                     self.get_object_pose(obj.name),
-                    self.get_object_half_extents(obj.name)[:3],
+                    self.get_object_half_extents_packing3d(obj.name)[:3],
                 ):
                     available_parts.append(obj.name)
         return available_parts
@@ -725,7 +729,7 @@ class ObjectCentricPacking3DEnv(
                 self._get_obs().rack_pose,
                 self._get_obs().rack_half_extents,
                 self._get_obs().get_object_pose(part_name),
-                self._get_obs().get_object_half_extents(part_name)[:3],
+                self._get_obs().get_object_half_extents_packing3d(part_name)[:3],
             ):
                 return False
 
