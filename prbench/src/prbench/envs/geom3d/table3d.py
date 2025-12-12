@@ -48,12 +48,14 @@ class Table3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     block_size: float = 0.02  # cubes (height = width = length)
     block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
+    min_placement_dist: float = 0.02
+
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
         return {
             "camera_target": (0, 0, 0),
             "camera_yaw": 90,
-            "camera_distance": 1.0,
+            "camera_distance": 2.0,
             "camera_pitch": -20,
         }
 
@@ -273,39 +275,53 @@ class ObjectCentricTable3DEnv(
             raise RuntimeError("Failed to sample collision-free cube poses")
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
-        import ipdb
-
-        ipdb.set_trace()
+        assert isinstance(obs, Table3DObjectCentricState)
+        for cube_name, cube_id in self._cubes.items():
+            assert cube_id is not None
+            set_pose(
+                cube_id,
+                obs.get_object_pose(cube_name),
+                self.physics_client_id,
+            )
 
     def _object_name_to_pybullet_id(self, object_name: str) -> int:
-        import ipdb
-
-        ipdb.set_trace()
+        if object_name == "table":
+            return self.table_id
+        if object_name.startswith("cube"):
+            return self._cubes[object_name]
+        raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        import ipdb
-
-        ipdb.set_trace()
+        return {self.table_id}
 
     def _get_movable_object_names(self) -> set[str]:
-        import ipdb
-
-        ipdb.set_trace()
+        return set(self._cubes.keys())
 
     def _get_surface_object_names(self) -> set[str]:
-        import ipdb
-
-        ipdb.set_trace()
+        return {"table"}
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
-        import ipdb
-
-        ipdb.set_trace()
+        if object_name.startswith("cube"):
+            return (
+                self.config.block_size / 2,
+                self.config.block_size / 2,
+                self.config.block_size / 2,
+            )
+        if object_name == "table":
+            return self.config.table_half_extents
+        raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_obs(self) -> Table3DObjectCentricState:
-        import ipdb
-
-        ipdb.set_trace()
+        state_dict = self._create_state_dict(
+            [("robot", Geom3DRobotType)]
+            + [("table", Geom3DCuboidType)]
+            + [("cube" + str(i), Geom3DCuboidType) for i in range(self._num_cubes)]
+        )
+        state = create_state_from_dict(
+            state_dict, Geom3DEnvTypeFeatures, state_cls=Table3DObjectCentricState
+        )
+        assert isinstance(state, Table3DObjectCentricState)
+        return state
 
     def _goal_reached(self) -> bool:
         return False
@@ -322,9 +338,11 @@ class Table3DEnv(ConstantObjectPRBenchEnv):
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
     ) -> list[str]:
-        import ipdb
-
-        ipdb.set_trace()
+        constant_objects = ["robot", "table"]
+        for obj in exemplar_state:
+            if obj.name.startswith("cube"):
+                constant_objects.append(obj.name)
+        return constant_objects
 
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
