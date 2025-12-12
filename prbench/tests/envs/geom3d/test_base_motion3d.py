@@ -106,7 +106,8 @@ def test_check_mobile_base_collisions_is_called():
 
         # Verify the robot base was passed as the first argument
         assert (
-            call_args[0][0] == env._object_centric_env.robot.base
-        )  # pylint: disable=_object_centric_env
+            call_args[0][0]
+            == env._object_centric_env.robot.base  # pylint: disable=protected-access
+        )
 
     env.close()
