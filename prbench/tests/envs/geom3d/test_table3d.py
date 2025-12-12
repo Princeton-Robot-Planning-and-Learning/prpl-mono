@@ -64,7 +64,7 @@ def test_pick_place_after_moving():
     # Step 1: Move the base in front of cube1
     target_object_pose_temp = obs.get_object_pose("cube1").to_se2()
     target_object_pose = SE2Pose(
-        target_object_pose_temp.x - 0.3,
+        target_object_pose_temp.x - 0.4,
         target_object_pose_temp.y,
         target_object_pose_temp.rot,
     )
@@ -92,7 +92,7 @@ def test_pick_place_after_moving():
     x, y, z = obs.get_object_pose("cube1").position
     dz = 0.05
     pre_grasp_pose = Pose.from_rpy((x, y, z + dz), (np.pi, 0, np.pi / 2))
-    grasp_pose = Pose.from_rpy((x, y, z + 0.005), (np.pi, 0, np.pi / 2))
+    grasp_pose = Pose.from_rpy((x, y, z + 0.015), (np.pi, 0, np.pi / 2))
 
     joint_distance_fn = create_joint_distance_fn(sim.robot.arm)
     joint_plan = smoothly_follow_end_effector_path(

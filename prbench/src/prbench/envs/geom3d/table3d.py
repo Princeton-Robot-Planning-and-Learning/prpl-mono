@@ -45,10 +45,10 @@ class Table3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     y_ub: float = 1
 
     # Blocks.
-    block_size: float = 0.02  # cubes (height = width = length)
+    block_size: float = 0.05  # cubes (height = width = length)
     block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
-    min_placement_dist: float = 0.02
+    # min_placement_dist: float = 0.02
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
