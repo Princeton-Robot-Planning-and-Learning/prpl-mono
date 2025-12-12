@@ -280,8 +280,8 @@ class GroundPlaceController(Dynamic2dRobotController):
         return final_waypoints
 
 
-class GroundMoveToController(Dynamic2dRobotController):
-    """Controller for moving the robot to the target region."""
+class GroundMoveToTgtSurfaceController(Dynamic2dRobotController):
+    """Controller for moving the robot to the target surface."""
 
     def __init__(
         self,
@@ -372,39 +372,14 @@ class GroundMoveToController(Dynamic2dRobotController):
 
         robot_pose = gripper_target_pose
 
-        # Check if the target pose is collision-free
-        full_state = state.copy()
-        init_constant_state = self._init_constant_state
-        if init_constant_state is not None:
-            full_state.data.update(init_constant_state.data)
-
-        # Convert to absolute coordinates within target bounds
-        full_state.set(self._tgt_block, "x", tgt_pose_bottom.x)
-        full_state.set(self._tgt_block, "y", tgt_pose_bottom.y)
-        full_state.set(self._tgt_block, "theta", target_theta)
-
-        full_state.set(self._robot, "x", robot_pose.x)
-        full_state.set(self._robot, "y", robot_pose.y)
-        full_state.set(self._robot, "theta", robot_pose.theta)
-
-        # Check collision
-        moving_objects = {self._robot, self._tgt_block, self._tgt_surface}
-        static_objects = set(full_state) - moving_objects
-        collision = state_2d_has_collision(
-            full_state, moving_objects, static_objects, {}
-        )
-        if collision:
-            raise TrajectorySamplingFailure(
-                "Failed to find a collision-free path to target."
-            )
-
+        # IMPORTANT - Do not check if target pose is collision-free
         # Simple waypoint generation
         final_waypoints: list[tuple[SE2Pose, float]] = []
         final_waypoints.append((robot_pose, robot_arm_joint))
         return final_waypoints
 
 
-class GroundPushController(Dynamic2dRobotController):
+class GroundMoveFromTgtSurfaceController(Dynamic2dRobotController):
     """Controller for moving the robot to a desired location while pushing objects along
     the way."""
 
@@ -415,7 +390,6 @@ class GroundPushController(Dynamic2dRobotController):
         init_constant_state: Optional[ObjectCentricState] = None,
     ) -> None:
         super().__init__(objects, action_space, init_constant_state)
-        self._block = objects[1]
         self._action_space = action_space
         env_config = DynObstruction2DEnvConfig()
         self.world_x_min = env_config.world_min_x + env_config.robot_base_radius
@@ -526,13 +500,13 @@ def create_lifted_controllers(
         def __init__(self, objects):
             super().__init__(objects, action_space, init_constant_state)
 
-    class MoveToTgtController(GroundMoveToController):
+    class MoveToTgtSurfaceController(GroundMoveToTgtSurfaceController):
         """Controller for moving the robot to the target region."""
 
         def __init__(self, objects):
             super().__init__(objects, action_space, init_constant_state)
 
-    class PushController(GroundPushController):
+    class MoveFromTgtSurfaceController(GroundMoveFromTgtSurfaceController):
         """Controller for robot to push objects on the way to the target region."""
 
         def __init__(self, objects):
@@ -552,7 +526,7 @@ def create_lifted_controllers(
     )
 
     place_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
-        [robot, target_block], PlaceController, place_params_space
+        [robot, target_block, target_surface], PlaceController, place_params_space
     )
 
     pick_obstruction_controller: LiftedParameterizedController = (
@@ -574,23 +548,15 @@ def create_lifted_controllers(
     move_to_tgt_controller: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, target_block, target_surface],
-            MoveToTgtController,
+            MoveToTgtSurfaceController,
             move_to_params_space,
         )
     )
 
-    push_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
+    move_from_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
         [robot, target_block],
-        PushController,
+        MoveFromTgtSurfaceController,
         push_params_space,
-    )
-
-    push_obstruction_controller: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, obstruction],
-            PushController,
-            push_params_space,
-        )
     )
 
     return {
@@ -599,6 +565,5 @@ def create_lifted_controllers(
         "pick_obstruction": pick_obstruction_controller,
         "place_obstruction": place_obstruction_controller,
         "move_to_tgt": move_to_tgt_controller,
-        "push_tgt": push_tgt_controller,
-        "push_obstruction": push_obstruction_controller,
+        "move_from_tgt": move_from_tgt_controller,
     }

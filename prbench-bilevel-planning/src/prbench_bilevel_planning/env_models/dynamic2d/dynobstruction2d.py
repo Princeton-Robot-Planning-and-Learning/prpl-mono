@@ -1,6 +1,5 @@
 """Bilevel planning models for the dynamic obstruction 2D environment."""
 
-import numpy as np
 from bilevel_planning.structs import (
     LiftedSkill,
     RelationalAbstractGoal,
@@ -14,13 +13,16 @@ from prbench.envs.dynamic2d.dyn_obstruction2d import (
     TargetBlockType,
     TargetSurfaceType,
 )
-from prbench.envs.geom2d.object_types import CRVRobotType, RectangleType
-from prbench.envs.geom2d.utils import (
-    CRVRobotActionSpace,
-    get_suctioned_objects,
+from prbench.envs.dynamic2d.object_types import KinRobotType, DynRectangleType
+from prbench.envs.dynamic2d.utils import (
+    KinRobotActionSpace,
+)
+
+from prbench.envs.geom2d.utils import(
     is_on,
 )
-from prbench_models.dynamic2d.dynobstruction2d import (
+
+from prbench_models.dynamic2d.dynobstruction2d.parameterized_skills import (
     create_lifted_controllers,
 )
 from relational_structs import (
@@ -39,57 +41,59 @@ def create_bilevel_planning_models(
 ) -> SesameModels:
     """Create the env models for dynamic obstruction 2D."""
     assert isinstance(observation_space, ObjectCentricBoxSpace)
-    assert isinstance(action_space, CRVRobotActionSpace)
+    assert isinstance(action_space, KinRobotActionSpace)
 
     sim = ObjectCentricDynObstruction2DEnv(num_obstructions=num_obstructions)
 
     # Convert observations into states. The important thing is that states are hashable.
-    def observation_to_state(o: NDArray[np.float32]) -> ObjectCentricState:
+    def observation_to_state(o: NDArray) -> ObjectCentricState:
         """Convert the vectors back into (hashable) object-centric states."""
         return observation_space.devectorize(o)
 
     # Create the transition function.
     def transition_fn(
         x: ObjectCentricState,
-        u: NDArray[np.float32],
+        u: NDArray,
     ) -> ObjectCentricState:
         """Simulate the action."""
         state = x.copy()
-        sim.reset(options={"init_state": state})
+        sim.reset(seed=123)
+        sim._add_state_to_space(state)
         obs, _, _, _, _ = sim.step(u)
         return obs.copy()
 
     # Types.
-    types = {CRVRobotType, RectangleType, TargetBlockType, TargetSurfaceType}
+    types = {KinRobotType, DynRectangleType, TargetBlockType, TargetSurfaceType}
 
     # Create the state space.
     state_space = ObjectCentricStateSpace(types)
 
     # Predicates.
-    HoldingTgt = Predicate("HoldingTgt", [CRVRobotType, TargetBlockType])
-    HoldingObstruction = Predicate("HoldingObstruction", [CRVRobotType, RectangleType])
-    HandEmpty = Predicate("HandEmpty", [CRVRobotType])
-    OnTgtSurface = Predicate("Inside", [TargetBlockType, TargetSurfaceType])
-    predicates = {HoldingTgt, HoldingObstruction, HandEmpty, OnTgtSurface}
+    HoldingTgt = Predicate("HoldingTgt", [KinRobotType, TargetBlockType])
+    HoldingObstruction = Predicate("HoldingObstruction", [KinRobotType, DynRectangleType])
+    HandEmpty = Predicate("HandEmpty", [KinRobotType])
+    OnTgtSurface = Predicate("OnTgt", [TargetBlockType, TargetSurfaceType])
+    AboveTgtSurface = Predicate("AboveTgt", [KinRobotType])
+    predicates = {HoldingTgt, HoldingObstruction, HandEmpty, OnTgtSurface, AboveTgtSurface}
 
     # State abstractor.
     def state_abstractor(x: ObjectCentricState) -> RelationalAbstractState:
         """Get the abstract state for the current state."""
-        robot = x.get_objects(CRVRobotType)[0]
+        robot = x.get_objects(KinRobotType)[0]
         target_block = x.get_objects(TargetBlockType)[0]
         target_surface = x.get_objects(TargetSurfaceType)[0]
-        obstructions = x.get_objects(RectangleType)
+        obstructions = x.get_objects(DynRectangleType)
+
         atoms: set[GroundAtom] = set()
-        # Add holding / handempty atoms.
-        suctioned_objs = {o for o, _ in get_suctioned_objects(x, robot)}
+
         # Check what the robot is holding
-        if target_block in suctioned_objs:
+        if x.get(target_block, "held"):
             atoms.add(GroundAtom(HoldingTgt, [robot, target_block]))
         else:
             # Check if holding any obstruction
             held_obstruction = None
             for obstruction in obstructions:
-                if obstruction in suctioned_objs:
+                if x.get(obstruction, "held"):
                     held_obstruction = obstruction
                     break
 
@@ -98,11 +102,17 @@ def create_bilevel_planning_models(
             else:
                 atoms.add(GroundAtom(HandEmpty, [robot]))
 
-        # Add inside atom
+        # Add on atom
         if is_on(x, target_block, target_surface, {}):
             atoms.add(GroundAtom(OnTgtSurface, [target_block, target_surface]))
 
-        objects = {robot, target_block} | set(obstructions)
+        # Add above atom
+        robot_x = x.get(robot, "x")
+        target_surface_x = x.get(target_surface, "x")
+        if abs(robot_x - target_surface_x) < 0.01:
+            atoms.add(GroundAtom(AboveTgtSurface, [robot]))
+
+        objects = {robot, target_block, target_surface} | set(obstructions)
         return RelationalAbstractState(atoms, objects)
 
     # Goal abstractor.
@@ -114,10 +124,10 @@ def create_bilevel_planning_models(
         return RelationalAbstractGoal(atoms, state_abstractor)
 
     # Operators.
-    robot = Variable("?robot", CRVRobotType)
+    robot = Variable("?robot", KinRobotType)
     target_block = Variable("?target_block", TargetBlockType)
     target_surface = Variable("?target_surface", TargetSurfaceType)
-    obstruction = Variable("?obstruction", RectangleType)
+    obstruction = Variable("?obstruction", DynRectangleType)
 
     PickTgtOperator = LiftedOperator(
         "PickTgt",
@@ -132,8 +142,18 @@ def create_bilevel_planning_models(
         [robot, target_block, target_surface],
         preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
         add_effects={
-            LiftedAtom(OnTgtSurface, [target_block, target_surface]),
             LiftedAtom(HandEmpty, [robot]),
+        },
+        delete_effects={LiftedAtom(HoldingTgt, [robot, target_block])},
+    )
+
+    PlaceTgtOnSurfaceOperator = LiftedOperator(
+        "PlaceTgtOnSurface",
+        [robot, target_block, target_surface],
+        preconditions={LiftedAtom(AboveTgtSurface, [robot]), LiftedAtom(HoldingTgt, [robot, target_block])},
+        add_effects={
+            LiftedAtom(HandEmpty, [robot]),
+            LiftedAtom(OnTgtSurface, [target_block, target_surface])
         },
         delete_effects={LiftedAtom(HoldingTgt, [robot, target_block])},
     )
@@ -154,23 +174,40 @@ def create_bilevel_planning_models(
         delete_effects={LiftedAtom(HoldingObstruction, [robot, obstruction])},
     )
 
-    # TODO
-    PushOperator = LiftedOperator(
-        "Push",
-        [robot, target_block],
-        preconditions={LiftedAtom(HoldingObstruction, [robot, obstruction])},
-        add_effects={LiftedAtom(HandEmpty, [robot])},
-        delete_effects={LiftedAtom(HoldingObstruction, [robot, obstruction])},
+    MoveToTgtHeldOperator = LiftedOperator(
+        "MoveToTargetHeld",
+        [robot, target_block, target_surface],
+        preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
+        add_effects=set(),
+        delete_effects=set(),
     )
 
-    # TODO
-    MoveToOperator = LiftedOperator(
-        "MoveTo",
-        [robot, target_block],
-        preconditions={LiftedAtom(HoldingObstruction, [robot, obstruction])},
-        add_effects={LiftedAtom(HandEmpty, [robot])},
-        delete_effects={LiftedAtom(HoldingObstruction, [robot, obstruction])},
+    MoveToTgtEmptyOperator = LiftedOperator(
+        "MoveToTargetEmpty",
+        [robot, target_block, target_surface],
+        preconditions={LiftedAtom(HandEmpty, [robot])},
+        add_effects=set(),
+        delete_effects=set(),
     )
+
+    MoveFromTgtHeldOperator = LiftedOperator(
+        "MoveFromTgtHeld",
+        [robot, target_block],
+        preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
+        add_effects=set(),
+        delete_effects=set(),
+    )
+
+    MoveFromTgtEmptyOperator = LiftedOperator(
+        "MoveFromTgtEmpty",
+        [robot, target_block],
+        preconditions={LiftedAtom(HandEmpty, [robot])},
+        add_effects=set(),
+        delete_effects=set(),
+    )
+
+    # two push operators (one onto surface and off surface)
+    # push whne holding and when not
 
     # Get lifted controllers from prbench_models
     lifted_controllers = create_lifted_controllers(
@@ -181,8 +218,7 @@ def create_bilevel_planning_models(
     PlaceObstructionController = lifted_controllers["place_obstruction"]
     PlaceTgtController = lifted_controllers["place_tgt"]
     MoveToTgtController = lifted_controllers["move_to_tgt"]
-    PushTgtController = lifted_controllers["push_tgt"]
-    PushObstructionController = lifted_controllers["push_obstruction"]
+    MoveFromTgtController = lifted_controllers["move_from_tgt"]
 
     # Finalize the skills.
     skills = {
@@ -190,9 +226,11 @@ def create_bilevel_planning_models(
         LiftedSkill(PickObstructionOperator, PickObstructionController),
         LiftedSkill(PlaceObstructionOperator, PlaceObstructionController),
         LiftedSkill(PlaceTgtOperator, PlaceTgtController),
-        LiftedSkill(MoveToOperator, MoveToTgtController),
-        LiftedSkill(PushOperator, PushTgtController),
-        LiftedSkill(PushOperator, PushObstructionController)
+        LiftedSkill(PlaceTgtOnSurfaceOperator, PlaceTgtController),
+        LiftedSkill(MoveToTgtHeldOperator, MoveToTgtController),
+        LiftedSkill(MoveToTgtEmptyOperator, MoveToTgtController),
+         LiftedSkill(MoveFromTgtHeldOperator, MoveFromTgtController),
+        LiftedSkill(MoveFromTgtEmptyOperator, MoveFromTgtController),
     }
 
     # Finalize the models.
