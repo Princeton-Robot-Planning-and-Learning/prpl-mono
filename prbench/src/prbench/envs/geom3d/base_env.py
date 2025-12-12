@@ -454,7 +454,7 @@ class ObjectCentricGeom3DRobotEnv(
         ):
             return True
         if not self.config.check_base_collisions:
-            return True
+            return False
         return check_mobile_base_collisions(
             self.robot.base,
             collision_bodies,
