@@ -373,6 +373,26 @@ class ObjectCentricGeom3DRobotEnv(
                         break
                     next_finger_state = current_finger_state + 1e-2
                     self._robot_arm.set_finger_state(next_finger_state)
+                # Handle the edge case where the robot fingers penetrate the table as
+                # the fingers close to grasp the object. This can happen with a gripper
+                # that is not just a parallel jaw but has additional DOFs (robotiq).
+                # Do not check collision with the tentatively held object.
+                collision_bodies = self._get_collision_object_ids()
+                collision_bodies -= {self._grasped_object_id}
+                if check_collisions_with_held_object(
+                    self.robot.arm,
+                    collision_bodies,
+                    self.physics_client_id,
+                    held_object=None,
+                    base_link_to_held_obj=self._grasped_object_transform,
+                    joint_state=self.robot.arm.get_joint_positions(),
+                ):
+                    # Revert!
+                    self._grasped_object = None
+                    self._grasped_object_transform = None
+                    self._set_robot_and_held_object(
+                        current_base_pose, current_joints, current_finger_state
+                    )
 
         # Check for ungrasping.
         elif gripper_action == "open" and self._grasped_object_id is not None:
