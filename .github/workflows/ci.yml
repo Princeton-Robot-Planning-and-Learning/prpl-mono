@@ -10,14 +10,40 @@ env:
   UV_NO_CACHE: "1"
   PIP_NO_CACHE_DIR: "1"
 
+  # If anything tries to download HF models/datasets, keep them off the workspace
+  HF_HOME: ${{ runner.temp }}/hf
+  TRANSFORMERS_CACHE: ${{ runner.temp }}/hf/transformers
+  HUGGINGFACE_HUB_CACHE: ${{ runner.temp }}/hf/hub
+
 jobs:
   autoformat:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Disk status (before)
+        run: |
+          df -h
+          du -h -d 2 . | sort -h | tail -n 50 || true
+          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
+
       - uses: ./.github/actions/setup
+
       - name: Run autoformat
         run: uv run ./run_in_all_packages.sh "./run_autoformat.sh"
+
+      - name: Cleanup (always)
+        if: always()
+        run: |
+          rm -rf .mypy_cache .pytest_cache || true
+          rm -rf ~/.cache/uv ~/.cache/pip || true
+
+      - name: Disk status (after)
+        if: always()
+        run: |
+          df -h
+          du -h -d 2 . | sort -h | tail -n 50 || true
+          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
 
   linting:
     runs-on: ubuntu-latest
@@ -26,20 +52,63 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
+
       - uses: actions/checkout@v4
+
+      - name: Disk status (before)
+        run: |
+          df -h
+          du -h -d 2 . | sort -h | tail -n 50 || true
+          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
+
       - uses: ./.github/actions/setup
+
       - name: Lint
         run: |
           uv run ./run_in_all_packages.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc -p no:cacheprovider"
+
+      - name: Cleanup (always)
+        if: always()
+        run: |
+          rm -rf .mypy_cache .pytest_cache || true
+          rm -rf ~/.cache/uv ~/.cache/pip || true
+
+      - name: Disk status (after)
+        if: always()
+        run: |
+          df -h
+          du -h -d 2 . | sort -h | tail -n 50 || true
+          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
 
   static-type-checking:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Disk status (before)
+        run: |
+          df -h
+          du -h -d 2 . | sort -h | tail -n 50 || true
+          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
+
       - uses: ./.github/actions/setup
+
       - name: Mypy
         run: |
           uv run ./run_in_all_packages.sh "mypy . --no-incremental"
+
+      - name: Cleanup (always)
+        if: always()
+        run: |
+          rm -rf .mypy_cache .pytest_cache || true
+          rm -rf ~/.cache/uv ~/.cache/pip || true
+
+      - name: Disk status (after)
+        if: always()
+        run: |
+          df -h
+          du -h -d 2 . | sort -h | tail -n 50 || true
+          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -48,11 +117,33 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
+
       - uses: actions/checkout@v4
+
+      - name: Disk status (before)
+        run: |
+          df -h
+          du -h -d 2 . | sort -h | tail -n 50 || true
+          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
+
       - uses: ./.github/actions/setup
+
       - name: Pytest
         env:
           MUJOCO_GL: "osmesa"
           PYOPENGL_PLATFORM: ""
         run: |
           uv run ./run_in_all_packages.sh "pytest --cache-clear tests/"
+
+      - name: Cleanup (always)
+        if: always()
+        run: |
+          rm -rf .mypy_cache .pytest_cache || true
+          rm -rf ~/.cache/uv ~/.cache/pip || true
+
+      - name: Disk status (after)
+        if: always()
+        run: |
+          df -h
+          du -h -d 2 . | sort -h | tail -n 50 || true
+          du -h -d 2 ~/.cache | sort -h | tail -n 50 || true
