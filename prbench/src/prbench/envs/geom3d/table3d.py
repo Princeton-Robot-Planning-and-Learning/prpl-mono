@@ -6,6 +6,7 @@ There may be other obstructing objects in the environment.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 from typing import Type as TypingType
 
 import numpy as np
@@ -47,8 +48,6 @@ class Table3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     # Blocks.
     block_size: float = 0.05  # cubes (height = width = length)
     block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
-
-    # min_placement_dist: float = 0.02
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -147,16 +146,6 @@ class Table3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
         return self._sample_block_on_block_pose(
             block_half_extents, self.table_half_extents, self.table_pose, rng
-        )
-
-    def get_target_block_half_extents(
-        self, target_region_half_extents: tuple[float, float, float]
-    ) -> tuple[float, float, float]:
-        """Calculate the target block half extents based on the target region."""
-        return (
-            self.target_block_size_scale * target_region_half_extents[0],
-            self.target_block_size_scale * target_region_half_extents[1],
-            self.target_block_height,
         )
 
 

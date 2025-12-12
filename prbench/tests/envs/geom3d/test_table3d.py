@@ -42,7 +42,7 @@ def test_base_table3d_env():
 def test_pick_place_after_moving():
     """Test moving in front of a block, picking it up, and placing it."""
     # Create the real environment.
-    env = Table3DEnv(num_cubes=2, use_gui=True, render_mode="rgb_array")
+    env = Table3DEnv(num_cubes=2, use_gui=False, render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
     if MAKE_VIDEOS:
@@ -171,7 +171,10 @@ def test_pick_place_after_moving():
         (
             current_end_effector_pose.position[0] + 0.1,
             current_end_effector_pose.position[1],
-            obs.get_cuboid_pose("table").position[2] + config.table_half_extents[2]/2 + obs.get_cuboid_half_extents("cube1")[2] + 0.01,
+            obs.get_cuboid_pose("table").position[2]
+            + config.table_half_extents[2] / 2
+            + obs.get_cuboid_half_extents("cube1")[2]
+            + 0.01,
         ),
         current_end_effector_pose.orientation,
     )
@@ -201,10 +204,14 @@ def test_pick_place_after_moving():
 
     # Debug: Check if cube is close to table
     sim.set_state(obs)
-    cube_id = sim._cubes["cube1"]
-    surface_supports = sim._get_surfaces_supporting_object(cube_id)
+    cube_id = sim._cubes["cube1"]  # pylint: disable=protected-access
+    # fmt: off
+    surface_supports = sim._get_surfaces_supporting_object(  # pylint: disable=protected-access
+        cube_id
+    )
+    # fmt: on
     print(f"Surface supports: {surface_supports}")  # Should not be empty!
-    
+
     # Step 6: Open the gripper to place the cube
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
