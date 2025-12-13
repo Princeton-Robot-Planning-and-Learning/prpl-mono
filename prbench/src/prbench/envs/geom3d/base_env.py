@@ -96,6 +96,87 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
             "camera_pitch": -20,
         }
 
+    def _sample_block_on_block_pose(
+        self,
+        top_block_half_extents: tuple[float, float, float],
+        bottom_block_half_extents: tuple[float, float, float],
+        bottom_block_pose: Pose,
+        rng: np.random.Generator,
+    ) -> Pose:
+        """Sample one block pose on top of another one, with no hanging allowed."""
+        assert np.allclose(
+            bottom_block_pose.orientation, (0, 0, 0, 1)
+        ), "Not implemented"
+
+        lb = (
+            bottom_block_pose.position[0]
+            - bottom_block_half_extents[0]
+            + top_block_half_extents[0],
+            bottom_block_pose.position[1]
+            - bottom_block_half_extents[1]
+            + top_block_half_extents[1],
+            bottom_block_pose.position[2]
+            + bottom_block_half_extents[2]
+            + top_block_half_extents[2],
+        )
+
+        ub = (
+            bottom_block_pose.position[0]
+            + bottom_block_half_extents[0]
+            - top_block_half_extents[0],
+            bottom_block_pose.position[1]
+            + bottom_block_half_extents[1]
+            - top_block_half_extents[1],
+            bottom_block_pose.position[2]
+            + bottom_block_half_extents[2]
+            + top_block_half_extents[2],
+        )
+
+        x, y, z = rng.uniform(lb, ub)
+
+        return Pose((x, y, z))
+
+    def _sample_block_on_block_pose_with_overhang(
+        self,
+        top_block_half_extents: tuple[float, float, float],
+        bottom_block_half_extents: tuple[float, float, float],
+        bottom_block_pose: Pose,
+        rng: np.random.Generator,
+        allowed_overhang_fraction: float = 0.25,
+    ) -> Pose:
+        """Sample one block pose on top of another one, where hanging is allowed."""
+        assert np.allclose(
+            bottom_block_pose.orientation, (0, 0, 0, 1)
+        ), "Not implemented"
+
+        lb = (
+            bottom_block_pose.position[0]
+            - bottom_block_half_extents[0]
+            - top_block_half_extents[0] * allowed_overhang_fraction,
+            bottom_block_pose.position[1]
+            - bottom_block_half_extents[1]
+            - top_block_half_extents[1] * allowed_overhang_fraction,
+            bottom_block_pose.position[2]
+            + bottom_block_half_extents[2]
+            + top_block_half_extents[2],
+        )
+
+        ub = (
+            bottom_block_pose.position[0]
+            + bottom_block_half_extents[0]
+            + top_block_half_extents[0] * allowed_overhang_fraction,
+            bottom_block_pose.position[1]
+            + bottom_block_half_extents[1]
+            + top_block_half_extents[1] * allowed_overhang_fraction,
+            bottom_block_pose.position[2]
+            + bottom_block_half_extents[2]
+            + top_block_half_extents[2],
+        )
+
+        x, y, z = rng.uniform(lb, ub)
+
+        return Pose((x, y, z))
+
 
 # Subclasses may extend the state.
 _ObsType = TypeVar("_ObsType", bound=Geom3DObjectCentricState)
