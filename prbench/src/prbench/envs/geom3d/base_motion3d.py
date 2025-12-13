@@ -30,6 +30,7 @@ class BaseMotion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Robot.
     robot_name: str = "tidybot-kinova"
+    check_base_collisions: bool = True
 
     # Target.
     target_radius: float = 0.01
