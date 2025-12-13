@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from typing import Optional
 
@@ -60,6 +61,7 @@ def run_fastdownward_planning(
     problem_str: str,
     alias: Optional[str] = "lama-first",
     search: Optional[str] = None,
+    timeout: Optional[int] = None,
 ) -> Optional[list[str]]:
     """Find a plan with fast downward.
 
@@ -99,8 +101,10 @@ def run_fastdownward_planning(
         search_flag = ""
     fd_exec_path = os.environ["FD_EXEC_PATH"]
     exec_str = os.path.join(fd_exec_path, "fast-downward.py")
+    timeout_cmd = "gtimeout" if sys.platform == "darwin" else "timeout"
+    timeout_str = f"{timeout_cmd} {timeout} " if timeout is not None else ""
     cmd_str = (
-        f'"{exec_str}" {alias_flag} '
+        f'{timeout_str}"{exec_str}" {alias_flag} '
         f"--sas-file {sas_file} "
         f'"{domain_file}" "{problem_file}" '
         f"{search_flag}"
