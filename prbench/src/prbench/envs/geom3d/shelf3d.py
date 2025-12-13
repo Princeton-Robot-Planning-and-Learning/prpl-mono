@@ -1,4 +1,5 @@
-"""PyBullet environment where an object must be picked from the ground and placed on a shelf.
+"""PyBullet environment where an object must be picked from the ground and placed on a
+shelf.
 
 There may be other obstructing objects in the environment.
 """
@@ -94,7 +95,8 @@ class Shelf3DObjectCentricState(Geom3DObjectCentricState):
 class ObjectCentricShelf3DEnv(
     ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Shelf3DEnvConfig]
 ):
-    """PyBullet environment where an object must be picked from the ground and placed on a shelf.
+    """PyBullet environment where an object must be picked from the ground and placed on
+    a shelf.
 
     There may be other obstructing objects in the environment.
     """
@@ -245,9 +247,7 @@ class Shelf3DEnv(ConstantObjectPRBenchEnv):
 
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
-        return (
-            """A 3D environment where the goal is to pick up a cube from the ground and place it on a shelf."""
-        )
+        return """A 3D environment where the goal is to pick up a cube from the ground and place it on a shelf."""
 
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""
