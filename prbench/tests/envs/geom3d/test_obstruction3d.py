@@ -43,7 +43,10 @@ def test_obstruction3d_env():
 def test_pick_place_no_obstructions():
     """Test that picking and placing succeeds when there are no obstructions."""
     # Create the real environment.
-    env = Obstruction3DEnv(num_obstructions=0, use_gui=False, render_mode="rgb_array")
+    config = Obstruction3DEnvConfig(target_block_height=0.01)
+    env = Obstruction3DEnv(
+        num_obstructions=0, config=config, use_gui=False, render_mode="rgb_array"
+    )
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
     if MAKE_VIDEOS:
@@ -66,7 +69,7 @@ def test_pick_place_no_obstructions():
 
     # First, move to pre-grasp pose (top-down).
     x, y, z = obs.target_block_pose.position
-    dz = 0.025
+    dz = 0.035
     pre_grasp_pose = Pose.from_rpy((x, y, z + dz), (np.pi, 0, np.pi / 2))
     joint_plan = run_smooth_motion_planning_to_pose(
         pre_grasp_pose,

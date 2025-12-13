@@ -35,6 +35,7 @@ class MobilePyBulletBase(abc.ABC):
             # We always use reset() rather than let PyBullet physics act on the base.
             useFixedBase=True,
             physicsClientId=self.physics_client_id,
+            flags=p.GEOM_FORCE_CONCAVE_TRIMESH,
         )
 
     @classmethod
