@@ -1,7 +1,6 @@
 """Tests for clutteredstoragel2d.py."""
 
 import numpy as np
-from tests.conftest import MAKE_VIDEOS
 from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 
@@ -11,6 +10,7 @@ from prbench.envs.geom2d.clutteredstorage2d import (
     ShelfType,
     TargetBlockType,
 )
+from tests.conftest import MAKE_VIDEOS
 
 
 def test_object_centric_clutteredstorage2d_env():

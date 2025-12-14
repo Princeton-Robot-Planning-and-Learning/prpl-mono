@@ -1,8 +1,10 @@
 """Blacklist configuration for demo unit tests.
 
-This module defines demos that should be excluded from deterministic replay tests.
-Each entry includes a pattern to match against demo paths and a reason for exclusion.
+This module defines demos that should be excluded from deterministic replay tests. Each
+entry includes a pattern to match against demo paths and a reason for exclusion.
 """
+
+from pathlib import Path
 
 # Blacklist for deterministic demo replay tests
 # Format: {pattern: reason}
@@ -15,7 +17,9 @@ DETERMINISTIC_REPLAY_BLACKLIST = {
 }
 
 
-def is_demo_blacklisted(demo_path: str, blacklist: dict[str, str]) -> tuple[bool, str | None]:
+def is_demo_blacklisted(
+    demo_path: Path, blacklist: dict[str, str]
+) -> tuple[bool, str | None]:
     """Check if a demo path matches any blacklist pattern.
 
     Args:

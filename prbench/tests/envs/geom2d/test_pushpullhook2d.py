@@ -1,11 +1,11 @@
 """Tests for pushpullhook2d.py."""
 
-from tests.conftest import MAKE_VIDEOS
 from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 
 import prbench
 from prbench.envs.geom2d.pushpullhook2d import ObjectCentricPushPullHook2DEnv
+from tests.conftest import MAKE_VIDEOS
 
 
 def test_object_centric_pushpullhook2d_env():

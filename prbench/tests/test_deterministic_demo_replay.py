@@ -27,7 +27,9 @@ def test_deterministic_demo_replay(demo_path: Path):
     prbench.register_all_environments()
 
     # Check if demo is blacklisted
-    is_blacklisted, reason = is_demo_blacklisted(demo_path, DETERMINISTIC_REPLAY_BLACKLIST)
+    is_blacklisted, reason = is_demo_blacklisted(
+        demo_path, DETERMINISTIC_REPLAY_BLACKLIST
+    )
     if is_blacklisted:
         pytest.skip(f"Demo blacklisted: {reason}")
 

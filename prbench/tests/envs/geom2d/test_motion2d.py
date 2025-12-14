@@ -1,12 +1,12 @@
 """Tests for motion2d.py."""
 
 import numpy as np
-from tests.conftest import MAKE_VIDEOS
 from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 
 import prbench
 from prbench.envs.geom2d.motion2d import Motion2DEnvConfig, ObjectCentricMotion2DEnv
+from tests.conftest import MAKE_VIDEOS
 
 prbench.register_all_environments()
 
