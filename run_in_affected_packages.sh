@@ -36,7 +36,34 @@ IFS=' ' read -r -a packages <<< "$affected_packages"
 
 echo "▶ Affected packages (${#packages[@]}): ${packages[*]}"
 echo ""
-echo "▶ Launching commands in parallel..."
+
+# Check if sequential mode is requested
+if [[ "${SEQUENTIAL:-false}" == "true" ]]; then
+  echo "▶ Running in SEQUENTIAL mode (set SEQUENTIAL=false for parallel execution)"
+  echo ""
+
+  # Run command in each affected package sequentially
+  for package in "${packages[@]}"; do
+    package_dir="./$package"
+
+    if [[ -f "$package_dir/pyproject.toml" ]]; then
+      echo "———"
+      echo "▶ Running in: $package_dir"
+      pushd "$package_dir" >/dev/null
+      bash -o pipefail -c "$cmd"
+      popd >/dev/null
+    else
+      echo "⏭ Skipping $package_dir (no pyproject.toml)"
+    fi
+  done
+
+  echo ""
+  echo "✓ Completed running in ${#packages[@]} affected packages"
+  exit 0
+fi
+
+# Parallel mode (default)
+echo "▶ Launching commands in PARALLEL (set SEQUENTIAL=true for sequential execution)"
 echo ""
 
 # Arrays to track background jobs

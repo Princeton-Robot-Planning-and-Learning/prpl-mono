@@ -8,12 +8,33 @@ fi
 
 cmd="$1"
 
+# Check if sequential mode is requested
+if [[ "${SEQUENTIAL:-false}" == "true" ]]; then
+  echo "▶ Running in SEQUENTIAL mode (set SEQUENTIAL=false for parallel execution)"
+  echo ""
+
+  while IFS= read -r -d '' d; do
+    if [[ -f "$d/pyproject.toml" ]]; then
+      echo "———"
+      echo "▶ Running in: $d"
+      pushd "$d" >/dev/null
+      bash -o pipefail -c "$cmd"
+      popd >/dev/null
+    else
+      echo "⏭ Skipping $d (no pyproject.toml)"
+    fi
+  done < <(find . -mindepth 1 -maxdepth 1 -type d -print0)
+
+  exit 0
+fi
+
+# Parallel mode (default)
 # Arrays to track packages and their background jobs
 declare -a packages
 declare -a pids
 declare -a tmpfiles
 
-echo "▶ Launching commands in parallel across all packages..."
+echo "▶ Launching commands in PARALLEL across all packages (set SEQUENTIAL=true for sequential execution)"
 echo ""
 
 # Launch commands in parallel
