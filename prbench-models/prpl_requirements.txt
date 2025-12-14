@@ -2,9 +2,4 @@
 ../relational-structs
 ../bilevel-planning
 ../prbench
-<<<<<<< Updated upstream
-||||||| Stash base
-../prpl_tidybot
-=======
 ../prpl-tidybot
->>>>>>> Stashed changes
