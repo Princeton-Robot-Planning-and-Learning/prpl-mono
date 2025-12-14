@@ -34,7 +34,7 @@ def env():
     environment.close()
 
 
-def test_obstruction3d_env(env):
+def test_obstruction3d_env(env):  # pylint: disable=redefined-outer-name
     """Tests for basic methods in obstruction3d env."""
     obs, _ = env.reset(seed=123)
     assert isinstance(obs, np.ndarray)
@@ -50,7 +50,7 @@ def test_obstruction3d_env(env):
     #     p.getMouseEvents(env._object_centric_env.physics_client_id)
 
 
-def test_pick_place_no_obstructions(env):
+def test_pick_place_no_obstructions(env):  # pylint: disable=redefined-outer-name
     """Test that picking and placing succeeds when there are no obstructions."""
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
@@ -228,9 +228,9 @@ def test_grasp_fails_when_fingers_collide_with_table():
     config = Obstruction3DEnvConfig(
         target_block_height=0.015, target_block_size_scale=0.5
     )
-    env = ObjectCentricObstruction3DEnv(num_obstructions=0, config=config)
+    oc_env = ObjectCentricObstruction3DEnv(num_obstructions=0, config=config)
 
-    obs, _ = env.reset(seed=456)
+    obs, _ = oc_env.reset(seed=456)
 
     # Position the gripper very low (close to the table surface) around the block.
     x, y, _ = obs.target_block_pose.position
@@ -241,20 +241,20 @@ def test_grasp_fails_when_fingers_collide_with_table():
 
     # Use IK to get joint positions for this pose, then directly set the state.
     target_joints = inverse_kinematics(
-        env._robot_arm,  # pylint: disable=protected-access
+        oc_env._robot_arm,  # pylint: disable=protected-access
         low_grasp_pose,
         validate=False,
     )
     assert target_joints is not None
 
     # Directly set robot state to this configuration.
-    env.robot.arm.set_joints(target_joints)
-    env._robot_arm.open_fingers()  # pylint: disable=protected-access
+    oc_env.robot.arm.set_joints(target_joints)
+    oc_env._robot_arm.open_fingers()  # pylint: disable=protected-access
 
     # Attempt to grasp. This should fail because the fingers will collide with
     # the table when they close.
     close_action = np.array([0.0] * 3 + [0.0] * 7 + [-1.0], dtype=np.float32)
-    obs, _, _, _, _ = env.step(close_action)
+    obs, _, _, _, _ = oc_env.step(close_action)
 
     # The grasp should have failed - grasped_object should be None.
     assert obs.grasped_object is None, "Grasp should have failed due to table collision"

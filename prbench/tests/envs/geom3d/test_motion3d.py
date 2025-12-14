@@ -27,7 +27,7 @@ def env():
     environment.close()
 
 
-def test_motion3d_env(env):
+def test_motion3d_env(env):  # pylint: disable=redefined-outer-name
     """Tests for basic methods in motion3D env."""
     obs, _ = env.reset(seed=123)
     assert isinstance(obs, np.ndarray)
@@ -43,7 +43,7 @@ def test_motion3d_env(env):
     #     p.getMouseEvents(env._object_centric_env.physics_client_id)
 
 
-def test_motion_planning_in_motion3d_env(env):
+def test_motion_planning_in_motion3d_env(env):  # pylint: disable=redefined-outer-name
     """Proof of concept that motion planning works in this environment."""
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access

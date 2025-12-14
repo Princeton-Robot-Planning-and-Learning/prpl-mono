@@ -26,7 +26,7 @@ def env():
     environment.close()
 
 
-def test_base_motion3d_env(env):
+def test_base_motion3d_env(env):  # pylint: disable=redefined-outer-name
     """Tests for basic methods in base motion3D env."""
     obs, _ = env.reset(seed=123)
     assert isinstance(obs, np.ndarray)
@@ -42,7 +42,9 @@ def test_base_motion3d_env(env):
     #     p.getMouseEvents(env._object_centric_env.physics_client_id)
 
 
-def test_motion_planning_in_base_motion3d_env(env):
+def test_motion_planning_in_base_motion3d_env(
+    env,
+):  # pylint: disable=redefined-outer-name
     """Proof of concept that motion planning works in this environment."""
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
@@ -85,7 +87,9 @@ def test_motion_planning_in_base_motion3d_env(env):
         assert False, "Plan did not reach goal"
 
 
-def test_check_mobile_base_collisions_is_called(env):
+def test_check_mobile_base_collisions_is_called(
+    env,
+):  # pylint: disable=redefined-outer-name
     """Test that check_mobile_base_collisions is called when there is a collision."""
     env.reset(seed=123)
 
