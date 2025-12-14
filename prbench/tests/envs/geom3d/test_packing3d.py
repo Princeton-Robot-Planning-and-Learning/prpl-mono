@@ -322,5 +322,3 @@ def test_pick_place_on_rack():
     # visualize_pose(end_effector_placement_pose, env.physics_client_id)
     # while True:
     #     p.getMouseEvents(env.physics_client_id)
-
-    env.close()

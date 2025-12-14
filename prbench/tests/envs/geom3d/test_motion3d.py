@@ -1,6 +1,7 @@
 """Tests for motion3d.py."""
 
 import numpy as np
+import pytest
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
 from prpl_utils.utils import wrap_angle
@@ -18,10 +19,16 @@ from prbench.envs.geom3d.motion3d import (
 )
 
 
-def test_motion3d_env():
-    """Tests for basic methods in motion3D env."""
+@pytest.fixture(scope="module")
+def env():
+    """Create a shared environment for all tests in this module."""
+    environment = Motion3DEnv(render_mode="rgb_array", use_gui=False)
+    yield environment
+    environment.close()
 
-    env = Motion3DEnv(use_gui=False)  # set use_gui=True to debug
+
+def test_motion3d_env(env):
+    """Tests for basic methods in motion3D env."""
     obs, _ = env.reset(seed=123)
     assert isinstance(obs, np.ndarray)
 
@@ -36,19 +43,18 @@ def test_motion3d_env():
     #     p.getMouseEvents(env._object_centric_env.physics_client_id)
 
 
-def test_motion_planning_in_motion3d_env():
+def test_motion_planning_in_motion3d_env(env):
     """Proof of concept that motion planning works in this environment."""
-
-    # Create the real environment.
-    env = Motion3DEnv(render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
-    if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos")
 
-    vec_obs, _ = env.reset(seed=123)
+    test_env = env
+    if MAKE_VIDEOS:
+        test_env = RecordVideo(env, "unit_test_videos")
+
+    vec_obs, _ = test_env.reset(seed=123)
     # NOTE: we should soon make this smoother.
-    oc_obs = env.observation_space.devectorize(vec_obs)
+    oc_obs = test_env.observation_space.devectorize(vec_obs)
     obs = Motion3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
@@ -81,18 +87,17 @@ def test_motion_planning_in_motion3d_env():
         joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
 
-    env.action_space.seed(123)
+    test_env.action_space.seed(123)
     for target_joints in joint_plan[1:]:
         delta = np.subtract(target_joints[:7], obs.joint_positions)
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, done, _, _ = env.step(action)
+        vec_obs, _, done, _, _ = test_env.step(action)
         # NOTE: we should soon make this smoother.
-        oc_obs = env.observation_space.devectorize(vec_obs)
+        oc_obs = test_env.observation_space.devectorize(vec_obs)
         obs = Motion3DObjectCentricState(oc_obs.data, oc_obs.type_features)
         if done:
             break
     else:
         assert False, "Plan did not reach goal"
-    env.close()
