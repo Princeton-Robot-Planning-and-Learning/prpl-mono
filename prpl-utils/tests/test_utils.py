@@ -59,6 +59,7 @@ def test_cached_property_until_field_change() -> None:
 
 def test_wrap_angle():
     """Tests for wrap_angle()."""
+    assert False
     assert np.isclose(wrap_angle(0.0), 0.0)
     assert np.isclose(wrap_angle(np.pi / 2), np.pi / 2)
     assert np.isclose(wrap_angle(-np.pi / 2), -np.pi / 2)
