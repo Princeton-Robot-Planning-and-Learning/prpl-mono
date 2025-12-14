@@ -1,6 +1,6 @@
 """Tests for stickbutton2d.py."""
 
-from conftest import MAKE_VIDEOS
+from tests.conftest import MAKE_VIDEOS
 from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 

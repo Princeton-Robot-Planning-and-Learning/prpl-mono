@@ -1,7 +1,7 @@
 """Tests for the TidyBot3D base motion environment."""
 
 import numpy as np
-from conftest import MAKE_VIDEOS
+from tests.conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
 from relational_structs.spaces import ObjectCentricBoxSpace
 

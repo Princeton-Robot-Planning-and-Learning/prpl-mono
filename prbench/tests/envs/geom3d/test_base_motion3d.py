@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from conftest import MAKE_VIDEOS
+from tests.conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
 from pybullet_helpers.motion_planning import (
     run_single_arm_mobile_base_motion_planning,
