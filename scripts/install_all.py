@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install all dependencies."""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,11 +13,16 @@ def install_package(package_path: Path) -> bool:
     """Install a single package quickly with minimal output."""
     if not package_path.exists() or not (package_path / "pyproject.toml").exists():
         return True  # Skip missing packages silently
-    
+
     try:
-        # Install the package in development mode
+        # Install the package (use -e for editable install in development, not in CI)
+        install_cmd = ["uv", "pip", "install"]
+        if not os.environ.get("CI"):
+            install_cmd.append("-e")
+        install_cmd.append(".[develop]")
+
         subprocess.run(
-            ["uv", "pip", "install", "-e", ".[develop]"],
+            install_cmd,
             cwd=package_path,
             check=True,
             capture_output=True,
