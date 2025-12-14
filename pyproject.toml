@@ -9,7 +9,6 @@ members = [
     "bilevel-planning",
     "prbench",
     "prbench-bilevel-planning",
-    "prbench-imitation-learning",
     "prbench-models",
     "prbench-rl",
     "prbench-vlm-planning",
@@ -22,8 +21,8 @@ members = [
     "toms-geoms-2d",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "black",
     "docformatter",
     "isort",
