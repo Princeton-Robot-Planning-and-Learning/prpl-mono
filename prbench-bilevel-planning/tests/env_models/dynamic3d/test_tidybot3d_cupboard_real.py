@@ -11,7 +11,7 @@ from prbench_bilevel_planning.env_models import create_bilevel_planning_models
 prbench.register_all_environments()
 
 
-@pytest.skip(reason="Failure when run in parallel, needs to be investigated")
+@pytest.mark.skip(reason="Failure when run in parallel, needs to be investigated")
 def test_tidybot3d_cupboard_bilevel_planning():
     """Tests for bilevel planning in the TidyBot3D cupboard real environment."""
 
