@@ -6,6 +6,10 @@ env:
   # Tell git/uv to NOT download LFS blobs, just keep pointer files
   GIT_LFS_SKIP_SMUDGE: "1"
 
+  # Prevent caches from filling the runner disk
+  UV_NO_CACHE: "1"
+  PIP_NO_CACHE_DIR: "1"
+
 jobs:
   autoformat:
     runs-on: ubuntu-latest
@@ -26,7 +30,7 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Lint
         run: |
-          uv run ./run_in_all_packages.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
+          uv run ./run_in_all_packages.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc -p no:cacheprovider"
 
   static-type-checking:
     runs-on: ubuntu-latest
@@ -35,7 +39,7 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Mypy
         run: |
-          uv run ./run_in_all_packages.sh "mypy ."
+          uv run ./run_in_all_packages.sh "mypy . --no-incremental"
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -51,4 +55,4 @@ jobs:
           MUJOCO_GL: "osmesa"
           PYOPENGL_PLATFORM: ""
         run: |
-          uv run ./run_in_all_packages.sh "pytest tests/"
+          uv run ./run_in_all_packages.sh "pytest --cache-clear tests/"

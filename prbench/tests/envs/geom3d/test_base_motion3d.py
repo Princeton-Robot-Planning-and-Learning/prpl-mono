@@ -1,5 +1,7 @@
 """Tests for base_motion3d.py."""
 
+from unittest.mock import patch
+
 import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
@@ -67,10 +69,45 @@ def test_motion_planning_in_base_motion3d_env():
         delta_lst = [delta.x, delta.y, delta.rot]
         action_lst = delta_lst + [0.0] * 7 + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, _, done, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = BaseMotion3DObjectCentricState(oc_obs.data, oc_obs.type_features)
-    # else:
-    #     assert False, "Plan did not reach goal"
+        if done:
+            break
+    else:
+        assert False, "Plan did not reach goal"
+    env.close()
+
+
+def test_check_mobile_base_collisions_is_called():
+    """Test that check_mobile_base_collisions is called when there is a collision."""
+    env = BaseMotion3DEnv(use_gui=False)
+    env.reset(seed=123)
+
+    # Patch the check_mobile_base_collisions function
+    with patch(
+        "prbench.envs.geom3d.base_env.check_mobile_base_collisions"
+    ) as mock_check_base:
+        # Set return value to False (no collision)
+        mock_check_base.return_value = False
+
+        # Take an action that moves the base (first 3 elements are base actions)
+        action = np.array([0.01, 0.01, 0.0] + [0.0] * 7 + [0.0], dtype=np.float32)
+        env.step(action)
+
+        # Verify that check_mobile_base_collisions was called
+        assert mock_check_base.called, "check_mobile_base_collisions should be called"
+
+        # Verify it was called with the correct arguments
+        assert mock_check_base.call_count >= 1
+        call_args = mock_check_base.call_args
+        assert call_args is not None
+
+        # Verify the robot base was passed as the first argument
+        assert (
+            call_args[0][0]
+            == env._object_centric_env.robot.base  # pylint: disable=protected-access
+        )
+
     env.close()
