@@ -33,7 +33,7 @@ class SingleArmPyBulletRobot(abc.ABC):
         self,
         physics_client_id: int,
         base_pose: Pose = Pose.identity(),
-        control_mode: str = "position",
+        control_mode: str = "reset",
         home_joint_positions: JointPositions | None = None,
         fixed_base: bool = True,
         custom_urdf_path: Path | None = None,
