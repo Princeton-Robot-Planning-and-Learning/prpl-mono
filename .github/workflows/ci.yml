@@ -26,14 +26,14 @@ jobs:
   linting:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Cache apt packages
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
           packages: liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
           version: 1.0
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Lint
         run: |
@@ -53,14 +53,14 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Cache apt packages
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
           packages: liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
           version: 1.0
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Pytest
         env:
