@@ -179,8 +179,8 @@ def iter_traj_with_max_distance(
     include_start: bool = True,
     include_end: bool = True,
 ) -> Iterator[TrajectoryPoint]:
-    """Iterate through the trajectory while guaranteeing that the distance in
-    each step is no more than the given max distance."""
+    """Iterate through the trajectory while guaranteeing that the distance in each step
+    is no more than the given max distance."""
     num_steps = int(np.ceil(traj.distance / max_distance)) + 1
     ts = np.linspace(0, traj.duration, num=num_steps, endpoint=True)
     if not include_start:

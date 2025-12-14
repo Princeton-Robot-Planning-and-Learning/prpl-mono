@@ -1,9 +1,8 @@
-"""This module wraps around IKFast so we can run inverse kinematics for our
-desired pose.
+"""This module wraps around IKFast so we can run inverse kinematics for our desired
+pose.
 
-The code here is based off the pybullet-planning repository by Caelan
-Garrett, but has been heavily modified and simplified to suit our more
-minimal use case.
+The code here is based off the pybullet-planning repository by Caelan Garrett, but has
+been heavily modified and simplified to suit our more minimal use case.
 
 https://github.com/caelan/pybullet-planning/blob/master/pybullet_tools/ikfast/ikfast.py
 """
@@ -60,11 +59,11 @@ def violates_joint_limits(
 
 
 def get_ordered_ancestors(robot: SingleArmPyBulletRobot, link: int) -> list[int]:
-    """Get the ancestors of the given link in order from ancestor to the given
-    link itself.
+    """Get the ancestors of the given link in order from ancestor to the given link
+    itself.
 
-    The returned link ordering excludes the base link, but includes the
-    given link as the last element.
+    The returned link ordering excludes the base link, but includes the given link as
+    the last element.
     """
     ikfast_info = robot.ikfast_info()
     if ikfast_info is None:
@@ -96,8 +95,8 @@ def get_base_from_ee(
     robot: SingleArmPyBulletRobot,
     world_from_target: Pose,
 ) -> Pose:
-    """Transform the target tool link pose from the world frame into the pose
-    of the end-effector link in the base link frame."""
+    """Transform the target tool link pose from the world frame into the pose of the
+    end-effector link in the base link frame."""
     ikfast_info = robot.ikfast_info()
     if ikfast_info is None:
         # Keep mypy happy
@@ -166,16 +165,16 @@ def free_joints_generator(
     max_distance: float,
     rng: np.random.Generator,
 ) -> Iterator[JointPositions | np.ndarray]:
-    """A generator that samples joint positions for free joints in the given
-    robot that are within the joint limits.
+    """A generator that samples joint positions for free joints in the given robot that
+    are within the joint limits.
 
-    The current joint positions of the robots will be used in
-    conjunction with max_distance to constrain the 'distance' of the
-    sampled free joints from their current positions.
+    The current joint positions of the robots will be used in conjunction with
+    max_distance to constrain the 'distance' of the sampled free joints from their
+    current positions.
 
-    This function yields the joint positions as a list of floats or a
-    numpy array (due to sampling). We avoid converting the numpy array
-    to a list to avoid unnecessary computation and memory.
+    This function yields the joint positions as a list of floats or a numpy array (due
+    to sampling). We avoid converting the numpy array to a list to avoid unnecessary
+    computation and memory.
     """
     free_joints = [joint_info.jointIndex for joint_info in free_joint_infos]
     current_positions = get_joint_positions(
@@ -225,12 +224,11 @@ def ikfast_inverse_kinematics(
     norm: float,
     rng: np.random.Generator,
 ) -> Iterator[JointPositions]:
-    """Run IKFast to compute joint positions for given target pose specified in
-    the world frame.
+    """Run IKFast to compute joint positions for given target pose specified in the
+    world frame.
 
-    Note that this will automatically compile IKFast for the given robot
-    if it hasn't been compiled already when this function is called for
-    the first time.
+    Note that this will automatically compile IKFast for the given robot if it hasn't
+    been compiled already when this function is called for the first time.
     """
     ikfast_info = robot.ikfast_info()
     if ikfast_info is None:
@@ -291,8 +289,8 @@ def ikfast_closest_inverse_kinematics(
     seed: int = 0,
     hyperparameters: IKFastHyperparameters | None = None,
 ) -> list[JointPositions]:
-    """Runs IKFast and returns the solutions sorted in order of closest
-    distance to the robot's current joint positions.
+    """Runs IKFast and returns the solutions sorted in order of closest distance to the
+    robot's current joint positions.
 
     Parameters
     ----------
