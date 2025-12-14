@@ -47,8 +47,8 @@ def test_get_jointwise_difference():
 
 
 def test_violates_joint_limits_raises_error():
-    """Test violated_joint_limits raises error if length of joint positions
-    doesn't match number of joints."""
+    """Test violated_joint_limits raises error if length of joint positions doesn't
+    match number of joints."""
     joint_infos = 7 * [Mock()]
     with pytest.raises(ValueError):
         violates_joint_limits(joint_infos, [1, 2, 3, 4, 5, 6])
@@ -94,8 +94,7 @@ def test_get_ikfast_joints_raises_error(robot_with_no_ikfast_info):
 
 
 def test_ikfast_inverse_kinematics_raises_error(robot_with_no_ikfast_info):
-    """Test ikfast_inverse_kinematics raises error if no IKFastInfo in
-    robot."""
+    """Test ikfast_inverse_kinematics raises error if no IKFastInfo in robot."""
     with pytest.raises(ValueError):
         rng = np.random.default_rng(123)
         generator = ikfast_inverse_kinematics(
@@ -111,8 +110,8 @@ def test_ikfast_inverse_kinematics_raises_error(robot_with_no_ikfast_info):
 
 
 def test_ikfast_closest_inverse_kinematics_raises_error():
-    """Test ikfast_closest_inverse_kinematics raises error if max time,
-    candidates or attempts is infinite."""
+    """Test ikfast_closest_inverse_kinematics raises error if max time, candidates or
+    attempts is infinite."""
     hyperparameters = IKFastHyperparameters(
         max_time=np.inf, max_attempts=np.inf, max_candidates=np.inf
     )

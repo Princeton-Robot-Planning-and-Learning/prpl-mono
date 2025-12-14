@@ -35,9 +35,8 @@ class SynthesizedPythonFunctionRunError(Exception):
 class SynthesizedPythonFunction:
     """Wraps a piece of Python code that contains a function with a given name.
 
-    The typical flow is that an LLM outputs the code as a string, then
-    we create one of these class instances, then invoke the function by
-    calling run().
+    The typical flow is that an LLM outputs the code as a string, then we create one of
+    these class instances, then invoke the function by calling run().
 
     If timeout is exceeded on run() call, a TimeoutError is raised.
     """
@@ -218,8 +217,8 @@ def find_undefined_names(source: str, *, provided_globals=None):
 
 
 class SemanticsPythonRepromptCheck(RepromptCheck):
-    """Check whether the python_stub field contains valid, executable Python
-    code that meets the required syntax and execution constraints."""
+    """Check whether the python_stub field contains valid, executable Python code that
+    meets the required syntax and execution constraints."""
 
     def get_reprompt(
         self, query: Query, response: Response, python_stub: str | None = None

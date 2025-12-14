@@ -60,9 +60,9 @@ class RRT(Generic[_RRTState]):
         goal_sampler: Callable[[], _RRTState] | None = None,
         sample_goal_eps: float = 0.0,
     ) -> Optional[list[_RRTState]]:
-        """Query the RRT, to get a collision-free path from start to a point
-        such that goal_fn(point) is True. Uses goal_sampler to sample a target
-        for a direct path or with probability sample_goal_eps.
+        """Query the RRT, to get a collision-free path from start to a point such that
+        goal_fn(point) is True. Uses goal_sampler to sample a target for a direct path
+        or with probability sample_goal_eps.
 
         If none is found, returns None.
         """
@@ -84,8 +84,8 @@ class RRT(Generic[_RRTState]):
     def try_direct_path(
         self, pt1: _RRTState, pt2: _RRTState
     ) -> Optional[list[_RRTState]]:
-        """Attempt to plan a direct path from pt1 to pt2, returning None if
-        collision-free path can be found."""
+        """Attempt to plan a direct path from pt1 to pt2, returning None if collision-
+        free path can be found."""
         path = [pt1]
         for newpt in self._extend_fn(pt1, pt2):
             if self._collision_fn(newpt):

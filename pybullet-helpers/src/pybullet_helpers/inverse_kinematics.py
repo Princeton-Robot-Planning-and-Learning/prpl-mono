@@ -1,7 +1,6 @@
 """Vanilla PyBullet Inverse Kinematics.
 
-The IKFast solver is preferred over PyBullet IK, if available for the
-given robot.
+The IKFast solver is preferred over PyBullet IK, if available for the given robot.
 """
 
 import time
@@ -28,12 +27,12 @@ from pybullet_helpers.joint import (
     get_joints,
 )
 from pybullet_helpers.link import get_link_pose, get_link_state
+from pybullet_helpers.robots.mobile import MobilePyBulletBase
 from pybullet_helpers.robots.single_arm import (
     FingeredSingleArmPyBulletRobot,
     FingerState,
     SingleArmPyBulletRobot,
 )
-from pybullet_helpers.robots.mobile import MobilePyBulletBase
 from pybullet_helpers.utils import get_closest_points_with_optional_links
 
 
@@ -57,9 +56,8 @@ def inverse_kinematics(
     set_joints: bool = True,
     validation_atol: float = 1e-3,
 ) -> JointPositions:
-    """Compute joint positions from a target end effector position, based on
-    the robot's current joint positions. Uses IKFast if the robot has IKFast
-    info specified.
+    """Compute joint positions from a target end effector position, based on the robot's
+    current joint positions. Uses IKFast if the robot has IKFast info specified.
 
     The robot's joint state is updated to the IK result. For convenience,
     the new joint positions are also returned.
@@ -281,12 +279,12 @@ def filter_collision_free_joint_generator(
     held_object: int | None = None,
     base_link_to_held_obj: Pose | None = None,
 ) -> Iterator[JointPositions]:
-    """Given a generator of joint positions, yield only those that pass
-    collision checks.
+    """Given a generator of joint positions, yield only those that pass collision
+    checks.
 
-    The typical use case is that we want to explore the null space of a
-    target end effector position to find joint positions that have no
-    collisions before then calling motion planning.
+    The typical use case is that we want to explore the null space of a target end
+    effector position to find joint positions that have no collisions before then
+    calling motion planning.
     """
 
     _collision_fn = partial(
@@ -338,8 +336,8 @@ def sample_collision_free_inverse_kinematics(
     max_candidates: int = 100,
     norm: float = np.inf,
 ) -> Iterator[JointPositions]:
-    """Sample in joints consistent with the end effector pose that also avoid
-    collisions with the given objects."""
+    """Sample in joints consistent with the end effector pose that also avoid collisions
+    with the given objects."""
 
     if robot.ikfast_info():
         generator = ikfast_inverse_kinematics(
@@ -383,10 +381,9 @@ def pybullet_inverse_kinematics(
 ) -> JointPositions:
     """Runs IK and returns joint positions for the given (free) joints.
 
-    If validate is True, the PyBullet IK solver is called multiple
-    times, resetting the robot state each time, until the target
-    position is reached. If the target position is not reached after a
-    maximum number of iters, an exception is raised.
+    If validate is True, the PyBullet IK solver is called multiple times, resetting the
+    robot state each time, until the target position is reached. If the target position
+    is not reached after a maximum number of iters, an exception is raised.
     """
     if hyperparameters is None:
         hyperparameters = InverseKinematicsHyperparameters()
@@ -501,8 +498,8 @@ def pybullet_inverse_kinematics(
 def end_effector_transform_to_joints(
     robot: SingleArmPyBulletRobot, transform: Pose
 ) -> JointPositions:
-    """Given a transform for the robot's end effectors relative to the current
-    joint state, return a next joint state."""
+    """Given a transform for the robot's end effectors relative to the current joint
+    state, return a next joint state."""
     current_end_effector_pose = robot.get_end_effector_pose()
     next_end_effector_pose = multiply_poses(current_end_effector_pose, transform)
     return inverse_kinematics(robot, next_end_effector_pose, set_joints=False)
@@ -548,8 +545,7 @@ def _validate_joints_state(
 ) -> None:
     """Validate that the given joint positions matches the target pose.
 
-    This method should NOT be used during simulation mode as it resets
-    the joint states.
+    This method should NOT be used during simulation mode as it resets the joint states.
     """
     # Store current joint positions so we can reset.
     initial_joint_states = robot.get_joint_positions()

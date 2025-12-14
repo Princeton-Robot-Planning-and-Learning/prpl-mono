@@ -14,8 +14,8 @@ from pyperplan.planner import HEURISTICS, SEARCHES, search_plan
 def run_pddl_planner(
     domain_str: str, problem_str: str, planner: str = "fd-sat"
 ) -> Optional[list[str]]:
-    """Run a PDDL planner and return a list of ground operators, or None if no
-    plan is found."""
+    """Run a PDDL planner and return a list of ground operators, or None if no plan is
+    found."""
     if planner == "fd-sat":
         return run_fastdownward_planning(domain_str, problem_str, alias="lama-first")
     if planner == "fd-opt":
