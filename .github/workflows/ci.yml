@@ -12,9 +12,6 @@ env:
   # Base SHA for selective testing in PRs
   CI_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
 
-  # Base SHA for selective testing in PRs
-  CI_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
-
 jobs:
   autoformat:
     runs-on: ubuntu-latest
