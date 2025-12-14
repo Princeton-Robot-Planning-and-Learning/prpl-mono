@@ -8,14 +8,74 @@ fi
 
 cmd="$1"
 
+# Arrays to track packages and their background jobs
+declare -a packages
+declare -a pids
+declare -a tmpfiles
+
+echo "▶ Launching commands in parallel across all packages..."
+echo ""
+
+# Launch commands in parallel
 while IFS= read -r -d '' d; do
   if [[ -f "$d/pyproject.toml" ]]; then
-    echo "———"
-    echo "▶ Running in: $d"
-    pushd "$d" >/dev/null
-    bash -o pipefail -c "$cmd"
-    popd >/dev/null
-  else
-    echo "⏭ Skipping $d (no pyproject.toml)"
+    # Create a temporary file to capture output
+    tmpfile=$(mktemp)
+    tmpfiles+=("$tmpfile")
+    packages+=("$d")
+
+    # Run command in background, capturing output
+    (
+      echo "———" > "$tmpfile"
+      echo "▶ Running in: $d" >> "$tmpfile"
+      cd "$d"
+      if bash -o pipefail -c "$cmd" >> "$tmpfile" 2>&1; then
+        echo "✓ Success: $d" >> "$tmpfile"
+        exit 0
+      else
+        echo "✗ Failed: $d" >> "$tmpfile"
+        exit 1
+      fi
+    ) &
+    pids+=($!)
   fi
 done < <(find . -mindepth 1 -maxdepth 1 -type d -print0)
+
+echo "▶ Waiting for ${#packages[@]} packages to complete..."
+echo ""
+
+# Wait for all background jobs and collect exit codes
+declare -a exit_codes
+for pid in "${pids[@]}"; do
+  wait "$pid"
+  exit_codes+=($?)
+done
+
+# Print all outputs in order
+for i in "${!packages[@]}"; do
+  cat "${tmpfiles[$i]}"
+  rm -f "${tmpfiles[$i]}"
+done
+
+echo ""
+echo "▶ Results:"
+
+# Check if any failed
+failed=0
+for i in "${!packages[@]}"; do
+  if [[ ${exit_codes[$i]} -ne 0 ]]; then
+    echo "✗ ${packages[$i]}: FAILED"
+    failed=1
+  else
+    echo "✓ ${packages[$i]}: passed"
+  fi
+done
+
+if [[ $failed -eq 1 ]]; then
+  echo ""
+  echo "✗ Some packages failed"
+  exit 1
+fi
+
+echo ""
+echo "✓ All ${#packages[@]} packages passed"
