@@ -29,4 +29,4 @@ runs:
       run: uv python install ${{ inputs.python-version }}
     - name: Install the project
       shell: bash
-      run: uv sync --all-extras
+      run: uv sync --all-packages --group dev
