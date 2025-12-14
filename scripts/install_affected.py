@@ -106,11 +106,18 @@ def main():
 
     # Install packages in topological order
     # Enable verbose mode in CI to diagnose slow installs
-    verbose = os.environ.get('CI') == 'true'
-    if verbose:
-        print("ℹ️  Verbose mode enabled (CI environment detected)")
+    # Use regular (non-editable) installs in CI for speed
+    is_ci = os.environ.get('CI') == 'true'
+    verbose = is_ci
+    editable = not is_ci  # Editable locally, regular in CI
+
+    if is_ci:
+        print("ℹ️  CI environment detected")
+        print("ℹ️  Using regular installs (not editable) for faster builds")
         print("ℹ️  Using --no-deps to skip dependency re-resolution")
-        print()
+    if verbose:
+        print("ℹ️  Verbose mode enabled")
+    print()
 
     total_start = time.time()
     times = []
@@ -120,7 +127,7 @@ def main():
         print(f"Installing {package_name}...", end=" " if not verbose else "\n", flush=True)
 
         start = time.time()
-        if install_package(package_path, verbose=verbose):
+        if install_package(package_path, verbose=verbose, editable=editable):
             elapsed = time.time() - start
             times.append((package_name, elapsed))
             if not verbose:

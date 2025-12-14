@@ -10,16 +10,21 @@ from pathlib import Path
 from generate_topological_order import get_topological_order
 
 
-def install_package(package_path: Path, verbose: bool = False) -> bool:
+def install_package(package_path: Path, verbose: bool = False, editable: bool = True) -> bool:
     """Install a single package quickly with minimal output."""
     if not package_path.exists() or not (package_path / "pyproject.toml").exists():
         return True  # Skip missing packages silently
 
     try:
-        # Install the package in development mode
+        # Install the package
         # Use --no-deps since dependencies are already installed in topological order
         # Use --verbose in CI to diagnose slow installs
-        cmd = ["uv", "pip", "install", "--no-deps", "-e", ".[develop]"]
+        # Use regular install in CI (not editable) for faster builds
+        cmd = ["uv", "pip", "install", "--no-deps"]
+        if editable:
+            cmd.append("-e")
+        cmd.append(".[develop]")
+
         if verbose:
             cmd.insert(3, "--verbose")  # Insert after "install"
 
@@ -48,12 +53,18 @@ def main():
     install_order = get_topological_order(repo_root)
 
     # Enable verbose mode in CI to diagnose slow installs
-    verbose = os.environ.get('CI') == 'true'
+    # Use regular (non-editable) installs in CI for speed
+    is_ci = os.environ.get('CI') == 'true'
+    verbose = is_ci
+    editable = not is_ci  # Editable locally, regular in CI
 
     print(f"Installing {len(install_order)} packages...")
-    if verbose:
-        print("ℹ️  Verbose mode enabled (CI environment detected)")
+    if is_ci:
+        print("ℹ️  CI environment detected")
+        print("ℹ️  Using regular installs (not editable) for faster builds")
         print("ℹ️  Using --no-deps to skip dependency re-resolution")
+    if verbose:
+        print("ℹ️  Verbose mode enabled")
 
     total_start = time.time()
     times = []
@@ -63,7 +74,7 @@ def main():
         print(f"Installing {package_name}...", end=" " if not verbose else "\n", flush=True)
 
         start = time.time()
-        if install_package(package_path, verbose=verbose):
+        if install_package(package_path, verbose=verbose, editable=editable):
             elapsed = time.time() - start
             times.append((package_name, elapsed))
             if not verbose:
