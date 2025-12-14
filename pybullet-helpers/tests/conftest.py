@@ -6,11 +6,10 @@ import pytest
 
 @pytest.fixture(scope="function", name="physics_client_id")
 def _connect_to_pybullet():
-    """Direct connect to PyBullet physics server, and disconnect when we're
-    done.
+    """Direct connect to PyBullet physics server, and disconnect when we're done.
 
-    This fixture automatically disconnects the physics server, so we
-    don't forget to do it ourselves.
+    This fixture automatically disconnects the physics server, so we don't forget to do
+    it ourselves.
     """
     # Uncomment for debugging.
     # from pybullet_helpers.gui import create_gui_connection

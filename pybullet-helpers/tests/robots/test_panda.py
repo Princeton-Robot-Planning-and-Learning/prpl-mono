@@ -103,8 +103,8 @@ def test_panda_pybullet_robot_inverse_kinematics_no_solutions(panda):
 def test_panda_pybullet_robot_inverse_kinematics_incorrect_solution(panda):
     """Test when IKFast returns an incorrect solution.
 
-    Note that this doesn't happen in reality, but we need to check we
-    validate correctly).
+    Note that this doesn't happen in reality, but we need to check we validate
+    correctly).
     """
     pose = Pose((0.25, 0.25, 0.25), (0.7071, 0.7071, 0.0, 0.0))
     # Note: the ikfast_closest_inverse_kinematics import happens

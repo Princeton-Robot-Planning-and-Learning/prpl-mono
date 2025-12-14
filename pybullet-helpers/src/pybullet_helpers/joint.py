@@ -19,8 +19,8 @@ JointVelocities = list[float]
 class JointInfo(NamedTuple):
     """Joint Information to match the output of the PyBullet getJointInfo API.
 
-    We use a NamedTuple as it supports retrieving by integer indexing
-    and most closely follows the PyBullet API.
+    We use a NamedTuple as it supports retrieving by integer indexing and most closely
+    follows the PyBullet API.
     """
 
     jointIndex: int
@@ -70,8 +70,8 @@ class JointInfo(NamedTuple):
 class JointState(NamedTuple):
     """Joint Information to match the output of the PyBullet getJointState API.
 
-    We use a NamedTuple as it supports retrieving by integer indexing
-    and most closely follows the PyBullet API.
+    We use a NamedTuple as it supports retrieving by integer indexing and most closely
+    follows the PyBullet API.
     """
 
     jointPosition: float
@@ -113,11 +113,11 @@ def get_joint_infos(
 def get_joint_limits(
     body: int, joints: list[int], physics_client_id: int
 ) -> tuple[list[float], list[float]]:
-    """Get the joint limits for the given joints for a body. Circular joints do
-    not have limits (represented by ±np.inf).
+    """Get the joint limits for the given joints for a body. Circular joints do not have
+    limits (represented by ±np.inf).
 
-    We return a Tuple where the first element is the list of lower
-    limits, and the second element is the list of upper limits.
+    We return a Tuple where the first element is the list of lower limits, and the
+    second element is the list of upper limits.
     """
     joint_infos = get_joint_infos(body, joints, physics_client_id)
     lower_limits = [
@@ -206,8 +206,8 @@ def get_jointwise_difference(
 ) -> JointPositions:
     """Determine the difference between two joint positions.
 
-    Returns a function that takes two joint positions and returns the
-    difference between them.
+    Returns a function that takes two joint positions and returns the difference between
+    them.
     """
 
     if not len(q2) == len(q1) == len(joint_infos):

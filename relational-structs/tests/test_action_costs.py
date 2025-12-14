@@ -350,8 +350,7 @@ def test_cost_extraction_edge_cases() -> None:
 
 
 def test_problem_parsing_with_total_cost_and_metric() -> None:
-    """Ensure PDDLProblem.parse handles problems that include total-cost and
-    metric."""
+    """Ensure PDDLProblem.parse handles problems that include total-cost and metric."""
     domain_str = """(define (domain test-domain)
     (:requirements :typing :action-costs)
     (:types location robot)

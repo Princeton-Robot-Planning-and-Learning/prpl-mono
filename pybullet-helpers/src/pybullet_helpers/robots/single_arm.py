@@ -1,5 +1,4 @@
-"""Abstract class for single armed manipulators with PyBullet helper
-functions."""
+"""Abstract class for single armed manipulators with PyBullet helper functions."""
 
 import abc
 from functools import cached_property
@@ -165,11 +164,11 @@ class SingleArmPyBulletRobot(abc.ABC):
 
     @cached_property
     def arm_joints(self) -> list[int]:
-        """The PyBullet joint IDs of the joints of the robot arm as determined
-        by the kinematic chain.
+        """The PyBullet joint IDs of the joints of the robot arm as determined by the
+        kinematic chain.
 
-        Note these are joint indices not body IDs, and that the arm
-        joints may be a subset of all the robot joints.
+        Note these are joint indices not body IDs, and that the arm joints may be a
+        subset of all the robot joints.
         """
         joint_ids = get_kinematic_chain(
             self.robot_id, self.end_effector_id, self.physics_client_id
@@ -284,10 +283,9 @@ class SingleArmPyBulletRobot(abc.ABC):
     ) -> None:
         """Directly set the joint positions.
 
-        Outside of resetting to an initial state, this should not be
-        used with the robot that uses stepSimulation(); it should only
-        be used for motion planning, collision checks, etc., in a robot
-        that does not maintain state.
+        Outside of resetting to an initial state, this should not be used with the robot
+        that uses stepSimulation(); it should only be used for motion planning,
+        collision checks, etc., in a robot that does not maintain state.
         """
         if joint_velocities is None:
             joint_velocities = [0] * len(joint_positions)
@@ -321,8 +319,7 @@ class SingleArmPyBulletRobot(abc.ABC):
         )
 
     def get_end_effector_pose(self) -> Pose:
-        """Get the robot end-effector pose based on the current PyBullet
-        state."""
+        """Get the robot end-effector pose based on the current PyBullet state."""
         ee_link_state = get_link_state(
             self.robot_id,
             self.end_effector_id,
@@ -390,8 +387,8 @@ class SingleArmPyBulletRobot(abc.ABC):
         self.set_motors(self.default_home_joint_positions)
 
     def forward_kinematics(self, joint_positions: JointPositions) -> Pose:
-        """Compute the end effector pose that would result if the robot arm
-        joint positions was equal to the input joint_positions.
+        """Compute the end effector pose that would result if the robot arm joint
+        positions was equal to the input joint_positions.
 
         WARNING: This method will make use of resetJointState(), and so it
         should NOT be used during simulation.
@@ -488,8 +485,8 @@ class FingeredSingleArmPyBulletRobot(SingleArmPyBulletRobot, Generic[FingerState
     def finger_joint_idxs(self) -> list[int]:
         """The indices into the joints corresponding to the fingers.
 
-        Note this is not the joint ID, but the index of the joint within
-        the list of arm joints.
+        Note this is not the joint ID, but the index of the joint within the list of arm
+        joints.
         """
         return [self.arm_joints.index(i) for i in self.finger_ids]
 
