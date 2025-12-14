@@ -2,4 +2,4 @@
 ../relational-structs
 ../bilevel-planning
 ../prbench
-../prpl_tidybot
+../prpl-tidybot
