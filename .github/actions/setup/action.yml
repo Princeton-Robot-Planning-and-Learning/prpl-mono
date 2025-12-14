@@ -10,17 +10,41 @@ runs:
   steps:
     - name: Install uv
       uses: astral-sh/setup-uv@v3
+    - name: Get uv cache dir
+      id: uv-cache-dir
+      shell: bash
+      run: |
+        cache_dir=$(uv cache dir)
+        echo "dir=$cache_dir" >> $GITHUB_OUTPUT
+        echo "UV cache directory: $cache_dir"
+        mkdir -p "$cache_dir"
     - name: Cache uv package cache
+      id: cache-uv
       uses: actions/cache@v4
       with:
-        path: ~/.cache/uv
+        path: ${{ steps.uv-cache-dir.outputs.dir }}
         key: uv-cache-${{ runner.os }}-py${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml', '**/prpl_requirements.txt') }}
         restore-keys: |
           uv-cache-${{ runner.os }}-py${{ inputs.python-version }}-
           uv-cache-${{ runner.os }}-
+    - name: Report cache status
+      shell: bash
+      run: |
+        if [ "${{ steps.cache-uv.outputs.cache-hit }}" == "true" ]; then
+          echo "✅ Cache hit! Using cached packages"
+        else
+          echo "❌ Cache miss - will download packages"
+        fi
+        echo "Cache key: uv-cache-${{ runner.os }}-py${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml', '**/prpl_requirements.txt') }}"
     - name: Set up Python ${{ inputs.python-version }}
       shell: bash
-      run: uv venv --python=${{ inputs.python-version }}
+      run: |
+        echo "::group::Setting up Python venv"
+        time uv venv --python=${{ inputs.python-version }}
+        echo "::endgroup::"
     - name: Install the project
       shell: bash
-      run: uv run python scripts/install_affected.py
+      run: |
+        echo "::group::Installing packages"
+        time uv run python scripts/install_affected.py
+        echo "::endgroup::"

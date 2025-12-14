@@ -3,6 +3,7 @@
 
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from generate_topological_order import get_topological_order
@@ -38,20 +39,36 @@ def main():
     """Install all packages in the correct order."""
     repo_root = Path(__file__).parents[1]
     install_order = get_topological_order(repo_root)
-    
+
     print(f"Installing {len(install_order)} packages...")
-    
+
+    total_start = time.time()
+    times = []
+
     for package_name in install_order:
         package_path = repo_root / package_name
         print(f"Installing {package_name}...", end=" ", flush=True)
-        
+
+        start = time.time()
         if install_package(package_path):
-            print("✅")
+            elapsed = time.time() - start
+            times.append((package_name, elapsed))
+            print(f"✅ ({elapsed:.2f}s)")
         else:
             print("❌")
             sys.exit(1)
-    
-    print("🎉 All packages installed successfully!")
+
+    total_elapsed = time.time() - total_start
+    print(f"\n🎉 All packages installed successfully in {total_elapsed:.2f}s")
+
+    # Show timing breakdown
+    print("\nTiming breakdown:")
+    for pkg, t in sorted(times, key=lambda x: x[1], reverse=True)[:5]:
+        print(f"  {pkg}: {t:.2f}s")
+
+    overhead = sum(t for _, t in times)
+    print(f"\nTotal package install time: {overhead:.2f}s")
+    print(f"Overhead (subprocess, etc.): {total_elapsed - overhead:.2f}s")
 
 
 if __name__ == "__main__":
