@@ -38,33 +38,20 @@ def main():
     """Install all packages in the correct order."""
     repo_root = Path(__file__).parents[1]
     install_order = get_topological_order(repo_root)
-
+    
     print(f"Installing {len(install_order)} packages...")
-
-    # Build list of package paths for single install command
-    package_args = []
+    
     for package_name in install_order:
         package_path = repo_root / package_name
-        if package_path.exists() and (package_path / "pyproject.toml").exists():
-            package_args.extend(["-e", f"{package_path}[develop]"])
-
-    if not package_args:
-        print("⚠ No packages to install")
-        return
-
-    # Install all packages in one command
-    print(f"Packages: {', '.join(install_order)}")
-    try:
-        subprocess.run(
-            ["uv", "pip", "install"] + package_args,
-            check=True,
-            cwd=repo_root
-        )
-        print("🎉 All packages installed successfully!")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to install packages", file=sys.stderr)
-        print(f"   Return code: {e.returncode}", file=sys.stderr)
-        sys.exit(1)
+        print(f"Installing {package_name}...", end=" ", flush=True)
+        
+        if install_package(package_path):
+            print("✅")
+        else:
+            print("❌")
+            sys.exit(1)
+    
+    print("🎉 All packages installed successfully!")
 
 
 if __name__ == "__main__":

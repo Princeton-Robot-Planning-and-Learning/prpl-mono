@@ -103,33 +103,19 @@ def main():
     print(f"  Dependencies: {', '.join(sorted(install_set - set(affected_packages)))}")
     print()
 
-    # Install all packages in a single command for efficiency
-    # Build list of package paths
-    package_args = []
+    # Install packages in topological order
     for package_name in install_order:
         package_path = repo_root / package_name
-        if package_path.exists() and (package_path / "pyproject.toml").exists():
-            # Add as editable install with develop extras
-            package_args.extend(["-e", f"{package_path}[develop]"])
+        print(f"Installing {package_name}...", end=" ", flush=True)
 
-    if not package_args:
-        print("⚠ No packages to install")
-        return
+        if install_package(package_path):
+            print("✅")
+        else:
+            print("❌")
+            sys.exit(1)
 
-    # Install all packages in one command
-    print(f"Installing packages: {', '.join(install_order)}")
-    try:
-        subprocess.run(
-            ["uv", "pip", "install"] + package_args,
-            check=True,
-            cwd=repo_root
-        )
-        skipped_count = len(all_packages) - len(install_order)
-        print(f"✅ Installed {len(install_order)} packages (skipped {skipped_count})")
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to install packages", file=sys.stderr)
-        print(f"   Return code: {e.returncode}", file=sys.stderr)
-        sys.exit(1)
+    skipped_count = len(all_packages) - len(install_order)
+    print(f"🎉 Installed {len(install_order)} packages (skipped {skipped_count})")
 
 
 if __name__ == "__main__":
