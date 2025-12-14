@@ -193,12 +193,12 @@ def run_hill_climbing(
 ) -> tuple[list[_S], list[_A], list[float]]:
     """Enforced hill climbing local search.
 
-    For each node, the best child node is always selected, if that child
-    is an improvement over the node. If no children improve on the node,
-    look at the children's children, etc., up to enforced_depth, where
-    enforced_depth 0 corresponds to simple hill climbing. Terminate when
-    no improvement can be found. early_termination_heuristic_thresh
-    allows for searching until heuristic reaches a specified value.
+    For each node, the best child node is always selected, if that child is an
+    improvement over the node. If no children improve on the node, look at the
+    children's children, etc., up to enforced_depth, where enforced_depth 0 corresponds
+    to simple hill climbing. Terminate when no improvement can be found.
+    early_termination_heuristic_thresh allows for searching until heuristic reaches a
+    specified value.
 
     Lower heuristic is better.
     """
@@ -278,20 +278,18 @@ def run_policy_guided_astar(
     timeout: float = 10000000,
     lazy_expansion: bool = False,
 ) -> tuple[list[_S], list[_A]]:
-    """Perform A* search, but at each node, roll out a given policy for a given
-    number of timesteps, creating new successors at each step.
+    """Perform A* search, but at each node, roll out a given policy for a given number
+    of timesteps, creating new successors at each step.
 
     Stop the rollout prematurely if the policy returns None.
 
-    Note that unlike the other search functions, which take
-    get_successors as input, this function takes get_valid_actions and
-    get_next_state as two separate inputs. This is necessary because we
-    need to anticipate the next state conditioned on the action output
-    by the policy.
+    Note that unlike the other search functions, which take get_successors as input,
+    this function takes get_valid_actions and get_next_state as two separate inputs.
+    This is necessary because we need to anticipate the next state conditioned on the
+    action output by the policy.
 
-    The get_valid_actions generates (action, cost) tuples. For policy-
-    generated transitions, the costs are ignored, and rollout_step_cost
-    is used instead.
+    The get_valid_actions generates (action, cost) tuples. For policy- generated
+    transitions, the costs are ignored, and rollout_step_cost is used instead.
     """
 
     # Create a new successor function that rolls out the policy first.

@@ -29,9 +29,8 @@ class PretrainedLargeModel(abc.ABC):
     def get_id(self) -> str:
         """Get a string identifier for this model.
 
-        This identifier should include sufficient information so that
-        querying the same model with the same query and same identifier
-        should yield the same result.
+        This identifier should include sufficient information so that querying the same
+        model with the same query and same identifier should yield the same result.
         """
         raise NotImplementedError("Override me!")
 
@@ -39,8 +38,8 @@ class PretrainedLargeModel(abc.ABC):
     def _run_query(self, query: Query) -> Response:
         """This is the main method that subclasses must implement.
 
-        This helper method is called by query(), which caches the
-        queries and responses to disk.
+        This helper method is called by query(), which caches the queries and responses
+        to disk.
         """
         raise NotImplementedError("Override me!")
 
@@ -50,9 +49,9 @@ class PretrainedLargeModel(abc.ABC):
     ) -> list[Response]:
         """Generate multiple responses for the same query.
 
-        This helper method is called by run_query_multi_response(),
-        which handles caching. Subclasses must implement this to support
-        generating multiple diverse responses.
+        This helper method is called by run_query_multi_response(), which handles
+        caching. Subclasses must implement this to support generating multiple diverse
+        responses.
         """
         raise NotImplementedError("Override me!")
 
@@ -335,8 +334,8 @@ class GeminiModel(PretrainedLargeModel):
 
 
 class CannedResponseModel(PretrainedLargeModel):
-    """A model that returns responses from a dictionary and raises an error if
-    no matching query is found.
+    """A model that returns responses from a dictionary and raises an error if no
+    matching query is found.
 
     This is useful for development and testing.
     """
@@ -371,8 +370,8 @@ class CannedResponseModel(PretrainedLargeModel):
 
 
 class OrderedResponseModel(PretrainedLargeModel):
-    """A model that returns responses from a list and raises an error if the
-    index is exceeded.
+    """A model that returns responses from a list and raises an error if the index is
+    exceeded.
 
     This is useful for development and testing.
     """

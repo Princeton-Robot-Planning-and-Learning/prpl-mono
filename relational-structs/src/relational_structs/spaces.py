@@ -17,8 +17,8 @@ from relational_structs.objects import Object, Type
 class ObjectCentricStateSpace(Space):
     """A space for where members are State instances.
 
-    Different members may have different objects, but the types of the
-    objects are fixed.
+    Different members may have different objects, but the types of the objects are
+    fixed.
     """
 
     def __init__(
@@ -62,8 +62,8 @@ class ObjectCentricStateSpace(Space):
 
 
 class ObjectCentricBoxSpace(Box):
-    """A box space where elements are vectors, but the entries represent
-    flattened features for a constant number of objects."""
+    """A box space where elements are vectors, but the entries represent flattened
+    features for a constant number of objects."""
 
     def __init__(
         self,
@@ -86,8 +86,7 @@ class ObjectCentricBoxSpace(Box):
         return object_centric_state.vec(self.constant_objects, dtype=self.dtype)
 
     def devectorize(self, vec: Array) -> ObjectCentricState:
-        """Create an object-centric state from a vector that is in this
-        space."""
+        """Create an object-centric state from a vector that is in this space."""
         assert self.contains(vec)
         return self.state_cls.from_vec(vec, self.constant_objects, self.type_features)
 
@@ -104,11 +103,11 @@ class ObjectCentricBoxSpace(Box):
 
 
 class ObjectSequenceSpace(Space):
-    """A space for where members are sequences of objects corresponding to a
-    given sequence of types.
+    """A space for where members are sequences of objects corresponding to a given
+    sequence of types.
 
-    For example, if space = ObjectSequenceSpace([dog, cat, dog]), then
-    one member might be [nomsy_the_dog, alfred_the_cat, goldie_the_dog].
+    For example, if space = ObjectSequenceSpace([dog, cat, dog]), then one member might
+    be [nomsy_the_dog, alfred_the_cat, goldie_the_dog].
     """
 
     def __init__(self, types: Sequence[Type]) -> None:
@@ -138,9 +137,9 @@ class ObjectSequenceSpace(Space):
 
 
 class ObjectSequenceBoxSpace(Space):
-    """A wrapper around an ObjectSequenceSpace and a Box space. This is a very
-    common kind of space, e.g., for defining parameterized options that have
-    both object and continuous parameters.
+    """A wrapper around an ObjectSequenceSpace and a Box space. This is a very common
+    kind of space, e.g., for defining parameterized options that have both object and
+    continuous parameters.
 
     Elements are tuples where the first element is an object sequence and the
     second element is a vector in the Box space.

@@ -22,11 +22,10 @@ _NOT_FOUND = object()
 
 
 class _DISABLED_cached_property_until_field_change(cached_property):
-    """Decorator that caches a property in a dataclass until any field is
-    changed.
+    """Decorator that caches a property in a dataclass until any field is changed.
 
-    This descriptor is currently disabled because it does not play well
-    with pylint. For example, see
+    This descriptor is currently disabled because it does not play well with pylint. For
+    example, see
     https://stackoverflow.com/questions/74523859/
 
     It is left here in case future versions of python / pylint have better
