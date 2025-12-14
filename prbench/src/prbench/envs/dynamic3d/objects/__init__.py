@@ -1,5 +1,7 @@
 """Object definitions for TidyBot environments."""
 
+# Import robocasa_objects to trigger auto-registration of RoboCasa object classes
+from prbench.envs.dynamic3d.objects import robocasa_objects
 from prbench.envs.dynamic3d.objects.base import (
     MujocoFixture,
     MujocoObject,
@@ -10,9 +12,6 @@ from prbench.envs.dynamic3d.objects.base import (
 )
 from prbench.envs.dynamic3d.objects.fixtures import Cupboard, Table
 from prbench.envs.dynamic3d.objects.primitive_objects import Cube, Cuboid
-
-# Import robocasa_objects to trigger auto-registration of RoboCasa object classes
-from prbench.envs.dynamic3d.objects import robocasa_objects
 
 __all__ = [
     "MujocoObject",
