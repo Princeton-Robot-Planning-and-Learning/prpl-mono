@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install all dependencies."""
 
+import os
 import subprocess
 import sys
 import time
@@ -9,18 +10,24 @@ from pathlib import Path
 from generate_topological_order import get_topological_order
 
 
-def install_package(package_path: Path) -> bool:
+def install_package(package_path: Path, verbose: bool = False) -> bool:
     """Install a single package quickly with minimal output."""
     if not package_path.exists() or not (package_path / "pyproject.toml").exists():
         return True  # Skip missing packages silently
-    
+
     try:
         # Install the package in development mode
+        # Use --no-deps since dependencies are already installed in topological order
+        # Use --verbose in CI to diagnose slow installs
+        cmd = ["uv", "pip", "install", "--no-deps", "-e", ".[develop]"]
+        if verbose:
+            cmd.insert(3, "--verbose")  # Insert after "install"
+
         subprocess.run(
-            ["uv", "pip", "install", "-e", ".[develop]"],
+            cmd,
             cwd=package_path,
             check=True,
-            capture_output=True,
+            capture_output=not verbose,  # Show output if verbose
         )
         return True
         
@@ -40,20 +47,29 @@ def main():
     repo_root = Path(__file__).parents[1]
     install_order = get_topological_order(repo_root)
 
+    # Enable verbose mode in CI to diagnose slow installs
+    verbose = os.environ.get('CI') == 'true'
+
     print(f"Installing {len(install_order)} packages...")
+    if verbose:
+        print("ℹ️  Verbose mode enabled (CI environment detected)")
+        print("ℹ️  Using --no-deps to skip dependency re-resolution")
 
     total_start = time.time()
     times = []
 
     for package_name in install_order:
         package_path = repo_root / package_name
-        print(f"Installing {package_name}...", end=" ", flush=True)
+        print(f"Installing {package_name}...", end=" " if not verbose else "\n", flush=True)
 
         start = time.time()
-        if install_package(package_path):
+        if install_package(package_path, verbose=verbose):
             elapsed = time.time() - start
             times.append((package_name, elapsed))
-            print(f"✅ ({elapsed:.2f}s)")
+            if not verbose:
+                print(f"✅ ({elapsed:.2f}s)")
+            else:
+                print(f"✅ {package_name} completed in {elapsed:.2f}s\n")
         else:
             print("❌")
             sys.exit(1)

@@ -105,18 +105,28 @@ def main():
     print()
 
     # Install packages in topological order
+    # Enable verbose mode in CI to diagnose slow installs
+    verbose = os.environ.get('CI') == 'true'
+    if verbose:
+        print("ℹ️  Verbose mode enabled (CI environment detected)")
+        print("ℹ️  Using --no-deps to skip dependency re-resolution")
+        print()
+
     total_start = time.time()
     times = []
 
     for package_name in install_order:
         package_path = repo_root / package_name
-        print(f"Installing {package_name}...", end=" ", flush=True)
+        print(f"Installing {package_name}...", end=" " if not verbose else "\n", flush=True)
 
         start = time.time()
-        if install_package(package_path):
+        if install_package(package_path, verbose=verbose):
             elapsed = time.time() - start
             times.append((package_name, elapsed))
-            print(f"✅ ({elapsed:.2f}s)")
+            if not verbose:
+                print(f"✅ ({elapsed:.2f}s)")
+            else:
+                print(f"✅ {package_name} completed in {elapsed:.2f}s\n")
         else:
             print("❌")
             sys.exit(1)
