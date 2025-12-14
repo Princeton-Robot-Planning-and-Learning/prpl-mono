@@ -10,15 +10,20 @@ runs:
   steps:
     - name: Install uv
       uses: astral-sh/setup-uv@v3
-    - name: Cache uv dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/uv
-          .venv
-        key: uv-${{ runner.os }}-py${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml', '**/prpl_requirements.txt') }}
-        restore-keys: |
-          uv-${{ runner.os }}-py${{ inputs.python-version }}-
+
+    # NOTE: you may be tempted to add some caching like then below, but this actually
+    # leads to similar overall installation because of the time required to download the
+    # large cached uv environment. Prefer to remove it then for simplicity.
+    # - name: Cache uv dependencies
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: |
+    #       ~/.cache/uv
+    #       .venv
+    #     key: uv-${{ runner.os }}-py${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml', '**/prpl_requirements.txt') }}
+    #     restore-keys: |
+    #       uv-${{ runner.os }}-py${{ inputs.python-version }}-
+
     - name: Set up Python ${{ inputs.python-version }}
       shell: bash
       run: uv venv --python=${{ inputs.python-version }}
