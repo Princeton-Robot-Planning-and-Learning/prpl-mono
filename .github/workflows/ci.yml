@@ -26,10 +26,11 @@ jobs:
   linting:
     runs-on: ubuntu-latest
     steps:
-      - name: Install LAPACK BLAS, and OSMESA
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
+      - name: Cache apt packages
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
+          version: 1.0
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -52,10 +53,11 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Install LAPACK BLAS, and OSMESA
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
+      - name: Cache apt packages
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
+          version: 1.0
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
