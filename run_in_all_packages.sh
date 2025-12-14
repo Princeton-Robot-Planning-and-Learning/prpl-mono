@@ -47,8 +47,10 @@ echo ""
 # Wait for all background jobs and collect exit codes
 declare -a exit_codes
 for pid in "${pids[@]}"; do
+  set +e  # Temporarily disable exit on error
   wait "$pid"
   exit_codes+=($?)
+  set -e
 done
 
 # Print all outputs in order
