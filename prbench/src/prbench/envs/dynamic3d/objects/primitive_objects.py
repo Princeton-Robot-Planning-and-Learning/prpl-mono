@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+
 from relational_structs import Object
 
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
