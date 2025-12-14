@@ -7,6 +7,10 @@ import pytest
 
 import prbench
 from prbench.utils import find_all_demo_files, load_demo
+from tests.demo_blacklist import (
+    DETERMINISTIC_REPLAY_BLACKLIST,
+    is_demo_blacklisted,
+)
 
 
 @pytest.mark.parametrize("demo_path", find_all_demo_files())
@@ -22,11 +26,14 @@ def test_deterministic_demo_replay(demo_path: Path):
     # Register all environments
     prbench.register_all_environments()
 
+    # Check if demo is blacklisted
+    is_blacklisted, reason = is_demo_blacklisted(
+        demo_path, DETERMINISTIC_REPLAY_BLACKLIST
+    )
+    if is_blacklisted:
+        pytest.skip(f"Demo blacklisted: {reason}")
+
     # Load demo data
-    # NOTE: Skip ScoopPour for now, it is super weird, it passes
-    # on my local machine but fails on github actions....
-    if "DynScoopPour" in str(demo_path):
-        pytest.skip("Skipping DynScoopPour demos for now")
     try:
         demo_data = load_demo(demo_path)
     except Exception as e:

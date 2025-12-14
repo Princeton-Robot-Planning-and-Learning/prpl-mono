@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
 from prpl_utils.utils import wrap_angle
 from pybullet_helpers.geometry import Pose, multiply_poses
@@ -21,6 +20,7 @@ from prbench.envs.geom3d.obstruction3d import (
     Obstruction3DEnvConfig,
     Obstruction3DObjectCentricState,
 )
+from tests.conftest import MAKE_VIDEOS
 
 
 @pytest.fixture(scope="module")
