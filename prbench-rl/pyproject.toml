@@ -19,7 +19,11 @@ dependencies = [
    "dacite",
    "gymnasium[classic-control]==0.29.1",
    "tensorboard",
+   "prbench",
 ]
+
+[tool.uv.sources]
+prbench = { workspace = true }
 
 [project.optional-dependencies]
 develop = [

@@ -17,8 +17,12 @@ dependencies = [
     "lerobot@git+https://github.com/yixuanhuang98/lerobot_PRBench",
     "matplotlib",
     "wandb",
-    "tqdm"
+    "tqdm",
+    "prbench",
 ]
+
+[tool.uv.sources]
+prbench = { workspace = true }
 
 [project.optional-dependencies]
 develop = [

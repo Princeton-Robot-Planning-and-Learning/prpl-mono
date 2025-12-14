@@ -14,7 +14,11 @@ dependencies = [
    "gymnasium>=0.29.1",
    "scipy==1.14.0",
    "hello-robot-stretch-urdf",
+   "prpl-utils",
 ]
+
+[tool.uv.sources]
+prpl-utils = { workspace = true }
 
 [project.optional-dependencies]
 develop = [

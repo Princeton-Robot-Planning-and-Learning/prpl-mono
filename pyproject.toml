@@ -1,0 +1,34 @@
+[project]
+name = "prpl-mono"
+version = "0.1.0"
+description = "PRPL monorepo workspace"
+requires-python = ">=3.10"
+
+[tool.uv.workspace]
+members = [
+    "bilevel-planning",
+    "prbench",
+    "prbench-bilevel-planning",
+    "prbench-imitation-learning",
+    "prbench-models",
+    "prbench-rl",
+    "prbench-vlm-planning",
+    "prpl-llm-utils",
+    "prpl-perception-utils",
+    "prpl-tidybot",
+    "prpl-utils",
+    "pybullet-helpers",
+    "relational-structs",
+    "toms-geoms-2d",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "black",
+    "docformatter",
+    "isort",
+    "mypy",
+    "pylint>=2.14.5",
+    "pytest-pylint>=0.18.0",
+    "pytest>=7.2.2",
+]

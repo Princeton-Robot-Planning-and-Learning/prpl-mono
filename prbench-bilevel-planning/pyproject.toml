@@ -15,7 +15,15 @@ dependencies = [
    "pandas-stubs",
    "hydra-core",
    "omegaconf",
+   "bilevel-planning",
+   "prbench",
+   "prbench-models",
 ]
+
+[tool.uv.sources]
+bilevel-planning = { workspace = true }
+prbench = { workspace = true }
+prbench-models = { workspace = true }
 
 [project.optional-dependencies]
 develop = [

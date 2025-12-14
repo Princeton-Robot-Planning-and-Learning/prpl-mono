@@ -20,13 +20,13 @@ runs:
     #     path: |
     #       ~/.cache/uv
     #       .venv
-    #     key: uv-${{ runner.os }}-py${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml', '**/prpl_requirements.txt') }}
+    #     key: uv-${{ runner.os }}-py${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}
     #     restore-keys: |
     #       uv-${{ runner.os }}-py${{ inputs.python-version }}-
 
     - name: Set up Python ${{ inputs.python-version }}
       shell: bash
-      run: uv venv --python=${{ inputs.python-version }}
+      run: uv python install ${{ inputs.python-version }}
     - name: Install the project
       shell: bash
-      run: uv run python scripts/install_affected.py
+      run: uv sync --all-extras

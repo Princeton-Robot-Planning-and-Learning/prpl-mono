@@ -12,7 +12,17 @@ dependencies = [
    "matplotlib",
    "numpy",
    "spatialmath-python",
+   "relational-structs",
+   "bilevel-planning",
+   "prbench",
+   "prpl-tidybot",
 ]
+
+[tool.uv.sources]
+relational-structs = { workspace = true }
+bilevel-planning = { workspace = true }
+prbench = { workspace = true }
+prpl-tidybot = { workspace = true }
 
 [project.optional-dependencies]
 develop = [

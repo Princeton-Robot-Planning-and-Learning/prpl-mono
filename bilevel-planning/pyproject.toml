@@ -14,7 +14,11 @@ dependencies = [
    "networkx",
    "types-networkx",
    "gymnasium",
+   "relational-structs",
 ]
+
+[tool.uv.sources]
+relational-structs = { workspace = true }
 
 [project.optional-dependencies]
 develop = [

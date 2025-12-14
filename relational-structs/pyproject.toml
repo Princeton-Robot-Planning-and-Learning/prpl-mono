@@ -15,7 +15,11 @@ dependencies = [
    "tabulate",
    "multimethod",
    "pyperplan",
+   "prpl-utils",
 ]
+
+[tool.uv.sources]
+prpl-utils = { workspace = true }
 
 [project.optional-dependencies]
 develop = [
