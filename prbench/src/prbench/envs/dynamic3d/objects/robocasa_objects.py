@@ -12,11 +12,10 @@ from relational_structs import Object
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
 from prbench.envs.dynamic3d.object_types import MujocoMovableObjectType
 from prbench.envs.dynamic3d.objects.base import (
-    MujocoObject,
     REGISTERED_OBJECTS,
+    MujocoObject,
     register_object,
 )
-
 
 # Get the path to the robocasa objects directory relative to this file
 ROBOCASA_OBJECTS_DIR = (
@@ -125,7 +124,9 @@ class RoboCasaObject(MujocoObject):
                     # Update texture reference if present
                     if "texture" in child.attrib:
                         original_texture = child.attrib["texture"]
-                        new_element.attrib["texture"] = f"{self.name}_{original_texture}"
+                        new_element.attrib["texture"] = (
+                            f"{self.name}_{original_texture}"
+                        )
 
                 assets_container.append(new_element)
 
@@ -262,9 +263,7 @@ def _create_robocasa_object_classes() -> None:
     """Scan the robocasa_objects directory and create classes for each object."""
 
     if not ROBOCASA_OBJECTS_DIR.exists():
-        print(
-            f"Warning: RoboCasa objects directory not found: {ROBOCASA_OBJECTS_DIR}"
-        )
+        print(f"Warning: RoboCasa objects directory not found: {ROBOCASA_OBJECTS_DIR}")
         return
 
     # Iterate through all directories in the robocasa_objects folder

@@ -161,8 +161,8 @@ class Triangle(Geom2D):
 class Rectangle(Geom2D):
     """A helper class for visualizing and collision checking rectangles.
 
-    Following the convention in plt.Rectangle, the origin is at the
-    bottom left corner, and rotation is anti-clockwise about that point.
+    Following the convention in plt.Rectangle, the origin is at the bottom left corner,
+    and rotation is anti-clockwise about that point.
 
     Unlike plt.Rectangle, the angle is in radians.
     """
@@ -184,8 +184,8 @@ class Rectangle(Geom2D):
         height: float,
         rotation_about_center: float,
     ) -> Rectangle:
-        """Create a rectangle given an (x, y) for the center, with theta
-        rotating about that center point."""
+        """Create a rectangle given an (x, y) for the center, with theta rotating about
+        that center point."""
         x = center_x - width / 2
         y = center_y - height / 2
         norm_rect = Rectangle(x, y, width, height, 0.0)
@@ -276,11 +276,10 @@ class Rectangle(Geom2D):
         return (x, y)
 
     def rotate_about_point(self, x: float, y: float, rot: float) -> Rectangle:
-        """Create a new rectangle that is this rectangle, but rotated CCW by
-        the given rotation (in radians), relative to the (x, y) origin.
+        """Create a new rectangle that is this rectangle, but rotated CCW by the given
+        rotation (in radians), relative to the (x, y) origin.
 
-        Rotates the vertices first, then uses them to recompute the new
-        theta.
+        Rotates the vertices first, then uses them to recompute the new theta.
         """
         vertices = np.array(self.vertices)
         origin = np.array([x, y])
@@ -301,8 +300,8 @@ class Rectangle(Geom2D):
         return rect
 
     def scale_about_center(self, width_scale: float, height_scale: float) -> Rectangle:
-        """Create a new rectangle that is this rectangle, shrunken or stretched
-        about the center of this rectangle."""
+        """Create a new rectangle that is this rectangle, shrunken or stretched about
+        the center of this rectangle."""
         new_height = self.height * height_scale
         new_width = self.width * width_scale
         return Rectangle.from_center(
@@ -319,8 +318,8 @@ class Rectangle(Geom2D):
 
 @dataclass(frozen=True)
 class Lobject(Geom2D):
-    """A helper class for representing a L-shaped object for visualizing and
-    collision checking.
+    """A helper class for representing a L-shaped object for visualizing and collision
+    checking.
 
     The hook body pose is defined as follows:
     --------|
@@ -432,11 +431,10 @@ class Lobject(Geom2D):
         return (x, y)
 
     def rotate_about_point(self, x: float, y: float, rot: float) -> Lobject:
-        """Create a new L-object that is this L-object, but rotated CCW by the
-        given rotation (in radians), relative to the (x, y) origin.
+        """Create a new L-object that is this L-object, but rotated CCW by the given
+        rotation (in radians), relative to the (x, y) origin.
 
-        Rotates the vertices first, then uses them to recompute the new
-        theta.
+        Rotates the vertices first, then uses them to recompute the new theta.
         """
         vertices = np.array(self.vertices)
         origin = np.array([x, y])
@@ -506,8 +504,8 @@ class Lobject(Geom2D):
 
 @dataclass(frozen=True)
 class Tobject(Geom2D):
-    """A helper class for representing a T-shaped object for visualizing and
-    collision checking.
+    """A helper class for representing a T-shaped object for visualizing and collision
+    checking.
 
     The T-shaped body pose is defined as follows:
     -----
@@ -633,11 +631,10 @@ class Tobject(Geom2D):
         return (x, y)
 
     def rotate_about_point(self, x: float, y: float, rot: float) -> Tobject:
-        """Create a new T-object that is this T-object, but rotated CCW by the
-        given rotation (in radians), relative to the (x, y) origin.
+        """Create a new T-object that is this T-object, but rotated CCW by the given
+        rotation (in radians), relative to the (x, y) origin.
 
-        Rotates the vertices first, then uses them to recompute the new
-        theta.
+        Rotates the vertices first, then uses them to recompute the new theta.
         """
         vertices = np.array(self.vertices)
         origin = np.array([x, y])
@@ -721,9 +718,8 @@ class Tobject(Geom2D):
 def line_segments_intersect(seg1: LineSegment, seg2: LineSegment) -> bool:
     """Checks if two line segments intersect.
 
-    This method, which works by checking relative orientation, allows
-    for collinearity, and only checks if each segment straddles the line
-    containing the other.
+    This method, which works by checking relative orientation, allows for collinearity,
+    and only checks if each segment straddles the line containing the other.
     """
 
     def _subtract(

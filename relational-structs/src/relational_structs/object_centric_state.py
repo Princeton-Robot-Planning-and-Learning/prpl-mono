@@ -85,8 +85,8 @@ class ObjectCentricState:
         return matches[0]
 
     def vec(self, objects: Sequence[Object], dtype: Any = np.float32) -> Array:
-        """Concatenated vector of features for each of the objects in the given
-        ordered list."""
+        """Concatenated vector of features for each of the objects in the given ordered
+        list."""
         feats: List[Array] = []
         if len(objects) == 0:
             return np.zeros(0, dtype=dtype)
@@ -123,8 +123,8 @@ class ObjectCentricState:
         return val.copy()
 
     def allclose(self, other: Self, atol: float = 1e-3) -> bool:
-        """Return whether this state is close enough to another one, i.e., its
-        objects are the same, and the features are close."""
+        """Return whether this state is close enough to another one, i.e., its objects
+        are the same, and the features are close."""
         if not sorted(self.data) == sorted(other.data):
             return False
         for obj in self.data:

@@ -128,6 +128,15 @@ def register_all_environments() -> None:
             kwargs={"num_obstructions": num_obstruction},
         )
 
+    # Packing3D environment with different numbers of parts to be packed.
+    num_parts = [1, 2, 3]
+    for num_part in num_parts:
+        _register(
+            id=f"prbench/Packing3D-p{num_part}-v0",
+            entry_point="prbench.envs.geom3d.packing3d:Packing3DEnv",
+            kwargs={"num_parts": num_part},
+        )
+
     # ******* Dynamic3D Environments *******
 
     # Tasks with different scenes and object counts

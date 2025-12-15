@@ -18,6 +18,7 @@ from pybullet_helpers.gui import create_gui_connection
 from pybullet_helpers.inverse_kinematics import (
     check_body_collisions,
     check_collisions_with_held_object,
+    check_mobile_base_collisions,
     set_robot_joints_with_held_object,
 )
 from pybullet_helpers.joint import JointPositions
@@ -42,6 +43,7 @@ from prbench.envs.geom3d.utils import (
     Geom3DObjectCentricState,
     Geom3DRobotActionSpace,
     extend_joints_to_include_fingers,
+    get_robot_action_from_gui_input,
     remove_fingers_from_extended_joints,
 )
 
@@ -67,12 +69,13 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
         ]
     )
     initial_finger_state: float = 0.0
-    end_effector_viz_radius: float = 0.01
+    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.025)
     end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
     max_action_mag: float = 0.05
+    check_base_collisions: bool = False
 
     # This is used to check whether a grasped object can be placed on a surface.
-    min_placement_dist: float = 1e-3
+    min_placement_dist: float = 5e-3
 
     # For rendering.
     render_dpi: int = 300
@@ -92,6 +95,87 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
             "camera_distance": 1.5,
             "camera_pitch": -20,
         }
+
+    def _sample_block_on_block_pose(
+        self,
+        top_block_half_extents: tuple[float, float, float],
+        bottom_block_half_extents: tuple[float, float, float],
+        bottom_block_pose: Pose,
+        rng: np.random.Generator,
+    ) -> Pose:
+        """Sample one block pose on top of another one, with no hanging allowed."""
+        assert np.allclose(
+            bottom_block_pose.orientation, (0, 0, 0, 1)
+        ), "Not implemented"
+
+        lb = (
+            bottom_block_pose.position[0]
+            - bottom_block_half_extents[0]
+            + top_block_half_extents[0],
+            bottom_block_pose.position[1]
+            - bottom_block_half_extents[1]
+            + top_block_half_extents[1],
+            bottom_block_pose.position[2]
+            + bottom_block_half_extents[2]
+            + top_block_half_extents[2],
+        )
+
+        ub = (
+            bottom_block_pose.position[0]
+            + bottom_block_half_extents[0]
+            - top_block_half_extents[0],
+            bottom_block_pose.position[1]
+            + bottom_block_half_extents[1]
+            - top_block_half_extents[1],
+            bottom_block_pose.position[2]
+            + bottom_block_half_extents[2]
+            + top_block_half_extents[2],
+        )
+
+        x, y, z = rng.uniform(lb, ub)
+
+        return Pose((x, y, z))
+
+    def _sample_block_on_block_pose_with_overhang(
+        self,
+        top_block_half_extents: tuple[float, float, float],
+        bottom_block_half_extents: tuple[float, float, float],
+        bottom_block_pose: Pose,
+        rng: np.random.Generator,
+        allowed_overhang_fraction: float = 0.25,
+    ) -> Pose:
+        """Sample one block pose on top of another one, where hanging is allowed."""
+        assert np.allclose(
+            bottom_block_pose.orientation, (0, 0, 0, 1)
+        ), "Not implemented"
+
+        lb = (
+            bottom_block_pose.position[0]
+            - bottom_block_half_extents[0]
+            - top_block_half_extents[0] * allowed_overhang_fraction,
+            bottom_block_pose.position[1]
+            - bottom_block_half_extents[1]
+            - top_block_half_extents[1] * allowed_overhang_fraction,
+            bottom_block_pose.position[2]
+            + bottom_block_half_extents[2]
+            + top_block_half_extents[2],
+        )
+
+        ub = (
+            bottom_block_pose.position[0]
+            + bottom_block_half_extents[0]
+            + top_block_half_extents[0] * allowed_overhang_fraction,
+            bottom_block_pose.position[1]
+            + bottom_block_half_extents[1]
+            + top_block_half_extents[1] * allowed_overhang_fraction,
+            bottom_block_pose.position[2]
+            + bottom_block_half_extents[2]
+            + top_block_half_extents[2],
+        )
+
+        x, y, z = rng.uniform(lb, ub)
+
+        return Pose((x, y, z))
 
 
 # Subclasses may extend the state.
@@ -130,16 +214,16 @@ class ObjectCentricGeom3DRobotEnv(
 
         # Show a visualization of the end effector.
         visual_id = p.createVisualShape(
-            p.GEOM_SPHERE,
-            radius=self.config.end_effector_viz_radius,
+            p.GEOM_BOX,
+            halfExtents=self.config.end_effector_viz_half_extents,
             rgbaColor=self.config.end_effector_viz_color,
             physicsClientId=self.physics_client_id,
         )
 
         # Also create a collision body because we use it for grasp detection.
         collision_id = p.createCollisionShape(
-            p.GEOM_SPHERE,
-            radius=self.config.end_effector_viz_radius,
+            p.GEOM_BOX,
+            halfExtents=self.config.end_effector_viz_half_extents,
             physicsClientId=self.physics_client_id,
         )
 
@@ -205,6 +289,17 @@ class ObjectCentricGeom3DRobotEnv(
     @abc.abstractmethod
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         """Get the half extents for a cuboid object."""
+
+    def _get_triangle_features(
+        self, object_name: str
+    ) -> tuple[float, float, float, float]:
+        """Return triangle parameters (side_a, side_b, depth, triangle_type).
+
+        Subclasses that support triangles should override this. The default
+        implementation returns zeros to provide a safe fallback for serialization.
+        """
+        assert object_name is not None
+        return 0.0, 0.0, 0.0, 0.0
 
     @property
     def _robot_arm(self) -> FingeredSingleArmPyBulletRobot:
@@ -294,6 +389,7 @@ class ObjectCentricGeom3DRobotEnv(
             -self.config.max_action_mag,
             self.config.max_action_mag,
         )
+
         next_joints = np.clip(
             current_joints + delta_joints,
             self._robot_arm.joint_lower_limits[:7],
@@ -360,6 +456,26 @@ class ObjectCentricGeom3DRobotEnv(
                         break
                     next_finger_state = current_finger_state + 1e-2
                     self._robot_arm.set_finger_state(next_finger_state)
+                # Handle the edge case where the robot fingers penetrate the table as
+                # the fingers close to grasp the object. This can happen with a gripper
+                # that is not just a parallel jaw but has additional DOFs (robotiq).
+                # Do not check collision with the tentatively held object.
+                collision_bodies = self._get_collision_object_ids()
+                collision_bodies -= {self._grasped_object_id}
+                if check_collisions_with_held_object(
+                    self.robot.arm,
+                    collision_bodies,
+                    self.physics_client_id,
+                    held_object=None,
+                    base_link_to_held_obj=self._grasped_object_transform,
+                    joint_state=self.robot.arm.get_joint_positions(),
+                ):
+                    # Revert!
+                    self._grasped_object = None
+                    self._grasped_object_transform = None
+                    self._set_robot_and_held_object(
+                        current_base_pose, current_joints, current_finger_state
+                    )
 
         # Check for ungrasping.
         elif gripper_action == "open" and self._grasped_object_id is not None:
@@ -409,13 +525,21 @@ class ObjectCentricGeom3DRobotEnv(
         collision_bodies = self._get_collision_object_ids()
         if self._grasped_object_id is not None:
             collision_bodies.discard(self._grasped_object_id)
-        return check_collisions_with_held_object(
+        if check_collisions_with_held_object(
             self.robot.arm,
             collision_bodies,
             self.physics_client_id,
             self._grasped_object_id,
             self._grasped_object_transform,
             self.robot.arm.get_joint_positions(),
+        ):
+            return True
+        if not self.config.check_base_collisions:
+            return False
+        return check_mobile_base_collisions(
+            self.robot.base,
+            collision_bodies,
+            self.physics_client_id,
         )
 
     def _get_surfaces_supporting_object(self, object_id: int) -> set[int]:
@@ -503,6 +627,7 @@ class ObjectCentricGeom3DRobotEnv(
                     half_extent_names, half_extents, strict=True
                 ):
                     feats[feat_name] = feat
+                feats["object_type"] = -1.0  # cuboid
             # Handle points.
             elif object_type == Geom3DPointType:
                 # Add position.
@@ -516,3 +641,11 @@ class ObjectCentricGeom3DRobotEnv(
             # Add feats to state dict.
             state_dict[obj] = feats
         return state_dict
+
+    def get_action_from_gui_input(
+        self, gui_input: dict[str, Any]
+    ) -> NDArray[np.float32]:
+        """Get the mapping from human inputs to actions."""
+        # This will be implemented later
+        assert isinstance(self.action_space, Geom3DRobotActionSpace)
+        return get_robot_action_from_gui_input(self.action_space, gui_input)

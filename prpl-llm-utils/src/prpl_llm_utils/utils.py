@@ -18,8 +18,8 @@ def consistent_hash(obj: Any) -> int:
 
 
 class Scope:
-    """Represents a variable scope in Python code, tracking defined, global,
-    and nonlocal variables."""
+    """Represents a variable scope in Python code, tracking defined, global, and
+    nonlocal variables."""
 
     def __init__(self, parent: "Scope | None" = None) -> None:
         """Initialize a new Scope instance."""

@@ -1,19 +1,27 @@
 name: CI Checks
 
-on: [push]
+on:
+  push:
+    branches: [main]  # Run all tests on main
+  pull_request:       # Run selective tests on PRs
 
 env:
   # Tell git/uv to NOT download LFS blobs, just keep pointer files
   GIT_LFS_SKIP_SMUDGE: "1"
+
+  # Base SHA for selective testing in PRs
+  CI_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
 
 jobs:
   autoformat:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Run autoformat
-        run: uv run ./run_in_all_packages.sh "./run_autoformat.sh"
+        run: uv run ./run_in_affected_packages.sh "./run_autoformat.sh"
 
   linting:
     runs-on: ubuntu-latest
@@ -23,19 +31,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Lint
         run: |
-          uv run ./run_in_all_packages.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc"
+          uv run ./run_in_affected_packages.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc -p no:cacheprovider"
 
   static-type-checking:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Mypy
         run: |
-          uv run ./run_in_all_packages.sh "mypy ."
+          uv run ./run_in_affected_packages.sh "mypy . --no-incremental"
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -45,10 +57,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/setup
       - name: Pytest
         env:
           MUJOCO_GL: "osmesa"
           PYOPENGL_PLATFORM: ""
         run: |
-          uv run ./run_in_all_packages.sh "pytest tests/"
+          uv run ./run_in_affected_packages.sh "pytest --cache-clear tests/"

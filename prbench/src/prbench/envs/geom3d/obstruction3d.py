@@ -69,87 +69,6 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             "camera_pitch": -20,
         }
 
-    def _sample_block_on_block_pose(
-        self,
-        top_block_half_extents: tuple[float, float, float],
-        bottom_block_half_extents: tuple[float, float, float],
-        bottom_block_pose: Pose,
-        rng: np.random.Generator,
-    ) -> Pose:
-        """Sample one block pose on top of another one, with no hanging allowed."""
-        assert np.allclose(
-            bottom_block_pose.orientation, (0, 0, 0, 1)
-        ), "Not implemented"
-
-        lb = (
-            bottom_block_pose.position[0]
-            - bottom_block_half_extents[0]
-            + top_block_half_extents[0],
-            bottom_block_pose.position[1]
-            - bottom_block_half_extents[1]
-            + top_block_half_extents[1],
-            bottom_block_pose.position[2]
-            + bottom_block_half_extents[2]
-            + top_block_half_extents[2],
-        )
-
-        ub = (
-            bottom_block_pose.position[0]
-            + bottom_block_half_extents[0]
-            - top_block_half_extents[0],
-            bottom_block_pose.position[1]
-            + bottom_block_half_extents[1]
-            - top_block_half_extents[1],
-            bottom_block_pose.position[2]
-            + bottom_block_half_extents[2]
-            + top_block_half_extents[2],
-        )
-
-        x, y, z = rng.uniform(lb, ub)
-
-        return Pose((x, y, z))
-
-    def _sample_block_on_block_pose_with_overhang(
-        self,
-        top_block_half_extents: tuple[float, float, float],
-        bottom_block_half_extents: tuple[float, float, float],
-        bottom_block_pose: Pose,
-        rng: np.random.Generator,
-        allowed_overhang_fraction: float = 0.25,
-    ) -> Pose:
-        """Sample one block pose on top of another one, where hanging is allowed."""
-        assert np.allclose(
-            bottom_block_pose.orientation, (0, 0, 0, 1)
-        ), "Not implemented"
-
-        lb = (
-            bottom_block_pose.position[0]
-            - bottom_block_half_extents[0]
-            - top_block_half_extents[0] * allowed_overhang_fraction,
-            bottom_block_pose.position[1]
-            - bottom_block_half_extents[1]
-            - top_block_half_extents[1] * allowed_overhang_fraction,
-            bottom_block_pose.position[2]
-            + bottom_block_half_extents[2]
-            + top_block_half_extents[2],
-        )
-
-        ub = (
-            bottom_block_pose.position[0]
-            + bottom_block_half_extents[0]
-            + top_block_half_extents[0] * allowed_overhang_fraction,
-            bottom_block_pose.position[1]
-            + bottom_block_half_extents[1]
-            + top_block_half_extents[1] * allowed_overhang_fraction,
-            bottom_block_pose.position[2]
-            + bottom_block_half_extents[2]
-            + top_block_half_extents[2],
-        )
-
-        x, y, z = rng.uniform(lb, ub)
-
-        return Pose((x, y, z))
-
     def sample_block_on_table_pose(
         self, block_half_extents: tuple[float, float, float], rng: np.random.Generator
     ) -> Pose:
@@ -191,50 +110,25 @@ class Obstruction3DObjectCentricState(Geom3DObjectCentricState):
     Adds convenience methods on top of Geom3DObjectCentricState().
     """
 
-    def get_cuboid_half_extents(self, name: str) -> tuple[float, float, float]:
-        """The half extents of the cuboid."""
-        obj = self.get_object_from_name(name)
-        return (
-            self.get(obj, "half_extent_x"),
-            self.get(obj, "half_extent_y"),
-            self.get(obj, "half_extent_z"),
-        )
-
-    def get_cuboid_pose(self, name: str) -> Pose:
-        """The pose of the cuboid."""
-        obj = self.get_object_from_name(name)
-        position = (
-            self.get(obj, "pose_x"),
-            self.get(obj, "pose_y"),
-            self.get(obj, "pose_z"),
-        )
-        orientation = (
-            self.get(obj, "pose_qx"),
-            self.get(obj, "pose_qy"),
-            self.get(obj, "pose_qz"),
-            self.get(obj, "pose_qw"),
-        )
-        return Pose(position, orientation)
-
     @property
     def target_region_half_extents(self) -> tuple[float, float, float]:
         """The half extents of the target region, assuming the name "target_region"."""
-        return self.get_cuboid_half_extents("target_region")
+        return self.get_object_half_extents("target_region")
 
     @property
     def target_block_half_extents(self) -> tuple[float, float, float]:
         """The half extents of the target block, assuming the name "target_block"."""
-        return self.get_cuboid_half_extents("target_block")
+        return self.get_object_half_extents("target_block")
 
     @property
     def target_region_pose(self) -> Pose:
         """The pose of the target region, assuming the name "target_region"."""
-        return self.get_cuboid_pose("target_region")
+        return self.get_object_pose("target_region")
 
     @property
     def target_block_pose(self) -> Pose:
         """The pose of the target block, assuming the name "target_block"."""
-        return self.get_cuboid_pose("target_block")
+        return self.get_object_pose("target_block")
 
 
 class ObjectCentricObstruction3DEnv(
@@ -421,8 +315,8 @@ class ObjectCentricObstruction3DEnv(
         # Handle obstructions.
         for obstruction_idx in range(self._num_obstructions):
             obstruction_name = f"obstruction{obstruction_idx}"
-            obstruction_half_extents = obs.get_cuboid_half_extents(obstruction_name)
-            obstruction_pose = obs.get_cuboid_pose(obstruction_name)
+            obstruction_half_extents = obs.get_object_half_extents(obstruction_name)
+            obstruction_pose = obs.get_object_pose(obstruction_name)
             # Check if the block needs to be recreated.
             need_recreate = False
             need_destroy = False

@@ -76,14 +76,13 @@ def run_motion_planning(
 
     Note that this function changes the state of the robot.
 
-    If additional_state_constraint_fn is provided, the collision
-    checking is augmented so that additional_state_constraint_fn() =
-    False behaves as if a collision check failed. For example, if you
-    want to make sure that a held object is not rotated beyond some
-    threshold, you could use additional_state_constraint_fn to enforce
-    that. The additional state constraint function can assume that the
-    robot is already in the given joint positions because it will be
-    called right after collision checking, which sets the robot state.
+    If additional_state_constraint_fn is provided, the collision checking is augmented
+    so that additional_state_constraint_fn() = False behaves as if a collision check
+    failed. For example, if you want to make sure that a held object is not rotated
+    beyond some threshold, you could use additional_state_constraint_fn to enforce that.
+    The additional state constraint function can assume that the robot is already in the
+    given joint positions because it will be called right after collision checking,
+    which sets the robot state.
 
     If sampling_fn is not provided, defaults to uniform joint space.
     """
@@ -198,9 +197,9 @@ def run_smooth_motion_planning_to_pose(
     sampling_fn: Callable[[JointPositions], JointPositions] | None = None,
     distance_threshold: float = 1e-6,
 ) -> Optional[list[JointPositions]]:
-    """A naive smooth motion planner that reruns motion planning multiple times
-    and then picks the "smoothest" result according to a geometric weighting of
-    the joints (so the lowest joint should move the least)."""
+    """A naive smooth motion planner that reruns motion planning multiple times and then
+    picks the "smoothest" result according to a geometric weighting of the joints (so
+    the lowest joint should move the least)."""
     assert (
         not np.isinf(max_time) or max_candidate_plans is not None
     ), "Must specify either max_time or max_candidate_plans"
@@ -295,8 +294,8 @@ def smoothly_follow_end_effector_path(
     allow_skipping_intermediates: bool = True,
     seed: int = 0,
 ) -> list[JointPositions]:
-    """Find a smooth (short) joint trajectory that follows the given end
-    effector path while avoiding collisions.
+    """Find a smooth (short) joint trajectory that follows the given end effector path
+    while avoiding collisions.
 
     NOTE: if allow_skipping_intermediates is True, then some intermediate
     waypoints may be skipped if inverse kinematics fails.
@@ -435,8 +434,8 @@ def remap_joint_position_plan_to_constant_distance(
     max_distance: float = 0.1,
     distance_fn: Callable[[JointPositions, JointPositions], float] | None = None,
 ) -> list[JointPositions]:
-    """Re-interpolate a joint position plan so that it has constant distance
-    with a max distance specified."""
+    """Re-interpolate a joint position plan so that it has constant distance with a max
+    distance specified."""
 
     joint_infos = get_joint_infos(
         robot.robot_id, robot.arm_joints, robot.physics_client_id

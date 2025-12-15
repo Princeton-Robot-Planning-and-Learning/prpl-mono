@@ -30,12 +30,13 @@ class BaseMotion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Robot.
     robot_name: str = "tidybot-kinova"
+    check_base_collisions: bool = True
 
     # Target.
     target_radius: float = 0.01
     target_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    target_lower_bound: SE2Pose = SE2Pose(-1, 1, -np.pi)
-    target_upper_bound: SE2Pose = SE2Pose(-1, 1, np.pi)
+    target_lower_bound: SE2Pose = SE2Pose(-1, -1, -np.pi)
+    target_upper_bound: SE2Pose = SE2Pose(1, 1, np.pi)
 
 
 class BaseMotion3DObjectCentricState(Geom3DObjectCentricState):
@@ -96,15 +97,16 @@ class ObjectCentricBaseMotion3DEnv(
         target_pose: SE2Pose | None = None
         lb = self.config.target_lower_bound
         ub = self.config.target_upper_bound
+        robot_base_pose = self.robot.base.get_pose()
         for _ in range(100_000):
             x, y, rot = self.np_random.uniform(
                 (lb.x, lb.y, lb.rot), (ub.x, ub.y, ub.rot)
             )
             target_pose = SE2Pose(x, y, rot)
             # If the goal is already reached, keep sampling.
-            if not self._goal_reached():
+            if not self._robot_at_target_pose(robot_base_pose, target_pose):
                 break
-        if target_pose is None:
+        else:
             raise RuntimeError("Failed to find reachable target position")
         target_se3_pose = target_pose.to_se3(0.0)
         set_pose(self.target_id, target_se3_pose, self.physics_client_id)
@@ -141,21 +143,26 @@ class ObjectCentricBaseMotion3DEnv(
         assert isinstance(state, BaseMotion3DObjectCentricState)
         return state
 
-    def _goal_reached(self) -> bool:
-        target_se3_pose = get_pose(self.target_id, self.physics_client_id)
-        target_pose = target_se3_pose.to_se2()
-        robot_base_pose = self.robot.base.get_pose()
+    def _robot_at_target_pose(
+        self, robot_base_pose: SE2Pose, target_pose: SE2Pose
+    ) -> bool:
         dist = float(
             np.linalg.norm(
-                [
-                    target_pose.x - robot_base_pose.x,
-                    target_pose.y,
-                    robot_base_pose.y,
-                    target_pose.rot - robot_base_pose.rot,
-                ]
+                np.array(
+                    [
+                        target_pose.x - robot_base_pose.x,
+                        target_pose.y - robot_base_pose.y,
+                    ]
+                )
             )
         )
         return dist < self.config.target_radius
+
+    def _goal_reached(self) -> bool:
+        robot_base_pose = self.robot.base.get_pose()
+        target_se3_pose = get_pose(self.target_id, self.physics_client_id)
+        target_pose = target_se3_pose.to_se2()
+        return self._robot_at_target_pose(robot_base_pose, target_pose)
 
 
 class BaseMotion3DEnv(ConstantObjectPRBenchEnv):
