@@ -8,6 +8,9 @@ from numpy.typing import NDArray
 from prbench.envs.dynamic3d import utils
 from prbench.envs.dynamic3d.objects import get_fixture_class
 
+# Default yaw range in degrees (full rotation)
+DEFAULT_YAW_RANGE = (0.0, 360.0)
+
 
 def sample_collision_free_positions(
     fixtures: dict[str, dict[str, dict[str, Any]]],
@@ -37,7 +40,7 @@ def sample_collision_free_positions(
 
     # Default range if none provided
     default_range = (-2.0, 0.5, 2.0, 2.5)
-    default_yaw_range = (0.0, 360.0)
+    default_yaw_range = DEFAULT_YAW_RANGE
 
     for fixture_type, fixture_configs in fixtures.items():
         fixture_poses[fixture_type] = {}
@@ -88,7 +91,7 @@ def sample_collision_free_position(
     max_attempts: int = 100,
     x_range: tuple[float, float] = (-2.0, 2.0),
     y_range: tuple[float, float] = (0.5, 2.5),
-    yaw_range: tuple[float, float] = (0.0, 360.0),
+    yaw_range: tuple[float, float] = DEFAULT_YAW_RANGE,
 ) -> tuple[NDArray[np.float32], float]:
     """Sample a collision-free position and yaw for a fixture.
 
@@ -169,7 +172,7 @@ def sample_collision_free_position(
             0.0,
         ]
     )
-    fallback_yaw_deg = np_random.uniform(0, 360)
+    fallback_yaw_deg = np_random.uniform(DEFAULT_YAW_RANGE[0], DEFAULT_YAW_RANGE[1])
     fallback_yaw = np.radians(fallback_yaw_deg)
     return fallback_pos, fallback_yaw
 
@@ -178,17 +181,22 @@ def sample_pose_in_region(
     regions: list[list[float]],
     np_random: np.random.Generator,
     z_coordinate: float = 0.02,
-) -> tuple[float, float, float]:
-    """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
+    yaw_ranges: list[tuple[float, float]] | None = None,
+) -> tuple[float, float, float, float]:
+    """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided regions.
 
     Args:
         regions: List of bounding boxes, where each bounding box is a list of 4
                 floats: [x_start, y_start, x_end, y_end]
         np_random: Random number generator
         z_coordinate: Z coordinate for the sampled pose (height above ground)
+        yaw_ranges: Optional list of yaw rotation ranges as [(yaw_min, yaw_max), ...]
+                   in degrees, one for each region. If None, uses full range
+                   (0.0, 360.0) for all regions.
 
     Returns:
-        Tuple of (x, y, z) coordinates sampled from one of the regions
+        Tuple of (x, y, z, yaw) coordinates sampled from one of the regions,
+        where yaw is in radians
 
     Raises:
         ValueError: If regions list is empty or if any region has invalid bounds
@@ -197,7 +205,8 @@ def sample_pose_in_region(
         raise ValueError("Regions list cannot be empty")
 
     # Randomly select one of the regions
-    selected_region = np_random.choice(regions)
+    selected_region_index = np_random.choice(len(regions))
+    selected_region = regions[selected_region_index]
 
     # Validate the selected region
     if len(selected_region) != 4:
@@ -218,4 +227,12 @@ def sample_pose_in_region(
     x = np_random.uniform(x_start, x_end)
     y = np_random.uniform(y_start, y_end)
 
-    return (x, y, z_coordinate)
+    # Sample yaw from the specified range (convert from degrees to radians)
+    yaw_range = DEFAULT_YAW_RANGE
+    if yaw_ranges is not None and len(yaw_ranges) > 0:
+        # Use the yaw_range corresponding to the selected region index
+        yaw_range = yaw_ranges[selected_region_index]
+    yaw_deg = np_random.uniform(yaw_range[0], yaw_range[1])
+    yaw = np.radians(yaw_deg)
+
+    return (x, y, z_coordinate, yaw)

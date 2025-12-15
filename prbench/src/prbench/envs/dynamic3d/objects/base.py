@@ -383,18 +383,18 @@ class MujocoFixture(abc.ABC):
         self,
         region_name: str,
         np_random: np.random.Generator,
-    ) -> tuple[float, float, float]:
-        """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
+    ) -> tuple[float, float, float, float]:
+        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided regions.
 
         Args:
-            regions: List of bounding boxes, where each bounding box is a list of
-                    4 floats: [x_start, y_start, x_end, y_end] in table-relative
-                    coordinates
-            np_random: Random number generator. If None, uses numpy's default random
+            region_name: Name of the region to sample from
+            np_random: Random number generator
 
         Returns:
-            Tuple of (x, y, z) coordinates in world coordinates (offset by table
-            position)
+            Tuple of (x, y, z, yaw) coordinates in world coordinates (offset by
+            fixture position), where yaw is in radians. The yaw range is read from
+            self.regions[region_name]["yaw_ranges"] if it exists, otherwise
+            defaults to (0.0, 360.0) degrees.
 
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds

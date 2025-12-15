@@ -42,7 +42,10 @@ from prbench.envs.dynamic3d.robots import (
     TidyBotRobotEnv,
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
-from prbench.envs.dynamic3d.utils import check_in_region
+from prbench.envs.dynamic3d.utils import (
+    check_in_region,
+    convert_yaw_to_quaternion,
+)
 
 
 @dataclass(frozen=True)
@@ -220,10 +223,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                             # Extract randomly sampled range tuple
                             # (x_min, y_min, x_max, y_max)
                             available_ranges = region_config["ranges"]
-                            selected_range = self.np_random.choice(
+                            selected_range_index = self.np_random.choice(
                                 len(available_ranges)
                             )
-                            ranges = available_ranges[selected_range]
+                            ranges = available_ranges[selected_range_index]
                             fixture_ranges[fixture_name] = tuple(ranges)
 
                             # Extract yaw rotation range if specified
@@ -235,7 +238,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                                     f"ranges in region {region_name}"
                                 )
                                 yaw_rotation = region_config["yaw_ranges"][
-                                    selected_range
+                                    selected_range_index
                                 ]
                                 fixture_yaw_ranges[fixture_name] = tuple(yaw_rotation)
 
@@ -328,17 +331,23 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 region_config = self.task_config["regions"][region_name]
                 region_ranges = region_config["ranges"]
 
+                # Extract yaw ranges if specified (in degrees)
+                yaw_ranges = region_config.get("yaw_ranges", None)
+
                 if region_config["target"] == "ground":
                     # Sample pose directly on the ground using utility function
                     # Get the object's bounding box to determine proper z-coordinate
                     obj = self._objects_dict[obj_name]
                     _, _, height = obj.get_bounding_box_dimensions()
                     # Place object so its bottom is on the ground (z = height/2)
-                    pos_x, pos_y, pos_z = sample_pose_in_region(
+                    pos_x, pos_y, pos_z, theta = sample_pose_in_region(
                         region_ranges,
                         self.np_random,
                         z_coordinate=height / 2,
+                        yaw_ranges=yaw_ranges,
                     )
+                    # Convert yaw to quaternion
+                    quat = convert_yaw_to_quaternion(theta)
                 else:
                     # Sample pose on a fixture (table, etc.)
                     target_fixture = region_config["target"]
@@ -348,13 +357,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         f"fixture?"
                     )
                     fixture = self._fixtures_dict[target_fixture]
-                    pos_x, pos_y, pos_z = fixture.sample_pose_in_region(
+                    pos_x, pos_y, pos_z, theta = fixture.sample_pose_in_region(
                         region_name, self.np_random
                     )
-
-                # Randomize orientation around Z-axis (yaw)
-                theta = self.np_random.uniform(-math.pi, math.pi)
-                quat = np.array([math.cos(theta / 2), 0, 0, math.sin(theta / 2)])
+                    # Convert yaw to quaternion
+                    quat = convert_yaw_to_quaternion(theta)
 
                 # Set object pose in the environment
                 obj = self._objects_dict[obj_name]
