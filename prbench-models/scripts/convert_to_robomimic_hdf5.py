@@ -12,8 +12,8 @@ from scipy.spatial.transform import Rotation  # type: ignore
 
 
 def main(
-    input_dir: str, output_path: str, args
-) -> None:  # pylint: disable=redefined-outer-name
+    input_dir: str, output_path: str, args  # pylint: disable=redefined-outer-name
+) -> None:
     """Convert PRBench demos to RoboMimic HDF5 format."""
     # Get list of episode dirs
     episode_dirs = sorted(
@@ -58,9 +58,9 @@ def main(
                         if args.high_resolution:
                             v = cv.resize(v, (224, 224))  # pylint: disable=no-member
                         else:
-                            v = cv.resize(
+                            v = cv.resize(  # pylint: disable=no-member
                                 v, (POLICY_IMAGE_WIDTH, POLICY_IMAGE_HEIGHT)
-                            )  # pylint: disable=no-member
+                            )
 
                     # Append extracted observation
                     if k not in observations:

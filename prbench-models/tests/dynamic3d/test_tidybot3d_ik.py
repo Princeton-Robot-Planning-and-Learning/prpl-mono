@@ -36,4 +36,3 @@ def test_ik_solver_performance_and_accuracy():
     assert np.allclose(
         qpos_deg, expected_home_deg, atol=5
     ), f"IK solution deviates from expected: {qpos_deg} vs {expected_home_deg}"
-

@@ -15,9 +15,12 @@ def write_frames_to_mp4(frames: list[np.ndarray], mp4_path: Path) -> None:
     """Write frames to MP4 video."""
     height, width, _ = frames[0].shape
     fourcc = cv.VideoWriter_fourcc(*"mp4v")  # type: ignore # pylint: disable=no-member
-    out = cv.VideoWriter(
-        str(mp4_path), fourcc, POLICY_CONTROL_FREQ, (width, height)
-    )  # pylint: disable=no-member
+    out = cv.VideoWriter(  # pylint: disable=no-member
+        str(mp4_path),
+        fourcc,
+        POLICY_CONTROL_FREQ,
+        (width, height),  # pylint: disable=no-member
+    )
     for frame in frames:
         bgr_frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)  # pylint: disable=no-member
         out.write(bgr_frame)
@@ -33,8 +36,8 @@ def read_frames_from_mp4(mp4_path: Path) -> list[np.ndarray]:
         if not ret:
             break
         frames.append(
-            cv.cvtColor(bgr_frame, cv.COLOR_BGR2RGB)
-        )  # pylint: disable=no-member
+            cv.cvtColor(bgr_frame, cv.COLOR_BGR2RGB)  # pylint: disable=no-member
+        )
     cap.release()
     return frames
 

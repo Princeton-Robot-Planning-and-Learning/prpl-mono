@@ -71,13 +71,13 @@ class RemotePolicy:
         for k, v in obs.items():
             if isinstance(v, np.ndarray) and v.ndim == 3:
                 # Resize image to resolution expected by policy server
-                v = cv.resize(
+                v = cv.resize(  # pylint: disable=no-member
                     v, (self.image_width, self.image_height)
-                )  # pylint: disable=no-member
+                )
                 # Encode image as JPEG
-                _, v = cv.imencode(
+                _, v = cv.imencode( # pylint: disable=no-member
                     ".jpg", v
-                )  # Note: Interprets RGB as BGR # pylint: disable=no-member
+                )  # Note: Interprets RGB as BGR
                 encoded_obs[k] = v
             else:
                 encoded_obs[k] = v
@@ -220,7 +220,7 @@ def run_inference(
                     writer.step(obs_dict, action_dict, target_object_key)
 
                 # Execute action in environment
-                obs, reward, terminated, truncated, _, raw_obs = env.step_with_images(  # type: ignore
+                obs, reward, terminated, truncated, _, raw_obs = env.step_with_images( # type: ignore # pylint: disable=line-too-long
                     action
                 )
                 next_state = env.observation_space.devectorize(obs)
