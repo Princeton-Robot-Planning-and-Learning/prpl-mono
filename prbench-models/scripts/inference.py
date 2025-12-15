@@ -2,21 +2,23 @@
 
 import argparse
 import time
+
 import cv2 as cv
 import numpy as np
-import zmq
 import prbench
-from relational_structs.spaces import ObjectCentricBoxSpace
-from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
-from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
-from episode_storage import EpisodeWriter
+import zmq
 from constants import (
+    POLICY_CONTROL_PERIOD,
+    POLICY_IMAGE_HEIGHT,
+    POLICY_IMAGE_WIDTH,
     POLICY_SERVER_HOST,
     POLICY_SERVER_PORT,
-    POLICY_CONTROL_PERIOD,
-    POLICY_IMAGE_WIDTH,
-    POLICY_IMAGE_HEIGHT,
 )
+from episode_storage import EpisodeWriter
+from relational_structs.spaces import ObjectCentricBoxSpace
+
+from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
+from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 
 prbench.register_all_environments()
 
@@ -50,15 +52,17 @@ class RemotePolicy:
             self.socket.recv_pyobj()  # Note: Not secure. Only unpickle data you trust.
         except zmq.error.Again as e:
             raise Exception("Could not communicate with policy server") from e
-        self.socket.setsockopt(zmq.RCVTIMEO, default_timeout)  # Put default timeout back
+        self.socket.setsockopt(
+            zmq.RCVTIMEO, default_timeout
+        )  # Put default timeout back
         print("Policy reset successful")
 
     def step(self, obs: dict) -> dict:
         """Get action from policy server.
-        
+
         Args:
             obs: Observation dictionary with state and image keys.
-            
+
         Returns:
             Action dictionary from the policy server.
         """
@@ -79,7 +83,9 @@ class RemotePolicy:
         self.socket.send_pyobj(req)
 
         # Get action from policy server
-        rep = self.socket.recv_pyobj()  # Note: Not secure. Only unpickle data you trust.
+        rep = (
+            self.socket.recv_pyobj()
+        )  # Note: Not secure. Only unpickle data you trust.
         action = rep["action"]
 
         return action
@@ -101,7 +107,7 @@ def run_inference(
     render: bool = False,
 ):
     """Run policy inference in the prbench environment.
-    
+
     Args:
         output_dir: Directory to save episode data.
         seed: Random seed for reproducibility.
@@ -130,18 +136,18 @@ def run_inference(
     try:
         for episode_idx in range(num_episodes):
             print(f"\n=== Episode {episode_idx + 1}/{num_episodes} ===")
-            
+
             # Create episode writer if saving is enabled
             writer = EpisodeWriter(output_dir) if save else None
 
             # Reset the environment
             episode_seed = seed + episode_idx
-            obs, _, raw_obs = env.reset_with_images(seed=episode_seed)
+            obs, _, raw_obs = env.reset_with_images(seed=episode_seed) # type: ignore
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
             # Reset the policy
-            policy.reset()
+            policy.reset() # type: ignore
 
             # Target object for this episode (can be detected or specified)
             target_object_key = "cube0"
@@ -155,20 +161,22 @@ def run_inference(
 
                 # Get robot state
                 robot = state.get_object_from_name("robot")
-                current_joints = np.array([
-                    state.get(robot, f"pos_arm_joint{i}") for i in range(1, 8)
-                ])
+                current_joints = np.array(
+                    [state.get(robot, f"pos_arm_joint{i}") for i in range(1, 8)]
+                )
                 current_position, current_orientation = fk_solver.forward_kinematics(
                     current_joints
                 )
 
                 # Create observation dict for policy
                 obs_dict = {
-                    "base_pose": np.array([
-                        state.get(robot, "pos_base_x"),
-                        state.get(robot, "pos_base_y"),
-                        state.get(robot, "pos_base_rot"),
-                    ]),
+                    "base_pose": np.array(
+                        [
+                            state.get(robot, "pos_base_x"),
+                            state.get(robot, "pos_base_y"),
+                            state.get(robot, "pos_base_rot"),
+                        ]
+                    ),
                     "arm_pos": current_position,
                     "arm_quat": current_orientation,
                     "gripper_pos": np.array([state.get(robot, "pos_gripper")]),
@@ -181,29 +189,35 @@ def run_inference(
                 action_dict = policy.step(obs_dict)
 
                 if action_dict is None:
-                    action_dict = {
+                    action_dict: dict[str, np.ndarray] = { # type: ignore
                         "base_pose": obs_dict["base_pose"],
                         "arm_pos": obs_dict["arm_pos"],
                         "arm_quat": obs_dict["arm_quat"],
                         "gripper_pos": obs_dict["gripper_pos"],
                     }
-                
-                
-                qpos = ik_solver.solve(action_dict['arm_pos'], action_dict['arm_quat'], current_joints)
-                delta_qpos = np.mod((qpos - current_joints) + np.pi, 2 * np.pi) - np.pi  # Unwrapped joint angles
 
-                action = np.concatenate([
-                    action_dict["base_pose"] - obs_dict["base_pose"], 
-                    delta_qpos, 
-                    action_dict["gripper_pos"]])
+                qpos = ik_solver.solve(
+                    action_dict["arm_pos"], action_dict["arm_quat"], current_joints
+                )
+                delta_qpos = (
+                    np.mod((qpos - current_joints) + np.pi, 2 * np.pi) - np.pi
+                )  # Unwrapped joint angles
+
+                action = np.concatenate(
+                    [
+                        action_dict["base_pose"] - obs_dict["base_pose"],
+                        delta_qpos,
+                        action_dict["gripper_pos"],
+                    ]
+                )
 
                 # Record observation and action before stepping
                 if writer is not None:
                     writer.step(obs_dict, action_dict, target_object_key)
 
                 # Execute action in environment
-                obs, reward, terminated, truncated, info, raw_obs = env.step_with_images(
-                    action
+                obs, reward, terminated, truncated, info, raw_obs = (
+                    env.step_with_images(action) # type: ignore
                 )
                 next_state = env.observation_space.devectorize(obs)
                 state = next_state
@@ -211,7 +225,9 @@ def run_inference(
                 # Check for episode end
                 if terminated or truncated:
                     print(f"Episode ended after {step_idx + 1} steps")
-                    print(f"  Reward: {reward}, Terminated: {terminated}, Truncated: {truncated}")
+                    print(
+                        f"  Reward: {reward}, Terminated: {terminated}, Truncated: {truncated}"
+                    )
                     break
 
             else:
@@ -224,11 +240,11 @@ def run_inference(
                 print(f"Episode saved with {len(writer)} steps")
 
     finally:
-        policy.close()
-        env.close()
+        policy.close() # type: ignore
+        env.close() # type: ignore
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description="Run policy inference in prbench")
     parser.add_argument(
         "--output-dir", default="data/inference", help="Directory to save episodes"
@@ -236,7 +252,9 @@ def main():
     parser.add_argument(
         "--seed", type=int, default=123, help="Random seed for reproducibility"
     )
-    parser.add_argument("--save", action="store_true", default=True, help="Save episodes")
+    parser.add_argument(
+        "--save", action="store_true", default=True, help="Save episodes"
+    )
     parser.add_argument("--no-save", dest="save", action="store_false")
     parser.add_argument(
         "--num-episodes", type=int, default=1, help="Number of episodes to run"
@@ -277,4 +295,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

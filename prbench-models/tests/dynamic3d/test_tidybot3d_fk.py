@@ -4,8 +4,10 @@ import numpy as np
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 
+
 def test_forward_kinematics():
-    """Test that the TidybotFKSolver returns the correct end-effector pose for the home position."""
+    """Test that the TidybotFKSolver returns the correct end-effector pose for the home
+    position."""
     fk = TidybotFKSolver(ee_offset=0.0)
     home_qpos = np.deg2rad([0, 15, 180, -130, 0, 55, 90])
     expected_home_pos = np.array([0.456, 0.0, 0.434])

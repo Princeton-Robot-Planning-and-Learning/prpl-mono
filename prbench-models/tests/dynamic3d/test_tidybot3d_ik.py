@@ -37,6 +37,7 @@ def test_ik_solver_performance_and_accuracy():
         qpos_deg, expected_home_deg, atol=5
     ), f"IK solution deviates from expected: {qpos_deg} vs {expected_home_deg}"
 
+
 def test_forward_kinematics():
     ik = TidybotIKSolver(ee_offset=0.0)
     home_qpos = np.deg2rad([0, 15, 180, -130, 0, 55, 90])
