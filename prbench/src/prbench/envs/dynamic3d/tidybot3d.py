@@ -387,6 +387,37 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         return self._get_current_state(), {}
 
+    def reset_with_images(
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[ObjectCentricState, dict[str, Any], dict[str, Any]]:
+        """Reset the environment and return object-centric observation."""
+
+        # Reset the random seed
+        self._robot_env.seed(seed=seed)
+        self.np_random = self._robot_env.np_random
+
+        # Create scene XML
+        self._objects = []
+        self._objects_dict = {}
+        self._fixtures_dict = {}
+        xml_string = self._create_scene_xml()
+
+        # Reset the underlying TidyBot robot environment
+        robot_options = options.copy() if options is not None else {}
+        robot_options["xml"] = xml_string
+        self._robot_env.reset(options=robot_options)
+
+        # Initialize object poses
+        self._initialize_object_poses()
+
+        # Get object-centric observation
+        self._current_state = self._get_object_centric_state()
+
+        return self._get_current_state(), {}, self._get_obs()
+
     def set_state(self, state: ObjectCentricState) -> None:
         """Set the environment to the current state.
 
@@ -449,7 +480,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         obs = self._robot_env.get_obs()
         vec_obs = self._vectorize_observation(obs)
         object_centric_state = self._get_object_centric_state()
-        return {"vec": vec_obs, "object_centric_state": object_centric_state}
+        return {
+            "vec": vec_obs,
+            "object_centric_state": object_centric_state,
+            "raw_obs": obs,
+        }
 
     def _get_object_centric_state(self) -> ObjectCentricState:
         """Get the current object-centric state of the environment."""
@@ -465,6 +500,35 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         robot_state_dict = self._get_object_centric_robot_data()
         state_dict.update(robot_state_dict)
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
+
+    def step_with_images(
+        self, action: Array
+    ) -> tuple[ObjectCentricState, float, bool, bool, dict[str, Any], dict[str, Any]]:
+        """Step the environment and return object-centric observation."""
+        # Run the action through the underlying environment
+        assert self._robot_env is not None, "Robot environment not initialized"
+        self._robot_env.step(action)
+
+        # Update object-centric state
+        self._current_state = self._get_object_centric_state()
+
+        # Get raw observation for reward calculation
+        raw_obs = self._get_obs()
+
+        # Visualization loop for rendered image
+        if self.show_images:
+            for camera_name in self._robot_env.camera_names:
+                self._visualize_image_in_window(
+                    raw_obs[f"{camera_name}_image"],
+                    f"TidyBot {camera_name} camera",
+                )
+
+        # Calculate reward and termination
+        reward = self.reward(raw_obs)
+        terminated = self._is_terminated(raw_obs)
+        truncated = False
+
+        return self._get_current_state(), reward, terminated, truncated, {}, raw_obs
 
     def step(
         self, action: Array
