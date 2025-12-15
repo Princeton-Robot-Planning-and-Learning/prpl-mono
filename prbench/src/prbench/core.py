@@ -232,6 +232,30 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, info
 
+    def reset_with_images(
+        self, *args, **kwargs
+    ) -> tuple[NDArray[Any], dict, dict[str, Any]]:
+        """Reset the environment and return object-centric observation and raw
+        observation."""
+        super().reset(*args, **kwargs)  # necessary to reset RNG if seed is given
+        if (kwargs.get("options") is not None) and (
+            "init_state" in kwargs.get("options", {})
+        ):
+            # NOTE: From user perspective, they might just pass in a state
+            # that is similar to the observation array for resetting,
+            # not an ObjectCentricState.
+            if not isinstance(kwargs["options"]["init_state"], ObjectCentricState):
+                assert isinstance(kwargs["options"]["init_state"], np.ndarray)
+                assert isinstance(self.observation_space, ObjectCentricBoxSpace)
+                obj_centric_state = self.observation_space.devectorize(
+                    kwargs["options"]["init_state"]
+                )
+                kwargs["options"]["init_state"] = obj_centric_state
+        obs, info, raw_obs = self._object_centric_env.reset_with_images(*args, **kwargs)  # type: ignore # pylint: disable=line-too-long
+        assert isinstance(self.observation_space, ObjectCentricBoxSpace)
+        vec_obs = self.observation_space.vectorize(obs)
+        return vec_obs, info, raw_obs
+
     def step(self, *args, **kwargs) -> tuple[NDArray[Any], float, bool, bool, dict]:
         obs, reward, terminated, truncated, done = self._object_centric_env.step(
             *args, **kwargs
@@ -239,6 +263,18 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         assert isinstance(self.observation_space, ObjectCentricBoxSpace)
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, reward, terminated, truncated, done
+
+    def step_with_images(
+        self, *args, **kwargs
+    ) -> tuple[NDArray[Any], float, bool, bool, dict, dict[str, Any]]:
+        """Step the environment and return object-centric observation and raw
+        observation."""
+        obs, reward, terminated, truncated, done, raw_obs = (
+            self._object_centric_env.step_with_images(*args, **kwargs)  # type: ignore
+        )
+        assert isinstance(self.observation_space, ObjectCentricBoxSpace)
+        vec_obs = self.observation_space.vectorize(obs)
+        return vec_obs, reward, terminated, truncated, done, raw_obs
 
     def render(self):
         return self._object_centric_env.render()
