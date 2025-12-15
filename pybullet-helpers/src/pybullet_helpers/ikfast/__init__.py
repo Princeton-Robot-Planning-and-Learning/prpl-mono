@@ -1,5 +1,5 @@
-"""The `ikfast` module contains all the functionality to compile, install, and
-load the IKFast module and also run IK using it."""
+"""The `ikfast` module contains all the functionality to compile, install, and load the
+IKFast module and also run IK using it."""
 
 from typing import List, NamedTuple
 

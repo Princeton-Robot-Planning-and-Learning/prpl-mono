@@ -12,8 +12,8 @@ BASE_LINK: int = -1
 class LinkState(NamedTuple):
     """Link state to match the output of the PyBullet getLinkState API.
 
-    We use a NamedTuple as it supports retrieving by integer indexing
-    and most closely follows the PyBullet API.
+    We use a NamedTuple as it supports retrieving by integer indexing and most closely
+    follows the PyBullet API.
     """
 
     linkWorldPosition: Pose3D

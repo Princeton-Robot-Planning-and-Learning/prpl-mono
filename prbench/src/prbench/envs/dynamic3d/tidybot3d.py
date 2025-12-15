@@ -154,6 +154,19 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Insert objects in scene
         tree = ET.parse(str(absolute_model_path))
         root = tree.getroot()
+
+        # Get or create asset section for adding meshes/textures/materials
+        asset_section = root.find("asset")
+        if asset_section is None:
+            asset_section = ET.Element("asset")
+            # Insert asset section after visual section if it exists
+            visual_section = root.find("visual")
+            if visual_section is not None:
+                visual_index = list(root).index(visual_section)
+                root.insert(visual_index + 1, asset_section)
+            else:
+                root.insert(0, asset_section)
+
         worldbody = root.find("worldbody")
         if worldbody is not None:
             # Remove all existing cube bodies
@@ -254,10 +267,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 for object_type, object_configs in objects.items():
                     for object_name, object_config in object_configs.items():
                         obj_cls = get_object_class(object_type)
+                        default_rgba = [0.5, 0.5, 0.5, 1]
+                        rgba_list = object_config.get("rgba", default_rgba)
                         obj_options = {
-                            "size": object_config["size"],
-                            "rgba": " ".join(map(str, object_config["rgba"])),
-                            "mass": object_config["mass"],
+                            "size": object_config.get("size"),
+                            "rgba": " ".join(map(str, rgba_list)),
+                            "mass": object_config.get("mass", 0.1),
                         }
                         obj = obj_cls(
                             name=object_name,
@@ -268,6 +283,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         worldbody.append(body)
                         self._objects.append(obj)
                         self._objects_dict[object_name] = obj
+
+                        # Add assets if this is a RoboCasa object
+                        if hasattr(obj, "get_assets"):
+                            obj_assets = obj.get_assets()
+                            # Add all mesh, texture, and material elements
+                            # to asset section
+                            for asset_elem in obj_assets:
+                                asset_section.append(asset_elem)
 
             # Get XML string from tree
             xml_string = ET.tostring(root, encoding="unicode")
@@ -295,12 +318,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
                 if region_config["target"] == "ground":
                     # Sample pose directly on the ground using utility function
-                    assert obj_name.startswith("cube"), "TODO"
-                    size = self.task_config["objects"]["cube"][obj_name]["size"]
+                    # Get the object's bounding box to determine proper z-coordinate
+                    obj = self._objects_dict[obj_name]
+                    _, _, height = obj.get_bounding_box_dimensions()
+                    # Place object so its bottom is on the ground (z = height/2)
                     pos_x, pos_y, pos_z = sample_pose_in_region(
                         region_ranges,
                         self.np_random,
-                        z_coordinate=size,
+                        z_coordinate=height / 2,
                     )
                 else:
                     # Sample pose on a fixture (table, etc.)
@@ -361,6 +386,37 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self._current_state = self._get_object_centric_state()
 
         return self._get_current_state(), {}
+
+    def reset_with_images(
+        self,
+        *,
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[ObjectCentricState, dict[str, Any], dict[str, Any]]:
+        """Reset the environment and return object-centric observation."""
+
+        # Reset the random seed
+        self._robot_env.seed(seed=seed)
+        self.np_random = self._robot_env.np_random
+
+        # Create scene XML
+        self._objects = []
+        self._objects_dict = {}
+        self._fixtures_dict = {}
+        xml_string = self._create_scene_xml()
+
+        # Reset the underlying TidyBot robot environment
+        robot_options = options.copy() if options is not None else {}
+        robot_options["xml"] = xml_string
+        self._robot_env.reset(options=robot_options)
+
+        # Initialize object poses
+        self._initialize_object_poses()
+
+        # Get object-centric observation
+        self._current_state = self._get_object_centric_state()
+
+        return self._get_current_state(), {}, self._get_obs()
 
     def set_state(self, state: ObjectCentricState) -> None:
         """Set the environment to the current state.
@@ -424,7 +480,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         obs = self._robot_env.get_obs()
         vec_obs = self._vectorize_observation(obs)
         object_centric_state = self._get_object_centric_state()
-        return {"vec": vec_obs, "object_centric_state": object_centric_state}
+        return {
+            "vec": vec_obs,
+            "object_centric_state": object_centric_state,
+            "raw_obs": obs,
+        }
 
     def _get_object_centric_state(self) -> ObjectCentricState:
         """Get the current object-centric state of the environment."""
@@ -440,6 +500,35 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         robot_state_dict = self._get_object_centric_robot_data()
         state_dict.update(robot_state_dict)
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
+
+    def step_with_images(
+        self, action: Array
+    ) -> tuple[ObjectCentricState, float, bool, bool, dict[str, Any], dict[str, Any]]:
+        """Step the environment and return object-centric observation."""
+        # Run the action through the underlying environment
+        assert self._robot_env is not None, "Robot environment not initialized"
+        self._robot_env.step(action)
+
+        # Update object-centric state
+        self._current_state = self._get_object_centric_state()
+
+        # Get raw observation for reward calculation
+        raw_obs = self._get_obs()
+
+        # Visualization loop for rendered image
+        if self.show_images:
+            for camera_name in self._robot_env.camera_names:
+                self._visualize_image_in_window(
+                    raw_obs[f"{camera_name}_image"],
+                    f"TidyBot {camera_name} camera",
+                )
+
+        # Calculate reward and termination
+        reward = self.reward(raw_obs)
+        terminated = self._is_terminated(raw_obs)
+        truncated = False
+
+        return self._get_current_state(), reward, terminated, truncated, {}, raw_obs
 
     def step(
         self, action: Array

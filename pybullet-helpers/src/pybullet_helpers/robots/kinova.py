@@ -43,8 +43,8 @@ class KinovaGen3NoGripperPyBulletRobot(SingleArmPyBulletRobot):
 class KinovaGen3RobotiqGripperPyBulletRobot(FingeredSingleArmPyBulletRobot[float]):
     """A Kinova Gen3 robot arm with a robotiq gripper.
 
-    The finger states are all determined by one value, but there are
-    multiple mimic joints.
+    The finger states are all determined by one value, but there are multiple mimic
+    joints.
     """
 
     @classmethod
