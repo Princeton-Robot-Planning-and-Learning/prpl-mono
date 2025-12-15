@@ -34,8 +34,8 @@ def quaternion_from_euler(rpy: RollPitchYaw) -> Quaternion:
 class Pose(NamedTuple):
     """Pose which is a position (translation) and rotation.
 
-    We use a NamedTuple as it supports retrieving by integer indexing
-    and most closely follows the PyBullet API.
+    We use a NamedTuple as it supports retrieving by integer indexing and most closely
+    follows the PyBullet API.
     """
 
     # Cartesian (x, y, z) position
@@ -141,11 +141,11 @@ def multiply_poses(*poses: Pose) -> Pose:
 def orientations_allclose(
     quat1: Quaternion, quat2: Quaternion, atol: float = 1e-6
 ) -> bool:
-    """Check whether two quaternion orientations are close, accounting for
-    double coverage.
+    """Check whether two quaternion orientations are close, accounting for double
+    coverage.
 
-    Note that this should not be used to check if two rotations are
-    equal, e.g., in the context of slerp.
+    Note that this should not be used to check if two rotations are equal, e.g., in the
+    context of slerp.
 
     For example, see
     https://gamedev.stackexchange.com/questions/75072/.

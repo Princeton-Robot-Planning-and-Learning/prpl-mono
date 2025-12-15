@@ -26,8 +26,8 @@ class Type:
         return consistent_hash(self.name)
 
     def get_ancestors(self) -> Set[Type]:
-        """Get the set of all types that are ancestors (i.e. parents,
-        grandparents, great-grandparents, etc.) of the current type."""
+        """Get the set of all types that are ancestors (i.e. parents, grandparents,
+        great-grandparents, etc.) of the current type."""
         curr_type: Optional[Type] = self
         ancestors_set = set()
         while curr_type is not None:
@@ -38,8 +38,8 @@ class Type:
 
 @dataclass(frozen=True, order=True, repr=False)
 class TypedEntity:
-    """Struct defining an entity with some type, either an object (e.g.,
-    block3) or a variable (e.g., ?block).
+    """Struct defining an entity with some type, either an object (e.g., block3) or a
+    variable (e.g., ?block).
 
     Should not be instantiated externally.
     """
@@ -74,8 +74,8 @@ class TypedEntity:
 
 @dataclass(frozen=True, order=True, repr=False)
 class Object(TypedEntity):
-    """Struct defining an Object, which is just a _TypedEntity whose name does
-    not start with "?"."""
+    """Struct defining an Object, which is just a _TypedEntity whose name does not start
+    with "?"."""
 
     def __post_init__(self) -> None:
         assert not self.name.startswith("?")
@@ -88,8 +88,8 @@ class Object(TypedEntity):
 
 @dataclass(frozen=True, order=True, repr=False)
 class Variable(TypedEntity):
-    """Struct defining a Variable, which is just a _TypedEntity whose name
-    starts with "?"."""
+    """Struct defining a Variable, which is just a _TypedEntity whose name starts with
+    "?"."""
 
     def __post_init__(self) -> None:
         assert self.name.startswith("?")
