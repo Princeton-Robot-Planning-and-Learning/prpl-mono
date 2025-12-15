@@ -227,8 +227,16 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                             fixture_ranges[fixture_name] = tuple(ranges)
 
                             # Extract yaw rotation range if specified
-                            if "yaw_rotation" in region_config:
-                                yaw_rotation = region_config["yaw_rotation"]
+                            if "yaw_ranges" in region_config:
+                                assert len(region_config["yaw_ranges"]) == len(
+                                    region_config["ranges"]
+                                ), (
+                                    f"Length of yaw_ranges must match length of "
+                                    f"ranges in region {region_name}"
+                                )
+                                yaw_rotation = region_config["yaw_ranges"][
+                                    selected_range
+                                ]
                                 fixture_yaw_ranges[fixture_name] = tuple(yaw_rotation)
 
                 # Sample collision-free positions for all fixtures
