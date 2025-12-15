@@ -225,7 +225,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                             )
                             ranges = available_ranges[selected_range]
                             fixture_ranges[fixture_name] = tuple(ranges)
-                            
+
                             # Extract yaw rotation range if specified
                             if "yaw_rotation" in region_config:
                                 yaw_rotation = region_config["yaw_rotation"]
@@ -287,13 +287,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         worldbody.append(body)
                         self._objects.append(obj)
                         self._objects_dict[object_name] = obj
-                        
-                        # Add assets if this is a RoboCasa object
-                        if hasattr(obj, "get_assets"):
-                            obj_assets = obj.get_assets()
-                            # Add all mesh, texture, and material elements to asset section
-                            for asset_elem in obj_assets:
-                                asset_section.append(asset_elem)
 
                         # Add assets if this is a RoboCasa object
                         if hasattr(obj, "get_assets"):
