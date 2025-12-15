@@ -10,8 +10,8 @@ from prpl_llm_utils.structs import Query, Response
 class RepromptCheck(abc.ABC):
     """Check if reprompting is necessary and create a reprompt if so.
 
-    Note that the reprompt needs to include any relevant history; there
-    is no conversation carried between queries.
+    Note that the reprompt needs to include any relevant history; there is no
+    conversation carried between queries.
     """
 
     @abc.abstractmethod

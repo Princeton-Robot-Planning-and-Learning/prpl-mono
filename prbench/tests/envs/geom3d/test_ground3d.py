@@ -1,7 +1,7 @@
 """Tests for ground3d.py."""
 
 import numpy as np
-from conftest import MAKE_VIDEOS
+import pytest
 from gymnasium.wrappers import RecordVideo
 from prpl_utils.utils import wrap_angle
 from pybullet_helpers.geometry import Pose, SE2Pose
@@ -18,12 +18,19 @@ from prbench.envs.geom3d.ground3d import (
     Ground3DObjectCentricState,
     ObjectCentricGround3DEnv,
 )
+from tests.conftest import MAKE_VIDEOS
 
 
-def test_base_motion3d_env():
+@pytest.fixture(scope="module")
+def env():
+    """Create a shared environment for all tests in this module."""
+    environment = Ground3DEnv(num_cubes=2, render_mode="rgb_array", use_gui=False)
+    yield environment
+    environment.close()
+
+
+def test_base_motion3d_env(env):  # pylint: disable=redefined-outer-name
     """Tests for basic methods in base motion3D env."""
-
-    env = Ground3DEnv(use_gui=False)  # set use_gui=True to debug
     obs, _ = env.reset(seed=123)
     assert isinstance(obs, np.ndarray)
 
@@ -39,19 +46,18 @@ def test_base_motion3d_env():
     #     p.getMouseEvents(env._object_centric_env.physics_client_id)
 
 
-def test_motion_planning_in_ground3d_env():
+def test_motion_planning_in_ground3d_env(env):  # pylint: disable=redefined-outer-name
     """Proof of concept that motion planning works in this environment."""
-
-    # Create the real environment.
-    env = Ground3DEnv(render_mode="rgb_array", use_gui=False)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
-    if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos")
 
-    vec_obs, _ = env.reset(seed=123)
+    test_env = env
+    if MAKE_VIDEOS:
+        test_env = RecordVideo(env, "unit_test_videos")
+
+    vec_obs, _ = test_env.reset(seed=123)
     # NOTE: we should soon make this smoother.
-    oc_obs = env.observation_space.devectorize(vec_obs)
+    oc_obs = test_env.observation_space.devectorize(vec_obs)
     obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
@@ -67,35 +73,34 @@ def test_motion_planning_in_ground3d_env():
     )
     assert base_plan is not None
 
-    env.action_space.seed(123)
+    test_env.action_space.seed(123)
     for target_base_pose in base_plan[1:]:
         current_base_pose = obs.base_pose
         delta = target_base_pose - current_base_pose
         delta_lst = [delta.x, delta.y, delta.rot]
         action_lst = delta_lst + [0.0] * 7 + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, done, _, _ = env.step(action)
+        vec_obs, _, done, _, _ = test_env.step(action)
         # NOTE: we should soon make this smoother.
-        oc_obs = env.observation_space.devectorize(vec_obs)
+        oc_obs = test_env.observation_space.devectorize(vec_obs)
         obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
         if done:
             break
     # else:
     #     assert False, "Plan did not reach goal"
-    env.close()
 
 
-def test_pick_place_after_moving():
+def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     """Test moving in front of a block, picking it up, and placing it."""
-    # Create the real environment.
-    env = Ground3DEnv(num_cubes=2, use_gui=False, render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = env._object_centric_env.config  # pylint: disable=protected-access
-    if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos")
 
-    vec_obs, _ = env.reset(seed=123)
-    oc_obs = env.observation_space.devectorize(vec_obs)
+    test_env = env
+    if MAKE_VIDEOS:
+        test_env = RecordVideo(env, "unit_test_videos")
+
+    vec_obs, _ = test_env.reset(seed=123)
+    oc_obs = test_env.observation_space.devectorize(vec_obs)
     obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
@@ -129,8 +134,8 @@ def test_pick_place_after_moving():
         delta_lst = [delta.x, delta.y, delta.rot]
         action_lst = delta_lst + [0.0] * 7 + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
-        oc_obs = env.observation_space.devectorize(vec_obs)
+        vec_obs, _, _, _, _ = test_env.step(action)
+        oc_obs = test_env.observation_space.devectorize(vec_obs)
         obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Step 2: Move arm to pre-grasp pose and then to grasp pose
@@ -160,15 +165,15 @@ def test_pick_place_after_moving():
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
-        oc_obs = env.observation_space.devectorize(vec_obs)
+        vec_obs, _, _, _, _ = test_env.step(action)
+        oc_obs = test_env.observation_space.devectorize(vec_obs)
         obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Step 3: Close the gripper to grasp cube1 (takes multiple steps)
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [-1.0], dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
-        oc_obs = env.observation_space.devectorize(vec_obs)
+        vec_obs, _, _, _, _ = test_env.step(action)
+        oc_obs = test_env.observation_space.devectorize(vec_obs)
         obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # The cube should now be grasped
@@ -203,8 +208,8 @@ def test_pick_place_after_moving():
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
-        oc_obs = env.observation_space.devectorize(vec_obs)
+        vec_obs, _, _, _, _ = test_env.step(action)
+        oc_obs = test_env.observation_space.devectorize(vec_obs)
         obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Verify cube is still grasped after lifting
@@ -241,17 +246,15 @@ def test_pick_place_after_moving():
             delta_lst = [wrap_angle(a) for a in delta]
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
-            vec_obs, _, _, _, _ = env.step(action)
-            oc_obs = env.observation_space.devectorize(vec_obs)
+            vec_obs, _, _, _, _ = test_env.step(action)
+            oc_obs = test_env.observation_space.devectorize(vec_obs)
             obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Step 6: Open the gripper to place the cube
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
-        oc_obs = env.observation_space.devectorize(vec_obs)
+        vec_obs, _, _, _, _ = test_env.step(action)
+        oc_obs = test_env.observation_space.devectorize(vec_obs)
         obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     assert obs.grasped_object is None, "Object not released"
-
-    env.close()

@@ -45,6 +45,11 @@ multi_line_output = 2
 skip_glob = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "__pycache__/"]
 split_on_trailing_comma = true
 
+[tool.docformatter]
+line-length = 88
+wrap-summaries = 88
+wrap-descriptions = 88
+
 [tool.mypy]
 strict_equality = true
 disallow_untyped_calls = true

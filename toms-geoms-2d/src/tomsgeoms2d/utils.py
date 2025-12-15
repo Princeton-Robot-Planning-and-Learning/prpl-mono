@@ -12,9 +12,8 @@ from tomsgeoms2d.structs import Circle, Geom2D, LineSegment, Lobject, Rectangle
 def line_segments_intersect(seg1: LineSegment, seg2: LineSegment) -> bool:
     """Checks if two line segments intersect.
 
-    This method, which works by checking relative orientation, allows
-    for collinearity, and only checks if each segment straddles the line
-    containing the other.
+    This method, which works by checking relative orientation, allows for collinearity,
+    and only checks if each segment straddles the line containing the other.
     """
 
     def _subtract(

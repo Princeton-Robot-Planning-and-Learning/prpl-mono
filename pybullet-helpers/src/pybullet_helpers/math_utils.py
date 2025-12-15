@@ -19,17 +19,16 @@ def get_poses_facing_line(
     num_points: int,
     angle_offset: float = 0.0,
 ) -> list[Pose]:
-    """Generate poses that are rotated around a given line at a given radius,
-    facing towards the line.
+    """Generate poses that are rotated around a given line at a given radius, facing
+    towards the line.
 
-    "Facing" means that the z dim of the pose is pointing toward the
-    line. The x dim is pointing right and the y dim is pointing down.
+    "Facing" means that the z dim of the pose is pointing toward the line. The x dim is
+    pointing right and the y dim is pointing down.
 
-    A typical use case is generating multiple candidate grasps of an
-    object.
+    A typical use case is generating multiple candidate grasps of an object.
 
-    angle_offset is added to each angle around the circle. A typical use
-    would be in sampling random poses (with num_points = 1).
+    angle_offset is added to each angle around the circle. A typical use would be in
+    sampling random poses (with num_points = 1).
     """
     assert np.isclose(np.linalg.norm(axis), 1.0), "axis should have unit norm"
 
