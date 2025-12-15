@@ -25,8 +25,8 @@ def sample_collision_free_positions(
                        (x_min, y_min, x_max, y_max). If None, uses default range
                        (-2.0, 0.5, 2.0, 2.5) for all fixtures.
         fixture_yaw_ranges: Dictionary mapping fixture names to yaw rotation ranges as
-                           (yaw_min, yaw_max) in radians. If None, uses default range
-                           (0.0, 2*pi) for all fixtures.
+                           (yaw_min, yaw_max) in degrees. If None, uses default range
+                           (0.0, 360.0) for all fixtures.
 
     Returns:
         Dictionary mapping fixture types to dictionaries of fixture poses
@@ -37,7 +37,7 @@ def sample_collision_free_positions(
 
     # Default range if none provided
     default_range = (-2.0, 0.5, 2.0, 2.5)
-    default_yaw_range = (0.0, 2 * np.pi)
+    default_yaw_range = (0.0, 360.0)
 
     for fixture_type, fixture_configs in fixtures.items():
         fixture_poses[fixture_type] = {}
@@ -88,7 +88,7 @@ def sample_collision_free_position(
     max_attempts: int = 100,
     x_range: tuple[float, float] = (-2.0, 2.0),
     y_range: tuple[float, float] = (0.5, 2.5),
-    yaw_range: tuple[float, float] = (0.0, 2 * np.pi),
+    yaw_range: tuple[float, float] = (0.0, 360.0),
 ) -> tuple[NDArray[np.float32], float]:
     """Sample a collision-free position and yaw for a fixture.
 
@@ -100,7 +100,7 @@ def sample_collision_free_position(
         max_attempts: Maximum number of sampling attempts
         x_range: Range for x coordinate sampling as (min, max)
         y_range: Range for y coordinate sampling as (min, max)
-        yaw_range: Range for yaw rotation sampling as (min, max) in radians
+        yaw_range: Range for yaw rotation sampling as (min, max) in degrees
 
     Returns:
         Tuple of (position, yaw) where position is [x, y, z] array (z is always 0.0)
@@ -123,8 +123,10 @@ def sample_collision_free_position(
             ]
         )
 
-        # Sample a random yaw angle from the specified range
-        candidate_yaw = np_random.uniform(yaw_range[0], yaw_range[1])
+        # Sample a random yaw angle from the specified range (in degrees)
+        candidate_yaw_deg = np_random.uniform(yaw_range[0], yaw_range[1])
+        # Convert to radians for internal use
+        candidate_yaw = np.radians(candidate_yaw_deg)
 
         # Translate the bounding box to the candidate position
         translation = candidate_pos - np.array(
@@ -167,7 +169,8 @@ def sample_collision_free_position(
             0.0,
         ]
     )
-    fallback_yaw = np_random.uniform(0, 2 * np.pi)
+    fallback_yaw_deg = np_random.uniform(0, 360)
+    fallback_yaw = np.radians(fallback_yaw_deg)
     return fallback_pos, fallback_yaw
 
 
