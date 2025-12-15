@@ -64,14 +64,14 @@ class TidybotFKSolver:
         self.data.qpos[:] = qpos
 
         # Run forward kinematics
-        mujoco.mj_kinematics(self.model, self.data)
-        mujoco.mj_comPos(self.model, self.data)
+        mujoco.mj_kinematics(self.model, self.data)  # pylint: disable=no-member
+        mujoco.mj_comPos(self.model, self.data)  # pylint: disable=no-member
 
         # Get position from site
         pos = self.site_pos.copy()
 
         # Get orientation as quaternion
-        mujoco.mju_mat2Quat(self.site_quat, self.site_mat)
+        mujoco.mju_mat2Quat(self.site_quat, self.site_mat)  # pylint: disable=no-member
         # Convert from (w, x, y, z) to (x, y, z, w)
         quat = self.site_quat[[1, 2, 3, 0]].copy()
 

@@ -71,9 +71,13 @@ class RemotePolicy:
         for k, v in obs.items():
             if isinstance(v, np.ndarray) and v.ndim == 3:
                 # Resize image to resolution expected by policy server
-                v = cv.resize(v, (self.image_width, self.image_height))
+                v = cv.resize(
+                    v, (self.image_width, self.image_height)
+                )  # pylint: disable=no-member
                 # Encode image as JPEG
-                _, v = cv.imencode(".jpg", v)  # Note: Interprets RGB as BGR
+                _, v = cv.imencode(
+                    ".jpg", v
+                )  # Note: Interprets RGB as BGR # pylint: disable=no-member
                 encoded_obs[k] = v
             else:
                 encoded_obs[k] = v
@@ -142,12 +146,12 @@ def run_inference(
 
             # Reset the environment
             episode_seed = seed + episode_idx
-            obs, _, raw_obs = env.reset_with_images(seed=episode_seed) # type: ignore
+            obs, _, raw_obs = env.reset_with_images(seed=episode_seed)  # type: ignore
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
             # Reset the policy
-            policy.reset() # type: ignore
+            policy.reset()  # type: ignore
 
             # Target object for this episode (can be detected or specified)
             target_object_key = "cube0"
@@ -189,7 +193,7 @@ def run_inference(
                 action_dict = policy.step(obs_dict)
 
                 if action_dict is None:
-                    action_dict: dict[str, np.ndarray] = { # type: ignore
+                    action_dict: dict[str, np.ndarray] = {  # type: ignore
                         "base_pose": obs_dict["base_pose"],
                         "arm_pos": obs_dict["arm_pos"],
                         "arm_quat": obs_dict["arm_quat"],
@@ -216,8 +220,8 @@ def run_inference(
                     writer.step(obs_dict, action_dict, target_object_key)
 
                 # Execute action in environment
-                obs, reward, terminated, truncated, info, raw_obs = (
-                    env.step_with_images(action) # type: ignore
+                obs, reward, terminated, truncated, _, raw_obs = env.step_with_images(  # type: ignore
+                    action
                 )
                 next_state = env.observation_space.devectorize(obs)
                 state = next_state
@@ -226,7 +230,7 @@ def run_inference(
                 if terminated or truncated:
                     print(f"Episode ended after {step_idx + 1} steps")
                     print(
-                        f"  Reward: {reward}, Terminated: {terminated}, Truncated: {truncated}"
+                        f"  Reward: {reward}, Terminated: {terminated}, Truncated: {truncated}"  # pylint: disable=line-too-long
                     )
                     break
 
@@ -240,11 +244,12 @@ def run_inference(
                 print(f"Episode saved with {len(writer)} steps")
 
     finally:
-        policy.close() # type: ignore
-        env.close() # type: ignore
+        policy.close()  # type: ignore
+        env.close()  # type: ignore
 
 
 def main() -> None:
+    """Main function to run policy inference in prbench."""
     parser = argparse.ArgumentParser(description="Run policy inference in prbench")
     parser.add_argument(
         "--output-dir", default="data/inference", help="Directory to save episodes"

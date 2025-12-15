@@ -14,23 +14,27 @@ from constants import POLICY_CONTROL_FREQ
 def write_frames_to_mp4(frames: list[np.ndarray], mp4_path: Path) -> None:
     """Write frames to MP4 video."""
     height, width, _ = frames[0].shape
-    fourcc = cv.VideoWriter_fourcc(*"mp4v") # type: ignore
-    out = cv.VideoWriter(str(mp4_path), fourcc, POLICY_CONTROL_FREQ, (width, height))
+    fourcc = cv.VideoWriter_fourcc(*"mp4v")  # type: ignore # pylint: disable=no-member
+    out = cv.VideoWriter(
+        str(mp4_path), fourcc, POLICY_CONTROL_FREQ, (width, height)
+    )  # pylint: disable=no-member
     for frame in frames:
-        bgr_frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
+        bgr_frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)  # pylint: disable=no-member
         out.write(bgr_frame)
     out.release()
 
 
 def read_frames_from_mp4(mp4_path: Path) -> list[np.ndarray]:
     """Read frames from MP4 video."""
-    cap = cv.VideoCapture(str(mp4_path))
+    cap = cv.VideoCapture(str(mp4_path))  # pylint: disable=no-member
     frames: list[np.ndarray] = []
     while True:
         ret, bgr_frame = cap.read()
         if not ret:
             break
-        frames.append(cv.cvtColor(bgr_frame, cv.COLOR_BGR2RGB))
+        frames.append(
+            cv.cvtColor(bgr_frame, cv.COLOR_BGR2RGB)
+        )  # pylint: disable=no-member
     cap.release()
     return frames
 
@@ -53,10 +57,13 @@ class EpisodeWriter:
         # Write to disk in separate thread to avoid blocking main thread
         self.flush_thread = None
 
-    def step(self, obs: dict[str, np.ndarray], action: dict[str, np.ndarray], target_object_key: str):
+    def step(
+        self,
+        obs: dict[str, np.ndarray],
+        action: dict[str, np.ndarray],
+        target_object_key: str,
+    ):
         """Step the EpisodeWriter."""
-        # if len(self.observations) == 0 and not np.allclose(obs['base_pose'], 0.0, atol=0.03):
-        #     raise Exception('Initial base pose should be zero. Did the base get pushed?')
         self.timestamps.append(time.time())
         self.observations.append(obs)
         self.actions.append(action)
@@ -110,13 +117,13 @@ class EpisodeWriter:
         """Flush the EpisodeWriter asynchronously."""
         print("Saving successful episode to disk...")
         # Note: Disk writes may cause latency spikes in low-level controllers
-        self.flush_thread = threading.Thread(target=self._flush, daemon=True) # type: ignore
-        self.flush_thread.start() # type: ignore
+        self.flush_thread = threading.Thread(target=self._flush, daemon=True)  # type: ignore # pylint: disable=line-too-long
+        self.flush_thread.start()  # type: ignore
 
     def wait_for_flush(self) -> None:
         """Wait for the EpisodeWriter to flush."""
         if self.flush_thread is not None:
-            self.flush_thread.join() # type: ignore
+            self.flush_thread.join()  # type: ignore
             self.flush_thread = None
 
 
@@ -129,7 +136,7 @@ class EpisodeReader:
 
         # Load data
         with open(
-            episode_dir / "data.pkl", "rb" # type: ignore
+            episode_dir / "data.pkl", "rb"  # type: ignore
         ) as f:  # Note: Not secure. Only unpickle data you trust.
             data = pickle.load(f)
         self.timestamps = data["timestamps"]
@@ -146,7 +153,7 @@ class EpisodeReader:
                 if v is None:  # Images are stored as MP4 videos
                     # Load images from MP4 file
                     if k not in frames_dict:
-                        mp4_path = episode_dir / f"{k}.mp4" # type: ignore
+                        mp4_path = episode_dir / f"{k}.mp4"  # type: ignore
                         frames_dict[k] = read_frames_from_mp4(mp4_path)
 
                     # Restore image for current step

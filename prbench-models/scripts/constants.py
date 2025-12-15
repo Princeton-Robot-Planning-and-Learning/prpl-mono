@@ -1,4 +1,4 @@
-import numpy as np
+"""Constants for PRBench models."""
 
 # Base and arm RPC servers
 BASE_RPC_HOST = "localhost"

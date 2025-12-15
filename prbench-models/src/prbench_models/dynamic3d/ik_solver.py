@@ -151,30 +151,3 @@ class TidybotIKSolver:
             )
 
         return self.data.qpos.copy()
-
-    def forward_kinematics(self, qpos: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Compute forward kinematics to get end-effector pose from joint positions.
-
-        Args:
-            qpos: Joint positions (7 values for 7-DOF arm)
-
-        Returns:
-            pos: End-effector position (x, y, z) in meters
-            quat: End-effector orientation as quaternion (x, y, z, w)
-        """
-        # Set joint positions
-        self.data.qpos[:] = qpos
-
-        # Run forward kinematics
-        mujoco.mj_kinematics(self.model, self.data)
-        mujoco.mj_comPos(self.model, self.data)
-
-        # Get position from site
-        pos = self.site_pos.copy()
-
-        # Get orientation as quaternion
-        mujoco.mju_mat2Quat(self.site_quat, self.site_mat)
-        # Convert from (w, x, y, z) to (x, y, z, w)
-        quat = self.site_quat[[1, 2, 3, 0]].copy()
-
-        return pos, quat

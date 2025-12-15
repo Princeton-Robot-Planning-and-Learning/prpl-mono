@@ -5,17 +5,12 @@ import argparse
 import numpy as np
 import prbench
 from episode_storage import EpisodeWriter
-from gymnasium.wrappers import RecordVideo
-from prpl_tidybot.interfaces.interface import FakeInterface
-from prpl_tidybot.perceivers.prbench_ground_perceiver import PRBenchGroundPerceiver
 from relational_structs.spaces import ObjectCentricBoxSpace
-from spatialmath import SE2
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ground.parameterized_skills import (
     PyBulletSim,
     create_lifted_controllers,
-    get_target_robot_pose_from_parameters,
 )
 
 prbench.register_all_environments()
@@ -45,14 +40,14 @@ def collect_data(
     writer = EpisodeWriter(output_dir) if save else None
 
     # Reset the environment and get the initial state.
-    obs, _, raw_obs = env.reset_with_images(seed=seed) # type: ignore
+    obs, _, raw_obs = env.reset_with_images(seed=seed)  # type: ignore
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
     assert state is not None
     pybullet_sim = PyBulletSim(state, rendering=False)
 
-    controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim) # type: ignore
+    controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim)  # type: ignore # pylint: disable=line-too-long
 
     fk_solver = TidybotFKSolver(ee_offset=0.0)
 
@@ -124,7 +119,7 @@ def collect_data(
             }
             writer.step(obs_dict, action_dict, target_object_key)
 
-        obs, _, _, _, _, raw_obs = env.step_with_images(action) # type: ignore
+        obs, _, _, _, _, raw_obs = env.step_with_images(action)  # type: ignore
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
         state = next_state
@@ -140,7 +135,7 @@ def collect_data(
         robot = state.get_object_from_name("robot")
         cube = state.get_object_from_name(target_object_key)
         cupboard = state.get_object_from_name("cupboard_1")
-        object_parameters = (robot, cube, cupboard) # type: ignore
+        object_parameters = (robot, cube, cupboard)  # type: ignore
         controller = lifted_controller.ground(object_parameters)
         params = controller.sample_parameters(state, np.random.default_rng(seed))
 
@@ -201,7 +196,7 @@ def collect_data(
                 }
                 writer.step(obs_dict, action_dict, target_object_key)
 
-            obs, _, _, _, _, raw_obs = env.step_with_images(action) # type: ignore
+            obs, _, _, _, _, raw_obs = env.step_with_images(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
@@ -217,10 +212,11 @@ def collect_data(
         writer.wait_for_flush()
         print(f"Episode saved with {len(writer)} steps")
 
-    env.close() # type: ignore
+    env.close()  # type: ignore
 
 
 def main() -> None:
+    """Main function to collect demonstration data."""
     parser = argparse.ArgumentParser(description="Collect demonstration data")
     parser.add_argument("--output-dir", default="data/demos", help="Output dir")
     parser.add_argument("--seed", type=int, default=123, help="Random seed")

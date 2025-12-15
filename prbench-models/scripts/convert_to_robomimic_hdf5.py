@@ -4,15 +4,16 @@ import argparse
 from pathlib import Path
 
 import cv2 as cv
-import h5py # type: ignore
+import h5py  # type: ignore
 import numpy as np
 from constants import POLICY_IMAGE_HEIGHT, POLICY_IMAGE_WIDTH
 from episode_storage import EpisodeReader
-from scipy.spatial.transform import Rotation # type: ignore
-from tqdm import tqdm # type: ignore
+from scipy.spatial.transform import Rotation  # type: ignore
 
 
-def main(input_dir: str, output_path: str, args: argparse.Namespace) -> None:
+def main(
+    input_dir: str, output_path: str, args
+) -> None:  # pylint: disable=redefined-outer-name
     """Convert PRBench demos to RoboMimic HDF5 format."""
     # Get list of episode dirs
     episode_dirs = sorted(
@@ -55,9 +56,11 @@ def main(input_dir: str, output_path: str, args: argparse.Namespace) -> None:
                     if v.ndim == 3:
                         # Resize image
                         if args.high_resolution:
-                            v = cv.resize(v, (224, 224))
+                            v = cv.resize(v, (224, 224))  # pylint: disable=no-member
                         else:
-                            v = cv.resize(v, (POLICY_IMAGE_WIDTH, POLICY_IMAGE_HEIGHT))
+                            v = cv.resize(
+                                v, (POLICY_IMAGE_WIDTH, POLICY_IMAGE_HEIGHT)
+                            )  # pylint: disable=no-member
 
                     # Append extracted observation
                     if k not in observations:
@@ -194,7 +197,7 @@ def main(input_dir: str, output_path: str, args: argparse.Namespace) -> None:
                     else:
                         episode_group.create_dataset(
                             "language",
-                            data=f"Pick the {target_object_key} and place it on the shelf.",
+                            data=f"Pick the {target_object_key} and place it on the shelf.",  # pylint: disable=line-too-long
                         )
                 else:
                     episode_group.create_dataset(
