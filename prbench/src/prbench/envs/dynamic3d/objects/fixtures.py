@@ -266,16 +266,15 @@ class Table(MujocoFixture):
         selected_range_index = np_random.choice(len(region_config["ranges"]))
 
         # Validate the selected region
-        if len(region_config["ranges"][selected_range_index]) != 4:  # type: ignore[arg-type]
+        selected_range = region_config["ranges"][selected_range_index]
+        if len(selected_range) != 4:  # type: ignore[arg-type]
             raise ValueError(
                 "Each region must have exactly 4 values "
                 "[x_start, y_start, x_end, y_end], "
                 f"got {len(region_config['ranges'][selected_range_index])}"
             )
 
-        (x_start, y_start, x_end, y_end) = region_config["ranges"][
-            selected_range_index
-        ]  # type: ignore[misc]
+        (x_start, y_start, x_end, y_end) = selected_range  # type: ignore[misc]
 
         # Validate bounds
         if x_start >= x_end:
