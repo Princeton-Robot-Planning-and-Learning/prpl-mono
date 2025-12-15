@@ -18,7 +18,7 @@ from episode_storage import EpisodeWriter
 
 prbench.register_all_environments()
 
-def collect_data(output_dir: str = "data/demos", seed: int = 123, save: bool = True):
+def collect_data(output_dir: str = "data/demos", seed: int = 123, save: bool = True, grasping_only: bool = False):
     """Collect pick and place demonstration data in ground environment.
     
     Args:
@@ -106,51 +106,62 @@ def collect_data(output_dir: str = "data/demos", seed: int = 123, save: bool = T
     else:
         print("Warning: Pick controller did not terminate within 400 steps")
 
-    # Create the place ground controller.
-    lifted_controller = controllers["place_ground"]
-    robot = state.get_object_from_name("robot")
-    cube = state.get_object_from_name(target_object_key)
-    cupboard = state.get_object_from_name("cupboard_1")
-    object_parameters = (robot, cube, cupboard)
-    controller = lifted_controller.ground(object_parameters)
-    params = controller.sample_parameters(state, np.random.default_rng(seed))
+    if not grasping_only:
+        # Create the place ground controller.
+        lifted_controller = controllers["place_ground"]
+        robot = state.get_object_from_name("robot")
+        cube = state.get_object_from_name(target_object_key)
+        cupboard = state.get_object_from_name("cupboard_1")
+        object_parameters = (robot, cube, cupboard)
+        controller = lifted_controller.ground(object_parameters)
+        params = controller.sample_parameters(state, np.random.default_rng(seed))
 
-    # Reset and execute the controller until it terminates.
-    controller.reset(state, params)
-    for step_idx in range(400):
-        action = controller.step()
-        
-        # Record observation and action before stepping
-        if writer is not None:
-            # Create observation dict with state vector and images
-            obs_dict = {
-                'base_pose': np.array([state.get(robot, "pos_base_x"), state.get(robot, "pos_base_y"), state.get(robot, "pos_base_rot")]),
-                'arm_pos': current_position,
-                'arm_quat': current_orientation,
-                'gripper_pos': np.array([state.get(robot, "pos_gripper")]),
-                'base_image': raw_obs['raw_obs']['base_image'],
-                'wrist_image': raw_obs['raw_obs']['wrist_image'],
-                'overview_image': raw_obs['raw_obs']['overview_image'],
-            }
-            # Convert action to dict format
-            action_dict = {
-                'base_pose': target_base_pose,
-                'arm_pos': target_position,
-                'arm_quat': target_orientation,
-                'gripper_pos': np.array([action[-1]]),
-            }
-            writer.step(obs_dict, action_dict, target_object_key)
-        
-        
-        obs, _, _, _, _, raw_obs = env.step_with_images(action)
-        next_state = env.observation_space.devectorize(obs)
-        controller.observe(next_state)
-        state = next_state
-        if controller.terminated():
-            print(f"Place controller terminated after {step_idx + 1} steps")
-            break
-    else:
-        print("Warning: Place controller did not terminate within 400 steps")
+        # Reset and execute the controller until it terminates.
+        controller.reset(state, params)
+        for step_idx in range(400):
+            action = controller.step()  
+            robot = state.get_object_from_name("robot")
+            current_joints = [state.get(robot, "pos_arm_joint1"), state.get(robot, "pos_arm_joint2"), state.get(robot, "pos_arm_joint3"), state.get(robot, "pos_arm_joint4"), state.get(robot, "pos_arm_joint5"), state.get(robot, "pos_arm_joint6"), state.get(robot, "pos_arm_joint7")]
+            current_position, current_orientation = fk_solver.forward_kinematics(np.array(current_joints))
+
+            target_base_pose = np.array(
+                [state.get(robot, "pos_base_x") + action[0],
+                state.get(robot, "pos_base_y") + action[1],
+                state.get(robot, "pos_base_rot") + action[2]]
+            )
+            target_joints = current_joints + action[3:10]
+            target_position, target_orientation = fk_solver.forward_kinematics(np.array(target_joints))
+            
+            # Record observation and action before stepping
+            if writer is not None:
+                # Create observation dict with state vector and images
+                obs_dict = {
+                    'base_pose': np.array([state.get(robot, "pos_base_x"), state.get(robot, "pos_base_y"), state.get(robot, "pos_base_rot")]),
+                    'arm_pos': current_position,
+                    'arm_quat': current_orientation,
+                    'gripper_pos': np.array([state.get(robot, "pos_gripper")]),
+                    'base_image': raw_obs['raw_obs']['base_image'],
+                    'wrist_image': raw_obs['raw_obs']['wrist_image'],
+                    'overview_image': raw_obs['raw_obs']['overview_image'],
+                }
+                # Convert action to dict format
+                action_dict = {
+                    'base_pose': target_base_pose,
+                    'arm_pos': target_position,
+                    'arm_quat': target_orientation,
+                    'gripper_pos': np.array([action[-1]]),
+                }
+                writer.step(obs_dict, action_dict, target_object_key)
+            
+            obs, _, _, _, _, raw_obs = env.step_with_images(action)
+            next_state = env.observation_space.devectorize(obs)
+            controller.observe(next_state)
+            state = next_state
+            if controller.terminated():
+                print(f"Place controller terminated after {step_idx + 1} steps")
+                break
+        else:
+            print("Warning: Place controller did not terminate within 400 steps")
 
     # Save episode data to disk
     if writer is not None and len(writer) > 0:
@@ -165,11 +176,12 @@ def main():
     parser.add_argument('--output-dir', default='data/demos', help='Output dir')
     parser.add_argument('--seed', type=int, default=123, help='Random seed')
     parser.add_argument('--save', action='store_true', default=True)
+    parser.add_argument('--grasping-only', action='store_true', default=True)
     parser.add_argument('--no-save', dest='save', action='store_false')
     parser.add_argument('--n-demos', type=int, default=1, help='Number of demos to collect')
     args = parser.parse_args()
     for demo_idx in range(args.n_demos):
-        collect_data(output_dir=args.output_dir, seed=args.seed + demo_idx, save=args.save)
+        collect_data(output_dir=args.output_dir, seed=args.seed + demo_idx, save=args.save, grasping_only=args.grasping_only)
 
 if __name__ == "__main__":
     main()

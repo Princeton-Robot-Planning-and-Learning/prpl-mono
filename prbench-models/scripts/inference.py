@@ -8,6 +8,7 @@ import zmq
 import prbench
 from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
+from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from episode_storage import EpisodeWriter
 from constants import (
     POLICY_SERVER_HOST,
@@ -65,19 +66,16 @@ class RemotePolicy:
         encoded_obs = {}
         for k, v in obs.items():
             if isinstance(v, np.ndarray) and v.ndim == 3:
-                print(f"Encoding image {k} with shape {v.shape}")
                 # Resize image to resolution expected by policy server
                 v = cv.resize(v, (self.image_width, self.image_height))
                 # Encode image as JPEG
                 _, v = cv.imencode(".jpg", v)  # Note: Interprets RGB as BGR
                 encoded_obs[k] = v
-                print(f"Encoded image {k} with shape {v.shape}")
             else:
                 encoded_obs[k] = v
 
         # Send obs to policy server
         req = {"obs": encoded_obs}
-        import ipdb; ipdb.set_trace()
         self.socket.send_pyobj(req)
 
         # Get action from policy server
@@ -96,7 +94,7 @@ def run_inference(
     seed: int = 123,
     save: bool = True,
     num_episodes: int = 1,
-    max_steps: int = 400,
+    max_steps: int = 100,
     policy_host: str = POLICY_SERVER_HOST,
     policy_port: int = POLICY_SERVER_PORT,
     num_cubes: int = 2,
@@ -124,6 +122,7 @@ def run_inference(
 
     # Create FK solver for computing end-effector pose
     fk_solver = TidybotFKSolver(ee_offset=0.0)
+    ik_solver = TidybotIKSolver(ee_offset=0.12)
 
     # Create remote policy
     policy = RemotePolicy(host=policy_host, port=policy_port)
@@ -163,7 +162,6 @@ def run_inference(
                     current_joints
                 )
 
-                import ipdb; ipdb.set_trace()
                 # Create observation dict for policy
                 obs_dict = {
                     "base_pose": np.array([
@@ -182,17 +180,22 @@ def run_inference(
                 # Get action from policy
                 action_dict = policy.step(obs_dict)
 
-                # Convert action dict to env action array if needed
-                if isinstance(action_dict, dict):
-                    # Reconstruct action array from dict
-                    # Expected format: base_pose (3), arm_joints (7), gripper (1)
-                    action = np.concatenate([
-                        action_dict.get("base_pose", np.zeros(3)),
-                        action_dict.get("arm_joints", np.zeros(7)),
-                        action_dict.get("gripper_pos", np.zeros(1)),
-                    ])
-                else:
-                    action = action_dict
+                if action_dict is None:
+                    action_dict = {
+                        "base_pose": obs_dict["base_pose"],
+                        "arm_pos": obs_dict["arm_pos"],
+                        "arm_quat": obs_dict["arm_quat"],
+                        "gripper_pos": obs_dict["gripper_pos"],
+                    }
+                
+                
+                qpos = ik_solver.solve(action_dict['arm_pos'], action_dict['arm_quat'], current_joints)
+                delta_qpos = np.mod((qpos - current_joints) + np.pi, 2 * np.pi) - np.pi  # Unwrapped joint angles
+
+                action = np.concatenate([
+                    action_dict["base_pose"] - obs_dict["base_pose"], 
+                    delta_qpos, 
+                    action_dict["gripper_pos"]])
 
                 # Record observation and action before stepping
                 if writer is not None:
@@ -239,7 +242,7 @@ def main():
         "--num-episodes", type=int, default=1, help="Number of episodes to run"
     )
     parser.add_argument(
-        "--max-steps", type=int, default=400, help="Maximum steps per episode"
+        "--max-steps", type=int, default=100, help="Maximum steps per episode"
     )
     parser.add_argument(
         "--policy-host",
