@@ -31,7 +31,7 @@ def main(
             if episode_idx >= len(episode_dirs):
                 break
             episode_dir = episode_dirs[episode_idx]
-            reader = EpisodeReader(str(episode_dir))
+            reader = EpisodeReader(episode_dir)
 
             if args.navigation_only:
                 max_nav_steps = 0

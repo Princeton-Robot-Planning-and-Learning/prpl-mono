@@ -133,15 +133,17 @@ class EpisodeWriter:
 class EpisodeReader:
     """Reader for PRBench demos."""
 
-    def __init__(self, episode_dir: str):
+    def __init__(self, episode_dir: Path):
         """Initialize EpisodeReader."""
         self.episode_dir = episode_dir
 
         # Load data
+        # isort: off
         with open(
-            episode_dir / "data.pkl", "rb"  # type: ignore
+            episode_dir / "data.pkl", "rb"
         ) as f:  # Note: Not secure. Only unpickle data you trust.
             data = pickle.load(f)
+        # isort: on
         self.timestamps = data["timestamps"]
         self.observations = data["observations"]
         self.actions = data["actions"]
