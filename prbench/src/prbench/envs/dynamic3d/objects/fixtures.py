@@ -243,7 +243,8 @@ class Table(MujocoFixture):
         region_name: str,
         np_random: np.random.Generator,
     ) -> tuple[float, float, float, float]:
-        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided regions.
+        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided
+        regions.
 
         Args:
             region_name: Name of the region to sample from
@@ -260,7 +261,7 @@ class Table(MujocoFixture):
         """
         assert self.regions is not None, "Regions must be defined"
         region_config = self.regions[region_name]
-        
+
         # Randomly select one of the regions
         selected_range_index = np_random.choice(len(region_config["ranges"]))
 
@@ -736,7 +737,8 @@ class Cupboard(MujocoFixture):
         region_name: str,
         np_random: np.random.Generator,
     ) -> tuple[float, float, float, float]:
-        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided regions.
+        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided
+        regions.
 
         For cupboards, this samples on the specified shelf surface.
 
