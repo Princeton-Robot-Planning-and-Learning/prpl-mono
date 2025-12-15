@@ -232,7 +232,7 @@ class TidyBotRobotEnv(RobotEnv):
         self._setup_robot_references()
 
         # Randomize the base pose of the robot in the sim
-        self._randomize_base_pose()
+        # self._randomize_base_pose()
         self._randomize_arm_pose()
 
         return self.get_obs(), {}
