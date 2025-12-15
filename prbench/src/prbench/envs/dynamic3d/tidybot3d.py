@@ -51,7 +51,7 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
 
     control_frequency: int = 10
     horizon: int = 1000
-    camera_names: list[str] = field(default_factory=lambda: ["overview", "base", "wrist"])
+    camera_names: list[str] = field(default_factory=lambda: ["overview"])
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
@@ -70,7 +70,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         scene_type: str = "ground",
         num_objects: int = 3,
         task_config_path: str | None = None,
-        render_images: bool = True,
+        render_images: bool = False,
         show_images: bool = False,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
@@ -455,7 +455,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         obs = self._robot_env.get_obs()
         vec_obs = self._vectorize_observation(obs)
         object_centric_state = self._get_object_centric_state()
-        return {"vec": vec_obs, "object_centric_state": object_centric_state, "raw_obs": obs}
+        return {
+            "vec": vec_obs,
+            "object_centric_state": object_centric_state,
+            "raw_obs": obs,
+        }
 
     def _get_object_centric_state(self) -> ObjectCentricState:
         """Get the current object-centric state of the environment."""
@@ -530,7 +534,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         return self._get_current_state(), reward, terminated, truncated, {}
 
-    
     def _check_goals(self) -> bool:
         """Check if the goal has been achieved."""
         state = self._get_current_state()

@@ -232,7 +232,11 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, info
 
-    def reset_with_images(self, *args, **kwargs) -> tuple[NDArray[Any], dict, dict[str, Any]]:
+    def reset_with_images(
+        self, *args, **kwargs
+    ) -> tuple[NDArray[Any], dict, dict[str, Any]]:
+        """Reset the environment and return object-centric observation and raw
+        observation."""
         super().reset(*args, **kwargs)  # necessary to reset RNG if seed is given
         if (kwargs.get("options") is not None) and (
             "init_state" in kwargs.get("options", {})
@@ -247,7 +251,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
                     kwargs["options"]["init_state"]
                 )
                 kwargs["options"]["init_state"] = obj_centric_state
-        obs, info, raw_obs = self._object_centric_env.reset_with_images(*args, **kwargs)
+        obs, info, raw_obs = self._object_centric_env.reset_with_images(*args, **kwargs)  # type: ignore # pylint: disable=line-too-long
         assert isinstance(self.observation_space, ObjectCentricBoxSpace)
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, info, raw_obs
@@ -260,9 +264,13 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, reward, terminated, truncated, done
 
-    def step_with_images(self, *args, **kwargs) -> tuple[NDArray[Any], float, bool, bool, dict, dict[str, Any]]:
-        obs, reward, terminated, truncated, done, raw_obs = self._object_centric_env.step_with_images(
-            *args, **kwargs
+    def step_with_images(
+        self, *args, **kwargs
+    ) -> tuple[NDArray[Any], float, bool, bool, dict, dict[str, Any]]:
+        """Step the environment and return object-centric observation and raw
+        observation."""
+        obs, reward, terminated, truncated, done, raw_obs = (
+            self._object_centric_env.step_with_images(*args, **kwargs)  # type: ignore
         )
         assert isinstance(self.observation_space, ObjectCentricBoxSpace)
         vec_obs = self.observation_space.vectorize(obs)
