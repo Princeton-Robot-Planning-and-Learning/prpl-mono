@@ -384,7 +384,8 @@ class MujocoFixture(abc.ABC):
         region_name: str,
         np_random: np.random.Generator,
     ) -> tuple[float, float, float, float]:
-        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided regions.
+        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided
+        regions.
 
         Args:
             region_name: Name of the region to sample from
