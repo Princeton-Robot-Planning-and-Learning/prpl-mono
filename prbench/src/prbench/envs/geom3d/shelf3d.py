@@ -152,9 +152,7 @@ class ObjectCentricShelf3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        # TODO remove!!
-        # return {self._shelf_id}
-        return set()
+        return {self._shelf_id}
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys())
