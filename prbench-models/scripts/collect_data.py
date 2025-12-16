@@ -91,11 +91,11 @@ def collect_data(
         target_position, target_orientation = fk_solver.forward_kinematics(
             np.array(target_joints)
         )
-        print('target_position: ', target_position)
-        print('target_orientation: ', target_orientation)
-        print('current_position: ', current_position)
-        print('current_orientation: ', current_orientation)
-        print('action: ', action)
+        # print('target_position: ', target_position)
+        # print('target_orientation: ', target_orientation)
+        # print('current_position: ', current_position)
+        # print('current_orientation: ', current_orientation)
+        # print('action: ', action)
 
         # Record observation and action before stepping
         if writer is not None:

@@ -519,7 +519,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         if self.show_images:
             for camera_name in self._robot_env.camera_names:
                 self._visualize_image_in_window(
-                    raw_obs[f"{camera_name}_image"],
+                    raw_obs["raw_obs"][f"{camera_name}_image"],
                     f"TidyBot {camera_name} camera",
                 )
 
