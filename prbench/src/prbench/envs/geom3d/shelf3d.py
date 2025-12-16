@@ -54,7 +54,7 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     y_ub: float = 1
 
     # Blocks.
-    block_size: float = 0.05  # cubes (height = width = length)
+    block_half_extents: tuple[float, float, float] = (0.05, 0.025, 0.025)
     block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
     def get_camera_kwargs(self) -> dict[str, Any]:
@@ -96,9 +96,9 @@ class ObjectCentricShelf3DEnv(
             cube_id = create_pybullet_block(
                 self.config.block_rgba,
                 (
-                    self.config.block_size / 2,
-                    self.config.block_size / 2,
-                    self.config.block_size / 2,
+                    self.config.block_half_extents[0],
+                    self.config.block_half_extents[1],
+                    self.config.block_half_extents[2],
                 ),
                 physics_client_id=self.physics_client_id,
             )
@@ -127,8 +127,8 @@ class ObjectCentricShelf3DEnv(
     def _reset_objects(self) -> None:
         sample_collision_free_object_poses(
             object_ids=set(self._cubes.values()),
-            lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2),
-            ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2),
+            lb=(self.config.x_lb, self.config.y_lb, self.config.block_half_extents[2]),
+            ub=(self.config.x_ub, self.config.y_ub, self.config.block_half_extents[2]),
             physics_client_id=self.physics_client_id,
             rng=self.np_random,
             other_collision_ids={self.robot.base.robot_id},
@@ -152,7 +152,9 @@ class ObjectCentricShelf3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        return {self._shelf_id}
+        # TODO remove!!
+        # return {self._shelf_id}
+        return set()
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys())
@@ -162,11 +164,7 @@ class ObjectCentricShelf3DEnv(
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         if object_name.startswith("cube"):
-            return (
-                self.config.block_size / 2,
-                self.config.block_size / 2,
-                self.config.block_size / 2,
-            )
+            return self.config.block_half_extents
         if object_name == "shelf":
             raise NotImplementedError("TODO")
         raise ValueError(f"Unrecognized object name: {object_name}")

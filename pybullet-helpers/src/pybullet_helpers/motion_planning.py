@@ -241,8 +241,10 @@ def run_smooth_motion_planning_to_pose(
         end_effector_pose = multiply_poses(
             target_pose, end_effector_frame_to_plan_frame
         )
+
         # Sample a collision-free joint target. If none exist, we'll just
         # go back to sampling a different target pose.
+        robot.set_joints(robot_initial_joints)
         for target_joint_positions in sample_collision_free_inverse_kinematics(
             robot,
             end_effector_pose,
@@ -251,6 +253,7 @@ def run_smooth_motion_planning_to_pose(
             max_time=max_time,
             max_candidates=1,
         ):
+            print("SAMPLED", target_joint_positions)
             # Try motion planning to the target.
             robot.set_joints(robot_initial_joints)
             motion_plan = run_motion_planning(
@@ -269,6 +272,7 @@ def run_smooth_motion_planning_to_pose(
                 ),
                 distance_threshold=distance_threshold,
             )
+            print("done..")
             # Score the motion plan.
             if motion_plan is not None:
                 num_iters += 1
