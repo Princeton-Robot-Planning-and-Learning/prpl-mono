@@ -241,7 +241,6 @@ def run_smooth_motion_planning_to_pose(
         end_effector_pose = multiply_poses(
             target_pose, end_effector_frame_to_plan_frame
         )
-
         # Sample a collision-free joint target. If none exist, we'll just
         # go back to sampling a different target pose.
         for target_joint_positions in sample_collision_free_inverse_kinematics(
