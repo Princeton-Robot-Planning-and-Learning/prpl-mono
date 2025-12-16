@@ -36,6 +36,7 @@ from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionS
 from prbench.envs.geom3d.object_types import (
     Geom3DCuboidType,
     Geom3DEnvTypeFeatures,
+    Geom3DFixtureType,
     Geom3DPointType,
     Geom3DRobotType,
 )
@@ -636,6 +637,23 @@ class ObjectCentricGeom3DRobotEnv(
                 feats["x"] = pose.position[0]
                 feats["y"] = pose.position[1]
                 feats["z"] = pose.position[2]
+            # Handle fixtures.
+            elif object_type == Geom3DFixtureType:
+                # Add pose.
+                body_id = self._object_name_to_pybullet_id(object_name)
+                pose = get_pose(body_id, self.physics_client_id)
+                pose_feat_names = [
+                    "pose_x",
+                    "pose_y",
+                    "pose_z",
+                    "pose_qx",
+                    "pose_qy",
+                    "pose_qz",
+                    "pose_qw",
+                ]
+                pose_feats = list(pose.position) + list(pose.orientation)
+                for feat_name, feat in zip(pose_feat_names, pose_feats, strict=True):
+                    feats[feat_name] = feat
             else:
                 raise NotImplementedError(f"Unsupported object type: {object_type}")
             # Add feats to state dict.

@@ -78,9 +78,9 @@ Geom3DEnvTypeFeatures[Geom3DPointType] = [
 ]
 
 
-# Shelf objects: parameterize by shelf kind and shelf height. Pose and grasp_active included.
-Geom3DShelfType = Type("Geom3DShelf")
-Geom3DEnvTypeFeatures[Geom3DShelfType] = [
+# Fixtures: static objects with a pose.
+Geom3DFixtureType = Type("Geom3DFixture")
+Geom3DEnvTypeFeatures[Geom3DFixtureType] = [
     "pose_x",
     "pose_y",
     "pose_z",

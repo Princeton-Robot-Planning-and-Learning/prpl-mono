@@ -1,4 +1,4 @@
-"""Tests for ground3d.py."""
+"""Tests for table3d.py."""
 
 import numpy as np
 import pytest

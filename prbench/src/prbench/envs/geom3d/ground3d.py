@@ -8,9 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Type as TypingType
 
-import numpy as np
-from pybullet_helpers.geometry import Pose, set_pose
-from pybullet_helpers.inverse_kinematics import check_body_collisions
+from pybullet_helpers.geometry import set_pose
 from pybullet_helpers.utils import create_pybullet_block
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
@@ -25,7 +23,10 @@ from prbench.envs.geom3d.object_types import (
     Geom3DEnvTypeFeatures,
     Geom3DRobotType,
 )
-from prbench.envs.geom3d.utils import Geom3DObjectCentricState
+from prbench.envs.geom3d.utils import (
+    Geom3DObjectCentricState,
+    sample_collision_free_object_poses,
+)
 from prbench.envs.utils import PURPLE
 
 
@@ -92,46 +93,14 @@ class ObjectCentricGround3DEnv(
         return {}
 
     def _reset_objects(self) -> None:
-        # Randomly sample collision-free positions for the cubes.
-        # Also ensure that they are not in collision with the robot.
-        # Samples the poses of the cubes
-        for _ in range(100_000):
-            for cube_name, cube_id in self._cubes.items():
-                # add orientation later
-                cube_pose = Pose(
-                    (
-                        np.random.uniform(self.config.x_lb, self.config.x_ub),
-                        np.random.uniform(self.config.y_lb, self.config.y_ub),
-                        self.config.block_size / 2,
-                    )
-                )
-                set_pose(cube_id, cube_pose, self.physics_client_id)
-            collision_free = True
-            for cube_name, cube_id in self._cubes.items():
-                for other_cube_name, other_cube_id in self._cubes.items():
-                    if cube_name == other_cube_name:
-                        continue
-                    if check_body_collisions(
-                        cube_id,
-                        other_cube_id,
-                        self.physics_client_id,
-                    ):
-                        collision_free = False
-                        break
-
-            for cube_name, cube_id in self._cubes.items():
-                if check_body_collisions(
-                    cube_id,
-                    self.robot.base.robot_id,
-                    self.physics_client_id,
-                ):
-                    collision_free = False
-                    break
-            if collision_free:
-                break
-
-        else:
-            raise RuntimeError("Failed to sample collision-free cube poses")
+        sample_collision_free_object_poses(
+            object_ids=set(self._cubes.values()),
+            lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2),
+            ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2),
+            physics_client_id=self.physics_client_id,
+            rng=self.np_random,
+            other_collision_ids={self.robot.base.robot_id},
+        )
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
         assert isinstance(obs, Ground3DObjectCentricState)

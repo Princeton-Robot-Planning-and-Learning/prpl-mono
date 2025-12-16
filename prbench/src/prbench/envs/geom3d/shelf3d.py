@@ -10,10 +10,8 @@ from dataclasses import dataclass
 from typing import Any
 from typing import Type as TypingType
 
-import numpy as np
 from pybullet_helpers.geometry import Pose, set_pose
-from pybullet_helpers.inverse_kinematics import check_body_collisions
-from pybullet_helpers.utils import create_pybullet_block
+from pybullet_helpers.utils import create_pybullet_block, create_pybullet_shelf
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
@@ -25,10 +23,13 @@ from prbench.envs.geom3d.base_env import (
 from prbench.envs.geom3d.object_types import (
     Geom3DCuboidType,
     Geom3DEnvTypeFeatures,
+    Geom3DFixtureType,
     Geom3DRobotType,
-    Geom3DShelfType,
 )
-from prbench.envs.geom3d.utils import Geom3DObjectCentricState
+from prbench.envs.geom3d.utils import (
+    Geom3DObjectCentricState,
+    sample_collision_free_object_poses,
+)
 from prbench.envs.utils import PURPLE
 
 
@@ -37,8 +38,14 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Shelf3DEnv()."""
 
     # Shelf.
-    shelf_pose: Pose = Pose((1.5, 0.0, 0.25))
+    shelf_pose: Pose = Pose((0.0, 1.5, 0.0))
     shelf_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
+    shelf_width: float = 0.60198
+    shelf_depth: float = 0.254
+    shelf_height: float = 0.0127
+    shelf_spacing: float = 0.254
+    shelf_support_width: float = 0.0127
+    shelf_num_layers: int = 4
 
     # World bounds.
     x_lb: float = -1
@@ -66,40 +73,12 @@ class Shelf3DObjectCentricState(Geom3DObjectCentricState):
     Adds convenience methods on top of Geom3DObjectCentricState().
     """
 
-    def get_cuboid_half_extents(self, name: str) -> tuple[float, float, float]:
-        """The half extents of the cuboid."""
-        obj = self.get_object_from_name(name)
-        return (
-            self.get(obj, "half_extent_x"),
-            self.get(obj, "half_extent_y"),
-            self.get(obj, "half_extent_z"),
-        )
-
-    def get_cuboid_pose(self, name: str) -> Pose:
-        """The pose of the cuboid."""
-        obj = self.get_object_from_name(name)
-        position = (
-            self.get(obj, "pose_x"),
-            self.get(obj, "pose_y"),
-            self.get(obj, "pose_z"),
-        )
-        orientation = (
-            self.get(obj, "pose_qx"),
-            self.get(obj, "pose_qy"),
-            self.get(obj, "pose_qz"),
-            self.get(obj, "pose_qw"),
-        )
-        return Pose(position, orientation)
-
 
 class ObjectCentricShelf3DEnv(
     ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Shelf3DEnvConfig]
 ):
-    """PyBullet environment where an object must be picked from the ground and placed on
-    a shelf.
-
-    There may be other obstructing objects in the environment.
-    """
+    """PyBullet environment where objects must be picked from the ground and placed on a
+    shelf."""
 
     def __init__(
         self,
@@ -125,58 +104,38 @@ class ObjectCentricShelf3DEnv(
             )
             self._cubes[f"cube{idx}"] = cube_id
 
-        # Create table.
-        self.table_id = create_pybullet_block(
-            self.config.table_rgba,
-            half_extents=self.config.table_half_extents,
+        # Create shelf.
+        self._shelf_id, self._shelf_surface_ids = create_pybullet_shelf(
+            color=self.config.shelf_rgba,
+            shelf_width=self.config.shelf_width,
+            shelf_depth=self.config.shelf_depth,
+            shelf_height=self.config.shelf_height,
+            spacing=self.config.shelf_spacing,
+            support_width=self.config.shelf_support_width,
+            num_layers=self.config.shelf_num_layers,
             physics_client_id=self.physics_client_id,
         )
-        set_pose(self.table_id, self.config.table_pose, self.physics_client_id)
+        set_pose(self._shelf_id, self.config.shelf_pose, self.physics_client_id)
 
     @property
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
         return Shelf3DObjectCentricState
 
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
-        return self._create_state_dict([("shelf", Geom3DShelfType)])
+        return self._create_state_dict([("shelf", Geom3DFixtureType)])
 
     def _reset_objects(self) -> None:
-        # Randomly sample collision-free positions for the cubes.
-        # Also ensure that they are not in collision with the robot.
-        # Samples the poses of the cubes
-        for _ in range(100_000):
-            for cube_name, cube_id in self._cubes.items():
-                cube_half_extents = (
-                    self.config.block_size / 2,
-                    self.config.block_size / 2,
-                    self.config.block_size / 2,
-                )
-                # add orientation later
-                cube_pose = self.config.sample_block_on_table_pose(
-                    cube_half_extents, self.np_random
-                )
-                set_pose(cube_id, cube_pose, self.physics_client_id)
-            collision_free = True
-            for cube_name, cube_id in self._cubes.items():
-                for other_cube_name, other_cube_id in self._cubes.items():
-                    if cube_name == other_cube_name:
-                        continue
-                    if check_body_collisions(
-                        cube_id,
-                        other_cube_id,
-                        self.physics_client_id,
-                    ):
-                        collision_free = False
-                        break
-
-            if collision_free:
-                break
-
-        else:
-            raise RuntimeError("Failed to sample collision-free cube poses")
+        sample_collision_free_object_poses(
+            object_ids=set(self._cubes.values()),
+            lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2),
+            ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2),
+            physics_client_id=self.physics_client_id,
+            rng=self.np_random,
+            other_collision_ids={self.robot.base.robot_id},
+        )
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
-        assert isinstance(obs, Table3DObjectCentricState)
+        assert isinstance(obs, Shelf3DObjectCentricState)
         for cube_name, cube_id in self._cubes.items():
             assert cube_id is not None
             set_pose(
@@ -187,13 +146,13 @@ class ObjectCentricShelf3DEnv(
 
     def _object_name_to_pybullet_id(self, object_name: str) -> int:
         if object_name == "shelf":
-            return self.shelf_id
+            return self._shelf_id
         if object_name.startswith("cube"):
             return self._cubes[object_name]
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        return {self.shelf_id}
+        return {self._shelf_id}
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys())
@@ -209,13 +168,13 @@ class ObjectCentricShelf3DEnv(
                 self.config.block_size / 2,
             )
         if object_name == "shelf":
-            return self.config.shelf_half_extents
+            raise NotImplementedError("TODO")
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_obs(self) -> Shelf3DObjectCentricState:
         state_dict = self._create_state_dict(
             [("robot", Geom3DRobotType)]
-            + [("shelf", Geom3DShelfType)]
+            + [("shelf", Geom3DFixtureType)]
             + [("cube" + str(i), Geom3DCuboidType) for i in range(self._num_cubes)]
         )
         state = create_state_from_dict(
@@ -247,6 +206,7 @@ class Shelf3DEnv(ConstantObjectPRBenchEnv):
 
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
+        # pylint: disable=line-too-long
         return """A 3D environment where the goal is to pick up a cube from the ground and place it on a shelf."""
 
     def _create_observation_space_markdown_description(self) -> str:
