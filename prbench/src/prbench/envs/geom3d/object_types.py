@@ -76,3 +76,16 @@ Geom3DEnvTypeFeatures[Geom3DPointType] = [
     "y",
     "z",
 ]
+
+
+# Fixtures: static objects with a pose.
+Geom3DFixtureType = Type("Geom3DFixture")
+Geom3DEnvTypeFeatures[Geom3DFixtureType] = [
+    "pose_x",
+    "pose_y",
+    "pose_z",
+    "pose_qx",
+    "pose_qy",
+    "pose_qz",
+    "pose_qw",
+]
