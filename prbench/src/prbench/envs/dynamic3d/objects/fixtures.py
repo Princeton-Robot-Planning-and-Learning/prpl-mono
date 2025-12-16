@@ -242,34 +242,39 @@ class Table(MujocoFixture):
         self,
         region_name: str,
         np_random: np.random.Generator,
-    ) -> tuple[float, float, float]:
-        """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
+    ) -> tuple[float, float, float, float]:
+        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided
+        regions.
 
         Args:
-            regions: List of bounding boxes, where each bounding box is a list of
-                    4 floats: [x_start, y_start, x_end, y_end] in table-relative
-                    coordinates
-            np_random: Random number generator. If None, uses numpy's default random
+            region_name: Name of the region to sample from
+            np_random: Random number generator
 
         Returns:
-            Tuple of (x, y, z) coordinates in world coordinates (offset by table
-            position)
+            Tuple of (x, y, z, yaw) coordinates in world coordinates (offset by table
+            position), where yaw is in radians. The yaw range is read from
+            self.regions[region_name]["yaw_ranges"] if it exists, otherwise
+            defaults to (0.0, 360.0) degrees.
 
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
         """
         assert self.regions is not None, "Regions must be defined"
+        region_config = self.regions[region_name]
+
         # Randomly select one of the regions
-        selected_range = np_random.choice(self.regions[region_name]["ranges"])
+        selected_range_index = np_random.choice(len(region_config["ranges"]))
 
         # Validate the selected region
+        selected_range = region_config["ranges"][selected_range_index]
         if len(selected_range) != 4:  # type: ignore[arg-type]
             raise ValueError(
-                f"Each region must have exactly 4 values "
-                f"[x_start, y_start, x_end, y_end], got {len(selected_range)}"
+                "Each region must have exactly 4 values "
+                "[x_start, y_start, x_end, y_end], "
+                f"got {len(region_config['ranges'][selected_range_index])}"
             )
 
-        x_start, y_start, x_end, y_end = selected_range  # type: ignore[misc]
+        (x_start, y_start, x_end, y_end) = selected_range  # type: ignore[misc]
 
         # Validate bounds
         if x_start >= x_end:
@@ -284,12 +289,22 @@ class Table(MujocoFixture):
         # Sample z coordinate on top of the table
         z = self.table_height + 0.1  # Slightly above the table surface
 
+        # Sample yaw from the specified range (convert from degrees to radians)
+        yaw_range = (0.0, 360.0)  # Default range
+        if "yaw_ranges" in region_config:
+            # Use the yaw_range corresponding to the selected range index
+            yaw_ranges = region_config["yaw_ranges"]
+            if yaw_ranges:
+                yaw_range = tuple(yaw_ranges[selected_range_index])
+        yaw_deg = np_random.uniform(yaw_range[0], yaw_range[1])
+        yaw = np.radians(yaw_deg)
+
         # Offset by the table's position to get world coordinates
         world_x = x + self.position[0]
         world_y = y + self.position[1]
         world_z = z + self.position[2]
 
-        return (world_x, world_y, world_z)
+        return (world_x, world_y, world_z, yaw)
 
     def check_in_region(
         self,
@@ -723,20 +738,21 @@ class Cupboard(MujocoFixture):
         self,
         region_name: str,
         np_random: np.random.Generator,
-    ) -> tuple[float, float, float]:
-        """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
+    ) -> tuple[float, float, float, float]:
+        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided
+        regions.
 
-        For cupboards, this samples on the top shelf surface.
+        For cupboards, this samples on the specified shelf surface.
 
         Args:
-            regions: List of bounding boxes, where each bounding box is a list of
-                    4 floats: [x_start, y_start, x_end, y_end] in cupboard-relative
-                    coordinates
+            region_name: Name of the region to sample from
             np_random: Random number generator
 
         Returns:
-            Tuple of (x, y, z) coordinates in world coordinates (offset by cupboard
-            position)
+            Tuple of (x, y, z, yaw) coordinates in world coordinates (offset by cupboard
+            position), where yaw is in radians. The yaw range is read from
+            self.regions[region_name]["yaw_ranges"] if it exists, otherwise
+            defaults to (0.0, 360.0) degrees.
 
         Raises:
             ValueError: If regions list is empty or if any region has invalid bounds
@@ -760,16 +776,19 @@ class Cupboard(MujocoFixture):
         )
 
         # Randomly select one of the regions
-        selected_range = np_random.choice(region["ranges"])
+        selected_range_index = np_random.choice(len(region["ranges"]))
 
         # Validate the selected region
-        if len(selected_range) != 4:  # type: ignore[arg-type]
+        if len(region["ranges"][selected_range_index]) != 4:  # type: ignore[arg-type]
             raise ValueError(
-                f"Each region must have exactly 4 values "
-                f"[x_start, y_start, x_end, y_end], got {len(selected_range)}"
+                "Each region must have exactly 4 values "
+                "[x_start, y_start, x_end, y_end], "
+                f"got {len(region['ranges'][selected_range_index])}"
             )
 
-        x_start, y_start, x_end, y_end = selected_range  # type: ignore[misc]
+        (x_start, y_start, x_end, y_end) = region["ranges"][
+            selected_range_index
+        ]  # type: ignore[misc]
 
         # Validate bounds
         if x_start >= x_end:
@@ -785,12 +804,23 @@ class Cupboard(MujocoFixture):
         shelf_z = self._shelf_z_positions[shelf]
         z = shelf_z + 0.01  # Slightly above shelf surface
 
+        # Sample yaw from the specified range (convert from degrees to radians)
+        yaw_range = (0.0, 360.0)  # Default range
+        if "yaw_ranges" in region:
+            # Use the yaw_range corresponding to the selected range index
+            # For simplicity, use the first yaw_range if available
+            yaw_ranges = region["yaw_ranges"]
+            if yaw_ranges:
+                yaw_range = tuple(yaw_ranges[selected_range_index])
+        yaw_deg = np_random.uniform(yaw_range[0], yaw_range[1])
+        yaw = np.radians(yaw_deg)
+
         # Offset by the cupboard's position to get world coordinates
         world_x = x + self.position[0]
         world_y = y + self.position[1]
         world_z = z + self.position[2]
 
-        return (world_x, world_y, world_z)
+        return (world_x, world_y, world_z, yaw)
 
     def check_in_region(
         self,

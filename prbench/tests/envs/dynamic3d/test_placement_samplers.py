@@ -159,11 +159,12 @@ def test_single_region():
     np_random = np.random.default_rng(42)
     regions = [[1.0, 2.0, 3.0, 4.0]]  # [x_start, y_start, x_end, y_end]
 
-    x, y, z = sample_pose_in_region(regions, np_random)
+    x, y, z, yaw = sample_pose_in_region(regions, np_random)
 
     assert 1.0 <= x <= 3.0
     assert 2.0 <= y <= 4.0
     assert z == 0.02  # Default z coordinate
+    assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians
 
 
 def test_multiple_regions():
@@ -178,7 +179,7 @@ def test_multiple_regions():
     # Sample many times to check all regions can be selected
     sampled_regions = set()
     for _ in range(100):
-        x, y, z = sample_pose_in_region(regions, np_random)
+        x, y, z, yaw = sample_pose_in_region(regions, np_random)
 
         # Determine which region this sample came from
         if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
@@ -189,6 +190,7 @@ def test_multiple_regions():
             sampled_regions.add(2)
 
         assert z == 0.02
+        assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians
 
     # Should have sampled from all regions at least once
     assert len(sampled_regions) == 3
@@ -200,11 +202,12 @@ def test_custom_z_coordinate():
     regions = [[0.0, 0.0, 1.0, 1.0]]
     custom_z = 0.5
 
-    x, y, z = sample_pose_in_region(regions, np_random, z_coordinate=custom_z)
+    x, y, z, yaw = sample_pose_in_region(regions, np_random, z_coordinate=custom_z)
 
     assert 0.0 <= x <= 1.0
     assert 0.0 <= y <= 1.0
     assert z == custom_z
+    assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians
 
 
 def test_deterministic_with_seed_pose():
@@ -279,11 +282,12 @@ def test_point_region():
     np_random = np.random.default_rng(42)
     regions = [[0.0, 0.0, 0.001, 0.001]]  # Very small region
 
-    x, y, z = sample_pose_in_region(regions, np_random)
+    x, y, z, yaw = sample_pose_in_region(regions, np_random)
 
     assert 0.0 <= x <= 0.001
     assert 0.0 <= y <= 0.001
     assert z == 0.02
+    assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians
 
 
 def test_negative_coordinates():
@@ -291,8 +295,9 @@ def test_negative_coordinates():
     np_random = np.random.default_rng(42)
     regions = [[-2.0, -3.0, -1.0, -1.0]]
 
-    x, y, z = sample_pose_in_region(regions, np_random)
+    x, y, z, yaw = sample_pose_in_region(regions, np_random)
 
     assert -2.0 <= x <= -1.0
     assert -3.0 <= y <= -1.0
     assert z == 0.02
+    assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians
