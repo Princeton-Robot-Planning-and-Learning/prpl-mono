@@ -239,6 +239,21 @@ class MujocoObject:
         These bounding box dimensions are independent from the object pose.
         """
 
+    @staticmethod
+    @abc.abstractmethod
+    def get_bounding_box_from_config(
+        pos: NDArray[np.float32], object_config: dict[str, str | float]
+    ) -> list[float]:
+        """Get the object's bounding box in world coordinates.
+
+        Args:
+            pos: Position of the object as [x, y, z] array
+            object_config: Dictionary containing object configuration parameters
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max] array
+        """
+
     def get_object_centric_data(self) -> dict[str, float]:
         """Get the object's current data.
 
@@ -423,3 +438,183 @@ class MujocoFixture(abc.ABC):
         This method adds visual elements to the MuJoCo XML to represent the regions
         defined for this fixture.
         """
+
+
+class MujocoGround:
+    """A ground fixture for simple region sampling on the ground plane."""
+
+    def __init__(
+        self,
+        regions: dict | None = None,
+    ) -> None:
+        """Initialize a Ground object.
+
+        Args:
+            name: Name of the ground body in the XML
+            fixture_config: Dictionary containing ground configuration with keys:
+                - "length": Total ground length in meters
+                - "width": Total ground width in meters
+            position: Position of the ground as [x, y, z]
+            yaw: Yaw orientation of the ground in radians
+            regions: Dictionary of regions defined on the ground plane
+        """
+        self.name = "ground"
+        self.regions = regions
+        self.position = np.array([0.0, 0.0, 0.0])  # Ground at origin
+        self.ground_thickness = 0.01  # Default ground thickness
+        self.xml_element = ET.Element("body", name=self.name)  # Empty body element
+
+    def sample_pose_in_region(
+        self,
+        region_name: str,
+        np_random: np.random.Generator,
+    ) -> tuple[float, float, float, float]:
+        """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided
+        regions.
+
+        For ground, this samples on the ground plane surface.
+
+        Args:
+            region_name: Name of the region to sample from
+            np_random: Random number generator
+
+        Returns:
+            Tuple of (x, y, z, yaw) coordinates in world coordinates (offset by ground
+            position), where yaw is in radians. The yaw range is read from
+            self.regions[region_name]["yaw_ranges"] if it exists, otherwise
+            defaults to (0.0, 360.0) degrees.
+
+        Raises:
+            ValueError: If regions list is empty or if any region has invalid bounds
+        """
+        assert self.regions is not None, "Regions must be defined"
+        region_config = self.regions[region_name]
+
+        # Randomly select one of the regions
+        selected_range_index = np_random.choice(len(region_config["ranges"]))
+
+        # Validate the selected region
+        selected_range = region_config["ranges"][selected_range_index]
+        if len(selected_range) != 4:
+            raise ValueError(
+                f"Each region must have exactly 4 values "
+                f"[x_start, y_start, x_end, y_end], got {len(selected_range)}"
+            )
+
+        (x_start, y_start, x_end, y_end) = selected_range  # type: ignore[misc]
+
+        # Validate bounds
+        if x_start > x_end:
+            raise ValueError(f"x_start ({x_start}) must be less than x_end ({x_end})")
+        if y_start > y_end:
+            raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
+
+        # Sample uniformly within the selected region
+        x = np_random.uniform(x_start, x_end)
+        y = np_random.uniform(y_start, y_end)
+
+        # Sample z coordinate on the ground surface
+        z = self.ground_thickness / 2  # Slightly above ground
+
+        # Sample yaw from the specified range (convert from degrees to radians)
+        yaw_range = (0.0, 360.0)  # Default range
+        if "yaw_ranges" in region_config:
+            selected_yaw_range = region_config["yaw_ranges"][selected_range_index]
+            yaw_range = selected_yaw_range
+        yaw_deg = np_random.uniform(yaw_range[0], yaw_range[1])
+        yaw = np.radians(yaw_deg)
+
+        # Offset by the ground's position to get world coordinates
+        world_x = x + self.position[0]
+        world_y = y + self.position[1]
+        world_z = z + self.position[2]
+
+        return (world_x, world_y, world_z, yaw)
+
+    def check_in_region(
+        self,
+        position: NDArray[np.float32],
+        region_name: str,
+    ) -> bool:
+        """Check if a given position is within the specified region on the ground.
+
+        Args:
+            position: Position as [x, y, z] array in world coordinates
+            region_name: Name of the region to check
+        Returns:
+            True if the position is within the specified region, False otherwise
+        """
+        # Convert world coordinates to ground-relative coordinates
+        ground_x = position[0] - self.position[0]
+        ground_y = position[1] - self.position[1]
+
+        ground_placement_threshold = 0.01  # 1cm tolerance for placement
+
+        # Get the bounding box for the specified region
+        assert self.regions is not None, "Regions must be defined"
+        if region_name not in self.regions:
+            raise ValueError(f"Region {region_name} not found in ground regions")
+
+        region_ranges = self.regions[region_name]["ranges"]
+
+        for region_range in region_ranges:
+            x_start, y_start, x_end, y_end = region_range
+            # Check if position is within this region (with tolerance)
+            if (
+                x_start - ground_placement_threshold
+                <= ground_x
+                <= x_end + ground_placement_threshold
+            ) and (
+                y_start - ground_placement_threshold
+                <= ground_y
+                <= y_end + ground_placement_threshold
+            ):
+                return True
+
+        return False
+
+    def visualize_regions(self) -> None:
+        """Visualize the ground's regions in the MuJoCo environment.
+
+        This method adds visual elements to the MuJoCo XML to represent the regions
+        defined for this ground.
+        """
+        if self.regions is None:
+            return
+
+        for region_name, region_config in self.regions.items():
+            for i_region, region_range in enumerate(region_config["ranges"]):
+                x_start, y_start, x_end, y_end = region_range
+
+                # Calculate region center and size
+                region_center_x = (x_start + x_end) / 2
+                region_center_y = (y_start + y_end) / 2
+                region_center_z = 0.001  # Just above ground
+                region_size_x = (x_end - x_start) / 2
+                region_size_y = (y_end - y_start) / 2
+                region_size_z = 0.001  # Very thin box for visualization
+
+                # Create geom element for the region visualization
+                region_geom = ET.SubElement(self.xml_element, "geom")
+                region_geom.set("name", f"{self.name}_{region_name}_region_{i_region}")
+                region_geom.set("type", "box")
+                region_geom.set(
+                    "size",
+                    f"{region_size_x} {region_size_y} {region_size_z}",
+                )
+                region_geom.set(
+                    "pos",
+                    f"{region_center_x} {region_center_y} {region_center_z}",
+                )
+                region_geom.set("rgba", " ".join(map(str, region_config["rgba"])))
+                # Disable collision for visual-only representation
+                region_geom.set("contype", "0")
+                region_geom.set("conaffinity", "0")
+
+    def __str__(self) -> str:
+        """String representation of the ground."""
+        return f"Ground(name='{self.name}', " f"position={self.position})"
+
+    def __repr__(self) -> str:
+        """Detailed string representation of the ground."""
+        return f"Ground(name='{self.name}', " f"position={self.position})"
