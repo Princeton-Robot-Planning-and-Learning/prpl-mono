@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import ClassVar
 
 import numpy as np
+from numpy.typing import NDArray
 from relational_structs import Object
 
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
@@ -241,6 +242,118 @@ class RoboCasaObject(MujocoObject):
             ET.Element containing all assets for this object
         """
         return self.assets
+
+    @staticmethod
+    def get_bounding_box_from_config(
+        pos: NDArray[np.float32], object_config: dict[str, str | float]
+    ) -> list[float]:
+        """Get bounding box for a RoboCasa object given its position and config.
+
+        Args:
+            pos: Position of the object as [x, y, z] array
+            object_config: Dictionary containing RoboCasa object configuration.
+                Should contain "object_type" key for the object type name.
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+        """
+        # Extract object type from config
+        object_type = object_config.get("object_type", "")
+        if not object_type:
+            # Try to use type name or fallback to default dimensions
+            return [
+                float(pos[0]) - 0.05,
+                float(pos[1]) - 0.05,
+                float(pos[2]) - 0.05,
+                float(pos[0]) + 0.05,
+                float(pos[1]) + 0.05,
+                float(pos[2]) + 0.05,
+            ]
+
+        # Look up the registered object class to get model directory
+        object_class = REGISTERED_OBJECTS.get(object_type)
+        if object_class is None or not hasattr(object_class, "model_dir"):
+            # Fallback to default dimensions if object not found
+            return [
+                float(pos[0]) - 0.05,
+                float(pos[1]) - 0.05,
+                float(pos[2]) - 0.05,
+                float(pos[0]) + 0.05,
+                float(pos[1]) + 0.05,
+                float(pos[2]) + 0.05,
+            ]
+
+        # Load the model and calculate bounding box dimensions
+        model_dir: Path = object_class.model_dir  # type: ignore[assignment]
+        model_xml_path = model_dir / "model.xml"
+
+        if not model_xml_path.exists():
+            # Fallback to default dimensions
+            return [
+                float(pos[0]) - 0.05,
+                float(pos[1]) - 0.05,
+                float(pos[2]) - 0.05,
+                float(pos[0]) + 0.05,
+                float(pos[1]) + 0.05,
+                float(pos[2]) + 0.05,
+            ]
+
+        # Parse model to extract bounding box dimensions
+        try:
+            model_tree = ET.parse(str(model_xml_path))
+            model_root = model_tree.getroot()
+            worldbody = model_root.find("worldbody")
+
+            if worldbody is None:
+                raise ValueError("No worldbody found in model.xml")
+
+            # Extract sites to calculate bounding box
+            sites = {}
+            for body in worldbody.iter("body"):
+                for site in body.findall("site"):
+                    site_name = site.attrib.get("name", "")
+                    pos_str = site.attrib.get("pos", "0 0 0")
+                    site_pos = np.array([float(x) for x in pos_str.split()])
+                    sites[site_name] = site_pos
+
+            # Calculate dimensions from sites
+            if "bottom_site" in sites and "top_site" in sites:
+                height = abs(sites["top_site"][2] - sites["bottom_site"][2])
+            else:
+                height = 0.05
+
+            if "horizontal_radius_site" in sites:
+                radius_pos = sites["horizontal_radius_site"]
+                width = 2 * abs(radius_pos[0])
+                depth = 2 * abs(radius_pos[1])
+            else:
+                width = 0.05
+                depth = 0.05
+
+            # Calculate half-extents
+            half_width = width / 2
+            half_depth = depth / 2
+            half_height = height / 2
+
+            # Return bounding box at given position
+            return [
+                float(pos[0]) - half_width,
+                float(pos[1]) - half_depth,
+                float(pos[2]) - half_height,
+                float(pos[0]) + half_width,
+                float(pos[1]) + half_depth,
+                float(pos[2]) + half_height,
+            ]
+        except Exception:
+            # Fallback to default dimensions on any error
+            return [
+                float(pos[0]) - 0.05,
+                float(pos[1]) - 0.05,
+                float(pos[2]) - 0.05,
+                float(pos[0]) + 0.05,
+                float(pos[1]) + 0.05,
+                float(pos[2]) + 0.05,
+            ]
 
     def __str__(self) -> str:
         """String representation of the RoboCasa object."""
