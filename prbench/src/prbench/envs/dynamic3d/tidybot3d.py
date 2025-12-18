@@ -338,7 +338,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     # Collect ground-placed objects
                     obj = self._objects_dict[obj_name]
                     # pylint: disable=no-member
-                    obj_type = obj.__class__.REGISTERED_NAME
+                    obj_type = (
+                        obj.__class__.REGISTERED_NAME  # type: ignore[attr-defined]
+                    )
                     obj_config = self.task_config["objects"][
                         obj_type
                     ].get(obj_name, {})
@@ -376,7 +378,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     # Get the object type for this object
                     obj = self._objects_dict[obj_name]
                     # pylint: disable=no-member
-                    obj_type = obj.__class__.REGISTERED_NAME
+                    obj_type = (
+                        obj.__class__.REGISTERED_NAME  # type: ignore[attr-defined]
+                    )
                     if obj_type not in ground_object_configs:
                         ground_object_configs[obj_type] = {}
                     ground_object_configs[obj_type][obj_name] = (
