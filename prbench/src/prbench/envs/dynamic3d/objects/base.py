@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import abc
 import xml.etree.ElementTree as ET
-from typing import TYPE_CHECKING, Callable, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, TypeVar, Union, overload
 
 import numpy as np
 from numpy.typing import NDArray
@@ -31,6 +31,18 @@ def register_fixture(cls: type[FixtureT]) -> type[FixtureT]:
     """Register fixture classes for TidyBot environments."""
     REGISTERED_FIXTURES[cls.__name__.lower()] = cls
     return cls
+
+
+@overload
+def register_object(cls: type[ObjectT]) -> type[ObjectT]:
+    ...
+
+
+@overload
+def register_object(
+    cls: None = None, name: str | None = None
+) -> Callable[[type[ObjectT]], type[ObjectT]]:
+    ...
 
 
 def register_object(
