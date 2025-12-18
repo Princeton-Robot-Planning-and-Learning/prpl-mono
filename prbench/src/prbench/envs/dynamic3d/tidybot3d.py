@@ -26,13 +26,13 @@ from prbench.envs.dynamic3d.object_types import (
 )
 from prbench.envs.dynamic3d.objects import (
     MujocoFixture,
+    MujocoGround,
     MujocoObject,
     get_fixture_class,
     get_object_class,
 )
 from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_positions,
-    sample_pose_in_region,
 )
 from prbench.envs.dynamic3d.robots import (
     RBY1ARobotActionSpace,
@@ -187,9 +187,21 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 all_fixtures = self.task_config.get("fixtures", {})
                 fixtures: dict[str, dict[str, dict[str, Any]]] = {}
 
-                # Create fixture ranges dict based on initial state predicates
-                fixture_ranges = {}
-                fixture_yaw_ranges = {}
+                # Find regions on ground
+                regions_on_ground = {}
+                all_regions = self.task_config.get("regions", {})
+                for region_name, region_config in all_regions.items():
+                    if region_config["target"] == "ground":
+                        regions_on_ground[region_name] = region_config
+                # Create ground fixture for region sampling
+                self.ground_fixture = MujocoGround(
+                    regions=regions_on_ground,
+                )
+
+                # Create fixture region names and pos/yaw samplers dicts
+                entity_region_names: dict[str, str] = {}
+                entity_pos_yaw_samplers: dict[str, Any] = {}
+
                 init_predicates = self.task_config.get("initial_state", [])
                 for pred in init_predicates:
                     if pred[0] == "on" and len(pred) == 3:
@@ -219,31 +231,19 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                                 f"must have target 'ground', got "
                                 f"'{region_config['target']}'"
                             )
-                            # Extract randomly sampled range tuple
-                            # (x_min, y_min, x_max, y_max)
-                            available_ranges = region_config["ranges"]
-                            selected_range_index = self.np_random.choice(
-                                len(available_ranges)
-                            )
-                            ranges = available_ranges[selected_range_index]
-                            fixture_ranges[fixture_name] = tuple(ranges)
 
-                            # Extract yaw rotation range if specified
-                            if "yaw_ranges" in region_config:
-                                assert len(region_config["yaw_ranges"]) == len(
-                                    region_config["ranges"]
-                                ), (
-                                    f"Length of yaw_ranges must match length of "
-                                    f"ranges in region {region_name}"
-                                )
-                                yaw_rotation = region_config["yaw_ranges"][
-                                    selected_range_index
-                                ]
-                                fixture_yaw_ranges[fixture_name] = tuple(yaw_rotation)
+                            # Add to region names and pos/yaw samplers dicts
+                            entity_region_names[fixture_name] = region_name
+                            entity_pos_yaw_samplers[fixture_name] = (
+                                self.ground_fixture.sample_pose_in_region
+                            )
 
                 # Sample collision-free positions for all fixtures
                 fixture_poses = sample_collision_free_positions(
-                    fixtures, self.np_random, fixture_ranges, fixture_yaw_ranges
+                    fixtures,
+                    self.np_random,
+                    entity_region_names=entity_region_names,
+                    entity_pos_yaw_samplers=entity_pos_yaw_samplers,
                 )
 
                 # Insert filtered fixtures
@@ -317,54 +317,136 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         assert self._robot_env is not None, "Robot environment not initialized"
         assert self._robot_env.sim is not None, "Simulation not initialized"
 
-        # Set object pose based on task configuration
+        # Collect all objects and their target regions
         init_predicates = self.task_config.get("initial_state", [])
+
+        # Separate objects by their target (ground or fixture)
+        ground_objects: dict[str, dict[str, Any]] = {}
+        fixture_objects: dict[str, tuple[str, str]] = {}  # obj_name -> (target, region)
+
         for pred in init_predicates:
             if pred[0] == "on":
                 obj_name = pred[1]
+                region_name = pred[2]
+
+                # Skip fixtures, they are static
                 if obj_name in self._fixtures_dict:
-                    continue  # Skip fixtures, they are static
+                    continue
+
                 if obj_name not in self._objects_dict:
                     raise ValueError(f"Object {obj_name} not found in environment.")
-                region_name = pred[2]
+
                 region_config = self.task_config["regions"][region_name]
-                region_ranges = region_config["ranges"]
+                target = region_config["target"]
 
-                # Extract yaw ranges if specified (in degrees)
-                yaw_ranges = region_config.get("yaw_ranges", None)
-
-                if region_config["target"] == "ground":
-                    # Sample pose directly on the ground using utility function
-                    # Get the object's bounding box to determine proper z-coordinate
-                    obj = self._objects_dict[obj_name]
-                    _, _, height = obj.get_bounding_box_dimensions()
-                    # Place object so its bottom is on the ground (z = height/2)
-                    pos_x, pos_y, pos_z, theta = sample_pose_in_region(
-                        region_ranges,
-                        self.np_random,
-                        z_coordinate=height / 2,
-                        yaw_ranges=yaw_ranges,
-                    )
-                    # Convert yaw to quaternion
-                    quat = convert_yaw_to_quaternion(theta)
+                if target == "ground":
+                    # Collect ground-placed objects
+                    obj_config = self.task_config["objects"][
+                        self._objects_dict[obj_name].__class__.__name__.lower()
+                    ].get(obj_name, {})
+                    ground_objects[obj_name] = obj_config
+                    fixture_objects[obj_name] = (target, region_name)
                 else:
-                    # Sample pose on a fixture (table, etc.)
-                    target_fixture = region_config["target"]
-                    assert target_fixture in self._fixtures_dict, (
-                        f"Fixture {target_fixture} not found in environment. "
-                        f"Did you provide an initialization predicate for the "
-                        f"fixture?"
-                    )
-                    fixture = self._fixtures_dict[target_fixture]
-                    pos_x, pos_y, pos_z, theta = fixture.sample_pose_in_region(
-                        region_name, self.np_random
-                    )
-                    # Convert yaw to quaternion
-                    quat = convert_yaw_to_quaternion(theta)
+                    # Handle fixture-placed objects separately below
+                    fixture_objects[obj_name] = (target, region_name)
 
-                # Set object pose in the environment
-                obj = self._objects_dict[obj_name]
-                obj.set_pose(np.array([pos_x, pos_y, pos_z]), quat)
+        # Process ground-placed objects with collision checking
+        if ground_objects:
+            # Create ground fixture for region sampling
+            regions_on_ground = {}
+            all_regions = self.task_config.get("regions", {})
+            for region_name, region_config in all_regions.items():
+                if region_config["target"] == "ground":
+                    regions_on_ground[region_name] = region_config
+
+            ground_fixture = MujocoGround(regions=regions_on_ground)
+
+            # Prepare entity dicts for sample_collision_free_positions
+            entity_region_names: dict[str, str] = {}
+            entity_pos_yaw_samplers: dict[str, Any] = {}
+
+            # Build configs dict with only ground objects
+            ground_object_configs: dict[str, dict[str, Any]] = {}
+
+            for obj_name, region_name in fixture_objects.items():
+                target, reg_name = region_name
+                if target == "ground" and obj_name in ground_objects:
+                    entity_region_names[obj_name] = reg_name
+                    entity_pos_yaw_samplers[obj_name] = (
+                        ground_fixture.sample_pose_in_region
+                    )
+                    # Get the object type for this object
+                    obj_type = self._objects_dict[obj_name].__class__.__name__.lower()
+                    if obj_type not in ground_object_configs:
+                        ground_object_configs[obj_type] = {}
+                    ground_object_configs[obj_type][obj_name] = ground_objects[obj_name]
+
+            # Sample collision-free positions for ground objects
+            object_poses = sample_collision_free_positions(
+                ground_object_configs,
+                self.np_random,
+                entity_region_names=entity_region_names,
+                entity_pos_yaw_samplers=entity_pos_yaw_samplers,
+            )
+
+            # Set poses for ground-placed objects
+            for obj_type in object_poses.keys():
+                for obj_name in object_poses[obj_type]:
+                    pos = object_poses[obj_type][obj_name]["position"]
+                    yaw = object_poses[obj_type][obj_name]["yaw"]
+
+                    obj = self._objects_dict[obj_name]
+                    quat = convert_yaw_to_quaternion(yaw)
+                    obj.set_pose(pos, quat)
+
+        # Process fixture-placed objects with unified API
+        fixture_entity_region_names: dict[str, str] = {}
+        fixture_entity_pos_yaw_samplers: dict[str, Any] = {}
+        fixture_object_configs: dict[str, dict[str, Any]] = {}
+
+        for obj_name, region_info in fixture_objects.items():
+            target, region_name = region_info
+
+            if target == "ground":
+                continue  # Already handled above
+
+            # Get target fixture
+            target_fixture = self._fixtures_dict[target]
+
+            # Add to entity dicts
+            fixture_entity_region_names[obj_name] = region_name
+            fixture_entity_pos_yaw_samplers[obj_name] = (
+                target_fixture.sample_pose_in_region
+            )
+
+            # Get the object type for this object
+            obj_type = self._objects_dict[obj_name].__class__.__name__.lower()
+            if obj_type not in fixture_object_configs:
+                fixture_object_configs[obj_type] = {}
+            fixture_object_configs[obj_type][obj_name] = (
+                self.task_config.get("objects", {}).get(obj_type, {}).get(obj_name, {})
+            )
+
+        # Sample collision-free positions for all fixture-placed objects
+        if (
+            fixture_entity_region_names
+        ):  # Only sample if there are fixture-placed objects
+            object_poses = sample_collision_free_positions(
+                fixture_object_configs,
+                self.np_random,
+                entity_region_names=fixture_entity_region_names,
+                entity_pos_yaw_samplers=fixture_entity_pos_yaw_samplers,
+            )
+
+            # Set poses for fixture-placed objects
+            for obj_type in object_poses.keys():
+                for obj_name in object_poses[obj_type]:
+                    pos = object_poses[obj_type][obj_name]["position"]
+                    yaw = object_poses[obj_type][obj_name]["yaw"]
+
+                    obj = self._objects_dict[obj_name]
+                    quat = convert_yaw_to_quaternion(yaw)
+                    obj.set_pose(pos, quat)
 
         self._robot_env.sim.forward()
 
