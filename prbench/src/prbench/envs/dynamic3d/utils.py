@@ -58,7 +58,7 @@ def bboxes_overlap(
             or bbox1[3] + margin <= bbox2[1]  # bbox1 top + margin <= bbox2 bottom
             or bbox2[3] + margin <= bbox1[1]
         )  # bbox2 top + margin <= bbox1 bottom
-    elif len(bbox1) == 6:
+    if len(bbox1) == 6:
         assert len(bbox2) == 6
         return not (
             bbox1[3] + margin <= bbox2[0]  # bbox1 x_max + margin <= bbox2 x_min
@@ -68,8 +68,7 @@ def bboxes_overlap(
             or bbox1[5] + margin <= bbox2[2]  # bbox1 z_max + margin <= bbox2 z_min
             or bbox2[5] + margin <= bbox1[2]
         )  # bbox2 z_max + margin <= bbox1 z_min
-    else:
-        raise ValueError("Bounding boxes must be of length 4 or 6.")
+    raise ValueError("Bounding boxes must be of length 4 or 6.")
 
 
 def translate_bounding_box(
