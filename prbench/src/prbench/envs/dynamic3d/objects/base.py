@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import abc
 import xml.etree.ElementTree as ET
-from typing import TYPE_CHECKING, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, TypeVar, Union
 
 import numpy as np
 from numpy.typing import NDArray
@@ -33,10 +33,35 @@ def register_fixture(cls: type[FixtureT]) -> type[FixtureT]:
     return cls
 
 
-def register_object(cls: type[ObjectT]) -> type[ObjectT]:
-    """Register object classes for TidyBot environments."""
-    REGISTERED_OBJECTS[cls.__name__.lower()] = cls
-    return cls
+def register_object(
+    cls: type[ObjectT] | None = None, name: str | None = None
+) -> type[ObjectT] | Callable[[type[ObjectT]], type[ObjectT]]:
+    """Register object classes for TidyBot environments.
+
+    Can be used as:
+    - @register_object (uses class name in lowercase)
+    - @register_object(name='custom_name') (uses provided name)
+
+    Args:
+        cls: The class to register (when used without parentheses)
+        name: Optional name to register with (defaults to lowercase class name)
+
+    Returns:
+        The registered class or a decorator function
+    """
+
+    def decorator(c: type[ObjectT]) -> type[ObjectT]:
+        registry_name = name if name is not None else c.__name__.lower()
+        REGISTERED_OBJECTS[registry_name] = c
+        c.REGISTERED_NAME = registry_name  # type: ignore[attr-defined]
+        return c
+
+    # If used without parentheses: @register_object
+    if cls is not None:
+        return decorator(cls)
+
+    # If used with parentheses: @register_object() or @register_object(name='...')
+    return decorator
 
 
 def get_fixture_class(name: str) -> type[MujocoFixture]:

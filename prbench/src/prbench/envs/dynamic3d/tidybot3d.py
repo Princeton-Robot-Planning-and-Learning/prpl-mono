@@ -282,24 +282,18 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 for object_type, object_configs in objects.items():
                     for object_name, object_config in object_configs.items():
                         obj_cls = get_object_class(object_type)
-                        default_rgba = [0.5, 0.5, 0.5, 1]
-                        rgba_list = object_config.get("rgba", default_rgba)
-                        obj_options = {
-                            "size": object_config.get("size"),
-                            "rgba": " ".join(map(str, rgba_list)),
-                            "mass": object_config.get("mass", 0.1),
-                        }
                         obj = obj_cls(
                             name=object_name,
                             env=self._robot_env,
-                            options=obj_options,
+                            options=object_config,
                         )
                         body = obj.xml_element
                         worldbody.append(body)
                         self._objects.append(obj)
                         self._objects_dict[object_name] = obj
 
-                        # Add assets if this is a RoboCasa object
+                        # Add assets if the object has them
+                        # (e.g., RoboCasa, GeneratedBowl)
                         if hasattr(obj, "get_assets"):
                             obj_assets = obj.get_assets()
                             # Add all mesh, texture, and material elements
@@ -342,8 +336,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
                 if target == "ground":
                     # Collect ground-placed objects
+                    obj = self._objects_dict[obj_name]
+                    # pylint: disable=no-member
+                    obj_type = obj.__class__.REGISTERED_NAME
                     obj_config = self.task_config["objects"][
-                        self._objects_dict[obj_name].__class__.__name__.lower()
+                        obj_type
                     ].get(obj_name, {})
                     ground_objects[obj_name] = obj_config
                     fixture_objects[obj_name] = (target, region_name)
@@ -377,10 +374,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         ground_fixture.sample_pose_in_region
                     )
                     # Get the object type for this object
-                    obj_type = self._objects_dict[obj_name].__class__.__name__.lower()
+                    obj = self._objects_dict[obj_name]
+                    # pylint: disable=no-member
+                    obj_type = obj.__class__.REGISTERED_NAME
                     if obj_type not in ground_object_configs:
                         ground_object_configs[obj_type] = {}
-                    ground_object_configs[obj_type][obj_name] = ground_objects[obj_name]
+                    ground_object_configs[obj_type][obj_name] = (
+                        ground_objects[obj_name]
+                    )
 
             # Sample collision-free positions for ground objects
             object_poses = sample_collision_free_positions(
@@ -421,11 +422,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             )
 
             # Get the object type for this object
-            obj_type = self._objects_dict[obj_name].__class__.__name__.lower()
+            obj = self._objects_dict[obj_name]
+            obj_type = obj.__class__.REGISTERED_NAME  # type: ignore[attr-defined]
             if obj_type not in fixture_object_configs:
                 fixture_object_configs[obj_type] = {}
+            obj_config_dict = self.task_config.get("objects", {})
             fixture_object_configs[obj_type][obj_name] = (
-                self.task_config.get("objects", {}).get(obj_type, {}).get(obj_name, {})
+                obj_config_dict.get(obj_type, {}).get(obj_name, {})
             )
 
         # Sample collision-free positions for all fixture-placed objects
