@@ -14,6 +14,7 @@ def create_mock_sampler(x_range=(-2.0, 2.0), y_range=(0.5, 2.5)):
     """Create a mock pos_yaw_sampler function for testing."""
 
     def sampler(region_name, np_random):
+        _ = region_name  # Unused argument
         x = np_random.uniform(x_range[0], x_range[1])
         y = np_random.uniform(y_range[0], y_range[1])
         z = 0.0
