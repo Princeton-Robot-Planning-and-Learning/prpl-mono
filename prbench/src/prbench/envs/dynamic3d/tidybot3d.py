@@ -127,6 +127,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self._objects: list[MujocoObject] = []
         self._objects_dict: dict[str, MujocoObject] = {}
         self._fixtures_dict: dict[str, MujocoFixture] = {}
+        self.ground_fixture: MujocoGround | None = None
 
         self._reward_calculator = create_reward_calculator(scene_type, num_objects)
 
@@ -390,10 +391,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             )
 
             # Set poses for ground-placed objects
-            for obj_type in object_poses.keys():
-                for obj_name in object_poses[obj_type]:
-                    pos = object_poses[obj_type][obj_name]["position"]
-                    yaw = object_poses[obj_type][obj_name]["yaw"]
+            for obj_type, obj_poses_dict in object_poses.items():
+                for obj_name in obj_poses_dict:
+                    pos = obj_poses_dict[obj_name]["position"]
+                    yaw = obj_poses_dict[obj_name]["yaw"]
 
                     obj = self._objects_dict[obj_name]
                     quat = convert_yaw_to_quaternion(yaw)
@@ -439,10 +440,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             )
 
             # Set poses for fixture-placed objects
-            for obj_type in object_poses.keys():
-                for obj_name in object_poses[obj_type]:
-                    pos = object_poses[obj_type][obj_name]["position"]
-                    yaw = object_poses[obj_type][obj_name]["yaw"]
+            for obj_type, obj_poses_dict in object_poses.items():
+                for obj_name in obj_poses_dict:
+                    pos = obj_poses_dict[obj_name]["position"]
+                    yaw = obj_poses_dict[obj_name]["yaw"]
 
                     obj = self._objects_dict[obj_name]
                     quat = convert_yaw_to_quaternion(yaw)
