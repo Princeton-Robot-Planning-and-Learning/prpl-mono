@@ -258,7 +258,8 @@ class RoboCasaObject(MujocoObject):
             Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
         """
         # Extract object type from config
-        object_type = object_config.get("object_type", "")
+        object_type_value = object_config.get("object_type", "")
+        object_type = str(object_type_value) if object_type_value else ""
         if not object_type:
             # Try to use type name or fallback to default dimensions
             return [

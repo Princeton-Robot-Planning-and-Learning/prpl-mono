@@ -41,6 +41,11 @@ def sample_collision_free_positions(
         Dictionary mapping entity types to dictionaries of entity poses
         (entity_name -> {"position": position, "yaw": yaw})
     """
+    if entity_region_names is None:
+        entity_region_names = {}
+    if entity_pos_yaw_samplers is None:
+        entity_pos_yaw_samplers = {}
+
     entity_poses: dict[str, dict[str, dict[str, Any]]] = {}
     placed_bboxes: list[list[float]] = []
 
@@ -50,8 +55,7 @@ def sample_collision_free_positions(
 
             if entity_name not in entity_pos_yaw_samplers:
                 continue
-            else:
-                assert entity_name in entity_region_names, (
+            assert entity_name in entity_region_names, (
                     f"Entity '{entity_name}' must have a region name specified in "
                     f"entity_region_names if a pos_yaw_sampler is provided."
                 )
@@ -116,7 +120,7 @@ def sample_collision_free_position(
     bbox_center_y = (bounding_box_at_origin[1] + bounding_box_at_origin[4]) / 2
     bbox_center_z = (bounding_box_at_origin[2] + bounding_box_at_origin[5]) / 2
 
-    for i_attempt in range(max_attempts):
+    for _ in range(max_attempts):
         # Sample a candidate pose
         candidate_x, candidate_y, candidate_z, candidate_yaw = pos_yaw_sampler(
             region_name, np_random
@@ -159,6 +163,7 @@ def sample_collision_free_position(
         f"Warning: Could not find collision-free position after {max_attempts} "
         f"attempts"
     )
+    # pylint: disable=fixme
     fallback_pos = np.array(
         [
             0.0,
@@ -166,6 +171,7 @@ def sample_collision_free_position(
             0.0,  # TODO: consider ground thickness
         ]
     )
+    # pylint: enable=fixme
     fallback_yaw_deg = np_random.uniform(DEFAULT_YAW_RANGE[0], DEFAULT_YAW_RANGE[1])
     fallback_yaw = np.radians(fallback_yaw_deg)
     return fallback_pos, fallback_yaw
