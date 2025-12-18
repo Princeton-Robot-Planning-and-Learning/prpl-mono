@@ -12,6 +12,8 @@ from constants import (
     POLICY_IMAGE_HEIGHT,
     POLICY_IMAGE_WIDTH,
     POLICY_SERVER_HOST,
+    POLICY_IMAGE_WIDTH_VLA,
+    POLICY_IMAGE_HEIGHT_VLA,
     POLICY_SERVER_PORT,
 )
 from episode_storage import EpisodeWriter
@@ -30,8 +32,8 @@ class RemotePolicy:
         self,
         host: str = POLICY_SERVER_HOST,
         port: int = POLICY_SERVER_PORT,
-        image_width: int = POLICY_IMAGE_WIDTH,
-        image_height: int = POLICY_IMAGE_HEIGHT,
+        image_width: int = POLICY_IMAGE_WIDTH_VLA,
+        image_height: int = POLICY_IMAGE_HEIGHT_VLA,
     ):
         self.image_width = image_width
         self.image_height = image_height
@@ -42,12 +44,12 @@ class RemotePolicy:
         self.socket.connect(f"tcp://{host}:{port}")
         print(f"Connected to policy server at {host}:{port}")
 
-    def reset(self):
+    def reset(self, target_object_key: str):
         """Reset the policy on the server."""
         # Check connection to policy server and reset policy
         default_timeout = self.socket.getsockopt(zmq.RCVTIMEO)
         self.socket.setsockopt(zmq.RCVTIMEO, 1000)  # Temporarily set 1000 ms timeout
-        self.socket.send_pyobj({"reset": True})
+        self.socket.send_pyobj({"reset": True, "target_object_key": target_object_key})
         try:
             self.socket.recv_pyobj()  # Note: Not secure. Only unpickle data you trust.
         except zmq.error.Again as e:
@@ -150,11 +152,13 @@ def run_inference(
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
-            # Reset the policy
-            policy.reset()  # type: ignore
+            
 
             # Target object for this episode (can be detected or specified)
-            target_object_key = "cube0"
+            target_object_key = "cube1"
+
+            # Reset the policy
+            policy.reset(target_object_key)  # type: ignore
 
             start_time = time.time()
             for step_idx in range(max_steps):
@@ -165,6 +169,12 @@ def run_inference(
 
                 # Get robot state
                 robot = state.get_object_from_name("robot")
+                target_cube = state.get_object_from_name(target_object_key)
+                target_cube_pos = np.array(
+                    [state.get(target_cube, "x"), state.get(target_cube, "y"), state.get(target_cube, "z")]
+                )
+                if target_cube_pos[2] > 0.05:
+                    break
                 current_joints = np.array(
                     [state.get(robot, f"pos_arm_joint{i}") for i in range(1, 8)]
                 )
