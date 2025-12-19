@@ -10,10 +10,10 @@ import zmq
 from constants import (
     POLICY_CONTROL_PERIOD,
     POLICY_IMAGE_HEIGHT,
-    POLICY_IMAGE_WIDTH,
-    POLICY_SERVER_HOST,
-    POLICY_IMAGE_WIDTH_VLA,
     POLICY_IMAGE_HEIGHT_VLA,
+    POLICY_IMAGE_WIDTH,
+    POLICY_IMAGE_WIDTH_VLA,
+    POLICY_SERVER_HOST,
     POLICY_SERVER_PORT,
 )
 from episode_storage import EpisodeWriter
@@ -152,8 +152,6 @@ def run_inference(
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
-            
-
             # Target object for this episode (can be detected or specified)
             target_object_key = "cube1"
 
@@ -171,7 +169,11 @@ def run_inference(
                 robot = state.get_object_from_name("robot")
                 target_cube = state.get_object_from_name(target_object_key)
                 target_cube_pos = np.array(
-                    [state.get(target_cube, "x"), state.get(target_cube, "y"), state.get(target_cube, "z")]
+                    [
+                        state.get(target_cube, "x"),
+                        state.get(target_cube, "y"),
+                        state.get(target_cube, "z"),
+                    ]
                 )
                 if target_cube_pos[2] > 0.05:
                     break
