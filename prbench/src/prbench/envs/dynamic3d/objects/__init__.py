@@ -4,6 +4,7 @@
 from prbench.envs.dynamic3d.objects import robocasa_objects
 from prbench.envs.dynamic3d.objects.base import (
     MujocoFixture,
+    MujocoGround,
     MujocoObject,
     get_fixture_class,
     get_object_class,
@@ -16,6 +17,7 @@ from prbench.envs.dynamic3d.objects.primitive_objects import Cube, Cuboid
 __all__ = [
     "MujocoObject",
     "MujocoFixture",
+    "MujocoGround",
     "register_object",
     "register_fixture",
     "get_object_class",

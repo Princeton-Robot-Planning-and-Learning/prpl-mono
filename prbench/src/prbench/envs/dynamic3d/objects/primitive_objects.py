@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
+import numpy as np
+from numpy.typing import NDArray
 from relational_structs import Object
 
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
@@ -111,6 +113,45 @@ class Cuboid(MujocoObject):
 
     def get_bounding_box_dimensions(self) -> tuple[float, float, float]:
         return (2 * self.size[0], 2 * self.size[1], 2 * self.size[2])
+
+    @staticmethod
+    def get_bounding_box_from_config(
+        pos: NDArray[np.float32], object_config: dict[str, str | float]
+    ) -> list[float]:
+        """Get bounding box for a cuboid given its position and config.
+
+        Args:
+            pos: Position of the cuboid as [x, y, z] array
+            object_config: Dictionary containing cuboid configuration with keys:
+                - "size": Either a scalar (for cube) or [x, y, z] half-extents
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+        """
+        # Handle size parameter - can be scalar or list of 3 dimensions
+        default_size = Cuboid.default_edge_size
+        size = object_config.get("size", default_size)
+
+        if isinstance(size, (int, float)):
+            # Scalar size - cube
+            half_extents = [float(size), float(size), float(size)]
+        else:
+            # List of [x, y, z] half-extents
+            half_extents = [float(s) for s in size]  # type: ignore[union-attr]
+            if len(half_extents) != 3:
+                raise ValueError(
+                    f"Cuboid size must be a scalar or list of 3 values [x, y, z], "
+                    f"got {len(half_extents)} values"
+                )
+
+        return [
+            pos[0] - half_extents[0],  # x_min
+            pos[1] - half_extents[1],  # y_min
+            pos[2] - half_extents[2],  # z_min
+            pos[0] + half_extents[0],  # x_max
+            pos[1] + half_extents[1],  # y_max
+            pos[2] + half_extents[2],  # z_max
+        ]
 
 
 @register_object

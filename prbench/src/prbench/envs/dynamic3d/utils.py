@@ -37,7 +37,9 @@ def check_in_region(
     return False
 
 
-def bboxes_overlap(bbox1: list[float], bbox2: list[float], margin: float = 0.2) -> bool:
+def bboxes_overlap(
+    bbox1: list[float], bbox2: list[float], margin: float = 0.001
+) -> bool:
     """Check if two bounding boxes overlap with a safety margin.
 
     Args:
@@ -48,12 +50,25 @@ def bboxes_overlap(bbox1: list[float], bbox2: list[float], margin: float = 0.2) 
     Returns:
         True if bounding boxes overlap (including margin), False otherwise
     """
-    return not (
-        bbox1[2] + margin <= bbox2[0]  # bbox1 right + margin <= bbox2 left
-        or bbox2[2] + margin <= bbox1[0]  # bbox2 right + margin <= bbox1 left
-        or bbox1[3] + margin <= bbox2[1]  # bbox1 top + margin <= bbox2 bottom
-        or bbox2[3] + margin <= bbox1[1]
-    )  # bbox2 top + margin <= bbox1 bottom
+    if len(bbox1) == 4:
+        assert len(bbox2) == 4
+        return not (
+            bbox1[2] + margin <= bbox2[0]  # bbox1 right + margin <= bbox2 left
+            or bbox2[2] + margin <= bbox1[0]  # bbox2 right + margin <= bbox1 left
+            or bbox1[3] + margin <= bbox2[1]  # bbox1 top + margin <= bbox2 bottom
+            or bbox2[3] + margin <= bbox1[1]
+        )  # bbox2 top + margin <= bbox1 bottom
+    if len(bbox1) == 6:
+        assert len(bbox2) == 6
+        return not (
+            bbox1[3] + margin <= bbox2[0]  # bbox1 x_max + margin <= bbox2 x_min
+            or bbox2[3] + margin <= bbox1[0]  # bbox2 x_max + margin <= bbox1 x_min
+            or bbox1[4] + margin <= bbox2[1]  # bbox1 y_max + margin <= bbox2 y_min
+            or bbox2[4] + margin <= bbox1[1]  # bbox2 y_max + margin <= bbox1 y_min
+            or bbox1[5] + margin <= bbox2[2]  # bbox1 z_max + margin <= bbox2 z_min
+            or bbox2[5] + margin <= bbox1[2]
+        )  # bbox2 z_max + margin <= bbox1 z_min
+    raise ValueError("Bounding boxes must be of length 4 or 6.")
 
 
 def translate_bounding_box(

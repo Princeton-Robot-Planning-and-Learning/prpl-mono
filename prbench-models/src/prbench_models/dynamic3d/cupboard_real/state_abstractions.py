@@ -64,7 +64,7 @@ class CupboardRealStateAbstractor:
         all_mujoco_objects = set(fixtures) | set(movables)
 
         # OnGround.
-        on_ground_tol = 1e-2
+        on_ground_tol = 0.05
         for target in movables:
             z = state.get(target, "z")
             bb_z = state.get(target, "bb_z")

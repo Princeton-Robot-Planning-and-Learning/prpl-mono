@@ -287,7 +287,9 @@ class Table(MujocoFixture):
         y = np_random.uniform(y_start, y_end)
 
         # Sample z coordinate on top of the table
-        z = self.table_height + 0.1  # Slightly above the table surface
+        z = (
+            self.table_height + 0.1 + np_random.uniform(0.0, 0.2)
+        )  # Slightly above the table surface
 
         # Sample yaw from the specified range (convert from degrees to radians)
         yaw_range = (0.0, 360.0)  # Default range

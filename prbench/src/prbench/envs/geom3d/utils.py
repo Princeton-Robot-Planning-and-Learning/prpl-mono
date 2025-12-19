@@ -4,7 +4,8 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from pybullet_helpers.geometry import Pose, SE2Pose
+from pybullet_helpers.geometry import Pose, SE2Pose, set_pose
+from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.joint import JointPositions
 from relational_structs import Object, ObjectCentricState
 from scipy.spatial.transform import Rotation
@@ -278,3 +279,36 @@ def is_inside(
     PB = Polygon(C_B[:, :2]).convex_hull
 
     return PA.contains(PB)
+
+
+def sample_collision_free_object_poses(
+    object_ids: set[int],
+    lb: tuple[float, float, float],
+    ub: tuple[float, float, float],
+    physics_client_id: int,
+    rng: np.random.Generator,
+    other_collision_ids: set[int],
+    max_sampling_attempts: int = 100_000,
+) -> None:
+    """Randomly reset the poses of objects in-place while avoiding collisions.
+
+    NOTE: orientations not currently sampled.
+    """
+    collision_ids = set(other_collision_ids)
+
+    for obj_id in sorted(object_ids):
+        for _ in range(max_sampling_attempts):
+            x, y, z = rng.uniform(lb, ub)
+            pose = Pose((x, y, z))
+            set_pose(obj_id, pose, physics_client_id)
+
+            if not any(
+                check_body_collisions(obj_id, cid, physics_client_id)
+                for cid in collision_ids
+            ):
+                collision_ids.add(obj_id)
+                break
+        else:
+            raise RuntimeError(
+                f"Failed to sample collision-free pose for object {obj_id}"
+            )

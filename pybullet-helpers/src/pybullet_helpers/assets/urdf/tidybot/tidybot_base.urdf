@@ -40,17 +40,9 @@
 
     <!-- Collision: base body -->
     <collision>
-      <origin xyz="0 0 0.23" rpy="0 0 0"/>
+      <origin xyz="0 0 0.22" rpy="0 0 0"/>  <!-- must not collide with arm base -->
       <geometry>
         <box size="0.548 0.508 0.29"/>
-      </geometry>
-    </collision>
-
-    <!-- Collision: arm plate -->
-    <collision>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <mesh filename="meshes/arm_plate.stl"/>
       </geometry>
     </collision>
 
