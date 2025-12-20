@@ -53,7 +53,9 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
 
     control_frequency: int = 10
     horizon: int = 1000
-    camera_names: list[str] = field(default_factory=lambda: ["overview", "base", "wrist"])
+    camera_names: list[str] = field(
+        default_factory=lambda: ["overview", "base", "wrist"]
+    )
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
@@ -341,9 +343,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     obj_type = (
                         obj.__class__.REGISTERED_NAME  # type: ignore[attr-defined]
                     )
-                    obj_config = self.task_config["objects"][
-                        obj_type
-                    ].get(obj_name, {})
+                    obj_config = self.task_config["objects"][obj_type].get(obj_name, {})
                     ground_objects[obj_name] = obj_config
                     fixture_objects[obj_name] = (target, region_name)
                 else:
@@ -383,9 +383,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     )
                     if obj_type not in ground_object_configs:
                         ground_object_configs[obj_type] = {}
-                    ground_object_configs[obj_type][obj_name] = (
-                        ground_objects[obj_name]
-                    )
+                    ground_object_configs[obj_type][obj_name] = ground_objects[obj_name]
 
             # Sample collision-free positions for ground objects
             object_poses = sample_collision_free_positions(
@@ -431,9 +429,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             if obj_type not in fixture_object_configs:
                 fixture_object_configs[obj_type] = {}
             obj_config_dict = self.task_config.get("objects", {})
-            fixture_object_configs[obj_type][obj_name] = (
-                obj_config_dict.get(obj_type, {}).get(obj_name, {})
-            )
+            fixture_object_configs[obj_type][obj_name] = obj_config_dict.get(
+                obj_type, {}
+            ).get(obj_name, {})
 
         # Sample collision-free positions for all fixture-placed objects
         if (
