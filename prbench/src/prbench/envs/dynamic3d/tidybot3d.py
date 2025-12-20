@@ -35,6 +35,7 @@ from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_positions,
 )
 from prbench.envs.dynamic3d.robots import (
+    RobotEnv,
     RBY1ARobotActionSpace,
     RBY1ARobotEnv,
     TidyBot3DRobotActionSpace,
@@ -74,6 +75,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         task_config_path: str | None = None,
         render_images: bool = False,
         show_images: bool = False,
+        visual_stage: str | None = None,
+        visual_stage_scale: float = 10.0,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
         super().__init__(config)
@@ -86,6 +89,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self.show_images = show_images
         self.seed = seed
         self.config = config
+        self.visual_stage = visual_stage
+        self.visual_stage_scale = visual_stage_scale
 
         # Parse task configuration
         if task_config_path is None:
@@ -105,7 +110,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
             self.task_config["robots"][0]
         ]
-        self._robot_env = robot_cls(
+        self._robot_env: RobotEnv = robot_cls(
             control_frequency=self.config.control_frequency,
             act_delta=self.config.act_delta,
             horizon=self.config.horizon,
@@ -475,6 +480,20 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self._fixtures_dict = {}
         xml_string = self._create_scene_xml()
 
+        # Insert visual stage if specified
+        if self.visual_stage is not None:
+            stage_path = (
+                Path(__file__).parent
+                / "models"
+                / "assets"
+                / "replica_stages"
+                / self.visual_stage
+                / "model.xml"
+            )
+            xml_string = self._robot_env.insert_visual_stage_into_xml(
+                xml_string, str(stage_path), scale=self.visual_stage_scale
+            )
+
         # Reset the underlying TidyBot robot environment
         robot_options = options.copy() if options is not None else {}
         robot_options["xml"] = xml_string
@@ -505,6 +524,20 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self._objects_dict = {}
         self._fixtures_dict = {}
         xml_string = self._create_scene_xml()
+
+        # Insert visual stage if specified
+        if self.visual_stage is not None:
+            stage_path = (
+                Path(__file__).parent
+                / "models"
+                / "assets"
+                / "replica_stages"
+                / self.visual_stage
+                / "model.xml"
+            )
+            xml_string = self._robot_env.insert_visual_stage_into_xml(
+                xml_string, str(stage_path), scale=self.visual_stage_scale
+            )
 
         # Reset the underlying TidyBot robot environment
         robot_options = options.copy() if options is not None else {}

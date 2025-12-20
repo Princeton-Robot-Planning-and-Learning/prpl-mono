@@ -1,10 +1,15 @@
 """Basic tests for the TidyBot3D environment observation and action space validity,
 step, and reset."""
 
+from pathlib import Path
+
+import pytest
+from gymnasium.wrappers import RecordVideo
 from relational_structs import ObjectCentricState
 
 from prbench.envs.dynamic3d.object_types import MujocoObjectTypeFeatures
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from tests.conftest import MAKE_VIDEOS
 
 
 def test_tidybot3d_observation_space():
@@ -215,5 +220,94 @@ def test_tidybot3d_gripper_open_close():
     assert (
         gripper_ctrl == 255
     ), f"Gripper should be closed (255), but got {gripper_ctrl}"
+
+    env.close()
+
+
+@pytest.mark.parametrize(
+    "visual_stage",
+    [
+        "Stage_v3_sc0_staging",
+        "Stage_v3_sc1_staging",
+        "Stage_v3_sc2_staging",
+        "Stage_v3_sc3_staging",
+    ],
+)
+def test_scene_background_loading(visual_stage):
+    """Test that visual stage backgrounds can be successfully loaded.
+
+    This test verifies that:
+    1. The environment can be created with a visual_stage parameter
+    2. The environment can reset successfully with the visual stage
+    3. The visual stage model file exists
+    4. The simulation can step multiple times with the visual stage loaded
+    5. Optionally saves a video if --make-videos flag is passed to pytest
+    """
+    # Verify that the visual stage file exists
+    stage_path = (
+        Path(__file__).parents[3]
+        / "src"
+        / "prbench"
+        / "envs"
+        / "dynamic3d"
+        / "models"
+        / "assets"
+        / "replica_stages"
+        / visual_stage
+        / "model.xml"
+    )
+    assert stage_path.exists(), f"Visual stage file not found: {stage_path}"
+
+    # Create environment with visual stage (render if making videos)
+    env = ObjectCentricTidyBot3DEnv(
+        num_objects=3, render_images=MAKE_VIDEOS, visual_stage=visual_stage
+    )
+
+    # Wrap with RecordVideo if making videos
+    if MAKE_VIDEOS:
+        env = RecordVideo(
+            env,
+            video_folder="unit_test_videos",
+            name_prefix=f"test_scene_{visual_stage}",
+        )
+
+    # Test that the environment can reset successfully
+    obs, info = env.reset(seed=42)
+    assert env.observation_space.contains(obs), "Observation not in observation space"
+    assert isinstance(info, dict), "Info should be a dict"
+
+    # Run simulation for multiple steps
+    num_steps = 50
+    prev_obs = obs
+
+    for step_idx in range(num_steps):
+        # Sample random action
+        action = env.action_space.sample()
+        next_obs, reward, terminated, truncated, step_info = env.step(action)
+
+        # Verify outputs
+        assert env.observation_space.contains(
+            next_obs
+        ), f"Step {step_idx} observation not in observation space"
+        assert isinstance(reward, float), f"Step {step_idx} reward should be a float"
+        assert isinstance(
+            terminated, bool
+        ), f"Step {step_idx} terminated should be a bool"
+        assert isinstance(
+            truncated, bool
+        ), f"Step {step_idx} truncated should be a bool"
+        assert isinstance(step_info, dict), f"Step {step_idx} info should be a dict"
+
+        # Verify state changes (except possibly first few steps if robot is stationary)
+        if step_idx > 5:  # Allow some initial settling
+            assert not prev_obs.allclose(
+                next_obs, atol=1e-6
+            ), f"State should change at step {step_idx}"
+
+        prev_obs = next_obs
+
+        # Early exit if episode terminates
+        if terminated or truncated:
+            break
 
     env.close()
