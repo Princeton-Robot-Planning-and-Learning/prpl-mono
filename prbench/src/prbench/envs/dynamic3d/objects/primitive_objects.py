@@ -59,13 +59,14 @@ class Cuboid(MujocoObject):
                     f"got {len(self.size)} values"
                 )
 
-        # Handle rgba parameter
-        rgba = self.options.get("rgba", ".5 .7 .5 1")
+        # Handle rgba parameter - can be string or list of values
+        rgba = self.options.get("rgba", [0.5, 0.7, 0.5, 1])
         if isinstance(rgba, str):
             self.rgba = rgba
         else:
             self.rgba = " ".join(str(x) for x in rgba)
 
+        # Handle mass parameter with default
         self.mass = self.options.get("mass", 0.1)
 
         # Create the XML element
