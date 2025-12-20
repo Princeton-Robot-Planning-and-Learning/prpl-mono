@@ -843,12 +843,6 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
 class TidyBot3DEnv(ConstantObjectPRBenchEnv):
     """TidyBot env with a constant number of objects."""
 
-    def __init__(self, *args, render_mode: str | None = None, **kwargs) -> None:
-        # Pass render_images based on render_mode
-        if render_mode is not None:
-            kwargs["render_images"] = True
-        super().__init__(*args, render_mode=render_mode, **kwargs)
-
     def _create_object_centric_env(self, *args, **kwargs) -> ObjectCentricTidyBot3DEnv:
         return ObjectCentricTidyBot3DEnv(*args, **kwargs)
 
