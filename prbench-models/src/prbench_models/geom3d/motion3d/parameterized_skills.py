@@ -4,8 +4,10 @@ from typing import Any, Sequence
 
 import numpy as np
 import pybullet as p
-from bilevel_planning.structs import GroundParameterizedController, \
-    LiftedParameterizedController
+from bilevel_planning.structs import (
+    GroundParameterizedController,
+    LiftedParameterizedController,
+)
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
@@ -13,8 +15,8 @@ from gymnasium.spaces import Box
 from prbench.envs.geom3d.motion3d import (
     Geom3DPointType,
     Geom3DRobotType,
-    ObjectCentricMotion3DEnv,
     Motion3DObjectCentricState,
+    ObjectCentricMotion3DEnv,
 )
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
@@ -66,8 +68,8 @@ class GroundMoveToTargetController(
         quaternion = (
             np.sqrt(1 - u1) * np.sin(2 * np.pi * u2),
             np.sqrt(1 - u1) * np.cos(2 * np.pi * u2),
-            np.sqrt(u1)     * np.sin(2 * np.pi * u3),
-            np.sqrt(u1)     * np.cos(2 * np.pi * u3),
+            np.sqrt(u1) * np.sin(2 * np.pi * u3),
+            np.sqrt(u1) * np.cos(2 * np.pi * u3),
         )
 
         # Create target pose from target position and sampled orientation.

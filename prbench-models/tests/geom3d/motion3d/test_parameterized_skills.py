@@ -9,6 +9,7 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench_models.geom3d.motion3d.parameterized_skills import (
     create_lifted_controllers,
 )
+from prbench.envs.geom3d.motion3d import ObjectCentricMotion3DEnv
 
 prbench.register_all_environments()
 
@@ -24,8 +25,10 @@ def test_move_to_target_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
+    sim = ObjectCentricMotion3DEnv()
     controllers = create_lifted_controllers(
-        env.action_space, env.unwrapped._object_centric_env  # pylint: disable=protected-access
+        env.action_space,
+        sim,
     )
     lifted_controller = controllers["move_to_target"]
     robot = state.get_object_from_name("robot")
