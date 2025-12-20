@@ -146,7 +146,7 @@ class ObjectCentricGround3DEnv(
         assert isinstance(state, Ground3DObjectCentricState)
         return state
 
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         return False
 
 

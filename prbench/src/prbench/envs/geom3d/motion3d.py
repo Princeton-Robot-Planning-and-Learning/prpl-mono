@@ -106,7 +106,7 @@ class ObjectCentricMotion3DEnv(
                 self.config.initial_finger_state,
             )
             # If the goal is already reached, keep sampling.
-            if not self._goal_reached():
+            if not self.goal_reached():
                 break
         if target_pose is None:
             raise RuntimeError("Failed to find reachable target position")
@@ -143,7 +143,7 @@ class ObjectCentricMotion3DEnv(
         assert isinstance(state, Motion3DObjectCentricState)
         return state
 
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         target = get_pose(self.target_id, self.physics_client_id).position
         end_effector_pose = self._robot_arm.get_end_effector_pose()
         dist = float(np.linalg.norm(np.subtract(target, end_effector_pose.position)))

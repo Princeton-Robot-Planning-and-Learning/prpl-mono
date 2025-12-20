@@ -257,7 +257,7 @@ class ObjectCentricGeom3DRobotEnv(
         """Get the current observation."""
 
     @abc.abstractmethod
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         """Check if the goal is currently reached."""
 
     @abc.abstractmethod
@@ -492,7 +492,7 @@ class ObjectCentricGeom3DRobotEnv(
                 self._robot_arm.open_fingers()
 
         reward = -1
-        terminated = self._goal_reached()
+        terminated = self.goal_reached()
         return self._get_obs(), reward, terminated, False, {}
 
     def render(self) -> NDArray[np.uint8]:  # type: ignore

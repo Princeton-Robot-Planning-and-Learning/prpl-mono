@@ -719,7 +719,7 @@ class ObjectCentricPacking3DEnv(
         assert isinstance(state, Packing3DObjectCentricState)
         return state
 
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         # Goal: no parts are grasped and all parts are supported by the rack.
         if self._grasped_object is not None:
             return False
