@@ -56,9 +56,9 @@ def sample_collision_free_positions(
             if entity_name not in entity_pos_yaw_samplers:
                 continue
             assert entity_name in entity_region_names, (
-                    f"Entity '{entity_name}' must have a region name specified in "
-                    f"entity_region_names if a pos_yaw_sampler is provided."
-                )
+                f"Entity '{entity_name}' must have a region name specified in "
+                f"entity_region_names if a pos_yaw_sampler is provided."
+            )
 
             # Try to get the entity class (fixture or object)
             entity_class: Union[type[MujocoFixture], type[MujocoObject]]

@@ -35,9 +35,9 @@ from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_positions,
 )
 from prbench.envs.dynamic3d.robots import (
-    RobotEnv,
     RBY1ARobotActionSpace,
     RBY1ARobotEnv,
+    RobotEnv,
     TidyBot3DRobotActionSpace,
     TidyBotRobotEnv,
 )

@@ -79,7 +79,9 @@ class RobotEnv(MujocoEnv, abc.ABC):
                 # Parse existing scale and multiply by the scale factor
                 existing_scale = element.get("scale", "1.0 1.0 1.0")
                 scale_values = [float(s) * scale for s in existing_scale.split()]
-                element.set("scale", f"{scale_values[0]} {scale_values[1]} {scale_values[2]}")
+                element.set(
+                    "scale", f"{scale_values[0]} {scale_values[1]} {scale_values[2]}"
+                )
 
             # Recursively process all children
             for child_elem in element:
