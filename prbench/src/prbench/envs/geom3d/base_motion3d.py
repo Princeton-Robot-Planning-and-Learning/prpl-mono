@@ -158,7 +158,7 @@ class ObjectCentricBaseMotion3DEnv(
         )
         return dist < self.config.target_radius
 
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         robot_base_pose = self.robot.base.get_pose()
         target_se3_pose = get_pose(self.target_id, self.physics_client_id)
         target_pose = target_se3_pose.to_se2()

@@ -60,6 +60,14 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      - name: Pre-install IKFast modules
+        run: |
+          if [ -f pybullet-helpers/scripts/preinstall_ikfast.py ]; then
+            echo "Pre-installing IKFast modules to avoid parallel test conflicts..."
+            cd pybullet-helpers
+            uv run python scripts/preinstall_ikfast.py
+            cd ..
+          fi
       - name: Pytest
         env:
           MUJOCO_GL: "osmesa"

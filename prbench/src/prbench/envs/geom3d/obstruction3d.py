@@ -398,7 +398,7 @@ class ObjectCentricObstruction3DEnv(
         assert isinstance(state, Obstruction3DObjectCentricState)
         return state
 
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         if self._grasped_object is not None:
             return False
         assert self._target_block_id is not None

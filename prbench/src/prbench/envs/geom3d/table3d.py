@@ -231,7 +231,7 @@ class ObjectCentricTable3DEnv(
         assert isinstance(state, Table3DObjectCentricState)
         return state
 
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         return False
 
 

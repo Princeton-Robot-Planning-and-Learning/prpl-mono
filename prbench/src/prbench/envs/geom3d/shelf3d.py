@@ -179,7 +179,7 @@ class ObjectCentricShelf3DEnv(
         assert isinstance(state, Shelf3DObjectCentricState)
         return state
 
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         return False
 
 
