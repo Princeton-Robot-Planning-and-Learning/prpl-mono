@@ -80,7 +80,7 @@ def test_motion3d_state_abstractor():
     robot = obj_name_to_obj["robot"]
     target = obj_name_to_obj["target"]
 
-    # Initially robot should not be at target (very unlikely with random sampling)
+    # Initially robot should not be at target
     assert AtTgt([robot, target]) not in abstract_state.atoms
 
     # The environment has a goal_reached() method we can use to verify
