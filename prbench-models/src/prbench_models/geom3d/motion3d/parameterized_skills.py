@@ -3,7 +3,6 @@
 from typing import Any, Sequence
 
 import numpy as np
-import pybullet as p
 from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
@@ -11,7 +10,6 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
-from gymnasium.spaces import Box
 from prbench.envs.geom3d.motion3d import (
     Geom3DPointType,
     Geom3DRobotType,
@@ -21,7 +19,6 @@ from prbench.envs.geom3d.motion3d import (
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
 )
-from prpl_utils.utils import get_signed_angle_distance
 from pybullet_helpers.geometry import Pose
 from pybullet_helpers.inverse_kinematics import (
     InverseKinematicsError,
