@@ -31,10 +31,11 @@ prbench.register_all_environments()
 class WebServer:
     """Flask web server for serving the WebXR phone web app."""
 
-    def __init__(self, queue: Queue):
+    def __init__(self, queue: Queue, port: int = 5000):
         self.app = Flask(__name__)
         self.socketio = SocketIO(self.app)
         self.queue = queue
+        self.port = port
 
         @self.app.route("/")
         def index():
@@ -64,8 +65,8 @@ class WebServer:
             address = "127.0.0.1"
         finally:
             s.close()
-        print(f"Starting server at {address}:5000")
-        self.socketio.run(self.app, host="0.0.0.0")
+        print(f"Starting server at {address}:{self.port}")
+        self.socketio.run(self.app, host="0.0.0.0", port=self.port)
 
 
 # ============================================================================
@@ -291,7 +292,7 @@ class Policy:
 class TeleopPolicy(Policy):
     """Teleop using WebXR phone web app."""
 
-    def __init__(self, enable_web_server: bool = True):
+    def __init__(self, enable_web_server: bool = True, port: int = 5000):
         self.web_server_queue: Queue = Queue()
         self.teleop_controller: TeleopController | None = None
         self.teleop_state: str | None = (
@@ -302,7 +303,7 @@ class TeleopPolicy(Policy):
 
         if self.enable_web_server:
             # Web server for serving the WebXR phone web app
-            server = WebServer(self.web_server_queue)
+            server = WebServer(self.web_server_queue, port=port)
             threading.Thread(target=server.run, daemon=True).start()
             print("Web server started for teleop interface")
         else:
@@ -390,6 +391,7 @@ def run_teleop(
     max_steps: int = 1000,
     num_cubes: int = 2,
     enable_web_server: bool = True,
+    port: int = 5000,
 ) -> None:
     """Run teleoperation in the prbench environment.
 
@@ -401,6 +403,7 @@ def run_teleop(
         max_steps: Maximum steps per episode.
         num_cubes: Number of cubes in the environment.
         enable_web_server: Whether to enable the WebXR web server.
+        port: Port for the WebXR web server.
     """
     # Create the environment
     env = prbench.make(
@@ -413,7 +416,7 @@ def run_teleop(
     ik_solver = TidybotIKSolver(ee_offset=0.12)
 
     # Create teleop policy
-    policy = TeleopPolicy(enable_web_server=enable_web_server)
+    policy = TeleopPolicy(enable_web_server=enable_web_server, port=port)
 
     try:
         for episode_idx in range(num_episodes):
@@ -568,6 +571,12 @@ def main() -> None:
         default=True,
         help="Disable WebXR web server (for testing)",
     )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5000,
+        help="Port for WebXR web server (default: 5000)",
+    )
 
     args = parser.parse_args()
 
@@ -579,6 +588,7 @@ def main() -> None:
         max_steps=args.max_steps,
         num_cubes=args.num_cubes,
         enable_web_server=args.enable_web_server,
+        port=args.port,
     )
 
 
