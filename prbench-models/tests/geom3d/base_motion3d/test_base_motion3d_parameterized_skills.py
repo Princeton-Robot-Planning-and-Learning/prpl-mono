@@ -4,12 +4,12 @@ import numpy as np
 import prbench
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
+from prbench.envs.geom3d.base_motion3d import ObjectCentricBaseMotion3DEnv
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.geom3d.base_motion3d.parameterized_skills import (
     create_lifted_controllers,
 )
-from prbench.envs.geom3d.base_motion3d import ObjectCentricBaseMotion3DEnv
 
 prbench.register_all_environments()
 
