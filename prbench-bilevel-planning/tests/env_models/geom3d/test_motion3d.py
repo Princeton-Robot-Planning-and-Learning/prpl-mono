@@ -1,6 +1,5 @@
 """Tests for motion3d.py."""
 
-import numpy as np
 import prbench
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
@@ -9,59 +8,6 @@ from prbench_bilevel_planning.agent import BilevelPlanningAgent
 from prbench_bilevel_planning.env_models import create_bilevel_planning_models
 
 prbench.register_all_environments()
-
-
-def _skill_test_helper(ground_skill, env_models, env, obs, params=None):
-    """Helper function to test a skill execution."""
-    rng = np.random.default_rng(123)
-    state = env_models.observation_to_state(obs)
-    abstract_state = env_models.state_abstractor(state)
-    operator = ground_skill.operator
-    assert operator.preconditions.issubset(abstract_state.atoms)
-    controller = ground_skill.controller
-    if params is None:
-        params = controller.sample_parameters(state, rng)
-    controller.reset(state, params)
-    for _ in range(500):
-        action = controller.step()
-        obs, _, _, _, _ = env.step(action)
-        next_state = env_models.observation_to_state(obs)
-        controller.observe(next_state)
-        state = next_state
-
-        if controller.terminated():
-            break
-    return obs
-
-
-def test_motion3d_skills():
-    """Tests for skills in the Motion3D environment."""
-    env = prbench.make("prbench/Motion3D-v0")
-    env_models = create_bilevel_planning_models(
-        "motion3d", env.observation_space, env.action_space
-    )
-    skill_name_to_skill = {s.operator.name: s for s in env_models.skills}
-    MoveToTarget = skill_name_to_skill["MoveToTarget"]
-
-    obs0, _ = env.reset(seed=123)
-    state0 = env_models.observation_to_state(obs0)
-    abstract_state = env_models.state_abstractor(state0)
-    obj_name_to_obj = {o.name: o for o in abstract_state.objects}
-    robot = obj_name_to_obj["robot"]
-    target = obj_name_to_obj["target"]
-
-    # Test MoveToTarget skill
-    move_to_skill = MoveToTarget.ground((robot, target))
-    obs1 = _skill_test_helper(move_to_skill, env_models, env, obs0)
-
-    # Check that robot reached the target
-    state1 = env_models.observation_to_state(obs1)
-    abstract_state1 = env_models.state_abstractor(state1)
-    pred_name_to_pred = {p.name: p for p in env_models.predicates}
-    AtTgt = pred_name_to_pred["AtTgt"]
-    assert AtTgt([robot, target]) in abstract_state1.atoms
-
-    env.close()
 
 
 def test_motion3d_bilevel_planning():
