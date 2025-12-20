@@ -21,13 +21,13 @@ from prbench.envs.geom3d.motion3d import (
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
 )
-from prpl_utils.utils import wrap_angle
+from prpl_utils.utils import get_signed_angle_distance
 from pybullet_helpers.geometry import Pose
 from pybullet_helpers.inverse_kinematics import (
     InverseKinematicsError,
     inverse_kinematics,
 )
-from pybullet_helpers.joint import JointPositions
+from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     remap_joint_position_plan_to_constant_distance,
     run_motion_planning,
@@ -52,6 +52,7 @@ class GroundMoveToTargetController(
     ) -> None:
         super().__init__(objects)
         self._sim = sim
+        self._joint_infos = sim.robot.arm.joint_infos[:7]
         self._robot, self._target = objects
         self._current_params: JointPositions | None = None
         self._current_plan: list[JointPositions] | None = None
@@ -99,10 +100,10 @@ class GroundMoveToTargetController(
         assert self._current_state is not None
         assert self._current_params is not None
         assert isinstance(self._current_state, Motion3DObjectCentricState)
+        self._sim.set_state(self._current_state)
 
         # Generate the motion plan if it doesn't exist yet.
         if self._current_plan is None:
-            self._sim.set_state(self._current_state)
 
             # Run motion planning to the target joint positions.
             joint_plan = run_motion_planning(
@@ -132,8 +133,9 @@ class GroundMoveToTargetController(
         target_joints = self._current_plan.pop(0)
 
         # Compute delta joint positions.
-        delta = np.subtract(target_joints[:7], self._current_state.joint_positions)
-        delta_lst = [wrap_angle(a) for a in delta]
+        delta_lst = get_jointwise_difference(
+            self._joint_infos, target_joints[:7], self._current_state.joint_positions
+        )
 
         # Create action: [base_x, base_y, base_rot, joint1, ..., joint7, gripper].
         action_lst = [0.0] * 3 + delta_lst + [0.0]
