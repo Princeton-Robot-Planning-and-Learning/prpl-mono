@@ -8,7 +8,6 @@ for subdirectories containing setup.py files, then installs them.
 import logging
 from pathlib import Path
 
-from pybullet_helpers.ikfast import IKFastInfo
 from pybullet_helpers.ikfast.load import install_ikfast_module
 from pybullet_helpers.utils import get_third_party_path
 
@@ -58,7 +57,9 @@ def main() -> None:
             raise
 
     print()
-    logging.info(f"✓ All {len(module_dirs)} IKFast module(s) pre-installed successfully")
+    logging.info(
+        f"✓ All {len(module_dirs)} IKFast module(s) pre-installed successfully"
+    )
 
 
 if __name__ == "__main__":
