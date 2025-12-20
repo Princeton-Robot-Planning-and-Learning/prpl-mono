@@ -12,8 +12,8 @@ from numpy.typing import NDArray
 from prbench.envs.geom3d.motion3d import (
     Geom3DPointType,
     Geom3DRobotType,
-    ObjectCentricMotion3DEnv,
     Motion3DObjectCentricState,
+    ObjectCentricMotion3DEnv,
 )
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
@@ -54,7 +54,8 @@ def create_bilevel_planning_models(
     ) -> ObjectCentricState:
         """Simulate the action."""
         state = x.copy()
-        sim.reset(options={"init_state": state})
+        assert isinstance(state, Motion3DObjectCentricState)
+        sim.set_state(state)
         obs, _, _, _, _ = sim.step(u)
         return obs.copy()
 
