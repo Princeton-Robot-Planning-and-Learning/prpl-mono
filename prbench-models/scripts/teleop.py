@@ -249,7 +249,7 @@ class TeleopController:
         if not self.targets_initialized:
             self.base_target_pose = obs["base_pose"].copy()
             self.arm_target_pos = obs["arm_pos"].copy()
-            self.arm_target_rot = R.from_quat(obs["arm_quat"])
+            self.arm_target_rot = R.from_quat(obs["arm_quat"])  # type: ignore
             self.gripper_target_pos = obs["gripper_pos"].copy()
             self.targets_initialized = True
 
