@@ -15,7 +15,7 @@ from episode_storage import EpisodeWriter
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from relational_structs.spaces import ObjectCentricBoxSpace
-from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Rotation as R  # type: ignore
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
@@ -101,7 +101,7 @@ TWO_PI = 2 * math.pi
 class TeleopController:
     """Controller that processes WebXR input to generate robot commands."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Teleop device IDs
         self.primary_device_id = None  # Primary device controls either arm or base
         self.secondary_device_id = None  # Optional secondary device controls base
@@ -162,8 +162,8 @@ class TeleopController:
                 self.base_xr_ref_pos = None
 
         # Teleop is enabled
-        if self.primary_device_id is not None and "teleop_mode" in data:
-            pos, rot = convert_webxr_pose(data["position"], data["orientation"])
+        if self.primary_device_id is not None and "teleop_mode" in data:  # type: ignore
+            pos, rot = convert_webxr_pose(data["position"], data["orientation"])  # type: ignore # pylint: disable=line-too-long
 
             # Base movement
             if data["teleop_mode"] == "base" or device_id == self.secondary_device_id:
@@ -258,7 +258,7 @@ class TeleopController:
             return None
 
         # Get most recent teleop command
-        arm_quat = self.arm_target_rot.as_quat()
+        arm_quat = self.arm_target_rot.as_quat()  # type: ignore
         if arm_quat[3] < 0.0:  # Enforce quaternion uniqueness
             np.negative(arm_quat, out=arm_quat)
         action = {
@@ -374,7 +374,7 @@ class TeleopPolicy(Policy):
 
     def close(self) -> None:
         """Clean up resources."""
-        pass  # No explicit cleanup needed for teleop policy
+        # No explicit cleanup needed for teleop policy
 
 
 # ============================================================================
@@ -476,10 +476,10 @@ def run_teleop(
                 if action_result == "end_episode":
                     print(f"User ended episode after {step_idx + 1} steps")
                     break
-                elif action_result == "reset_env":
+                if action_result == "reset_env":
                     print("User requested environment reset")
                     break
-                elif action_result is None:
+                if action_result is None:
                     # No action from teleop, hold current pose
                     continue
 
@@ -487,7 +487,9 @@ def run_teleop(
 
                 # Convert action dict to env action
                 qpos = ik_solver.solve(
-                    action_dict["arm_pos"], action_dict["arm_quat"], current_joints
+                    action_dict["arm_pos"],  # type: ignore
+                    action_dict["arm_quat"],  # type: ignore
+                    current_joints,
                 )
                 delta_qpos = (
                     np.mod((qpos - current_joints) + np.pi, 2 * np.pi) - np.pi
@@ -495,18 +497,18 @@ def run_teleop(
 
                 action = np.concatenate(
                     [
-                        action_dict["base_pose"] - obs_dict["base_pose"],
+                        action_dict["base_pose"] - obs_dict["base_pose"],  # type: ignore
                         delta_qpos,
-                        action_dict["gripper_pos"],
+                        action_dict["gripper_pos"],  # type: ignore
                     ]
                 )
 
                 # Record observation and action before stepping
                 if writer is not None:
-                    writer.step(obs_dict, action_dict, target_object_key)
+                    writer.step(obs_dict, action_dict, target_object_key)  # type: ignore
 
                 # Execute action in environment
-                obs, reward, terminated, truncated, _, raw_obs = env.step_with_images(  # type: ignore
+                obs, reward, terminated, truncated, _, raw_obs = env.step_with_images(  # type: ignore # pylint: disable=line-too-long
                     action
                 )
                 next_state = env.observation_space.devectorize(obs)

@@ -9,9 +9,7 @@ import prbench
 import zmq
 from constants import (
     POLICY_CONTROL_PERIOD,
-    POLICY_IMAGE_HEIGHT,
     POLICY_IMAGE_HEIGHT_VLA,
-    POLICY_IMAGE_WIDTH,
     POLICY_IMAGE_WIDTH_VLA,
     POLICY_SERVER_HOST,
     POLICY_SERVER_PORT,
@@ -161,9 +159,9 @@ def run_inference(
             start_time = time.time()
             for step_idx in range(max_steps):
                 # Enforce desired control frequency
-                # step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD
-                # while time.time() < step_end_time:
-                #     time.sleep(0.0001)
+                step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD
+                while time.time() < step_end_time:
+                    time.sleep(0.0001)
 
                 # Get robot state
                 robot = state.get_object_from_name("robot")

@@ -53,7 +53,7 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
 
     control_frequency: int = 10
     horizon: int = 1000
-    camera_names: list[str] = field(default_factory=lambda: ["overview", "wrist", "base"])
+    camera_names: list[str] = field(default_factory=lambda: ["overview"])
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
@@ -72,8 +72,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         scene_type: str = "ground",
         num_objects: int = 3,
         task_config_path: str | None = None,
-        render_images: bool = True,
-        show_images: bool = True,
+        render_images: bool = False,
+        show_images: bool = False,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
         super().__init__(config)
