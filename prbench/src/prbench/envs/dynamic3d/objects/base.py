@@ -34,13 +34,15 @@ def register_fixture(cls: type[FixtureT]) -> type[FixtureT]:
 
 
 @overload
-def register_object(cls: type[ObjectT]) -> type[ObjectT]: ...
+def register_object(cls: type[ObjectT]) -> type[ObjectT]:
+    ...
 
 
 @overload
 def register_object(
     cls: None = None, name: str | None = None
-) -> Callable[[type[ObjectT]], type[ObjectT]]: ...
+) -> Callable[[type[ObjectT]], type[ObjectT]]:
+    ...
 
 
 def register_object(

@@ -133,7 +133,9 @@ def test_save_mesh_multiple_faces():
         ],
         dtype=np.float32,
     )
-    faces = np.array([[0, 1, 4], [0, 2, 4], [0, 3, 4], [0, 4, 1]], dtype=np.int32)
+    faces = np.array(
+        [[0, 1, 4], [0, 2, 4], [0, 3, 4], [0, 4, 1]], dtype=np.int32
+    )
 
     with tempfile.TemporaryDirectory() as temp_dir:
         mesh_file = save_mesh(vertices, faces, temp_dir)
@@ -171,7 +173,9 @@ def test_save_mesh_large_mesh():
 
 def test_save_mesh_precision():
     """Test that vertex coordinates maintain proper precision."""
-    vertices = np.array([[0.123456, 0.654321, 0.111111]], dtype=np.float32)
+    vertices = np.array(
+        [[0.123456, 0.654321, 0.111111]], dtype=np.float32
+    )
     faces = np.array([[0, 0, 0]], dtype=np.int32)
 
     with tempfile.TemporaryDirectory() as temp_dir:

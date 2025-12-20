@@ -134,7 +134,9 @@ class GeneratedBowl(MujocoObject):
                 # Current quad vertices
                 v0 = i * self.radial_segments + j
                 v1 = i * self.radial_segments + (j + 1) % self.radial_segments
-                v2 = (i + 1) * self.radial_segments + (j + 1) % self.radial_segments
+                v2 = (i + 1) * self.radial_segments + (
+                    j + 1
+                ) % self.radial_segments
                 v3 = (i + 1) * self.radial_segments + j
 
                 # Two triangles per quad (outer surface faces outward)
@@ -146,11 +148,9 @@ class GeneratedBowl(MujocoObject):
             for j in range(self.radial_segments):
                 # Current quad vertices (offset by outer surface vertices)
                 v0 = num_outer_vertices + i * self.radial_segments + j
-                v1 = (
-                    num_outer_vertices
-                    + i * self.radial_segments
-                    + (j + 1) % self.radial_segments
-                )
+                v1 = num_outer_vertices + i * self.radial_segments + (
+                    j + 1
+                ) % self.radial_segments
                 v2 = (
                     num_outer_vertices
                     + (i + 1) * self.radial_segments
