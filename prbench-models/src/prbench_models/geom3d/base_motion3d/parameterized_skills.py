@@ -1,6 +1,6 @@
 """Parameterized skills for the BaseMotion3D environment."""
 
-from typing import Any, Never, Sequence
+from typing import Any, Sequence
 
 import numpy as np
 from bilevel_planning.structs import (
@@ -50,7 +50,7 @@ class GroundMoveBaseToTargetController(
 
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
-    ) -> tuple[Never, ...]:
+    ) -> tuple[Any, ...]:
         """No parameters needed for base motion - just move to target."""
         assert isinstance(x, BaseMotion3DObjectCentricState)
         # No parameters needed, just return empty tuple
