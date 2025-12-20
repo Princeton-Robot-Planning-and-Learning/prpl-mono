@@ -119,6 +119,12 @@ def register_all_environments() -> None:
         entry_point="prbench.envs.geom3d.motion3d:Motion3DEnv",
     )
 
+    # BaseMotion3D environment.
+    _register(
+        id="prbench/BaseMotion3D-v0",
+        entry_point="prbench.envs.geom3d.base_motion3d:BaseMotion3DEnv",
+    )
+
     # Obstructions3D environment with different numbers of obstructions.
     num_obstructions = [0, 1, 2, 3, 4]
     for num_obstruction in num_obstructions:
