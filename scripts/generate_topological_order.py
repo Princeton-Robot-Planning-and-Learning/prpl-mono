@@ -34,19 +34,19 @@ def find_packages(repo_root: Path) -> list[str]:
 def parse_prpl_requirements(package_path: Path) -> list[str]:
     """
     Parse prpl_requirements.txt file to extract dependencies on other packages in the monorepo.
-    
+
     Args:
         package_path: Path to the package directory
-        
+
     Returns:
         list of package names that this package depends on
     """
     prpl_requirements_file = package_path / "prpl_requirements.txt"
     dependencies = []
-    
+
     if not prpl_requirements_file.exists():
         return dependencies
-    
+
     try:
         with open(prpl_requirements_file, 'r') as f:
             for line in f:
@@ -54,15 +54,18 @@ def parse_prpl_requirements(package_path: Path) -> list[str]:
                 # Skip empty lines and comments
                 if not line or line.startswith('#'):
                     continue
-                
-                # Dependencies are specified as relative paths like ../package-name
+
+                # Dependencies are specified as relative paths like ../package-name or ../package-name[extras]
                 if line.startswith('../'):
                     dependency_name = line[3:]  # Remove '../' prefix
+                    # Strip extras specifier if present (e.g., [all], [dev])
+                    if '[' in dependency_name:
+                        dependency_name = dependency_name[:dependency_name.index('[')]
                     dependencies.append(dependency_name)
-                    
+
     except Exception as e:
         print(f"Warning: Could not read {prpl_requirements_file}: {e}", file=sys.stderr)
-    
+
     return dependencies
 
 
