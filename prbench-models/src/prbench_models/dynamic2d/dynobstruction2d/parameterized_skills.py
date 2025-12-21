@@ -110,9 +110,6 @@ class GroundPickController(Dynamic2dRobotController):
             custom_dtheta = np.pi
         elif 0.5 <= side < 0.75:  # top side
             custom_dx = ratio * block_width
-            # import ipdb
-
-            # ipdb.set_trace()
             custom_dy = arm_length + gripper_height - 0.05
             custom_dtheta = -np.pi / 2
         else:  # bottom side

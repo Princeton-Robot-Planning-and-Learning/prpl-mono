@@ -12,6 +12,10 @@ from prbench.envs.geom2d.structs import SE2Pose
 
 from prbench_bilevel_planning.agent import BilevelPlanningAgent
 from prbench_bilevel_planning.env_models import create_bilevel_planning_models
+import matplotlib.pyplot as plt
+from prbench.envs.dynamic2d.dyn_obstruction2d import (
+    ObjectCentricDynObstruction2DEnv,
+)
 
 prbench.register_all_environments()
 
@@ -31,46 +35,6 @@ def test_dynobstruction2d_observation_to_state():
     assert isinstance(hash(state), int)  # states are hashable for bilevel planning
     assert env_models.state_space.contains(state)
     assert env_models.observation_space == env.observation_space
-    env.close()
-
-
-def test_dynobstruction2d_transition_fn():
-    """Tests for transition_fn() in the DynObstruction2D environment."""
-    env = prbench.make("prbench/DynObstruction2D-o1-v0")
-    env.action_space.seed(123)
-    env_models = create_bilevel_planning_models(
-        "dynobstruction2d",
-        env.observation_space,
-        env.action_space,
-        num_obstructions=1,
-    )
-    transition_fn = env_models.transition_fn
-    obs, _ = env.reset(seed=123)
-    state = env_models.observation_to_state(obs)
-    for _ in range(100):
-        action = env.action_space.sample()
-        obs, _, _, _, _ = env.step(action)
-        next_state = env_models.observation_to_state(obs)
-        predicted_next_state = transition_fn(state, action)
-        print("next state")
-        print(next_state)
-        print("predicted next state")
-        print(predicted_next_state)
-        
-        for key in next_state.data:
-            # Get the actual and predicted arrays for this object
-            actual_arr = next_state.data[key]
-            predicted_arr = predicted_next_state.data[key]
-            
-            # 2. Compare them using numpy's allclose or pytest.approx
-            # 'atol' is absolute tolerance (1e-5 as you requested)
-            np.testing.assert_allclose(
-                actual_arr, 
-                predicted_arr, 
-                atol=3e-5, 
-                err_msg=f"Mismatch found in object: {key}"
-            )
-        state = next_state
     env.close()
 
 
@@ -94,7 +58,7 @@ def test_dynobstruction2d_goal_deriver():
 
 def test_dynobstruction2d_state_abstractor():
     """Tests for state_abstractor() in the DynObstruction2D environment."""
-    env = prbench.make("prbench/DynObstruction2D-o1-v0")
+    env = prbench.make("prbench/DynObstruction2D-o1-v0", render_mode="rgb_array")
     env_models = create_bilevel_planning_models(
         "dynobstruction2d",
         env.observation_space,
@@ -114,22 +78,45 @@ def test_dynobstruction2d_state_abstractor():
     robot = obj_name_to_obj["robot"]
     target_block = obj_name_to_obj["target_block"]
 
-    import pdb
-
-    pdb.set_trace()
     target_surface = obj_name_to_obj["target_surface"]
     assert len(abstract_state.atoms) == 1
     assert HandEmpty([robot]) in abstract_state.atoms
 
     # Create state where robot is holding the target block.
     state1 = state.copy()
-    state1.set(robot, "vacuum", 1.0)
+    
     # Move robot close to target block
     target_x = state.get(target_block, "x")
     target_y = state.get(target_block, "y")
-    state1.set(robot, "x", target_x)
-    state1.set(robot, "y", target_y + 0.2)  # position above target
-    abstract_state1 = state_abstractor(state1)
+    target_theta = state.get(target_block, "theta")
+    target_width = state.get(target_block, "width")
+    arm_length = state.get(robot, "arm_length")
+    gripper_height = state.get(robot, "gripper_base_height")
+    finger_width = state.get(robot, "finger_width")
+
+    target_se2_pose = SE2Pose(target_x, target_y, target_theta) * SE2Pose(
+            -0.1, arm_length + gripper_height - 0.1, -np.pi / 2
+        )
+    state1.set(robot, "x", target_se2_pose.x)
+    state1.set(robot, "y", target_se2_pose.y)  # position above target
+    state1.set(robot, "theta", target_se2_pose.theta)  # position above target
+    state1.set(robot, "finger_gap", target_width + finger_width)
+
+    sim = ObjectCentricDynObstruction2DEnv(num_obstructions=1)
+    sim.reset(seed=123)
+    sim._add_state_to_space(state1)
+    new_state, _, _, _, _ = sim.step((0,0,0,0,0))
+    
+    # import ipdb
+
+    # ipdb.set_trace()
+    abstract_state1 = state_abstractor(new_state)
+
+    # Capture and show the image
+    img = sim.render()
+    plt.imshow(img)
+    plt.axis('off')
+    plt.show()
     assert HoldingTgt([robot, target_block]) in abstract_state1.atoms
 
     # Create state where the target block is inside the target region

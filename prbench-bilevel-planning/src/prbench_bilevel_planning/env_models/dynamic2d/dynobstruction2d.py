@@ -178,7 +178,7 @@ def create_bilevel_planning_models(
         "MoveToTargetHeld",
         [robot, target_block, target_surface],
         preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
-        add_effects=set(),
+        add_effects={LiftedAtom(AboveTgtSurface, [robot])},
         delete_effects=set(),
     )
 
@@ -186,7 +186,7 @@ def create_bilevel_planning_models(
         "MoveToTargetEmpty",
         [robot, target_block, target_surface],
         preconditions={LiftedAtom(HandEmpty, [robot])},
-        add_effects=set(),
+        add_effects={LiftedAtom(AboveTgtSurface, [robot])},
         delete_effects=set(),
     )
 
