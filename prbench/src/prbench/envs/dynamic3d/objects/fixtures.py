@@ -16,6 +16,8 @@ from prbench.envs.dynamic3d.objects.base import MujocoFixture, register_fixture
 class Table(MujocoFixture):
     """A table fixture."""
 
+    DEFAULT_REGION_HEIGHT: float = 0.2  # 20cm height for regions
+
     def __init__(
         self,
         name: str,
@@ -63,6 +65,11 @@ class Table(MujocoFixture):
                 f"Unknown table shape: {self.table_shape}. "
                 f"Must be 'rectangle' or 'circle'"
             )
+
+        # Create region bounding boxes if regions are defined
+        self.region_bboxes: dict[str, list[list[float]]] = {}
+        if self.regions is not None:
+            self._create_region_bboxes()
 
         # Create the XML element
         self.xml_element = self._create_xml_element()
@@ -189,6 +196,52 @@ class Table(MujocoFixture):
 
         return table_body
 
+    def _create_region_bboxes(self) -> None:
+        """Create 3D bounding boxes for each region.
+
+        Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted to 3D
+        bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where the z dimension
+        spans from the table surface to DEFAULT_REGION_HEIGHT above it.
+
+        The bounding boxes are stored in table-relative coordinates.
+        """
+        assert self.regions is not None, "Regions must be defined"
+
+        for region_name, region_config in self.regions.items():
+            region_bboxes = []
+
+            for region_range in region_config["ranges"]:
+                if len(region_range) != 4:
+                    raise ValueError(
+                        f"Each region range must have exactly 4 values "
+                        f"[x_start, y_start, x_end, y_end], "
+                        f"got {len(region_range)} for region '{region_name}'"
+                    )
+
+                x_start, y_start, x_end, y_end = region_range
+
+                # Validate bounds
+                if x_start >= x_end:
+                    raise ValueError(
+                        f"x_start ({x_start}) must be less than x_end ({x_end}) "
+                        f"for region '{region_name}'"
+                    )
+                if y_start >= y_end:
+                    raise ValueError(
+                        f"y_start ({y_start}) must be less than y_end ({y_end}) "
+                        f"for region '{region_name}'"
+                    )
+
+                # Create 3D bounding box:
+                # z_min is at the table surface, z_max is DEFAULT_REGION_HEIGHT above
+                z_min = self.table_height
+                z_max = self.table_height + self.DEFAULT_REGION_HEIGHT
+
+                bbox = [x_start, y_start, z_min, x_end, y_end, z_max]
+                region_bboxes.append(bbox)
+
+            self.region_bboxes[region_name] = region_bboxes
+
     @staticmethod
     def get_bounding_box_from_config(
         pos: NDArray[np.float32], fixture_config: dict[str, str | float]
@@ -260,48 +313,26 @@ class Table(MujocoFixture):
             ValueError: If regions list is empty or if any region has invalid bounds
         """
         assert self.regions is not None, "Regions must be defined"
+        assert region_name in self.region_bboxes, f"Region '{region_name}' not found"
+
         region_config = self.regions[region_name]
+        region_bboxes = self.region_bboxes[region_name]
 
-        # Randomly select one of the regions
-        selected_range_index = np_random.choice(len(region_config["ranges"]))
+        # Randomly select one of the region bounding boxes
+        selected_bbox_index = np_random.choice(len(region_bboxes))
+        selected_bbox = region_bboxes[selected_bbox_index]
 
-        # Validate the selected region
-        selected_range = region_config["ranges"][selected_range_index]
-        if len(selected_range) != 4:  # type: ignore[arg-type]
-            raise ValueError(
-                "Each region must have exactly 4 values "
-                "[x_start, y_start, x_end, y_end], "
-                f"got {len(region_config['ranges'][selected_range_index])}"
-            )
-
-        (x_start, y_start, x_end, y_end) = selected_range  # type: ignore[misc]
-
-        # Validate bounds
-        if x_start >= x_end:
-            raise ValueError(f"x_start ({x_start}) must be less than x_end ({x_end})")
-        if y_start >= y_end:
-            raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
-
-        # Sample uniformly within the selected region
-        x = np_random.uniform(x_start, x_end)
-        y = np_random.uniform(y_start, y_end)
-
-        # Sample z coordinate on top of the table
-        z = (
-            self.table_height + 0.1 + np_random.uniform(0.0, 0.2)
-        )  # Slightly above the table surface
-
-        # Sample yaw from the specified range (convert from degrees to radians)
+        # Get yaw range for this region
         yaw_range = (0.0, 360.0)  # Default range
         if "yaw_ranges" in region_config:
-            # Use the yaw_range corresponding to the selected range index
             yaw_ranges = region_config["yaw_ranges"]
-            if yaw_ranges:
-                yaw_range = tuple(yaw_ranges[selected_range_index])
-        yaw_deg = np_random.uniform(yaw_range[0], yaw_range[1])
-        yaw = np.radians(yaw_deg)
+            if yaw_ranges and len(yaw_ranges) > selected_bbox_index:
+                yaw_range = tuple(yaw_ranges[selected_bbox_index])
 
-        # Offset by the table's position to get world coordinates
+        # Sample pose from the 3D bounding box (in table-relative coordinates)
+        x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
+
+        # Convert to world coordinates
         world_x = x + self.position[0]
         world_y = y + self.position[1]
         world_z = z + self.position[2]
@@ -321,30 +352,24 @@ class Table(MujocoFixture):
         Returns:
             True if the position is within the specified region, False otherwise
         """
-        # Convert world coordinates to table-relative coordinates
-        table_x = position[0] - self.position[0]
-        table_y = position[1] - self.position[1]
-        table_z = position[2] - self.position[2]
-
-        table_placement_threshold = 0.01  # 1cm tolerance for placement
-
-        # Get the bounding box for the specified region
+        # Validate region exists
         assert self.regions is not None, "Regions must be defined"
-        if region_name not in self.regions:
+        if region_name not in self.region_bboxes:
             raise ValueError(f"Region '{region_name}' not found")
 
-        region_ranges = self.regions[region_name]["ranges"]
+        # Convert world coordinates to table-relative coordinates
+        table_relative_pos = np.array(
+            [
+                position[0] - self.position[0],
+                position[1] - self.position[1],
+                position[2] - self.position[2],
+            ]
+        )
 
-        for region_range in region_ranges:
-            x_start, y_start, x_end, y_end = region_range
-
-            if (
-                x_start <= table_x <= x_end
-                and y_start <= table_y <= y_end
-                and self.table_height
-                <= table_z
-                <= (self.table_height + table_placement_threshold)
-            ):
+        # Check if position is in any of the region's bounding boxes
+        region_bboxes = self.region_bboxes[region_name]
+        for bbox in region_bboxes:
+            if utils.point_in_bbox_3d(table_relative_pos, bbox):
                 return True
 
         return False
@@ -353,25 +378,28 @@ class Table(MujocoFixture):
         """Visualize the table's regions in the MuJoCo environment.
 
         This method adds visual elements to the MuJoCo XML to represent the regions
-        defined for this table.
+        defined for this table using the 3D bounding boxes.
         """
         if self.regions is None:
             return
 
         for region_name, region_config in self.regions.items():
             if "rgba" in region_config:
-                region_bounds_list = region_config["ranges"]
-                for i_region, region_bounds in enumerate(region_bounds_list):
-                    x_start, y_start, x_end, y_end = region_bounds
-                    region_center_x = (x_start + x_end) / 2
-                    region_center_y = (y_start + y_end) / 2
-                    region_center_z = (
-                        self.table_height + self.position[2] + 0.01
-                    )  # Slightly above
+                # Get the bounding boxes for this region
+                region_bboxes = self.region_bboxes.get(region_name, [])
 
-                    region_size_x = (x_end - x_start) / 2
-                    region_size_y = (y_end - y_start) / 2
-                    region_size_z = 0.005  # Thin box for visualization
+                for i_region, bbox in enumerate(region_bboxes):
+                    # bbox is [x_min, y_min, z_min, x_max, y_max, z_max] in table-relative coords
+                    x_min, y_min, z_min, x_max, y_max, z_max = bbox
+
+                    # Calculate center and half-sizes for MuJoCo box geom
+                    region_center_x = (x_min + x_max) / 2
+                    region_center_y = (y_min + y_max) / 2
+                    region_center_z = (z_min + z_max) / 2
+
+                    region_size_x = (x_max - x_min) / 2
+                    region_size_y = (y_max - y_min) / 2
+                    region_size_z = (z_max - z_min) / 2
 
                     # Create geom element for the region visualization
                     region_geom = ET.SubElement(self.xml_element, "geom")
@@ -509,6 +537,11 @@ class Cupboard(MujocoFixture):
         # Precompute shelf z positions for efficiency
         self._shelf_z_positions = self._compute_shelf_z_positions()
 
+        # Create region bounding boxes if regions are defined
+        self.region_bboxes: dict[str, list[list[float]]] = {}
+        if self.regions is not None:
+            self._create_region_bboxes()
+
         # Create the XML element
         self.xml_element = self._create_xml_element()
 
@@ -535,6 +568,73 @@ class Cupboard(MujocoFixture):
                 )
 
         return shelf_z_positions
+
+    def _create_region_bboxes(self) -> None:
+        """Create 3D bounding boxes for each region.
+
+        Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted to 3D
+        bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where the z dimension
+        spans from the shelf surface to the height available on that shelf.
+
+        The bounding boxes are stored in cupboard-relative coordinates.
+        """
+        assert self.regions is not None, "Regions must be defined"
+
+        for region_name, region_config in self.regions.items():
+            # Get the shelf index for this region
+            if "shelf" not in region_config:
+                raise ValueError(
+                    f"Cupboard region '{region_name}' must specify 'shelf' for bbox creation"
+                )
+            shelf = region_config["shelf"]
+
+            # Validate shelf index
+            if shelf < 0 or shelf >= self.num_shelves:
+                raise ValueError(
+                    f"Shelf index {shelf} out of range for cupboard with "
+                    f"{self.num_shelves} shelves in region '{region_name}'"
+                )
+
+            # Determine the height available on this shelf
+            if shelf < len(self.shelf_heights):
+                shelf_height = self.shelf_heights[shelf]
+            else:
+                # For the top shelf, use the last shelf height as default
+                shelf_height = self.shelf_heights[-1] if self.shelf_heights else 0.2
+
+            region_bboxes = []
+
+            for region_range in region_config["ranges"]:
+                if len(region_range) != 4:
+                    raise ValueError(
+                        f"Each region range must have exactly 4 values "
+                        f"[x_start, y_start, x_end, y_end], "
+                        f"got {len(region_range)} for region '{region_name}'"
+                    )
+
+                x_start, y_start, x_end, y_end = region_range
+
+                # Validate bounds
+                if x_start >= x_end:
+                    raise ValueError(
+                        f"x_start ({x_start}) must be less than x_end ({x_end}) "
+                        f"for region '{region_name}'"
+                    )
+                if y_start >= y_end:
+                    raise ValueError(
+                        f"y_start ({y_start}) must be less than y_end ({y_end}) "
+                        f"for region '{region_name}'"
+                    )
+
+                # Create 3D bounding box:
+                # z_min is at the shelf surface, z_max is shelf_height above
+                z_min = self._shelf_z_positions[shelf]
+                z_max = z_min + shelf_height
+
+                bbox = [x_start, y_start, z_min, x_end, y_end, z_max]
+                region_bboxes.append(bbox)
+
+            self.region_bboxes[region_name] = region_bboxes
 
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this cupboard.
@@ -760,64 +860,26 @@ class Cupboard(MujocoFixture):
             ValueError: If regions list is empty or if any region has invalid bounds
         """
         assert self.regions is not None, "Regions must be defined"
+        assert region_name in self.region_bboxes, f"Region '{region_name}' not found"
 
-        # Ensure region exists
-        region = self.regions.get(region_name)
-        if region is None:
-            raise ValueError(f"Region '{region_name}' not found")
+        region_config = self.regions[region_name]
+        region_bboxes = self.region_bboxes[region_name]
 
-        # Ensure shelf index is specified
-        if "shelf" not in region:
-            raise ValueError(
-                f"Cupboard region '{region_name}' must specify 'shelf' to sample on"
-            )
-        shelf = region["shelf"]
-        assert 0 <= shelf < self.num_shelves, (
-            f"Shelf index {shelf} out of range for cupboard with "
-            f"{self.num_shelves} shelves"
-        )
+        # Randomly select one of the region bounding boxes
+        selected_bbox_index = np_random.choice(len(region_bboxes))
+        selected_bbox = region_bboxes[selected_bbox_index]
 
-        # Randomly select one of the regions
-        selected_range_index = np_random.choice(len(region["ranges"]))
-
-        # Validate the selected region
-        if len(region["ranges"][selected_range_index]) != 4:  # type: ignore[arg-type]
-            raise ValueError(
-                "Each region must have exactly 4 values "
-                "[x_start, y_start, x_end, y_end], "
-                f"got {len(region['ranges'][selected_range_index])}"
-            )
-
-        (x_start, y_start, x_end, y_end) = region["ranges"][
-            selected_range_index
-        ]  # type: ignore[misc]
-
-        # Validate bounds
-        if x_start >= x_end:
-            raise ValueError(f"x_start ({x_start}) must be less than x_end ({x_end})")
-        if y_start >= y_end:
-            raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
-
-        # Sample uniformly within the selected region
-        x = np_random.uniform(x_start, x_end)
-        y = np_random.uniform(y_start, y_end)
-
-        # Get z position from precomputed shelf positions
-        shelf_z = self._shelf_z_positions[shelf]
-        z = shelf_z + 0.01  # Slightly above shelf surface
-
-        # Sample yaw from the specified range (convert from degrees to radians)
+        # Get yaw range for this region
         yaw_range = (0.0, 360.0)  # Default range
-        if "yaw_ranges" in region:
-            # Use the yaw_range corresponding to the selected range index
-            # For simplicity, use the first yaw_range if available
-            yaw_ranges = region["yaw_ranges"]
-            if yaw_ranges:
-                yaw_range = tuple(yaw_ranges[selected_range_index])
-        yaw_deg = np_random.uniform(yaw_range[0], yaw_range[1])
-        yaw = np.radians(yaw_deg)
+        if "yaw_ranges" in region_config:
+            yaw_ranges = region_config["yaw_ranges"]
+            if yaw_ranges and len(yaw_ranges) > selected_bbox_index:
+                yaw_range = tuple(yaw_ranges[selected_bbox_index])
 
-        # Offset by the cupboard's position to get world coordinates
+        # Sample pose from the 3D bounding box (in cupboard-relative coordinates)
+        x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
+
+        # Convert to world coordinates
         world_x = x + self.position[0]
         world_y = y + self.position[1]
         world_z = z + self.position[2]
@@ -831,47 +893,31 @@ class Cupboard(MujocoFixture):
     ) -> bool:
         """Check if a given position is within the specified region.
 
-        This checks if the
-        position is on the top shelf surface.
+        This checks if the position is within the region's 3D bounding box.
         Args:
             position: Position as [x, y, z] array in world coordinates
             region_name: Name of the region to check
         Returns:
             True if the position is within the specified region, False otherwise
         """
-        # Convert world coordinates to cupboard-relative coordinates
-        cupboard_x = position[0] - self.position[0]
-        cupboard_y = position[1] - self.position[1]
-        cupboard_z = position[2] - self.position[2]
-
-        cupboard_placement_threshold = 0.02  # 2cm tolerance for placement
-
-        # Get the bounding box for the specified region
+        # Validate region exists
         assert self.regions is not None, "Regions must be defined"
-        if region_name not in self.regions:
+        if region_name not in self.region_bboxes:
             raise ValueError(f"Region '{region_name}' not found")
 
-        region = self.regions[region_name]
-        region_ranges = region["ranges"]
+        # Convert world coordinates to cupboard-relative coordinates
+        cupboard_relative_pos = np.array(
+            [
+                position[0] - self.position[0],
+                position[1] - self.position[1],
+                position[2] - self.position[2],
+            ]
+        )
 
-        # Get shelf index if specified
-        if "shelf" not in region:
-            raise ValueError(
-                f"Cupboard region '{region_name}' must specify 'shelf' for checking"
-            )
-        shelf = region["shelf"]
-
-        # Get z position from precomputed shelf positions
-        shelf_z = self._shelf_z_positions[shelf]
-
-        for region_range in region_ranges:
-            x_start, y_start, x_end, y_end = region_range
-
-            if (
-                x_start <= cupboard_x <= x_end
-                and y_start <= cupboard_y <= y_end
-                and shelf_z <= cupboard_z <= (shelf_z + cupboard_placement_threshold)
-            ):
+        # Check if position is in any of the region's bounding boxes
+        region_bboxes = self.region_bboxes[region_name]
+        for bbox in region_bboxes:
+            if utils.point_in_bbox_3d(cupboard_relative_pos, bbox):
                 return True
 
         return False
@@ -880,28 +926,28 @@ class Cupboard(MujocoFixture):
         """Visualize the cupboard's regions in the MuJoCo environment.
 
         This method adds visual elements to the MuJoCo XML to represent the regions
-        defined for this cupboard.
+        defined for this cupboard using the 3D bounding boxes.
         """
         if self.regions is None:
             return
 
         for region_name, region_config in self.regions.items():
-            if "rgba" in region_config and "shelf" in region_config:
-                shelf = region_config["shelf"]
-                region_bounds_list = region_config["ranges"]
+            if "rgba" in region_config:
+                # Get the bounding boxes for this region
+                region_bboxes = self.region_bboxes.get(region_name, [])
 
-                # Get z position from precomputed shelf positions
-                shelf_z = self._shelf_z_positions[shelf]
+                for i_region, bbox in enumerate(region_bboxes):
+                    # bbox is [x_min, y_min, z_min, x_max, y_max, z_max] in cupboard-relative coords
+                    x_min, y_min, z_min, x_max, y_max, z_max = bbox
 
-                for i_region, region_bounds in enumerate(region_bounds_list):
-                    x_start, y_start, x_end, y_end = region_bounds
-                    region_center_x = (x_start + x_end) / 2
-                    region_center_y = (y_start + y_end) / 2
-                    region_center_z = shelf_z + 0.01  # Slightly above shelf surface
+                    # Calculate center and half-sizes for MuJoCo box geom
+                    region_center_x = (x_min + x_max) / 2
+                    region_center_y = (y_min + y_max) / 2
+                    region_center_z = (z_min + z_max) / 2
 
-                    region_size_x = (x_end - x_start) / 2
-                    region_size_y = (y_end - y_start) / 2
-                    region_size_z = 0.005  # Thin box for visualization
+                    region_size_x = (x_max - x_min) / 2
+                    region_size_y = (y_max - y_min) / 2
+                    region_size_z = (z_max - z_min) / 2
 
                     # Create geom element for the region visualization
                     region_geom = ET.SubElement(self.xml_element, "geom")
