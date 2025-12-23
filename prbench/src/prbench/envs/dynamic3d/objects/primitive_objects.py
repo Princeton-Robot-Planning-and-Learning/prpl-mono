@@ -77,7 +77,8 @@ class Cuboid(MujocoObject):
         
         The cuboid is created as a single box geom centered at the body's origin.
         The origin (0, 0, 0) is located at the center of the cuboid.
-        The cuboid extends by size[i]/2 in each direction (+/- x, +/- y, +/- z) from the origin.
+        The cuboid extends by size[i]/2 in each direction
+        (+/- x, +/- y, +/- z) from the origin.
 
         Returns:
             ET.Element representing the cuboid body
@@ -277,12 +278,13 @@ class Bin(MujocoObject):
         """Create the XML Element for this bin using multiple box geoms.
         
         The bin is constructed from 5 box geoms:
-        - 1 bottom panel: full outer dimensions (length x width), at z in [0, wall_thickness]
-        - 4 wall panels: back, front, left, right walls with thickness wall_thickness,
-          extending from z = wall_thickness to z = height
+        - 1 bottom panel: full outer dimensions (length x width),
+          at z in [0, wall_thickness]
+        - 4 wall panels: back, front, left, right walls with thickness
+          wall_thickness, extending from z = wall_thickness to z = height
         
-        The origin (0, 0, 0) is located at the base center of the bin (center of bottom surface).
-        The bin extends in the positive z direction.
+        The origin (0, 0, 0) is located at the base center of the bin
+        (center of bottom surface). The bin extends in the positive z direction.
 
         Returns:
             ET.Element representing the bin body with all geoms
