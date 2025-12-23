@@ -3,8 +3,9 @@
 import numpy as np
 import pytest
 
+from prbench.envs.dynamic3d.objects.base import MujocoObject
 from prbench.envs.dynamic3d.objects.generated_objects import GeneratedBowl
-from prbench.envs.dynamic3d.objects.primitive_objects import Cube, Cuboid
+from prbench.envs.dynamic3d.objects.primitive_objects import Bin, Cube, Cuboid
 
 
 def test_cuboid_default_initialization():
@@ -254,8 +255,6 @@ def test_bounding_box_consistency():
 
 def test_bin_default_initialization():
     """Test bin initialization with default parameters."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     bin_obj = Bin("test_bin")
 
     assert bin_obj.name == "test_bin"
@@ -269,8 +268,6 @@ def test_bin_default_initialization():
 
 def test_bin_custom_dimensions():
     """Test bin initialization with custom dimensions."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     options = {
         "length": 0.2,
         "width": 0.15,
@@ -287,8 +284,6 @@ def test_bin_custom_dimensions():
 
 def test_bin_with_rgba_string():
     """Test bin with rgba as string."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     bin_obj = Bin("test_bin", options={"rgba": "0.8 0.8 0.8 1"})
 
     assert bin_obj.rgba == "0.8 0.8 0.8 1"
@@ -296,8 +291,6 @@ def test_bin_with_rgba_string():
 
 def test_bin_with_rgba_list():
     """Test bin with rgba as list."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     bin_obj = Bin("test_bin", options={"rgba": [0.8, 0.8, 0.8, 1.0]})
 
     assert bin_obj.rgba == "0.8 0.8 0.8 1.0"
@@ -305,8 +298,6 @@ def test_bin_with_rgba_list():
 
 def test_bin_with_custom_mass():
     """Test bin with custom mass."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     bin_obj = Bin("test_bin", options={"mass": 0.2})
 
     assert bin_obj.mass == 0.2
@@ -314,8 +305,6 @@ def test_bin_with_custom_mass():
 
 def test_bin_xml_element_creation():
     """Test that XML element is created correctly with 5 geoms."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     bin_obj = Bin("test_bin", options={"length": 0.2, "width": 0.15, "height": 0.08})
 
     assert bin_obj.xml_element is not None
@@ -338,8 +327,6 @@ def test_bin_xml_element_creation():
 
 def test_bin_str_repr():
     """Test string representations for Bin."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     bin_obj = Bin(
         "test_bin",
         options={"length": 0.2, "width": 0.15, "height": 0.08, "mass": 0.2},
@@ -360,8 +347,6 @@ def test_bin_str_repr():
 
 def test_bin_get_bounding_box_dimensions():
     """Test get_bounding_box_dimensions method for Bin."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     length = 0.2
     width = 0.15
     height = 0.08
@@ -377,8 +362,6 @@ def test_bin_get_bounding_box_dimensions():
 
 def test_bin_get_bounding_box_from_config_default():
     """Test get_bounding_box_from_config with default values."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     pos = np.array([0.0, 0.0, 0.0], dtype=np.float32)
     config = {}
 
@@ -394,8 +377,6 @@ def test_bin_get_bounding_box_from_config_default():
 
 def test_bin_get_bounding_box_from_config_custom():
     """Test get_bounding_box_from_config with custom dimensions."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     pos = np.array([1.0, 2.0, 3.0], dtype=np.float32)
     config = {"length": 0.2, "width": 0.15, "height": 0.08}
 
@@ -410,8 +391,6 @@ def test_bin_get_bounding_box_from_config_custom():
 
 def test_bin_get_bounding_box_from_config_origin_at_base():
     """Test that origin is at base of bin (z_min = pos[2])."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     pos = np.array([5.0, 6.0, 2.0], dtype=np.float32)
     config = {"length": 0.1, "width": 0.1, "height": 0.05}
 
@@ -425,8 +404,6 @@ def test_bin_get_bounding_box_from_config_origin_at_base():
 
 def test_bin_geom_positioning():
     """Test that geoms are positioned correctly with base at origin."""
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     bin_obj = Bin(
         "test_bin",
         options={"length": 0.2, "width": 0.1, "height": 0.08, "wall_thickness": 0.005},
@@ -455,9 +432,6 @@ def test_bin_geom_positioning():
 
 def test_bin_inherits_from_mujoco_object():
     """Test that Bin inherits from MujocoObject."""
-    from prbench.envs.dynamic3d.objects.base import MujocoObject
-    from prbench.envs.dynamic3d.objects.primitive_objects import Bin
-
     bin_obj = Bin("test_bin")
 
     assert isinstance(bin_obj, MujocoObject)

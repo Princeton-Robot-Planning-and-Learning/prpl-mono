@@ -393,7 +393,7 @@ def test_sample_pose_in_bbox_3d_custom_yaw_range():
 
     # Sample multiple poses
     for _ in range(50):
-        x, y, z, yaw = sample_pose_in_bbox_3d(bbox, rng, yaw_range_deg)
+        _, _, _, yaw = sample_pose_in_bbox_3d(bbox, rng, yaw_range_deg)
 
         # Convert yaw back to degrees for easier checking
         yaw_deg = np.degrees(yaw)
@@ -410,7 +410,7 @@ def test_sample_pose_in_bbox_3d_zero_yaw_range():
 
     # Sample multiple poses
     for _ in range(10):
-        x, y, z, yaw = sample_pose_in_bbox_3d(bbox, rng, yaw_range_deg)
+        _, _, _, yaw = sample_pose_in_bbox_3d(bbox, rng, yaw_range_deg)
 
         # Yaw should always be 30 degrees (converted to radians)
         expected_yaw = np.radians(30.0)
@@ -424,7 +424,7 @@ def test_sample_pose_in_bbox_3d_negative_bbox():
 
     # Sample multiple poses
     for _ in range(50):
-        x, y, z, yaw = sample_pose_in_bbox_3d(bbox, rng)
+        x, y, z, _ = sample_pose_in_bbox_3d(bbox, rng)
 
         # Check position is within bounds
         assert -2.0 <= x <= -1.0
@@ -492,7 +492,7 @@ def test_sample_pose_in_bbox_3d_small_bbox():
 
     # Sample multiple poses
     for _ in range(20):
-        x, y, z, yaw = sample_pose_in_bbox_3d(bbox, rng)
+        x, y, z, _ = sample_pose_in_bbox_3d(bbox, rng)
 
         # All samples should be very close to the center
         assert 1.0 <= x <= 1.01

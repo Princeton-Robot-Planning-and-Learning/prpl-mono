@@ -299,7 +299,6 @@ class Bin(MujocoObject):
         half_wall = self.wall_thickness / 2
 
         # Calculate inner dimensions
-        inner_half_length = half_length - self.wall_thickness
         inner_half_width = half_width - self.wall_thickness
 
         # Wall height (excluding bottom thickness)
@@ -324,7 +323,8 @@ class Bin(MujocoObject):
 
         # Back wall (along x-axis, at -y edge)
         back_wall_size = [half_length, half_wall, half_wall_height]
-        back_wall_pos = [0.0, -half_width + half_wall, self.wall_thickness + half_wall_height]
+        back_wall_z = self.wall_thickness + half_wall_height
+        back_wall_pos = [0.0, -half_width + half_wall, back_wall_z]
         ET.SubElement(
             body,
             "geom",
@@ -337,7 +337,8 @@ class Bin(MujocoObject):
 
         # Front wall (along x-axis, at +y edge)
         front_wall_size = [half_length, half_wall, half_wall_height]
-        front_wall_pos = [0.0, half_width - half_wall, self.wall_thickness + half_wall_height]
+        front_wall_z = self.wall_thickness + half_wall_height
+        front_wall_pos = [0.0, half_width - half_wall, front_wall_z]
         ET.SubElement(
             body,
             "geom",
@@ -350,7 +351,8 @@ class Bin(MujocoObject):
 
         # Left wall (along y-axis, at -x edge)
         left_wall_size = [half_wall, inner_half_width, half_wall_height]
-        left_wall_pos = [-half_length + half_wall, 0.0, self.wall_thickness + half_wall_height]
+        left_wall_z = self.wall_thickness + half_wall_height
+        left_wall_pos = [-half_length + half_wall, 0.0, left_wall_z]
         ET.SubElement(
             body,
             "geom",
@@ -363,7 +365,8 @@ class Bin(MujocoObject):
 
         # Right wall (along y-axis, at +x edge)
         right_wall_size = [half_wall, inner_half_width, half_wall_height]
-        right_wall_pos = [half_length - half_wall, 0.0, self.wall_thickness + half_wall_height]
+        right_wall_z = self.wall_thickness + half_wall_height
+        right_wall_pos = [half_length - half_wall, 0.0, right_wall_z]
         ET.SubElement(
             body,
             "geom",

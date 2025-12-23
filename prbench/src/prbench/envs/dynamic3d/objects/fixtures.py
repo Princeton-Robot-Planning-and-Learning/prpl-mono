@@ -584,7 +584,8 @@ class Cupboard(MujocoFixture):
             # Get the shelf index for this region
             if "shelf" not in region_config:
                 raise ValueError(
-                    f"Cupboard region '{region_name}' must specify 'shelf' for bbox creation"
+                    f"Cupboard region '{region_name}' must specify "
+                    f"'shelf' for bbox creation"
                 )
             shelf = region_config["shelf"]
 
@@ -937,7 +938,9 @@ class Cupboard(MujocoFixture):
                 region_bboxes = self.region_bboxes.get(region_name, [])
 
                 for i_region, bbox in enumerate(region_bboxes):
-                    # bbox is [x_min, y_min, z_min, x_max, y_max, z_max] in cupboard-relative coords
+                    # bbox is [x_min, y_min, z_min, x_max, y_max, z_max]
+                    # in cupboard-relative coords
+
                     x_min, y_min, z_min, x_max, y_max, z_max = bbox
 
                     # Calculate center and half-sizes for MuJoCo box geom
