@@ -125,6 +125,15 @@ def register_all_environments() -> None:
         entry_point="prbench.envs.geom3d.base_motion3d:BaseMotion3DEnv",
     )
 
+    # Ground3D environment.
+    num_cubes = [1, 2, 3]
+    for num_cube in num_cubes:
+        _register(
+            id=f"prbench/Ground3D-o{num_cube}-v0",
+            entry_point="prbench.envs.geom3d.ground3d:Ground3DEnv",
+            kwargs={"num_cubes": num_cube},
+        )
+
     # Obstructions3D environment with different numbers of obstructions.
     num_obstructions = [0, 1, 2, 3, 4]
     for num_obstruction in num_obstructions:
