@@ -42,7 +42,6 @@ from prbench.envs.dynamic3d.robots import (
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
 from prbench.envs.dynamic3d.utils import (
-    check_in_region,
     convert_yaw_to_quaternion,
 )
 
@@ -123,11 +122,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         if show_images and not render_images:
             raise ValueError("Cannot show images if render_images is False")
 
-        # Initialize empty object list
+        # Initialize empty object and fixture lists, and ground fixture.
+        # These will be populated based on the task configuration
+        # in the _create_scene_xml() method.
         self._objects: list[MujocoObject] = []
         self._objects_dict: dict[str, MujocoObject] = {}
         self._fixtures_dict: dict[str, MujocoFixture] = {}
-        self.ground_fixture: MujocoGround | None = None
+        self._ground_fixture: MujocoGround | None = None
 
         self._reward_calculator = create_reward_calculator(scene_type, num_objects)
 
@@ -195,7 +196,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     if region_config["target"] == "ground":
                         regions_on_ground[region_name] = region_config
                 # Create ground fixture for region sampling
-                self.ground_fixture = MujocoGround(
+                self._ground_fixture = MujocoGround(
                     regions=regions_on_ground,
                 )
 
@@ -236,7 +237,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                             # Add to region names and pos/yaw samplers dicts
                             entity_region_names[fixture_name] = region_name
                             entity_pos_yaw_samplers[fixture_name] = (
-                                self.ground_fixture.sample_pose_in_region
+                                self._ground_fixture.sample_pose_in_region
                             )
 
                 # Sample collision-free positions for all fixtures
@@ -341,9 +342,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     obj_type = (
                         obj.__class__.REGISTERED_NAME  # type: ignore[attr-defined]
                     )
-                    obj_config = self.task_config["objects"][
-                        obj_type
-                    ].get(obj_name, {})
+                    obj_config = self.task_config["objects"][obj_type].get(obj_name, {})
                     ground_objects[obj_name] = obj_config
                     fixture_objects[obj_name] = (target, region_name)
                 else:
@@ -383,9 +382,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     )
                     if obj_type not in ground_object_configs:
                         ground_object_configs[obj_type] = {}
-                    ground_object_configs[obj_type][obj_name] = (
-                        ground_objects[obj_name]
-                    )
+                    ground_object_configs[obj_type][obj_name] = ground_objects[obj_name]
 
             # Sample collision-free positions for ground objects
             object_poses = sample_collision_free_positions(
@@ -431,9 +428,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             if obj_type not in fixture_object_configs:
                 fixture_object_configs[obj_type] = {}
             obj_config_dict = self.task_config.get("objects", {})
-            fixture_object_configs[obj_type][obj_name] = (
-                obj_config_dict.get(obj_type, {}).get(obj_name, {})
-            )
+            fixture_object_configs[obj_type][obj_name] = obj_config_dict.get(
+                obj_type, {}
+            ).get(obj_name, {})
 
         # Sample collision-free positions for all fixture-placed objects
         if (
@@ -690,7 +687,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 if region_config["target"] == "ground":
                     # Check pose directly on the ground in the world frame
                     region_ranges = region_config["ranges"]
-                    in_region = check_in_region(position, region_ranges)
+                    assert self._ground_fixture is not None, (
+                        "Ground fixture not initialized"
+                    )
+                    in_region = self._ground_fixture.check_in_region(
+                        position, region_ranges
+                    )
                 else:
                     # Sample pose on a fixture (table, etc.)
                     fixture = self._fixtures_dict[region_config["target"]]
