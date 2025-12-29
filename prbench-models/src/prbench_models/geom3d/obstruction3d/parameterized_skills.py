@@ -40,6 +40,7 @@ from relational_structs import (
 # constants
 GRASP_TRANSFORM_TO_OBJECT = Pose((0.005, 0, 0.035), (0.707, 0.707, 0, 0))
 GRIPPER_OPEN_THRESHOLD = 0.01
+HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
 
 
 # Controllers.
@@ -65,9 +66,6 @@ class GroundPickController(
         self._closed_gripper: bool = False
         self._lifted: bool = False
         self._last_gripper_state: float = 0.0
-        self.home_joints = np.deg2rad(
-            [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
-        )  # retract configuration
 
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
@@ -175,7 +173,7 @@ class GroundPickController(
                 joint_plan = run_motion_planning(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=self.home_joints.tolist(),
+                    target_positions=HOME_JOINT_POSITIONS.tolist(),
                     collision_bodies=set(),
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
@@ -244,9 +242,6 @@ class GroundPlaceController(
         self._open_gripper: bool = False
         self._returned: bool = False
         self._last_gripper_state: float = 0.0
-        self.home_joints = np.deg2rad(
-            [0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0]
-        )  # retract configuration
 
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
@@ -361,7 +356,7 @@ class GroundPlaceController(
                 joint_plan = run_motion_planning(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=self.home_joints.tolist(),
+                    target_positions=HOME_JOINT_POSITIONS.tolist(),
                     collision_bodies=set(),
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,

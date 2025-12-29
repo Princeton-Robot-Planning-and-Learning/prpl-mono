@@ -17,24 +17,51 @@ def convert_yaw_to_quaternion(yaw: float) -> list[float]:
     return [np.cos(half_yaw), 0.0, 0.0, np.sin(half_yaw)]  # w, x, y, z
 
 
-def check_in_region(
+def point_in_bbox_3d(
     position: NDArray[np.float32],
-    regions: list[list[float]],
+    bbox: list[float],
 ) -> bool:
-    """Check if a position is inside any of the given regions.
+    """Check if a 3D position is inside a 3D bounding box.
 
     Args:
         position: Position as [x, y, z] array
-        regions: List of regions, each defined as [x_start, y_start, x_end, y_end]
+        bbox: Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+
     Returns:
-        True if position is inside any region, False otherwise
+        True if position is inside the bounding box, False otherwise
     """
-    x, y, _ = position
-    for region in regions:
-        x_start, y_start, x_end, y_end = region
-        if x_start <= x <= x_end and y_start <= y <= y_end:
-            return True
-    return False
+    x, y, z = position
+    x_min, y_min, z_min, x_max, y_max, z_max = bbox
+    return x_min <= x <= x_max and y_min <= y <= y_max and z_min <= z <= z_max
+
+
+def sample_pose_in_bbox_3d(
+    bbox: list[float],
+    np_random: np.random.Generator,
+    yaw_range_deg: tuple[float, float] = (0.0, 360.0),
+) -> tuple[float, float, float, float]:
+    """Sample a pose uniformly from a 3D bounding box.
+
+    Args:
+        bbox: Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+        np_random: Random number generator
+        yaw_range_deg: Yaw range in degrees (min, max)
+
+    Returns:
+        Tuple of (x, y, z, yaw) where yaw is in radians
+    """
+    x_min, y_min, z_min, x_max, y_max, z_max = bbox
+
+    # Sample position uniformly within the bounding box
+    x = np_random.uniform(x_min, x_max)
+    y = np_random.uniform(y_min, y_max)
+    z = np_random.uniform(z_min, z_max)
+
+    # Sample yaw
+    yaw_deg = np_random.uniform(yaw_range_deg[0], yaw_range_deg[1])
+    yaw = np.radians(yaw_deg)
+
+    return (x, y, z, yaw)
 
 
 def bboxes_overlap(

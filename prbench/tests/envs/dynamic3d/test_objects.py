@@ -3,8 +3,9 @@
 import numpy as np
 import pytest
 
+from prbench.envs.dynamic3d.objects.base import MujocoObject
 from prbench.envs.dynamic3d.objects.generated_objects import GeneratedBowl
-from prbench.envs.dynamic3d.objects.primitive_objects import Cube, Cuboid
+from prbench.envs.dynamic3d.objects.primitive_objects import Bin, Cube, Cuboid
 
 
 def test_cuboid_default_initialization():
@@ -247,6 +248,194 @@ def test_bounding_box_consistency():
     cube_bbox = Cube.get_bounding_box_from_config(pos, config)
 
     assert cuboid_bbox == cube_bbox
+
+
+# Tests for Bin
+
+
+def test_bin_default_initialization():
+    """Test bin initialization with default parameters."""
+    bin_obj = Bin("test_bin")
+
+    assert bin_obj.name == "test_bin"
+    assert bin_obj.joint_name == "test_bin_joint"
+    assert bin_obj.length == 0.1
+    assert bin_obj.width == 0.1
+    assert bin_obj.height == 0.05
+    assert bin_obj.wall_thickness == Bin.default_wall_thickness
+    assert bin_obj.mass == 0.1
+
+
+def test_bin_custom_dimensions():
+    """Test bin initialization with custom dimensions."""
+    options = {
+        "length": 0.2,
+        "width": 0.15,
+        "height": 0.08,
+        "wall_thickness": 0.01,
+    }
+    bin_obj = Bin("test_bin", options=options)
+
+    assert bin_obj.length == 0.2
+    assert bin_obj.width == 0.15
+    assert bin_obj.height == 0.08
+    assert bin_obj.wall_thickness == 0.01
+
+
+def test_bin_with_rgba_string():
+    """Test bin with rgba as string."""
+    bin_obj = Bin("test_bin", options={"rgba": "0.8 0.8 0.8 1"})
+
+    assert bin_obj.rgba == "0.8 0.8 0.8 1"
+
+
+def test_bin_with_rgba_list():
+    """Test bin with rgba as list."""
+    bin_obj = Bin("test_bin", options={"rgba": [0.8, 0.8, 0.8, 1.0]})
+
+    assert bin_obj.rgba == "0.8 0.8 0.8 1.0"
+
+
+def test_bin_with_custom_mass():
+    """Test bin with custom mass."""
+    bin_obj = Bin("test_bin", options={"mass": 0.2})
+
+    assert bin_obj.mass == 0.2
+
+
+def test_bin_xml_element_creation():
+    """Test that XML element is created correctly with 5 geoms."""
+    bin_obj = Bin("test_bin", options={"length": 0.2, "width": 0.15, "height": 0.08})
+
+    assert bin_obj.xml_element is not None
+    assert bin_obj.xml_element.tag == "body"
+    assert bin_obj.xml_element.get("name") == "test_bin"
+
+    # Check for freejoint
+    freejoint = bin_obj.xml_element.find("freejoint")
+    assert freejoint is not None
+    assert freejoint.get("name") == "test_bin_joint"
+
+    # Check for 5 geoms (1 bottom + 4 walls)
+    geoms = bin_obj.xml_element.findall("geom")
+    assert len(geoms) == 5
+
+    # All should be box type
+    for geom in geoms:
+        assert geom.get("type") == "box"
+
+
+def test_bin_str_repr():
+    """Test string representations for Bin."""
+    bin_obj = Bin(
+        "test_bin",
+        options={"length": 0.2, "width": 0.15, "height": 0.08, "mass": 0.2},
+    )
+
+    str_repr = str(bin_obj)
+    assert "Bin" in str_repr
+    assert "test_bin" in str_repr
+    assert "0.2" in str_repr  # length
+    assert "0.15" in str_repr  # width
+    assert "0.08" in str_repr  # height
+
+    repr_str = repr(bin_obj)
+    assert "Bin" in repr_str
+    assert "test_bin" in repr_str
+    assert "test_bin_joint" in repr_str
+
+
+def test_bin_get_bounding_box_dimensions():
+    """Test get_bounding_box_dimensions method for Bin."""
+    length = 0.2
+    width = 0.15
+    height = 0.08
+    bin_obj = Bin(
+        "test_bin",
+        options={"length": length, "width": width, "height": height},
+    )
+
+    bb_dims = bin_obj.get_bounding_box_dimensions()
+
+    assert bb_dims == (length, width, height)
+
+
+def test_bin_get_bounding_box_from_config_default():
+    """Test get_bounding_box_from_config with default values."""
+    pos = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+    config = {}
+
+    bbox = Bin.get_bounding_box_from_config(pos, config)
+
+    # Defaults: length=0.1, width=0.1, height=0.05
+    # Half-extents: length/2=0.05, width/2=0.05
+    # Expected: [x_min, y_min, z_min, x_max, y_max, z_max]
+    # Base at (0,0,0), extends to height
+    expected = [-0.05, -0.05, 0.0, 0.05, 0.05, 0.05]
+    assert bbox == expected
+
+
+def test_bin_get_bounding_box_from_config_custom():
+    """Test get_bounding_box_from_config with custom dimensions."""
+    pos = np.array([1.0, 2.0, 3.0], dtype=np.float32)
+    config = {"length": 0.2, "width": 0.15, "height": 0.08}
+
+    bbox = Bin.get_bounding_box_from_config(pos, config)
+
+    # Half-extents: length/2=0.1, width/2=0.075
+    # Expected: [x_min, y_min, z_min, x_max, y_max, z_max]
+    # x: 1.0 +/- 0.1, y: 2.0 +/- 0.075, z: 3.0 to 3.08
+    expected = [0.9, 1.925, 3.0, 1.1, 2.075, 3.08]
+    assert bbox == expected
+
+
+def test_bin_get_bounding_box_from_config_origin_at_base():
+    """Test that origin is at base of bin (z_min = pos[2])."""
+    pos = np.array([5.0, 6.0, 2.0], dtype=np.float32)
+    config = {"length": 0.1, "width": 0.1, "height": 0.05}
+
+    bbox = Bin.get_bounding_box_from_config(pos, config)
+
+    # Check that z_min equals pos[2] (base at ground level)
+    assert bbox[2] == pos[2]
+    # Check that z_max = z_min + height
+    assert bbox[5] == pos[2] + 0.05
+
+
+def test_bin_geom_positioning():
+    """Test that geoms are positioned correctly with base at origin."""
+    bin_obj = Bin(
+        "test_bin",
+        options={"length": 0.2, "width": 0.1, "height": 0.08, "wall_thickness": 0.005},
+    )
+
+    geoms = bin_obj.xml_element.findall("geom")
+    assert len(geoms) == 5
+
+    # Get positions of geoms
+    positions = []
+    for geom in geoms:
+        pos_str = geom.get("pos")
+        if pos_str:
+            pos = [float(x) for x in pos_str.split()]
+            positions.append(pos)
+
+    # Bottom geom should have z_pos = wall_thickness/2 = 0.0025
+    bottom_z = positions[0][2]
+    assert abs(bottom_z - 0.0025) < 1e-6
+
+    # Wall geoms should have z_pos >= wall_thickness
+    for i in range(1, 5):
+        wall_z = positions[i][2]
+        assert wall_z >= 0.005
+
+
+def test_bin_inherits_from_mujoco_object():
+    """Test that Bin inherits from MujocoObject."""
+    bin_obj = Bin("test_bin")
+
+    assert isinstance(bin_obj, MujocoObject)
+    assert isinstance(bin_obj, Bin)
 
 
 # Tests for GeneratedBowl
