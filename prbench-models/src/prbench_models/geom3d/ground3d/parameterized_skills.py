@@ -30,7 +30,27 @@ from relational_structs import (
     ObjectCentricState,
     Variable,
 )
+from spatialmath import SE2
 
+# Utility functions.
+def get_target_robot_pose_from_parameters(
+    target_object_pose: SE2Pose, target_distance: float, target_rot: float
+) -> SE2Pose:
+    """Determine the pose for the robot given the state and parameters.
+
+    The robot will be facing the target_object_pose position while being target_distance
+    away, and rotated w.r.t. the target_object_pose rotation by target_rot.
+    """
+    # Absolute angle of the line from the robot to the target.
+    ang = target_object_pose.rot + target_rot
+
+    # Place the robot `target_distance` away from the target along -ang
+    tx, ty = target_object_pose.x, target_object_pose.y  # target translation (x, y).
+    rx = tx - target_distance * np.cos(ang)
+    ry = ty - target_distance * np.sin(ang)
+
+    # Robot faces the target: heading points along +ang (toward the target).
+    return SE2Pose(rx, ry, ang)
 
 # Controllers.
 class GroundPickController(
@@ -76,11 +96,14 @@ class GroundPickController(
             self._sim.set_state(self._current_state)
 
             target_pose = self._current_state.get_object_pose("cube0").to_se2()
+            target_base_pose = get_target_robot_pose_from_parameters(
+                target_pose, 0.3, 0.0
+            )
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
-                target_pose,
+                target_base_pose,
                 collision_bodies=set(),
                 seed=0,  # for determinism
             )
