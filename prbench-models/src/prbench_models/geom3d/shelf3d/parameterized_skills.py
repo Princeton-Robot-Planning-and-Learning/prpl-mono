@@ -351,7 +351,7 @@ class GroundPlaceController(
                     target_pose.position[0] + self._current_params[0],
                     target_pose.position[1] + self._current_params[1],
                     self._current_state.get_object_half_extents(self.objects[1].name)[2]
-                    + 0.01,
+                    + 0.03,
                 ),
                 target_pose.orientation,
             )
@@ -462,6 +462,8 @@ class GroundPlaceController(
                 self._opened_gripper = True
             action_lst = [0.0] * 10 + [1.0]
             action = np.array(action_lst, dtype=np.float32)
+            print(f"action: {action}")
+            print(f"self._get_current_robot_gripper_pose(): {self._get_current_robot_gripper_pose()}")
             return action
 
         if self._opened_gripper and not self._lifted:
