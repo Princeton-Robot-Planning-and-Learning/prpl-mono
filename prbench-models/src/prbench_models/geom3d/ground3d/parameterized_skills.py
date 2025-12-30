@@ -18,12 +18,20 @@ from prbench.envs.geom3d.ground3d import (
     Geom3DRobotType,
     ObjectCentricGround3DEnv,
 )
+from pybullet_helpers.geometry import Pose, multiply_poses
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
 )
+from pybullet_helpers.inverse_kinematics import (
+    InverseKinematicsError,
+    inverse_kinematics,
+)
 from pybullet_helpers.geometry import SE2Pose
+from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     run_single_arm_mobile_base_motion_planning,
+    remap_joint_position_plan_to_constant_distance,
+    run_motion_planning,
 )
 from relational_structs import (
     Object,
@@ -31,6 +39,11 @@ from relational_structs import (
     Variable,
 )
 from spatialmath import SE2
+
+# constants
+GRASP_TRANSFORM_TO_OBJECT = Pose((0.005, 0, 0.005), (0.707, 0.707, 0, 0))
+GRIPPER_OPEN_THRESHOLD = 0.01
+HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
 
 # Utility functions.
 def get_target_robot_pose_from_parameters(
@@ -65,10 +78,18 @@ class GroundPickController(
     ) -> None:
         super().__init__(objects)
         self._sim = sim
+        self._joint_infos = sim.robot.arm.joint_infos[:7]
         self._robot, self._target = objects
         self._current_params: tuple[()] | None = None
+        self._current_arm_joint_plan: list[JointPositions] | None = None
+        self._current_retract_plan: list[JointPositions] | None = None
         self._current_plan: list[SE2Pose] | None = None
         self._current_state: ObjectCentricState | None = None
+        self._navigated: bool = False
+        self._pre_grasp: bool = False
+        self._closed_gripper: bool = False
+        self._lifted: bool = False
+        
 
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
@@ -84,7 +105,7 @@ class GroundPickController(
         self._current_state = x
 
     def terminated(self) -> bool:
-        return self._current_plan is not None and len(self._current_plan) == 0
+        return self._lifted
 
     def step(self) -> np.ndarray:
         assert self._current_state is not None
@@ -97,7 +118,7 @@ class GroundPickController(
 
             target_pose = self._current_state.get_object_pose("cube0").to_se2()
             target_base_pose = get_target_robot_pose_from_parameters(
-                target_pose, 0.3, 0.0
+                target_pose, 0.5, 0.0
             )
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
@@ -114,24 +135,157 @@ class GroundPickController(
             # Store the plan (excluding the first state which is the current state).
             self._current_plan = base_plan[1:]
 
-        # Pop the next target base pose from the plan.
-        assert self._current_plan is not None
-        target_base_pose = self._current_plan.pop(0)
+        if not self._navigated:
+            # Pop the next target base pose from the plan.
+            assert self._current_plan is not None
+            target_base_pose = self._current_plan.pop(0)
+            if len(self._current_plan) == 1:
+                self._navigated = True
 
-        # Compute delta base pose.
-        current_base_pose = self._current_state.base_pose
-        delta = target_base_pose - current_base_pose
-        delta_lst = [delta.x, delta.y, delta.rot]
+            # Compute delta base pose.
+            current_base_pose = self._current_state.base_pose
+            delta = target_base_pose - current_base_pose
+            delta_lst = [delta.x, delta.y, delta.rot]
 
-        # Create action: [base_x, base_y, base_rot, joint1, ..., joint7, gripper].
-        action_lst = delta_lst + [0.0] * 7 + [0.0]
-        action = np.array(action_lst, dtype=np.float32)
+            # Create action: [base_x, base_y, base_rot, joint1, ..., joint7, gripper].
+            action_lst = delta_lst + [0.0] * 7 + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
 
-        return action
+            return action
+        
+        if self._navigated and not self._pre_grasp:
+            # Generate the motion plan if it doesn't exist yet.
+            if self._current_arm_joint_plan is None:
+                self._sim.set_state(self._current_state)
+                # Create target pose from target position and sampled orientation.
+                target_grasp_pose_world = self._current_state.get_object_pose("cube0")
 
+                target_end_effector_pose = multiply_poses(
+                    target_grasp_pose_world,
+                    GRASP_TRANSFORM_TO_OBJECT,
+                )
+
+                # Run inverse kinematics to get joint positions.
+                try:
+                    joint_positions = inverse_kinematics(
+                        self._sim.robot.arm,
+                        target_end_effector_pose,
+                        validate=True,
+                        set_joints=False,
+                    )
+                except InverseKinematicsError as e:
+                    raise TrajectorySamplingFailure(
+                        f"IK failed for target pose {target_end_effector_pose}"
+                    ) from e
+                
+                # Run motion planning to the target joint positions.
+                joint_plan = run_motion_planning(
+                    self._sim.robot.arm,
+                    initial_positions=self._sim.robot.arm.get_joint_positions(),
+                    target_positions=joint_positions,
+                    collision_bodies=set(),
+                    seed=0,  # for determinism
+                    physics_client_id=self._sim.physics_client_id,
+                )
+
+                if joint_plan is None:
+                    raise TrajectorySamplingFailure("Motion planning failed")
+
+                # Remap the plan to ensure we stay within action limits.
+                joint_plan = remap_joint_position_plan_to_constant_distance(
+                    joint_plan,
+                    self._sim.robot.arm,
+                    max_distance=self._sim.config.max_action_mag / 2,
+                )
+
+                # Store the plan (excluding the first state which is the current state).
+                self._current_arm_joint_plan = joint_plan[1:]
+            # Pop the next target joint positions from the plan.
+            assert self._current_arm_joint_plan is not None
+            target_joints = self._current_arm_joint_plan.pop(0)
+            if len(self._current_arm_joint_plan) == 1:
+                self._pre_grasp = True
+            # Compute delta joint positions.
+            delta_lst = get_jointwise_difference(
+                self._joint_infos,
+                target_joints[:7],
+                self._current_state.joint_positions,
+            )
+
+            # Create action: [base_x, base_y, base_rot, joint1, ..., joint7, gripper].
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
+
+            return action
+            
+        if self._pre_grasp and not self._closed_gripper:
+            if self._get_current_robot_gripper_pose() > 0.2 and np.isclose(
+                self._get_current_robot_gripper_pose(),
+                self._last_gripper_state,
+                atol=0.02,
+            ):
+                self._closed_gripper = True
+            action_lst = [0.0] * 10 + [-1.0]
+            action = np.array(action_lst, dtype=np.float32)
+            self._last_gripper_state = self._get_current_robot_gripper_pose()
+            return action
+        
+        if self._closed_gripper and not self._lifted:
+            # Generate the motion plan if it doesn't exist yet.
+            if self._current_retract_plan is None:
+
+                self._sim.set_state(self._current_state)
+
+                # Run motion planning to the target joint positions.
+                joint_plan = run_motion_planning(
+                    self._sim.robot.arm,
+                    initial_positions=self._sim.robot.arm.get_joint_positions(),
+                    target_positions=HOME_JOINT_POSITIONS.tolist(),
+                    collision_bodies=set(),
+                    seed=0,  # for determinism
+                    physics_client_id=self._sim.physics_client_id,
+                )
+
+                if joint_plan is None:
+                    raise TrajectorySamplingFailure("Motion planning failed")
+
+                # Remap the plan to ensure we stay within action limits.
+                joint_plan = remap_joint_position_plan_to_constant_distance(
+                    joint_plan,
+                    self._sim.robot.arm,
+                    max_distance=self._sim.config.max_action_mag / 2,
+                )
+
+                # Store the plan (excluding the first state which is the current state).
+                self._current_retract_plan = joint_plan[1:]
+            # Pop the next target joint positions from the plan.
+            assert self._current_retract_plan is not None
+            target_joints = self._current_retract_plan.pop(0)
+            if len(self._current_retract_plan) == 1:
+                self._lifted = True
+            # Compute delta joint positions.
+            delta_lst = get_jointwise_difference(
+                self._joint_infos,
+                target_joints[:7],
+                self._current_state.joint_positions,
+            )
+
+            # Create action: [base_x, base_y, base_rot, joint1, ..., joint7, gripper].
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
+
+            return action
+        
+        raise ValueError("Invalid state")
+    
     def observe(self, x: ObjectCentricState) -> None:
         self._current_state = x
 
+    def _get_current_robot_gripper_pose(self) -> float:
+        x = self._current_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        return x.get(robot_obj, "finger_state")
 
 def create_lifted_controllers(
     action_space: Geom3DRobotActionSpace,
