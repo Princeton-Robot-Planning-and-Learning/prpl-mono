@@ -315,10 +315,9 @@ class GroundPlaceController(
         self._current_plan: list[SE2Pose] | None = None
         self._current_state: ObjectCentricState | None = None
         self._navigated: bool = False
-        self._pre_grasp: bool = False
-        self._closed_gripper: bool = False
+        self._pre_place: bool = False
+        self._opened_gripper: bool = False
         self._lifted: bool = False
-        self._last_gripper_state: float = 0.0
         self._target_place_pose_se2: SE2Pose | None = None
         self._target_place_pose_world: Pose | None = None
 
@@ -393,7 +392,7 @@ class GroundPlaceController(
 
             return action
 
-        if self._navigated and not self._pre_grasp:
+        if self._navigated and not self._pre_place:
             # Generate the motion plan if it doesn't exist yet.
             if self._current_arm_joint_plan is None:
                 self._sim.set_state(self._current_state)
@@ -444,7 +443,7 @@ class GroundPlaceController(
             assert self._current_arm_joint_plan is not None
             target_joints = self._current_arm_joint_plan.pop(0)
             if len(self._current_arm_joint_plan) == 1:
-                self._pre_grasp = True
+                self._pre_place = True
             # Compute delta joint positions.
             delta_lst = get_jointwise_difference(
                 self._joint_infos,
@@ -458,19 +457,14 @@ class GroundPlaceController(
 
             return action
 
-        if self._pre_grasp and not self._closed_gripper:
-            if self._get_current_robot_gripper_pose() < 0.2 and np.isclose(
-                self._get_current_robot_gripper_pose(),
-                self._last_gripper_state,
-                atol=0.02,
-            ):
-                self._closed_gripper = True
+        if self._pre_place and not self._opened_gripper:
+            if self._get_current_robot_gripper_pose() < GRIPPER_OPEN_THRESHOLD:
+                self._opened_gripper = True
             action_lst = [0.0] * 10 + [1.0]
             action = np.array(action_lst, dtype=np.float32)
-            self._last_gripper_state = self._get_current_robot_gripper_pose()
             return action
 
-        if self._closed_gripper and not self._lifted:
+        if self._opened_gripper and not self._lifted:
             # Generate the motion plan if it doesn't exist yet.
             if self._current_retract_plan is None:
 
