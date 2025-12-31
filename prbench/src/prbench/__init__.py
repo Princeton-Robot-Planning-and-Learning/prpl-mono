@@ -142,7 +142,7 @@ def register_all_environments() -> None:
             entry_point="prbench.envs.geom3d.table3d:Table3DEnv",
             kwargs={"num_cubes": num_cube},
         )
-    
+
     # Shelf3D environment.
     num_cubes = [1, 2, 3]
     for num_cube in num_cubes:

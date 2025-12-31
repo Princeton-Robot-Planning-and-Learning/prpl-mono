@@ -44,7 +44,7 @@ HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0,
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
 PLACE_X_OFFSET_BOUNDS = (-0.1, 0.1)
-PLACE_Y_OFFSET_BOUNDS = (-0.1, 0.1)
+PLACE_Y_OFFSET_BOUNDS = (-0.03, 0.03)
 
 
 # Utility functions.
@@ -350,8 +350,8 @@ class GroundPlaceController(
             target_pose = self._current_state.get_object_pose(self.objects[2].name)
             self._target_place_pose_world = Pose.from_rpy(
                 (
-                    target_pose.position[0],
-                    target_pose.position[1] - 0.05,
+                    target_pose.position[0] + self._current_params[0],
+                    target_pose.position[1] - 0.05 + self._current_params[1],
                     self._sim.config.shelf_spacing * 2
                     + self._sim.config.shelf_height / 2 * 2
                     + self._sim.config.block_half_extents[0]
@@ -367,10 +367,16 @@ class GroundPlaceController(
                 ),
                 self._target_place_pose_world.orientation,
             )
-            self._target_place_pose_se2 = target_pose.to_se2()
+            target_pose_temp_se2 = target_pose.to_se2()
+            self._target_place_pose_se2 = SE2Pose(
+                target_pose_temp_se2.x + self._current_params[0],
+                target_pose_temp_se2.y + self._current_params[1],
+                target_pose_temp_se2.rot,
+            )
             target_base_pose = get_target_robot_pose_from_parameters(
                 self._target_place_pose_se2, 0.8, np.pi / 2
             )
+
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,

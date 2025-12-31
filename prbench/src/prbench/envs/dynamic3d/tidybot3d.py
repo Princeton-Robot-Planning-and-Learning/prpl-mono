@@ -687,9 +687,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 if region_config["target"] == "ground":
                     # Check pose directly on the ground in the world frame
                     region_ranges = region_config["ranges"]
-                    assert self._ground_fixture is not None, (
-                        "Ground fixture not initialized"
-                    )
+                    assert (
+                        self._ground_fixture is not None
+                    ), "Ground fixture not initialized"
                     in_region = self._ground_fixture.check_in_region(
                         position, region_ranges
                     )
