@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 from typing import Type as TypingType
 
-from pybullet_helpers.geometry import Pose, set_pose
+from pybullet_helpers.geometry import Pose, set_pose, get_pose
 from pybullet_helpers.utils import create_pybullet_block, create_pybullet_shelf
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
@@ -180,7 +180,12 @@ class ObjectCentricShelf3DEnv(
         return state
 
     def goal_reached(self) -> bool:
-        return False
+        shelf_pose = get_pose(self._shelf_id, self.physics_client_id)
+        for cube_name, cube_id in self._cubes.items():
+            cube_pose = get_pose(cube_id, self.physics_client_id)
+            if cube_pose.position[2] < 0.1:
+                return False
+        return True
 
 
 class Shelf3DEnv(ConstantObjectPRBenchEnv):
