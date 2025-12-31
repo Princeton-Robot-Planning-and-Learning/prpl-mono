@@ -26,9 +26,11 @@ from pybullet_helpers.inverse_kinematics import (
 )
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
+    create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
     run_motion_planning,
     run_single_arm_mobile_base_motion_planning,
+    smoothly_follow_end_effector_path,
 )
 from relational_structs import (
     Object,
@@ -316,7 +318,6 @@ class GroundPlaceController(
         self._current_state: ObjectCentricState | None = None
         self._navigated: bool = False
         self._pre_place: bool = False
-        self._place: bool = False
         self._opened_gripper: bool = False
         self._lifted: bool = False
         self._target_place_pose_se2: SE2Pose | None = None
@@ -355,7 +356,7 @@ class GroundPlaceController(
                     self._sim.config.shelf_spacing * 2
                     + self._sim.config.shelf_height / 2 * 2
                     + self._sim.config.block_half_extents[0]
-                    + 0.02,
+                    + 0.015,
                 ),
                 (-np.pi / 2, np.pi, 0),
             )
@@ -382,7 +383,7 @@ class GroundPlaceController(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=self._sim._get_collision_object_ids(), # pylint: disable=protected-access
+                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                 seed=0,  # for determinism
             )
 
@@ -417,29 +418,18 @@ class GroundPlaceController(
                 # Create target pose from target position and sampled orientation.
 
                 assert self._pre_place_pose_world is not None
-                target_end_effector_pose = self._pre_place_pose_world
+                assert self._target_place_pose_world is not None
 
-                # Run inverse kinematics to get joint positions.
-                try:
-                    joint_positions = inverse_kinematics(
-                        self._sim.robot.arm,
-                        target_end_effector_pose,
-                        validate=True,
-                        set_joints=False,
-                    )
-                except InverseKinematicsError as e:
-                    raise TrajectorySamplingFailure(
-                        f"IK failed for target pose {target_end_effector_pose}"
-                    ) from e
-
+                joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
                 # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
+                joint_plan = smoothly_follow_end_effector_path(
                     self._sim.robot.arm,
-                    initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=joint_positions,
-                    collision_bodies=self._sim._get_collision_object_ids(), # pylint: disable=protected-access
+                    [self._pre_place_pose_world, self._target_place_pose_world],
+                    initial_joints=self._sim.robot.arm.get_joint_positions(),
+                    collision_ids=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
-                    physics_client_id=self._sim.physics_client_id,
+                    joint_distance_fn=joint_distance_fn,
+                    max_smoothing_iters_per_step=1,
                 )
 
                 if joint_plan is None:
@@ -472,69 +462,7 @@ class GroundPlaceController(
 
             return action
 
-        if self._pre_place and not self._place:
-            # Generate the motion plan if it doesn't exist yet.
-            if self._current_place_arm_joint_plan is None:
-                self._sim.set_state(self._current_state)
-                # Create target pose from target position and sampled orientation.
-
-                assert self._target_place_pose_world is not None
-                target_end_effector_pose = self._target_place_pose_world
-
-                # Run inverse kinematics to get joint positions.
-                try:
-                    joint_positions = inverse_kinematics(
-                        self._sim.robot.arm,
-                        target_end_effector_pose,
-                        validate=True,
-                        set_joints=False,
-                    )
-                except InverseKinematicsError as e:
-                    raise TrajectorySamplingFailure(
-                        f"IK failed for target pose {target_end_effector_pose}"
-                    ) from e
-
-                # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
-                    self._sim.robot.arm,
-                    initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=joint_positions,
-                    collision_bodies=self._sim._get_collision_object_ids(), # pylint: disable=protected-access
-                    seed=0,  # for determinism
-                    physics_client_id=self._sim.physics_client_id,
-                )
-
-                if joint_plan is None:
-                    raise TrajectorySamplingFailure("Motion planning failed")
-
-                # Remap the plan to ensure we stay within action limits.
-                joint_plan = remap_joint_position_plan_to_constant_distance(
-                    joint_plan,
-                    self._sim.robot.arm,
-                    max_distance=self._sim.config.max_action_mag / 2,
-                )
-
-                # Store the plan (excluding the first state which is the current state).
-                self._current_place_arm_joint_plan = joint_plan[1:]
-            # Pop the next target joint positions from the plan.
-            assert self._current_place_arm_joint_plan is not None
-            target_joints = self._current_place_arm_joint_plan.pop(0)
-            if len(self._current_place_arm_joint_plan) == 0:
-                self._place = True
-            # Compute delta joint positions.
-            delta_lst = get_jointwise_difference(
-                self._joint_infos,
-                target_joints[:7],
-                self._current_state.joint_positions,
-            )
-
-            # Create action: [base_x, base_y, base_rot, joint1, ..., joint7, gripper].
-            action_lst = [0.0] * 3 + delta_lst + [0.0]
-            action = np.array(action_lst, dtype=np.float32)
-
-            return action
-
-        if self._place and not self._opened_gripper:
+        if self._pre_place and not self._opened_gripper:
             if self._get_current_robot_gripper_pose() < GRIPPER_OPEN_THRESHOLD:
                 self._opened_gripper = True
             action_lst = [0.0] * 10 + [1.0]
@@ -548,11 +476,11 @@ class GroundPlaceController(
                 self._sim.set_state(self._current_state)
 
                 # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
+                joint_plan = run_motion_planning(  # type: ignore
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=self._sim._get_collision_object_ids(), # pylint: disable=protected-access
+                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
