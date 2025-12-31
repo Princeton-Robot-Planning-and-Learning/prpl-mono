@@ -10,14 +10,11 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
+from prbench.envs.geom3d.object_types import Geom3DCuboidType, Geom3DFixtureType
 from prbench.envs.geom3d.shelf3d import (
     Geom3DRobotType,
-    Shelf3DObjectCentricState,
     ObjectCentricShelf3DEnv,
-)
-from prbench.envs.geom3d.object_types import (
-    Geom3DCuboidType,
-    Geom3DFixtureType
+    Shelf3DObjectCentricState,
 )
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
@@ -324,6 +321,7 @@ class GroundPlaceController(
         self._lifted: bool = False
         self._target_place_pose_se2: SE2Pose | None = None
         self._target_place_pose_world: Pose | None = None
+        self._pre_place_pose_world: Pose | None = None
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
@@ -359,7 +357,7 @@ class GroundPlaceController(
                     + self._sim.config.block_half_extents[0]
                     + 0.02,
                 ),
-                (-np.pi / 2, np.pi, 0)
+                (-np.pi / 2, np.pi, 0),
             )
             self._pre_place_pose_world = Pose(
                 (
@@ -378,7 +376,7 @@ class GroundPlaceController(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=self._sim._get_collision_object_ids(),
+                collision_bodies=self._sim._get_collision_object_ids(), # pylint: disable=protected-access
                 seed=0,  # for determinism
             )
 
@@ -394,7 +392,7 @@ class GroundPlaceController(
             target_base_pose = self._current_plan.pop(0)
             if len(self._current_plan) == 0:
                 self._navigated = True
-            
+
             # Compute delta base pose.
             current_base_pose = self._current_state.base_pose
             delta = target_base_pose - current_base_pose
@@ -433,7 +431,7 @@ class GroundPlaceController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=joint_positions,
-                    collision_bodies=self._sim._get_collision_object_ids(),
+                    collision_bodies=self._sim._get_collision_object_ids(), # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
@@ -495,7 +493,7 @@ class GroundPlaceController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=joint_positions,
-                    collision_bodies=self._sim._get_collision_object_ids(),
+                    collision_bodies=self._sim._get_collision_object_ids(), # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
@@ -529,7 +527,7 @@ class GroundPlaceController(
             action = np.array(action_lst, dtype=np.float32)
 
             return action
-        
+
         if self._place and not self._opened_gripper:
             if self._get_current_robot_gripper_pose() < GRIPPER_OPEN_THRESHOLD:
                 self._opened_gripper = True
@@ -548,7 +546,7 @@ class GroundPlaceController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=self._sim._get_collision_object_ids(),
+                    collision_bodies=self._sim._get_collision_object_ids(), # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
@@ -594,9 +592,6 @@ class GroundPlaceController(
         robot_obj = x.get_object_from_name("robot")
         return x.get(robot_obj, "finger_state")
 
-    def _robot_is_close_to_pose(self, pose: SE2Pose, atol: float = 0.001) -> bool:
-        current_base_pose = self._current_state.base_pose
-        return np.isclose(current_base_pose.x, pose.x, atol=atol) and np.isclose(current_base_pose.y, pose.y, atol=atol) and np.isclose(current_base_pose.rot, pose.rot, atol=atol)
 
 def create_lifted_controllers(
     action_space: Geom3DRobotActionSpace,
