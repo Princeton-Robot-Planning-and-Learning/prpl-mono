@@ -212,7 +212,7 @@ class GroundPickController(
             # Pop the next target joint positions from the plan.
             assert self._current_arm_joint_plan is not None
             target_joints = self._current_arm_joint_plan.pop(0)
-            if len(self._current_arm_joint_plan) == 1:
+            if len(self._current_arm_joint_plan) == 0:
                 self._pre_grasp = True
             # Compute delta joint positions.
             delta_lst = get_jointwise_difference(
@@ -270,7 +270,7 @@ class GroundPickController(
             # Pop the next target joint positions from the plan.
             assert self._current_retract_plan is not None
             target_joints = self._current_retract_plan.pop(0)
-            if len(self._current_retract_plan) == 1:
+            if len(self._current_retract_plan) == 0:
                 self._lifted = True
             # Compute delta joint positions.
             delta_lst = get_jointwise_difference(
@@ -313,11 +313,13 @@ class GroundPlaceController(
         self._robot, self._target, self._target_shelf = objects
         self._current_params: np.ndarray | None = None
         self._current_arm_joint_plan: list[JointPositions] | None = None
+        self._current_place_arm_joint_plan: list[JointPositions] | None = None
         self._current_retract_plan: list[JointPositions] | None = None
         self._current_plan: list[SE2Pose] | None = None
         self._current_state: ObjectCentricState | None = None
         self._navigated: bool = False
         self._pre_place: bool = False
+        self._place: bool = False
         self._opened_gripper: bool = False
         self._lifted: bool = False
         self._target_place_pose_se2: SE2Pose | None = None
@@ -336,7 +338,7 @@ class GroundPlaceController(
         self._current_state = x
 
     def terminated(self) -> bool:
-        return self._opened_gripper
+        return self._lifted
 
     def step(self) -> np.ndarray:
         assert self._current_state is not None
@@ -355,7 +357,7 @@ class GroundPlaceController(
                     self._sim.config.shelf_spacing * 2
                     + self._sim.config.shelf_height / 2 * 2
                     + self._sim.config.block_half_extents[0]
-                    + 0.015,
+                    + 0.02,
                 ),
                 (-np.pi / 2, np.pi, 0)
             )
@@ -451,7 +453,7 @@ class GroundPlaceController(
             # Pop the next target joint positions from the plan.
             assert self._current_arm_joint_plan is not None
             target_joints = self._current_arm_joint_plan.pop(0)
-            if len(self._current_arm_joint_plan) == 1:
+            if len(self._current_arm_joint_plan) == 0:
                 self._pre_place = True
             # Compute delta joint positions.
             delta_lst = get_jointwise_difference(
@@ -466,7 +468,69 @@ class GroundPlaceController(
 
             return action
 
-        if self._pre_place and not self._opened_gripper:
+        if self._pre_place and not self._place:
+            # Generate the motion plan if it doesn't exist yet.
+            if self._current_place_arm_joint_plan is None:
+                self._sim.set_state(self._current_state)
+                # Create target pose from target position and sampled orientation.
+
+                assert self._target_place_pose_world is not None
+                target_end_effector_pose = self._target_place_pose_world
+
+                # Run inverse kinematics to get joint positions.
+                try:
+                    joint_positions = inverse_kinematics(
+                        self._sim.robot.arm,
+                        target_end_effector_pose,
+                        validate=True,
+                        set_joints=False,
+                    )
+                except InverseKinematicsError as e:
+                    raise TrajectorySamplingFailure(
+                        f"IK failed for target pose {target_end_effector_pose}"
+                    ) from e
+
+                # Run motion planning to the target joint positions.
+                joint_plan = run_motion_planning(
+                    self._sim.robot.arm,
+                    initial_positions=self._sim.robot.arm.get_joint_positions(),
+                    target_positions=joint_positions,
+                    collision_bodies=self._sim._get_collision_object_ids(),
+                    seed=0,  # for determinism
+                    physics_client_id=self._sim.physics_client_id,
+                )
+
+                if joint_plan is None:
+                    raise TrajectorySamplingFailure("Motion planning failed")
+
+                # Remap the plan to ensure we stay within action limits.
+                joint_plan = remap_joint_position_plan_to_constant_distance(
+                    joint_plan,
+                    self._sim.robot.arm,
+                    max_distance=self._sim.config.max_action_mag / 2,
+                )
+
+                # Store the plan (excluding the first state which is the current state).
+                self._current_place_arm_joint_plan = joint_plan[1:]
+            # Pop the next target joint positions from the plan.
+            assert self._current_place_arm_joint_plan is not None
+            target_joints = self._current_place_arm_joint_plan.pop(0)
+            if len(self._current_place_arm_joint_plan) == 0:
+                self._place = True
+            # Compute delta joint positions.
+            delta_lst = get_jointwise_difference(
+                self._joint_infos,
+                target_joints[:7],
+                self._current_state.joint_positions,
+            )
+
+            # Create action: [base_x, base_y, base_rot, joint1, ..., joint7, gripper].
+            action_lst = [0.0] * 3 + delta_lst + [0.0]
+            action = np.array(action_lst, dtype=np.float32)
+
+            return action
+        
+        if self._place and not self._opened_gripper:
             if self._get_current_robot_gripper_pose() < GRIPPER_OPEN_THRESHOLD:
                 self._opened_gripper = True
             action_lst = [0.0] * 10 + [1.0]
@@ -504,7 +568,7 @@ class GroundPlaceController(
             # Pop the next target joint positions from the plan.
             assert self._current_retract_plan is not None
             target_joints = self._current_retract_plan.pop(0)
-            if len(self._current_retract_plan) == 1:
+            if len(self._current_retract_plan) == 0:
                 self._lifted = True
             # Compute delta joint positions.
             delta_lst = get_jointwise_difference(
