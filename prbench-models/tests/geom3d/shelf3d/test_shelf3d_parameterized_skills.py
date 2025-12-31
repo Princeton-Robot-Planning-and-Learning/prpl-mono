@@ -94,7 +94,8 @@ def test_pick_and_place_controller():
     lifted_controller = controllers["place"]
     robot = state.get_object_from_name("robot")
     target = state.get_object_from_name("cube0")
-    object_parameters = (robot, target)
+    target_shelf = state.get_object_from_name("shelf")
+    object_parameters = (robot, target, target_shelf)
     controller = lifted_controller.ground(object_parameters)
 
     rng = np.random.default_rng(123)
@@ -109,7 +110,7 @@ def test_pick_and_place_controller():
         state = next_state
         if controller.terminated():
             break
-    # else:
-    #     assert False, "Controller did not terminate"
+    else:
+        assert False, "Controller did not terminate"
 
     env.close()
