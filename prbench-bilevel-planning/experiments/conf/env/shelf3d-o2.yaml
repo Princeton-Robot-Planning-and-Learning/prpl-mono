@@ -3,8 +3,8 @@ env_name: "shelf3d"
 
 # Passed into prbench.make() to create the environment.
 make_kwargs:
-  id: "prbench/Shelf3D-o1-v0"
+  id: "prbench/Shelf3D-o2-v0"
 
 # Passed into create_bilevel_planning_models() to create the env models.
 env_model_kwargs:
-  num_objects: 1
+  num_objects: 2
