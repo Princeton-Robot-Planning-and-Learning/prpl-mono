@@ -364,7 +364,7 @@ class GroundPlaceController(
                 (
                     self._target_place_pose_world.position[0],
                     self._target_place_pose_world.position[1] - 0.1,
-                    self._target_place_pose_world.position[2],
+                    self._target_place_pose_world.position[2] + 0.02,
                 ),
                 self._target_place_pose_world.orientation,
             )

@@ -57,6 +57,9 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     block_half_extents: tuple[float, float, float] = (0.05, 0.025, 0.025)
     block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
+    # Gripper.
+    gripper_open_threshold: float = 0.01
+
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
         return {
@@ -180,10 +183,14 @@ class ObjectCentricShelf3DEnv(
         return state
 
     def goal_reached(self) -> bool:
+        robot_gripper_pose = self._robot_arm.get_finger_state()
+        if robot_gripper_pose > self.config.gripper_open_threshold:
+            return False
         for _, cube_id in self._cubes.items():
             cube_pose = get_pose(cube_id, self.physics_client_id)
-            if cube_pose.position[2] < 0.1:
+            if cube_pose.position[2] < 0.3:
                 return False
+
         return True
 
 

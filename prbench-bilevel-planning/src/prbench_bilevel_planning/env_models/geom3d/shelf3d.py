@@ -103,7 +103,10 @@ def create_bilevel_planning_models(
 
         # Holding.
         for target in target_objects:
-            if x.get(target, "pose_z") > 0.3:
+            if (
+                x.get(target, "pose_z") > 0.3
+                and x.get(robot, "finger_state") > GRIPPER_OPEN_THRESHOLD
+            ):
                 if target.name == x.grasped_object:
                     atoms.add(GroundAtom(Holding, [robot, target]))
 

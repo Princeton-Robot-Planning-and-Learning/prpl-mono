@@ -201,11 +201,7 @@ def test_shelf3d_bilevel_planning(seed):
         obs, reward, terminated, truncated, info = env.step(action)
         total_reward += reward
         agent.update(obs, reward, terminated or truncated, info)
-        if (
-            terminated
-            or truncated
-            or len(agent._current_plan) == 0  # pylint: disable=protected-access
-        ):
+        if terminated or truncated:
             break
 
     else:
