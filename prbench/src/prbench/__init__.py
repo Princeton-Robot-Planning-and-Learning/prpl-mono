@@ -144,7 +144,7 @@ def register_all_environments() -> None:
         )
 
     # Shelf3D environment.
-    num_cubes = [1, 2, 3]
+    num_cubes = [1, 2, 3, 5, 10]
     for num_cube in num_cubes:
         _register(
             id=f"prbench/Shelf3D-o{num_cube}-v0",
