@@ -103,13 +103,21 @@ def create_bilevel_planning_models(
                 atoms.add(GroundAtom(HandEmpty, [robot]))
 
         # Add on atom
-        if is_on(x, target_block, target_surface, {}):
-            atoms.add(GroundAtom(OnTgtSurface, [target_block, target_surface]))
+        target_surface_x = x.get(target_surface, "x")
+        target_surface_y = x.get(target_surface, "y")
+        target_surface_height = x.get(target_surface, "height")
+        target_block_x = x.get(target_block, "x")
+        target_block_y = x.get(target_block, "y")
+        target_block_width = x.get(target_block, "width")
+        target_block_height = x.get(target_block, "height")
+
+        if abs(target_block_x - target_surface_x) < target_block_width / 2 + 0.01:
+            if abs((target_block_y - target_block_height / 2) - (target_surface_y + target_surface_height / 2)) <= 0.01:
+                atoms.add(GroundAtom(OnTgtSurface, [target_block, target_surface]))
 
         # Add above atom
         robot_x = x.get(robot, "x")
-        target_surface_x = x.get(target_surface, "x")
-        if abs(robot_x - target_surface_x) < 0.01:
+        if abs(robot_x - target_surface_x) < target_block_width / 2 + 0.01:
             atoms.add(GroundAtom(AboveTgtSurface, [robot]))
 
         objects = {robot, target_block, target_surface} | set(obstructions)
@@ -229,7 +237,7 @@ def create_bilevel_planning_models(
         LiftedSkill(PlaceTgtOnSurfaceOperator, PlaceTgtController),
         LiftedSkill(MoveToTgtHeldOperator, MoveToTgtController),
         LiftedSkill(MoveToTgtEmptyOperator, MoveToTgtController),
-         LiftedSkill(MoveFromTgtHeldOperator, MoveFromTgtController),
+        LiftedSkill(MoveFromTgtHeldOperator, MoveFromTgtController),
         LiftedSkill(MoveFromTgtEmptyOperator, MoveFromTgtController),
     }
 

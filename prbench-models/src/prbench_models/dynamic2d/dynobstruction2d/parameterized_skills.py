@@ -262,8 +262,8 @@ class GroundPlaceController(Dynamic2dRobotController):
                     pass
 
         # Check collision
-        moving_objects = {self._robot} | set(held_objects)
-        static_objects = set(full_state) - moving_objects
+        moving_objects = {self._robot} # ignore held objects.
+        static_objects = set(full_state) - moving_objects - set(held_objects)
         if state_2d_has_collision(
             full_state, moving_objects, static_objects, {}, ignore_z_orders=True
         ):
