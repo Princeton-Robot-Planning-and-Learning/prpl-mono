@@ -134,6 +134,24 @@ def register_all_environments() -> None:
             kwargs={"num_cubes": num_cube},
         )
 
+    # Table3D environment.
+    num_cubes = [1, 2, 3]
+    for num_cube in num_cubes:
+        _register(
+            id=f"prbench/Table3D-o{num_cube}-v0",
+            entry_point="prbench.envs.geom3d.table3d:Table3DEnv",
+            kwargs={"num_cubes": num_cube},
+        )
+
+    # Shelf3D environment.
+    num_cubes = [1, 2, 3, 5, 10]
+    for num_cube in num_cubes:
+        _register(
+            id=f"prbench/Shelf3D-o{num_cube}-v0",
+            entry_point="prbench.envs.geom3d.shelf3d:Shelf3DEnv",
+            kwargs={"num_cubes": num_cube},
+        )
+
     # Obstructions3D environment with different numbers of obstructions.
     num_obstructions = [0, 1, 2, 3, 4]
     for num_obstruction in num_obstructions:

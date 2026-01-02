@@ -74,7 +74,7 @@ class Cuboid(MujocoObject):
 
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this cuboid.
-        
+
         The cuboid is created as a single box geom centered at the body's origin.
         The origin (0, 0, 0) is located at the center of the cuboid.
         The cuboid extends by size[i]/2 in each direction
@@ -220,7 +220,7 @@ class Cube(Cuboid):
 @register_object
 class Bin(MujocoObject):
     """A bin (rectangular container with open top) object for TidyBot environments.
-    
+
     The bin is constructed using multiple MuJoCo box primitives:
     - 1 bottom panel
     - 4 wall panels (front, back, left, right)
@@ -255,8 +255,8 @@ class Bin(MujocoObject):
 
         # Bin dimensions
         self.length = float(self.options.get("length", 0.1))  # x dimension
-        self.width = float(self.options.get("width", 0.1))    # y dimension
-        self.height = float(self.options.get("height", 0.05)) # z dimension
+        self.width = float(self.options.get("width", 0.1))  # y dimension
+        self.height = float(self.options.get("height", 0.05))  # z dimension
         self.wall_thickness = float(
             self.options.get("wall_thickness", Bin.default_wall_thickness)
         )
@@ -276,13 +276,13 @@ class Bin(MujocoObject):
 
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this bin using multiple box geoms.
-        
+
         The bin is constructed from 5 box geoms:
         - 1 bottom panel: full outer dimensions (length x width),
           at z in [0, wall_thickness]
         - 4 wall panels: back, front, left, right walls with thickness
           wall_thickness, extending from z = wall_thickness to z = height
-        
+
         The origin (0, 0, 0) is located at the base center of the bin
         (center of bottom surface). The bin extends in the positive z direction.
 
@@ -416,11 +416,11 @@ class Bin(MujocoObject):
 
         return [
             pos[0] - half_length,  # x_min
-            pos[1] - half_width,   # y_min
-            pos[2],                # z_min (at base)
+            pos[1] - half_width,  # y_min
+            pos[2],  # z_min (at base)
             pos[0] + half_length,  # x_max
-            pos[1] + half_width,   # y_max
-            pos[2] + height,       # z_max
+            pos[1] + half_width,  # y_max
+            pos[2] + height,  # z_max
         ]
 
     def __str__(self) -> str:
