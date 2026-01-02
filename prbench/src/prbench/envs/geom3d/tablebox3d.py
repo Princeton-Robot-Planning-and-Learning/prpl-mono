@@ -184,6 +184,7 @@ class ObjectCentricTableBox3DEnv(
                 self.config.box_rgba,
                 self.config.box_half_extents,
                 self.config.box_wall_thickness,
+                mass=1.0,
                 physics_client_id=self.physics_client_id,
             )
             self._boxes[f"box{idx}"] = box_id
