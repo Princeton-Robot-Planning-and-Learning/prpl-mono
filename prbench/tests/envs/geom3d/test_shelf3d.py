@@ -30,11 +30,13 @@ from tests.conftest import MAKE_VIDEOS
 def env():
     """Create a shared environment for all tests in this module."""
     environment = Shelf3DEnv(num_cubes=2, use_gui=False, render_mode="rgb_array")
+    if MAKE_VIDEOS:
+        environment = RecordVideo(environment, "unit_test_videos")
     yield environment
     environment.close()
 
 
-def _execute_base_plan(test_env, base_plan, obs):
+def _execute_base_plan(environment, base_plan, obs):
     """Execute a base motion plan and return the final observation."""
     for target_base_pose in base_plan[1:]:
         current_base_pose = obs.base_pose
@@ -42,21 +44,21 @@ def _execute_base_plan(test_env, base_plan, obs):
         delta_lst = [delta.x, delta.y, delta.rot]
         action_lst = delta_lst + [0.0] * 7 + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = test_env.step(action)
-        oc_obs = test_env.observation_space.devectorize(vec_obs)
+        vec_obs, _, _, _, _ = environment.step(action)
+        oc_obs = environment.observation_space.devectorize(vec_obs)
         obs = Shelf3DObjectCentricState(oc_obs.data, oc_obs.type_features)
     return obs
 
 
-def _execute_joint_plan(test_env, joint_plan, obs):
+def _execute_joint_plan(environment, joint_plan, obs):
     """Execute a joint space plan and return the final observation."""
     for target_joints in joint_plan[1:]:
         delta = np.subtract(target_joints[:7], obs.joint_positions)
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = test_env.step(action)
-        oc_obs = test_env.observation_space.devectorize(vec_obs)
+        vec_obs, _, _, _, _ = environment.step(action)
+        oc_obs = environment.observation_space.devectorize(vec_obs)
         obs = Shelf3DObjectCentricState(oc_obs.data, oc_obs.type_features)
     return obs
 
@@ -75,14 +77,10 @@ def test_shelf3d_env(env):  # pylint: disable=redefined-outer-name
 def test_pick_place(env):  # pylint: disable=redefined-outer-name
     """Test picking and placing a cube into the shelf."""
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
-    config = env._object_centric_env.config
+    config = env.unwrapped._object_centric_env.config
 
-    test_env = env
-    if MAKE_VIDEOS:
-        test_env = RecordVideo(env, "unit_test_videos")
-
-    vec_obs, _ = test_env.reset(seed=123)
-    oc_obs = test_env.observation_space.devectorize(vec_obs)
+    vec_obs, _ = env.reset(seed=123)
+    oc_obs = env.observation_space.devectorize(vec_obs)
     obs = Shelf3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
@@ -113,7 +111,7 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
         seed=123,
     )
     assert base_plan is not None
-    obs = _execute_base_plan(test_env, base_plan, obs)
+    obs = _execute_base_plan(env, base_plan, obs)
 
     # Step 2: Move arm to pre-grasp pose and then to grasp pose
     sim.set_state(obs)
@@ -134,7 +132,7 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
     joint_plan = remap_joint_position_plan_to_constant_distance(
         joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
-    obs = _execute_joint_plan(test_env, joint_plan, obs)
+    obs = _execute_joint_plan(env, joint_plan, obs)
 
     # Step 3: Move down to grasp cube1
     sim.set_state(obs)
@@ -151,13 +149,13 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
     joint_plan = remap_joint_position_plan_to_constant_distance(
         joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
-    obs = _execute_joint_plan(test_env, joint_plan, obs)
+    obs = _execute_joint_plan(env, joint_plan, obs)
 
     # Step 4: Close the gripper to grasp cube1 (takes multiple steps)
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [-1.0], dtype=np.float32)
-        vec_obs, _, _, _, _ = test_env.step(action)
-        oc_obs = test_env.observation_space.devectorize(vec_obs)
+        vec_obs, _, _, _, _ = env.step(action)
+        oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Shelf3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # The cube should now be grasped
@@ -178,7 +176,7 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
     joint_plan = remap_joint_position_plan_to_constant_distance(
         joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
-    obs = _execute_joint_plan(test_env, joint_plan, obs)
+    obs = _execute_joint_plan(env, joint_plan, obs)
 
     # Verify cube is still grasped after lifting
     assert obs.grasped_object == "cube1"
@@ -200,7 +198,7 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
         seed=456,
     )
     assert base_plan is not None
-    obs = _execute_base_plan(test_env, base_plan, obs)
+    obs = _execute_base_plan(env, base_plan, obs)
 
     # Step 7: Move arm to place the cube on the first shelf layer
     sim.set_state(obs)
@@ -237,7 +235,7 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
     joint_plan = remap_joint_position_plan_to_constant_distance(
         joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
-    obs = _execute_joint_plan(test_env, joint_plan, obs)
+    obs = _execute_joint_plan(env, joint_plan, obs)
 
     # Step 8: move to place pose
     sim.set_state(obs)
@@ -256,7 +254,7 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
     joint_plan = remap_joint_position_plan_to_constant_distance(
         joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
-    obs = _execute_joint_plan(test_env, joint_plan, obs)
+    obs = _execute_joint_plan(env, joint_plan, obs)
 
     # Verify cube is still grasped before releasing
     assert obs.grasped_object == "cube1"
@@ -264,8 +262,8 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
     # Step 9: Open the gripper to release cube1 (takes multiple steps)
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
-        vec_obs, _, _, _, _ = test_env.step(action)
-        oc_obs = test_env.observation_space.devectorize(vec_obs)
+        vec_obs, _, _, _, _ = env.step(action)
+        oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Shelf3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # The cube should no longer be grasped
@@ -275,4 +273,4 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
     cube_pose = obs.get_object_pose("cube1")
     assert abs(cube_pose.position[2] - place_z) < 0.1, "Cube should be at shelf height"
 
-    test_env.close()
+    env.close()
