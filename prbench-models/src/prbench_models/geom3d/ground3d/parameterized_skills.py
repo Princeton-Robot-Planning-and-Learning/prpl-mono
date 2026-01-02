@@ -98,7 +98,7 @@ class GroundPickController(
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
         assert isinstance(x, Ground3DObjectCentricState)
-        distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)  # type: ignore
+        distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)
         rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
 
