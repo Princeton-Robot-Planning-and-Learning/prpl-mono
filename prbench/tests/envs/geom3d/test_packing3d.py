@@ -60,7 +60,9 @@ def test_pick_place_on_rack():
     num_parts = 2
     env = Packing3DEnv(num_parts=num_parts, use_gui=False, render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
-    config = env._object_centric_env.config  # pylint: disable=protected-access
+    config = (
+        env.unwrapped._object_centric_env.config  # pylint: disable=protected-access
+    )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos")
 

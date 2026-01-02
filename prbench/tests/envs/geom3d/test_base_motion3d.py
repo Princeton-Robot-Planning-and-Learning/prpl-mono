@@ -22,6 +22,8 @@ from tests.conftest import MAKE_VIDEOS
 def env():
     """Create a shared environment for all tests in this module."""
     environment = BaseMotion3DEnv(render_mode="rgb_array", use_gui=False)
+    if MAKE_VIDEOS:
+        environment = RecordVideo(environment, "unit_test_videos")
     yield environment
     environment.close()
 
@@ -39,7 +41,7 @@ def test_base_motion3d_env(env):  # pylint: disable=redefined-outer-name
     # Uncomment to debug.
     # import pybullet as p
     # while True:
-    #     p.getMouseEvents(env._object_centric_env.physics_client_id)
+    #     p.getMouseEvents(env.unwrapped._object_centric_env.physics_client_id)
 
 
 def test_motion_planning_in_base_motion3d_env(
@@ -47,15 +49,13 @@ def test_motion_planning_in_base_motion3d_env(
 ):  # pylint: disable=redefined-outer-name
     """Proof of concept that motion planning works in this environment."""
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
-    config = env._object_centric_env.config  # pylint: disable=protected-access
+    config = (
+        env.unwrapped._object_centric_env.config  # pylint: disable=protected-access
+    )
 
-    test_env = env
-    if MAKE_VIDEOS:
-        test_env = RecordVideo(env, "unit_test_videos")
-
-    vec_obs, _ = test_env.reset(seed=123)
+    vec_obs, _ = env.reset(seed=123)
     # NOTE: we should soon make this smoother.
-    oc_obs = test_env.observation_space.devectorize(vec_obs)
+    oc_obs = env.observation_space.devectorize(vec_obs)
     obs = BaseMotion3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
@@ -70,16 +70,16 @@ def test_motion_planning_in_base_motion3d_env(
     )
     assert base_plan is not None
 
-    test_env.action_space.seed(123)
+    env.action_space.seed(123)
     for target_base_pose in base_plan[1:]:
         current_base_pose = obs.base_pose
         delta = target_base_pose - current_base_pose
         delta_lst = [delta.x, delta.y, delta.rot]
         action_lst = delta_lst + [0.0] * 7 + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, done, _, _ = test_env.step(action)
+        vec_obs, _, done, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.
-        oc_obs = test_env.observation_space.devectorize(vec_obs)
+        oc_obs = env.observation_space.devectorize(vec_obs)
         obs = BaseMotion3DObjectCentricState(oc_obs.data, oc_obs.type_features)
         if done:
             break
@@ -115,5 +115,5 @@ def test_check_mobile_base_collisions_is_called(
         # Verify the robot base was passed as the first argument
         assert (
             call_args[0][0]
-            == env._object_centric_env.robot.base  # pylint: disable=protected-access
+            == env.unwrapped._object_centric_env.robot.base  # pylint: disable=protected-access
         )

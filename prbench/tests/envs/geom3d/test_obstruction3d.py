@@ -30,6 +30,8 @@ def env():
     environment = Obstruction3DEnv(
         num_obstructions=0, config=config, use_gui=False, render_mode="rgb_array"
     )
+    if MAKE_VIDEOS:
+        environment = RecordVideo(environment, "unit_test_videos")
     yield environment
     environment.close()
 
@@ -47,21 +49,19 @@ def test_obstruction3d_env(env):  # pylint: disable=redefined-outer-name
     # Uncomment to debug.
     # import pybullet as p
     # while True:
-    #     p.getMouseEvents(env._object_centric_env.physics_client_id)
+    #     p.getMouseEvents(env.unwrapped._object_centric_env.physics_client_id)
 
 
 def test_pick_place_no_obstructions(env):  # pylint: disable=redefined-outer-name
     """Test that picking and placing succeeds when there are no obstructions."""
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
-    config = env._object_centric_env.config  # pylint: disable=protected-access
+    config = (
+        env.unwrapped._object_centric_env.config  # pylint: disable=protected-access
+    )
 
-    test_env = env
-    if MAKE_VIDEOS:
-        test_env = RecordVideo(env, "unit_test_videos")
-
-    vec_obs, _ = test_env.reset(seed=123)
+    vec_obs, _ = env.reset(seed=123)
     # NOTE: we should soon make this smoother.
-    oc_obs = test_env.observation_space.devectorize(vec_obs)
+    oc_obs = env.observation_space.devectorize(vec_obs)
     obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
@@ -98,16 +98,16 @@ def test_pick_place_no_obstructions(env):  # pylint: disable=redefined-outer-nam
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = test_env.step(action)
+        vec_obs, _, _, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.
-        oc_obs = test_env.observation_space.devectorize(vec_obs)
+        oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Close the gripper to grasp.
     action = np.array([0.0] * 3 + [0.0] * 7 + [-1.0], dtype=np.float32)
-    vec_obs, _, _, _, _ = test_env.step(action)
+    vec_obs, _, _, _, _ = env.step(action)
     # NOTE: we should soon make this smoother.
-    oc_obs = test_env.observation_space.devectorize(vec_obs)
+    oc_obs = env.observation_space.devectorize(vec_obs)
     obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # The target block should now be grasped.
@@ -143,9 +143,9 @@ def test_pick_place_no_obstructions(env):  # pylint: disable=redefined-outer-nam
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = test_env.step(action)
+        vec_obs, _, _, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.
-        oc_obs = test_env.observation_space.devectorize(vec_obs)
+        oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Determine placement pose and pre-placement pose. Place directly in the center of
@@ -200,16 +200,16 @@ def test_pick_place_no_obstructions(env):  # pylint: disable=redefined-outer-nam
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = test_env.step(action)
+        vec_obs, _, _, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.
-        oc_obs = test_env.observation_space.devectorize(vec_obs)
+        oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Open the gripper to finish the placement. Should trigger "done" (goal reached).
     action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
-    vec_obs, _, done, _, _ = test_env.step(action)
+    vec_obs, _, done, _, _ = env.step(action)
     # NOTE: we should soon make this smoother.
-    oc_obs = test_env.observation_space.devectorize(vec_obs)
+    oc_obs = env.observation_space.devectorize(vec_obs)
     obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
     assert obs.grasped_object is None, "Object not released"
     assert done, "Goal not reached"
