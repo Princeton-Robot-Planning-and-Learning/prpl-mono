@@ -45,8 +45,8 @@ def test_base_tablebox3d_env(env):  # pylint: disable=redefined-outer-name
     # import pybullet as p
 
     # while True:
-    #     p.getMouseEvents(env.unwrapped._object_centric_env.physics_client_id)
-
+    #     # p.getMouseEvents(env.unwrapped._object_centric_env.physics_client_id)
+    #     p.stepSimulation(env.unwrapped._object_centric_env.physics_client_id)
 
 def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     """Test moving in front of a block or box, picking it up, and placing it."""
@@ -99,8 +99,8 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     x, y, z = obs.get_object_pose("box0").position
     extent_x, extent_y, extent_z = obs.get_cuboid_half_extents("box0")
     dz = 0.05
-    pre_grasp_pose = Pose.from_rpy((x, y + extent_y + 0.02, z + dz + extent_z), (np.pi, 0, np.pi / 2))
-    grasp_pose = Pose.from_rpy((x, y + extent_y + 0.02, z + 0.015 + extent_z), (np.pi, 0, np.pi / 2))
+    pre_grasp_pose = Pose.from_rpy((x, y + extent_y*2, z + dz + extent_z + 0.1), (np.pi, 0, np.pi / 2))
+    grasp_pose = Pose.from_rpy((x, y + extent_y*2, z + 0.015 + extent_z + 0.02), (np.pi, 0, np.pi / 2))
 
     joint_distance_fn = create_joint_distance_fn(sim.robot.arm)
     joint_plan = smoothly_follow_end_effector_path(
@@ -134,7 +134,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # The cube should now be grasped
-    # assert obs.grasped_object == "box0"
+    assert obs.grasped_object == "box0"
 
     # Step 4: Move up to lift the cube
     sim.set_state(obs)
@@ -170,20 +170,20 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Verify cube is still grasped after lifting
-    # assert obs.grasped_object == "box0"
+    assert obs.grasped_object == "box0"
 
     # Step 5: Place it back down
     sim.set_state(obs)
     current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
     placement_pose = Pose(
         (
-            current_end_effector_pose.position[0] + 0.1,
-            current_end_effector_pose.position[1],
+            current_end_effector_pose.position[0],
+            current_end_effector_pose.position[1] + 0.3,
             obs.get_cuboid_pose("table").position[2]
             + config.table_half_extents[2]
             + obs.get_cuboid_half_extents("box0")[2]
             + config.box_wall_thickness
-            + 0.01,
+            + 0.02,
         ),
         current_end_effector_pose.orientation,
     )
