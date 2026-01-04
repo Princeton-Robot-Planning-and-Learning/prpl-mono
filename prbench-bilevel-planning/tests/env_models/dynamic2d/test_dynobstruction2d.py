@@ -203,7 +203,7 @@ def test_dynobstruction2d_skills():
     # obs0, _ = env.reset(seed=123)
     place_target = PlaceTgtSurface.ground((robot, target_block, target_surface))
     obs2 = _skill_test_helper(
-        place_target, env_models, env, obs1, params=(0.25), debug=True
+        place_target, env_models, env, obs1, params=(0.25)
     )
     state2 = env_models.observation_to_state(obs2)
     abstract_state2 = env_models.state_abstractor(state2)
