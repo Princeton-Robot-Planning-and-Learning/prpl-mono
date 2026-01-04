@@ -11,13 +11,6 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
 
-from prbench.envs.dynamic2d.dyn_obstruction2d import (
-    ObjectCentricDynObstruction2DEnv,
-)
-import matplotlib.pyplot as plt
-import imageio.v2 as iio
-import time
-
 _X = TypeVar("_X")  # state
 _U = TypeVar("_U")  # action
 _S = TypeVar("_S", bound=Hashable)  # abstract state
@@ -73,12 +66,11 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
             # Get the next action.
             u = controller.step()
 
-
             # Move forward and terminate early upon transition failure.
             try:
                 nx = self._transition_function(x, u)
             except TransitionFailure:
-                print('transition failure')
+                print("transition failure")
                 break
             # Update the controller.
             controller.observe(nx)
@@ -89,29 +81,15 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
             bpg.add_state_node(nx)
             bpg.add_action_edge(x, u, nx)
             # Advance the state.
-
-            # Capture and show the image
-            sim = ObjectCentricDynObstruction2DEnv(num_obstructions=1)
-            sim.reset(seed=123)
-            sim._add_state_to_space(nx)
-            _, _, _, _, _, = sim.step((0,0,0,0,0))
-            img = sim.render()
-            iio.imsave(f"debug/traj-test-{int(time.time()*1000.0)}.png", img)
-
             x = nx
 
         # Check if we succeeded in reaching the target abstract state.
         final_state = x_traj[-1]
         final_abstract_state = self._state_abstractor(final_state)
-
-        print("final abstract state: ", final_abstract_state)
-        print("next state: ", ns)
         bpg.add_abstract_state_node(final_abstract_state)
         bpg.add_state_abstractor_edge(final_state, final_abstract_state)
         if final_abstract_state == ns:
             # Success!
-            print("successfully reached next state")
             return x_traj, u_traj
-        print("Failed to reach next state")
         # Failure.
         raise TrajectorySamplingFailure()

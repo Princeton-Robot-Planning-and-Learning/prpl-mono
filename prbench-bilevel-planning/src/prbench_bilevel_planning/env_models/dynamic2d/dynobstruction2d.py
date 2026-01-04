@@ -13,15 +13,10 @@ from prbench.envs.dynamic2d.dyn_obstruction2d import (
     TargetBlockType,
     TargetSurfaceType,
 )
-from prbench.envs.dynamic2d.object_types import KinRobotType, DynRectangleType
+from prbench.envs.dynamic2d.object_types import DynRectangleType, KinRobotType
 from prbench.envs.dynamic2d.utils import (
     KinRobotActionSpace,
 )
-
-from prbench.envs.geom2d.utils import(
-    is_on,
-)
-
 from prbench_models.dynamic2d.dynobstruction2d.parameterized_skills import (
     create_lifted_controllers,
 )
@@ -58,7 +53,7 @@ def create_bilevel_planning_models(
         """Simulate the action."""
         state = x.copy()
         sim.reset(seed=123)
-        sim._add_state_to_space(state)
+        sim._add_state_to_space(state)  # pylint: disable=protected-access
         obs, _, _, _, _ = sim.step(u)
         return obs.copy()
 
@@ -70,11 +65,19 @@ def create_bilevel_planning_models(
 
     # Predicates.
     HoldingTgt = Predicate("HoldingTgt", [KinRobotType, TargetBlockType])
-    HoldingObstruction = Predicate("HoldingObstruction", [KinRobotType, DynRectangleType])
+    HoldingObstruction = Predicate(
+        "HoldingObstruction", [KinRobotType, DynRectangleType]
+    )
     HandEmpty = Predicate("HandEmpty", [KinRobotType])
     OnTgtSurface = Predicate("OnTgt", [TargetBlockType, TargetSurfaceType])
     AboveTgtSurface = Predicate("AboveTgt", [KinRobotType])
-    predicates = {HoldingTgt, HoldingObstruction, HandEmpty, OnTgtSurface, AboveTgtSurface}
+    predicates = {
+        HoldingTgt,
+        HoldingObstruction,
+        HandEmpty,
+        OnTgtSurface,
+        AboveTgtSurface,
+    }
 
     # State abstractor.
     def state_abstractor(x: ObjectCentricState) -> RelationalAbstractState:
@@ -112,7 +115,13 @@ def create_bilevel_planning_models(
         target_block_height = x.get(target_block, "height")
 
         if abs(target_block_x - target_surface_x) < target_block_width / 2 + 0.01:
-            if abs((target_block_y - target_block_height / 2) - (target_surface_y + target_surface_height / 2)) <= 0.01:
+            if (
+                abs(
+                    (target_block_y - target_block_height / 2)
+                    - (target_surface_y + target_surface_height / 2)
+                )
+                <= 0.01
+            ):
                 atoms.add(GroundAtom(OnTgtSurface, [target_block, target_surface]))
 
         # Add above atom
@@ -161,7 +170,7 @@ def create_bilevel_planning_models(
         preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
         add_effects={
             LiftedAtom(HandEmpty, [robot]),
-            LiftedAtom(OnTgtSurface, [target_block, target_surface])
+            LiftedAtom(OnTgtSurface, [target_block, target_surface]),
         },
         delete_effects={LiftedAtom(HoldingTgt, [robot, target_block])},
     )
