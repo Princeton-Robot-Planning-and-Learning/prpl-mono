@@ -261,7 +261,15 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
         """Reset the controller with new state and parameters."""
         self._current_params = params
         self._current_plan = None
-        self._current_state = x
+        # Normalize theta values in the initial state (same as observe())
+        x_normalized = x.copy()
+        for obj in x_normalized:
+            try:
+                theta = x_normalized.get(obj, "theta")
+                x_normalized.set(obj, "theta", wrap_angle(theta))
+            except KeyError:
+                pass
+        self._current_state = x_normalized
 
     def terminated(self) -> bool:
         """Check if the controller has finished executing its plan."""
@@ -275,8 +283,20 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
         return self._current_plan.pop(0)
 
     def observe(self, x: ObjectCentricState) -> None:
-        """Update the controller with a new observed state."""
-        self._current_state = x
+        """Update the controller with a new observed state.
+
+        IMPORTANT: Normalize all theta values to [-pi, pi] since the simulation
+        may not wrap them after accumulating angular changes.
+        """
+        x_normalized = x.copy()
+        for obj in x_normalized:
+            try:
+                theta = x_normalized.get(obj, "theta")
+                x_normalized.set(obj, "theta", wrap_angle(theta))
+            except KeyError:
+                # Object doesn't have theta attribute, skip
+                pass
+        self._current_state = x_normalized
 
     def _generate_plan(self, x: ObjectCentricState) -> list[NDArray[np.float32]]:
         waypoints = self._generate_waypoints(x)

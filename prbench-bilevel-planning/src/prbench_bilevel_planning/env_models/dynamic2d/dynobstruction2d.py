@@ -183,7 +183,7 @@ def create_bilevel_planning_models(
     )
 
     MoveOperator = LiftedOperator(
-        "MoveTgtHeld",
+        "Move",
         [robot],
         preconditions=set(),
         add_effects=set(),

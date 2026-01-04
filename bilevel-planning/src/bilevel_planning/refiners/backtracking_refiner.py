@@ -74,10 +74,13 @@ class BacktrackingRefiner(Refiner[_X, _U, _S, _A]):
         a = a_plan[index]
         ns = s_plan[index + 1]
 
+        print(f"Currently refining action: {a}")
+
         start_time = time.perf_counter()
         for _ in range(self._num_sampling_attempts_per_step):
             try:
                 x_traj, u_traj = self._trajectory_sampler(x, s, a, ns, bpg, self._rng)
+                print("refining step")
                 time_elapsed = time.perf_counter() - start_time
                 success, remainder = self._refine_from_step(
                     index + 1,

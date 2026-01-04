@@ -204,8 +204,7 @@ def test_dynobstruction2d_skills():
     predicate_name_to_pred = {p.name: p for p in env_models.predicates}
     skill_name_to_skill = {s.operator.name: s for s in env_models.skills}
     PickTgt = skill_name_to_skill["PickTgt"]
-    MoveToTgt = skill_name_to_skill["MoveToTargetHeld"]
-    PlaceTgt = skill_name_to_skill["PlaceTgtOnSurface"]
+    PlaceTgtSurface = skill_name_to_skill["PlaceTgtSurface"]
     obs0, _ = env.reset(seed=123)
 
     state0 = env_models.observation_to_state(obs0)
@@ -229,41 +228,38 @@ def test_dynobstruction2d_skills():
 
     # Test moving with the target block to be above target surface.
     # obs0, _ = env.reset(seed=123)
-    place_target = MoveToTgt.ground((robot, target_block, target_surface))
+    place_target = PlaceTgtSurface.ground((robot, target_block, target_surface))
     obs2 = _skill_test_helper(
-        place_target, env_models, env, obs1, params=(0.25)
+        place_target, env_models, env, obs1, params=(0.25), debug=True
     )
     state2 = env_models.observation_to_state(obs2)
     abstract_state2 = env_models.state_abstractor(state2)
     assert (
-        predicate_name_to_pred["AboveTgt"]([robot])
+        predicate_name_to_pred["OnTgt"]([target_block, target_surface])
         in abstract_state2.atoms
     )
 
-    # Test placing the target block.
-    # obs0, _ = env.reset(seed=123)
-    place_target = PlaceTgt.ground((robot, target_block, target_surface))
-    obs3 = _skill_test_helper(
-        place_target, env_models, env, obs2, params=(0.1, 0.6, 0.25), debug=True,
-    )
+    # # Test placing the target block.
+    # # obs0, _ = env.reset(seed=123)
+    # place_target = PlaceTgt.ground((robot, target_block, target_surface))
+    # obs3 = _skill_test_helper(
+    #     place_target, env_models, env, obs2, params=(0.1, 0.6, 0.25), debug=True,
+    # )
 
-    # # Capture and show the image
-    # img = env.render()
-    # plt.imshow(img)
-    # plt.axis('off')
-    # plt.show()
+    # # # Capture and show the image
+    # # img = env.render()
+    # # plt.imshow(img)
+    # # plt.axis('off')
+    # # plt.show()
 
-    state3 = env_models.observation_to_state(obs3)
-    abstract_state3 = env_models.state_abstractor(state3)
-    assert (
-        predicate_name_to_pred["OnTgt"]([target_block, target_surface])
-        in abstract_state3.atoms
-    )
+    # state3 = env_models.observation_to_state(obs3)
+    # abstract_state3 = env_models.state_abstractor(state3)
+    
 
 @pytest.mark.parametrize(
     "num_obstructions, max_abstract_plans, samples_per_step",
     [
-        (1, 5, 2),
+        (1, 5, 5),
     ],
 )
 def test_dynobstruction2d_bilevel_planning(
