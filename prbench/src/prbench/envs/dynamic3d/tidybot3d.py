@@ -74,6 +74,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         task_config_path: str | None = None,
         render_images: bool = False,
         show_images: bool = False,
+        scene_bg: str | None = None,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
         super().__init__(config)
@@ -100,6 +101,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         ), f"task_config_path {task_config_path} does not exist."
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
+
+        # Override scene configuration if scene_bg is provided
+        if scene_bg is not None:
+            self._apply_scene_bg(scene_bg)
 
         # Initialize robot environment
         robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
@@ -135,6 +140,39 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Store current state
         self._current_state: ObjectCentricState | None = None
+
+    def _apply_scene_bg(self, scene_bg: str) -> None:
+        """Apply scene background configuration to task_config.
+
+        Args:
+            scene_bg: Scene background identifier. Supports:
+                - "simple": Use default ground scene
+                - "mimiclabs-labN": Use MimicLabs labN scene (N=2-8)
+        """
+        if scene_bg == "simple":
+            # Use simple ground scene (default)
+            self.task_config["scene"] = {"type": "simple"}
+        elif scene_bg.startswith("mimiclabs-lab"):
+            # Extract lab number from scene_bg (e.g., "mimiclabs-lab2" -> 2)
+            # Split by "-lab" and take the last part
+            lab_str = scene_bg.split("-lab")[-1]
+            try:
+                lab_num = int(lab_str)
+            except ValueError as e:
+                raise ValueError(
+                    f"Could not parse lab number from {scene_bg}. "
+                    f"Expected format: 'mimiclabs-lab2' through 'mimiclabs-lab8'"
+                ) from e
+            if not 2 <= lab_num <= 8:
+                raise ValueError(
+                    f"MimicLabs lab number must be 2-8, got {lab_num} from {scene_bg}"
+                )
+            self.task_config["scene"] = {"type": "mimiclabs", "lab": lab_num}
+        else:
+            raise ValueError(
+                f"Unknown scene_bg: {scene_bg}. "
+                f"Supported values: 'simple', 'mimiclabs-lab2' through 'mimiclabs-lab8'"
+            )
 
     def _vectorize_observation(self, obs: dict[str, Any]) -> NDArray[np.float32]:
         """Convert TidyBot observation dict to vector."""
