@@ -100,7 +100,28 @@ class RobotEnv(MujocoEnv, abc.ABC):
                 # Merge or append asset sections
                 input_section = input_root.find(child.tag)  # type: ignore[union-attr]
                 if input_section is not None:
+                    # Get existing asset names in the scene to avoid duplicates
+                    # Track per asset type since MuJoCo allows same name for different types
+                    existing_names: dict[str, set[str]] = {}
+                    for existing_asset in input_section:
+                        asset_tag = existing_asset.tag
+                        asset_name = existing_asset.get("name")
+                        if asset_name:
+                            if asset_tag not in existing_names:
+                                existing_names[asset_tag] = set()
+                            existing_names[asset_tag].add(asset_name)
+
                     for sub_child in list(child):
+                        # Skip if this asset name already exists in the scene (same type)
+                        asset_tag = sub_child.tag
+                        asset_name = sub_child.get("name")
+                        if (
+                            asset_name
+                            and asset_tag in existing_names
+                            and asset_name in existing_names[asset_tag]
+                        ):
+                            continue
+
                         # Check if the asset element has a "file" attribute
                         # and make it absolute
                         if sub_child.get("file") is not None:

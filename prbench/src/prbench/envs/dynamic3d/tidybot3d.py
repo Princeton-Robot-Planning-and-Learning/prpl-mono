@@ -75,6 +75,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         render_images: bool = False,
         show_images: bool = False,
         scene_bg: str | None = None,
+        scene_render_camera: str | None = "overview",
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
         super().__init__(config)
@@ -122,7 +123,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             show_viewer=self.config.show_viewer,
         )
 
-        self._render_camera_name: str | None = "overview"
+        self._render_camera_name: str | None = scene_render_camera
 
         # Cannot show images if not rendering images
         if show_images and not render_images:
@@ -168,6 +169,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     f"MimicLabs lab number must be 2-8, got {lab_num} from {scene_bg}"
                 )
             self.task_config["scene"] = {"type": "mimiclabs", "lab": lab_num}
+
+            # Update camera names to match MimicLabs scene cameras
+            # MimicLabs scenes define: frontview, birdview, agentview, sideview
+            # If current camera_names contains 'overview', replace with 'frontview'
+            # Replace overview with frontview (default camera in MimicLabs)
+            self.camera_names = ["frontview", "birdview", "agentview", "sideview"]
+
         else:
             raise ValueError(
                 f"Unknown scene_bg: {scene_bg}. "
@@ -333,13 +341,37 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         # (e.g., RoboCasa, GeneratedBowl)
                         if hasattr(obj, "get_assets"):
                             obj_assets = obj.get_assets()
+                            # Get existing asset names to avoid duplicates
+                            # Track per asset type since MuJoCo allows same name for different types
+                            existing_names: dict[str, set[str]] = {}
+                            for existing_asset in asset_section:
+                                asset_tag = existing_asset.tag
+                                asset_name = existing_asset.get("name")
+                                if asset_name:
+                                    if asset_tag not in existing_names:
+                                        existing_names[asset_tag] = set()
+                                    existing_names[asset_tag].add(asset_name)
+
                             # Add all mesh, texture, and material elements
-                            # to asset section
+                            # to asset section, skipping duplicates within same type
                             for asset_elem in obj_assets:
+                                asset_tag = asset_elem.tag
+                                asset_name = asset_elem.get("name")
+                                if (
+                                    asset_name
+                                    and asset_tag in existing_names
+                                    and asset_name in existing_names[asset_tag]
+                                ):
+                                    continue
                                 asset_section.append(asset_elem)
+                                if asset_name:
+                                    if asset_tag not in existing_names:
+                                        existing_names[asset_tag] = set()
+                                    existing_names[asset_tag].add(asset_name)
 
             # Get XML string from tree
             xml_string = ET.tostring(root, encoding="unicode")
+
 
         return xml_string
 

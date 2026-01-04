@@ -130,4 +130,28 @@ class MimicLabsSceneLoader:
         if texturedir.exists():
             compiler.set("texturedir", str(texturedir.resolve()))
 
+        # De-duplicate assets within the scene XML
+        # Some mimiclabs scenes have duplicate material/texture/mesh definitions
+        # NOTE: Deduplicate per asset type (tag), not globally, since MuJoCo allows
+        # same name for different types (e.g., texture and material both named "X")
+        asset_section = tree.find("asset")
+        if asset_section is not None:
+            seen_names: dict[str, set[str]] = {}  # tag -> set of names
+            assets_to_remove = []
+            for asset_elem in asset_section:
+                asset_tag = asset_elem.tag
+                asset_name = asset_elem.get("name")
+                if asset_name:
+                    if asset_tag not in seen_names:
+                        seen_names[asset_tag] = set()
+                    if asset_name in seen_names[asset_tag]:
+                        # Mark for removal (duplicate within same type)
+                        assets_to_remove.append(asset_elem)
+                    else:
+                        seen_names[asset_tag].add(asset_name)
+
+            # Remove duplicate assets
+            for asset_elem in assets_to_remove:
+                asset_section.remove(asset_elem)
+
         return ET.tostring(tree, encoding="unicode")
