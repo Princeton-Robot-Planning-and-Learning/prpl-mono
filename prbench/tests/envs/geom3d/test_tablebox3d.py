@@ -24,7 +24,9 @@ from tests.conftest import MAKE_VIDEOS
 @pytest.fixture(scope="module")
 def env():
     """Create a shared environment for all tests in this module."""
-    environment = TableBox3DEnv(num_cubes=2, num_boxes=1, use_gui=False, render_mode="rgb_array")
+    environment = TableBox3DEnv(
+        num_cubes=2, num_boxes=1, use_gui=False, render_mode="rgb_array"
+    )
     if MAKE_VIDEOS:
         environment = RecordVideo(environment, "unit_test_videos")
     yield environment
@@ -47,6 +49,7 @@ def test_base_tablebox3d_env(env):  # pylint: disable=redefined-outer-name
     # while True:
     #     # p.getMouseEvents(env.unwrapped._object_centric_env.physics_client_id)
     #     p.stepSimulation(env.unwrapped._object_centric_env.physics_client_id)
+
 
 def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     """Test moving in front of a block or box, picking it up, and placing it."""
@@ -97,10 +100,14 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     # Step 2: Move arm to pre-grasp pose and then to grasp pose
     sim.set_state(obs)
     x, y, z = obs.get_object_pose("box0").position
-    extent_x, extent_y, extent_z = obs.get_cuboid_half_extents("box0")
+    _, extent_y, extent_z = obs.get_cuboid_half_extents("box0")
     dz = 0.05
-    pre_grasp_pose = Pose.from_rpy((x, y + extent_y*2, z + dz + extent_z + 0.1), (np.pi, 0, np.pi / 2))
-    grasp_pose = Pose.from_rpy((x, y + extent_y*2, z + 0.015 + extent_z + 0.02), (np.pi, 0, np.pi / 2))
+    pre_grasp_pose = Pose.from_rpy(
+        (x, y + extent_y, z + dz + extent_z / 2 + 0.1), (np.pi, 0, np.pi / 2)
+    )
+    grasp_pose = Pose.from_rpy(
+        (x, y + extent_y, z + 0.015 + extent_z / 2 + 0.02), (np.pi, 0, np.pi / 2)
+    )
 
     joint_distance_fn = create_joint_distance_fn(sim.robot.arm)
     joint_plan = smoothly_follow_end_effector_path(

@@ -73,36 +73,27 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         )
 
     def sample_block_in_box_pose(
-        self, block_half_extents: tuple[float, float, float], box_pose: Pose, box_half_extents: tuple[float, float, float], box_wall_thickness: float, rng: np.random.Generator
+        self,
+        block_half_extents: tuple[float, float, float],
+        box_pose: Pose,
+        box_half_extents: tuple[float, float, float],
+        box_wall_thickness: float,
+        rng: np.random.Generator,
     ) -> Pose:
         """Sample an initial block pose given sampled half extents."""
 
-        assert np.allclose(
-            box_pose.orientation, (0, 0, 0, 1)
-        ), "Not implemented"
+        assert np.allclose(box_pose.orientation, (0, 0, 0, 1)), "Not implemented"
 
         lb = (
-            box_pose.position[0]
-            - box_half_extents[0]
-            + block_half_extents[0],
-            box_pose.position[1]
-            - box_half_extents[1]
-            + block_half_extents[1],
-            box_pose.position[2]
-            + block_half_extents[2]
-            + box_wall_thickness,
+            box_pose.position[0] - box_half_extents[0] + block_half_extents[0],
+            box_pose.position[1] - box_half_extents[1] + block_half_extents[1],
+            box_pose.position[2] + block_half_extents[2] + box_wall_thickness,
         )
 
         ub = (
-            box_pose.position[0]
-            + box_half_extents[0]
-            - block_half_extents[0],
-            box_pose.position[1]
-            + box_half_extents[1]
-            - block_half_extents[1],
-            box_pose.position[2]
-            + block_half_extents[2]
-            + box_wall_thickness,
+            box_pose.position[0] + box_half_extents[0] - block_half_extents[0],
+            box_pose.position[1] + box_half_extents[1] - block_half_extents[1],
+            box_pose.position[2] + block_half_extents[2] + box_wall_thickness,
         )
 
         x, y, z = rng.uniform(lb, ub)
@@ -175,7 +166,7 @@ class ObjectCentricTableBox3DEnv(
                 physics_client_id=self.physics_client_id,
             )
             self._cubes[f"cube{idx}"] = cube_id
-        
+
         # Create the boxes, but their poses will be reset (with collision checking) in
         # the reset() method.
         self._boxes: dict[str, int] = {}
@@ -207,18 +198,18 @@ class ObjectCentricTableBox3DEnv(
         # Randomly sample collision-free positions for the cubes.
         # Also ensure that they are not in collision with the robot.
         # Samples the poses of the cubes
-        for box_name, box_id in self._boxes.items():
-                box_half_extents = (
-                    self.config.box_half_extents[0],
-                    self.config.box_half_extents[1],
-                    self.config.box_half_extents[2],
-                )
-                box_pose = self.config.sample_block_on_table_pose(
-                    box_half_extents, self.np_random
-                )
-                set_pose(box_id, box_pose, self.physics_client_id)
+        for _, box_id in self._boxes.items():
+            box_half_extents = (
+                self.config.box_half_extents[0],
+                self.config.box_half_extents[1],
+                self.config.box_half_extents[2],
+            )
+            box_pose = self.config.sample_block_on_table_pose(
+                box_half_extents, self.np_random
+            )
+            set_pose(box_id, box_pose, self.physics_client_id)
         for _ in range(100_000):
-            
+
             for cube_name, cube_id in self._cubes.items():
                 cube_half_extents = (
                     self.config.block_size / 2,
@@ -227,11 +218,14 @@ class ObjectCentricTableBox3DEnv(
                 )
                 # add orientation later
                 cube_pose = self.config.sample_block_in_box_pose(
-                    cube_half_extents, box_pose, box_half_extents, self.config.box_wall_thickness, self.np_random
+                    cube_half_extents,
+                    box_pose,
+                    box_half_extents,
+                    self.config.box_wall_thickness,
+                    self.np_random,
                 )
                 set_pose(cube_id, cube_pose, self.physics_client_id)
-            
-            
+
             collision_free = True
             for cube_name, cube_id in self._cubes.items():
                 for other_cube_name, other_cube_id in self._cubes.items():
@@ -245,7 +239,6 @@ class ObjectCentricTableBox3DEnv(
                         collision_free = False
                         break
 
-            
             if collision_free:
                 break
 
@@ -261,7 +254,7 @@ class ObjectCentricTableBox3DEnv(
                 obs.get_object_pose(cube_name),
                 self.physics_client_id,
             )
-        
+
         for box_name, box_id in self._boxes.items():
             assert box_id is not None
             set_pose(
@@ -281,9 +274,6 @@ class ObjectCentricTableBox3DEnv(
 
     def _get_collision_object_ids(self) -> set[int]:
         return {self.table_id}
-        if self._boxes is not None:
-            ids.update(self._boxes.values())
-        return ids
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys()) | set(self._boxes.keys())
@@ -300,9 +290,9 @@ class ObjectCentricTableBox3DEnv(
             )
         if object_name.startswith("box"):
             return (
-                self.config.box_half_extents[0] / 2,
-                self.config.box_half_extents[1] / 2,
-                self.config.box_half_extents[2] / 2,
+                self.config.box_half_extents[0],
+                self.config.box_half_extents[1],
+                self.config.box_half_extents[2],
             )
         if object_name == "table":
             return self.config.table_half_extents
@@ -346,9 +336,7 @@ class TableBox3DEnv(ConstantObjectPRBenchEnv):
 
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
-        return (
-            """A 3D environment where the goal is to pick up a cube or box from the table."""
-        )
+        return """A 3D environment where the goal is to pick up a box from the table."""
 
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""
