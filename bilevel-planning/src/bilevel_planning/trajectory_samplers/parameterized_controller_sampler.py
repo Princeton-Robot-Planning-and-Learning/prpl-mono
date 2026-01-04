@@ -89,6 +89,6 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
         if final_abstract_state == ns:
             # Success!
             return x_traj, u_traj
-        
+
         # Failure.
         raise TrajectorySamplingFailure()
