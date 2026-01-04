@@ -156,7 +156,7 @@ def create_bilevel_planning_models(
 
     PlaceTgtOperator = LiftedOperator(
         "PlaceTgt",
-        [robot, target_block, target_surface],
+        [robot, target_block],
         preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
         add_effects={
             LiftedAtom(HandEmpty, [robot]),
@@ -198,9 +198,6 @@ def create_bilevel_planning_models(
         add_effects=set(),
         delete_effects=set(),
     )
-
-    # two push operators (one onto surface and off surface)
-    # push whne holding and when not
 
     # Get lifted controllers from prbench_models
     lifted_controllers = create_lifted_controllers(
