@@ -74,34 +74,36 @@ class MimicLabsSceneLoader:
             XML string with absolute paths for assets
         """
         # Resolve mimiclabs assets directory
-        # Path(__file__) is at: prpl-mono/prbench/src/prbench/envs/dynamic3d/scene_loader.py
-        # Need to go up to prpl-mono root
-        # parent levels: dynamic3d -> envs -> prbench -> src -> prbench (pkg) -> prpl-mono
-        repo_root = Path(__file__).parent.parent.parent.parent.parent.parent
-        mimiclabs_assets = (
-            repo_root
-            / "third_party"
-            / "mimiclabs"
-            / "mimiclabs"
-            / "mimiclabs"
-            / "assets"
+        # Path(__file__) is at: prbench/src/prbench/envs/dynamic3d/scene_loader.py
+        # MimicLabs scenes are stored in models/assets/mimiclabs_scenes/
+        # (similar to how RoboCasa objects are in models/assets/robocasa_objects/)
+        mimiclabs_scenes_dir = (
+            Path(__file__).parent / "models" / "assets" / "mimiclabs_scenes"
         )
+
+        # Check if mimiclabs_scenes directory exists
+        if not mimiclabs_scenes_dir.exists():
+            raise FileNotFoundError(
+                f"MimicLabs scenes directory not found at: {mimiclabs_scenes_dir}\n"
+                f"Please run: python scripts/download_mimiclabs_assets.py"
+            )
 
         # Determine scene XML path
         if "xml_path" in scene_config:
-            scene_xml_path = mimiclabs_assets / scene_config["xml_path"]
+            scene_xml_path = mimiclabs_scenes_dir / scene_config["xml_path"]
         elif "lab" in scene_config:
             lab_num = scene_config["lab"]
-            scene_xml_path = (
-                mimiclabs_assets / f"scenes/mimiclabs_scenes/lab{lab_num}.xml"
-            )
+            scene_xml_path = mimiclabs_scenes_dir / f"lab{lab_num}.xml"
         else:
             raise ValueError(
                 "MimicLabs scene config must specify either 'lab' or 'xml_path'"
             )
 
         if not scene_xml_path.exists():
-            raise FileNotFoundError(f"MimicLabs scene not found at: {scene_xml_path}")
+            raise FileNotFoundError(
+                f"MimicLabs scene not found at: {scene_xml_path}\n"
+                f"Please run: python scripts/download_mimiclabs_assets.py"
+            )
 
         # Load scene XML
         with open(scene_xml_path, "r", encoding="utf-8") as f:
@@ -113,9 +115,8 @@ class MimicLabsSceneLoader:
         # Set meshdir and texturedir to absolute paths
         # NOTE: mimiclabs XML files already include "meshes/" and "textures/" in file paths
         # so meshdir/texturedir should point to mimiclabs_scenes directory
-        scenes_dir = mimiclabs_assets / "scenes" / "mimiclabs_scenes"
-        meshdir = scenes_dir
-        texturedir = scenes_dir
+        meshdir = mimiclabs_scenes_dir
+        texturedir = mimiclabs_scenes_dir
 
         # Update or create compiler section
         compiler = tree.find("compiler")
