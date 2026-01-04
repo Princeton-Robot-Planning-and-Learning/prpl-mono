@@ -217,3 +217,31 @@ def test_tidybot3d_gripper_open_close():
     ), f"Gripper should be closed (255), but got {gripper_ctrl}"
 
     env.close()
+
+
+def test_loading_mimiclab_scenes():
+    """Test that MimicLabs scenes can be loaded successfully."""
+    # Test with MimicLabs scene config
+    env = ObjectCentricTidyBot3DEnv(
+        num_objects=3,
+        render_images=False,
+        task_config_path="./tasks/tidybot-mimiclabs-o3.json",
+    )
+    obs, _ = env.reset()
+    assert env.observation_space.contains(obs), "Observation not in observation space"
+
+    # Verify that the scene was loaded
+    assert env._robot_env.sim is not None, "Simulation not initialized"  # pylint: disable=protected-access
+
+    # Test that we can step the environment
+    action = env.action_space.sample()
+    next_obs, reward, terminated, truncated, info = env.step(action)
+    assert env.observation_space.contains(
+        next_obs
+    ), "Step observation not in observation space"
+    assert isinstance(reward, float), "Reward is not a float"
+    assert isinstance(terminated, bool), "Terminated is not a bool"
+    assert isinstance(truncated, bool), "Truncated is not a bool"
+    assert isinstance(info, dict), "Info is not a dict"
+
+    env.close()

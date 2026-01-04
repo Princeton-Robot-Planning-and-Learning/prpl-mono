@@ -113,8 +113,28 @@ class RobotEnv(MujocoEnv, abc.ABC):
                         input_section.append(sub_child)
                 else:
                     input_root.append(child)  # type: ignore[union-attr]
+            elif child.tag == "compiler":
+                # Merge compiler sections - preserve scene's meshdir if it exists
+                input_compiler = input_root.find(child.tag)  # type: ignore[union-attr]
+                if input_compiler is not None:
+                    # Scene already has compiler - merge attributes from robot
+                    # but DON'T override meshdir/texturedir if scene has them
+                    scene_meshdir = input_compiler.get("meshdir")
+                    scene_texturedir = input_compiler.get("texturedir")
+
+                    # Merge all robot compiler attributes
+                    for key, value in child.attrib.items():
+                        # Skip meshdir/texturedir if scene already defined them
+                        if key == "meshdir" and scene_meshdir:
+                            continue
+                        if key == "texturedir" and scene_texturedir:
+                            continue
+                        input_compiler.set(key, value)
+                else:
+                    # No compiler in scene, just append robot's compiler
+                    input_root.append(child)  # type: ignore[union-attr]
             else:
-                # For other sections (compiler, actuator, contact, etc.), just append
+                # For other sections (actuator, contact, etc.), just append
                 input_root.append(child)  # type: ignore[union-attr]
 
         if input_root is None:

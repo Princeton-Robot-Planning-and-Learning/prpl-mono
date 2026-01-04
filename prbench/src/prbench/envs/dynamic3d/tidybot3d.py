@@ -41,6 +41,7 @@ from prbench.envs.dynamic3d.robots import (
     TidyBotRobotEnv,
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
+from prbench.envs.dynamic3d.scene_loader import SceneLoader
 from prbench.envs.dynamic3d.utils import (
     convert_yaw_to_quaternion,
 )
@@ -148,16 +149,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Set model path to local models directory
         model_base_path = Path(__file__).parent / "models" / "stanford_tidybot"
-        model_file = "ground_scene.xml"
-        # Construct absolute path to model file
-        absolute_model_path = model_base_path / model_file
 
-        with open(absolute_model_path, "r", encoding="utf-8") as f:
-            xml_string = f.read()
+        # Load scene XML using SceneLoader
+        scene_config = self.task_config.get("scene", {"type": "simple"})
+        xml_string = SceneLoader.load_scene(scene_config, model_base_path)
 
         # Insert objects in scene
-        tree = ET.parse(str(absolute_model_path))
-        root = tree.getroot()
+        root = ET.fromstring(xml_string)
         # Get or create asset section for adding meshes/textures/materials
         asset_section = root.find("asset")
         if asset_section is None:
