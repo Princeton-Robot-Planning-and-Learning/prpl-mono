@@ -155,10 +155,10 @@ def create_bilevel_planning_models(
         delete_effects={LiftedAtom(HoldingTgt, [robot, target_block])},
     )
 
-    PlaceTgtOnSurfaceOperator = LiftedOperator(
-        "PlaceTgtOnSurface",
+    PlaceTgtSurfaceOperator = LiftedOperator(
+        "PlaceTgtSurface",
         [robot, target_block, target_surface],
-        preconditions={LiftedAtom(AboveTgtSurface, [robot]), LiftedAtom(HoldingTgt, [robot, target_block])},
+        preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
         add_effects={
             LiftedAtom(HandEmpty, [robot]),
             LiftedAtom(OnTgtSurface, [target_block, target_surface])
@@ -182,34 +182,10 @@ def create_bilevel_planning_models(
         delete_effects={LiftedAtom(HoldingObstruction, [robot, obstruction])},
     )
 
-    MoveToTgtHeldOperator = LiftedOperator(
-        "MoveToTargetHeld",
-        [robot, target_block, target_surface],
-        preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
-        add_effects={LiftedAtom(AboveTgtSurface, [robot])},
-        delete_effects=set(),
-    )
-
-    MoveToTgtEmptyOperator = LiftedOperator(
-        "MoveToTargetEmpty",
-        [robot, target_block, target_surface],
-        preconditions={LiftedAtom(HandEmpty, [robot])},
-        add_effects={LiftedAtom(AboveTgtSurface, [robot])},
-        delete_effects=set(),
-    )
-
-    MoveFromTgtHeldOperator = LiftedOperator(
-        "MoveFromTgtHeld",
-        [robot, target_block],
-        preconditions={LiftedAtom(HoldingTgt, [robot, target_block])},
-        add_effects=set(),
-        delete_effects=set(),
-    )
-
-    MoveFromTgtEmptyOperator = LiftedOperator(
-        "MoveFromTgtEmpty",
-        [robot, target_block],
-        preconditions={LiftedAtom(HandEmpty, [robot])},
+    MoveOperator = LiftedOperator(
+        "MoveTgtHeld",
+        [robot],
+        preconditions=set(),
         add_effects=set(),
         delete_effects=set(),
     )
@@ -225,8 +201,8 @@ def create_bilevel_planning_models(
     PickObstructionController = lifted_controllers["pick_obstruction"]
     PlaceObstructionController = lifted_controllers["place_obstruction"]
     PlaceTgtController = lifted_controllers["place_tgt"]
-    MoveToTgtController = lifted_controllers["move_to_tgt"]
-    MoveFromTgtController = lifted_controllers["move_from_tgt"]
+    PlaceTgtSurfaceController = lifted_controllers["place_tgt_surface"]
+    MoveController = lifted_controllers["move"]
 
     # Finalize the skills.
     skills = {
@@ -234,11 +210,8 @@ def create_bilevel_planning_models(
         LiftedSkill(PickObstructionOperator, PickObstructionController),
         LiftedSkill(PlaceObstructionOperator, PlaceObstructionController),
         LiftedSkill(PlaceTgtOperator, PlaceTgtController),
-        LiftedSkill(PlaceTgtOnSurfaceOperator, PlaceTgtController),
-        LiftedSkill(MoveToTgtHeldOperator, MoveToTgtController),
-        LiftedSkill(MoveToTgtEmptyOperator, MoveToTgtController),
-        LiftedSkill(MoveFromTgtHeldOperator, MoveFromTgtController),
-        LiftedSkill(MoveFromTgtEmptyOperator, MoveFromTgtController),
+        LiftedSkill(PlaceTgtSurfaceOperator, PlaceTgtSurfaceController),
+        LiftedSkill(MoveOperator, MoveController),
     }
 
     # Finalize the models.

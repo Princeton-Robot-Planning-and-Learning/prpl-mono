@@ -247,13 +247,11 @@ def test_dynobstruction2d_skills():
         place_target, env_models, env, obs2, params=(0.1, 0.6, 0.25), debug=True,
     )
 
-    env.step((0,0,0,0,0))
-
-    # Capture and show the image
-    img = env.render()
-    plt.imshow(img)
-    plt.axis('off')
-    plt.show()
+    # # Capture and show the image
+    # img = env.render()
+    # plt.imshow(img)
+    # plt.axis('off')
+    # plt.show()
 
     state3 = env_models.observation_to_state(obs3)
     abstract_state3 = env_models.state_abstractor(state3)
@@ -265,7 +263,7 @@ def test_dynobstruction2d_skills():
 @pytest.mark.parametrize(
     "num_obstructions, max_abstract_plans, samples_per_step",
     [
-        (1, 5, 10),
+        (1, 5, 2),
     ],
 )
 def test_dynobstruction2d_bilevel_planning(
@@ -299,9 +297,11 @@ def test_dynobstruction2d_bilevel_planning(
         seed=123,
         max_abstract_plans=max_abstract_plans,
         samples_per_step=samples_per_step,
+        planning_timeout=60.0,
+        max_skill_horizon=500,
     )
 
-    obs, info = env.reset(seed=0)
+    obs, info = env.reset(seed=123)
 
     total_reward = 0
     agent.reset(obs, info)

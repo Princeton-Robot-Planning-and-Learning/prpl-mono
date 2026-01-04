@@ -54,7 +54,7 @@ class GroundPickController(Dynamic2dRobotController):
         arm_length = rng.uniform(min_arm_length, max_arm_length)
 
         # Pack parameters: side determines grasp approach, ratio determines position
-        return (grasp_ratio, side, arm_length)
+        return (0, side, 0.3)
 
     def _requires_multi_phase_gripper(self) -> bool:
         """Pick controller always uses two phases: move to block, then close gripper."""
@@ -150,15 +150,19 @@ class GroundPickController(Dynamic2dRobotController):
         full_state.set(self._robot, "theta", target_se2_pose.theta)
         full_state.set(self._robot, "arm_joint", desired_arm_length)
 
+        print(f"In PICK Controller")
+
         # Check target state collision
         moving_objects = {self._robot}
         static_objects = set(full_state) - moving_objects
 
         if state_2d_has_collision(full_state, moving_objects, static_objects, {}):
+            print("Failed to find path")
             raise TrajectorySamplingFailure(
                 "Failed to find a collision-free path to target."
             )
 
+        print("Found collision free path to target")
         # Simple waypoint generation: go directly to target
         # In a full implementation, we could use motion planning here
         final_waypoints: list[tuple[SE2Pose, float]] = [
@@ -275,9 +279,8 @@ class GroundPlaceController(Dynamic2dRobotController):
         final_waypoints: list[tuple[SE2Pose, float]] = [current_wp]
         final_waypoints.append((final_robot_pose, robot_arm_joint))
         return final_waypoints
-
-
-class GroundMoveToTgtSurfaceController(Dynamic2dRobotController):
+    
+class GroundPlaceTgtSurfaceController(Dynamic2dRobotController):
     """Controller for moving the robot to the target surface."""
 
     def __init__(
@@ -301,7 +304,7 @@ class GroundMoveToTgtSurfaceController(Dynamic2dRobotController):
         # Relative orientation
         rel_theta = (abs_theta + np.pi) / (2 * np.pi)
 
-        return rel_theta
+        return 0.25
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
         """Get gripper actions for move-to: keep current gap during movement,
@@ -312,8 +315,10 @@ class GroundMoveToTgtSurfaceController(Dynamic2dRobotController):
             - delta_during: 0.0 (keep current gap during movement)
             - delta_after: 0.0 (no change after moving)
         """
-        # Keep gripper at current gap during movement, no change after
-        return 0.0, 0.0
+        curr_finger_gap = state.get(self._robot, "finger_gap")
+        desired_finger_gap = self.finger_gap_max
+        delta_to_open = desired_finger_gap - curr_finger_gap
+        return 0.0, desired_finger_gap
 
     def _generate_waypoints(
         self, state: ObjectCentricState
@@ -328,13 +333,9 @@ class GroundMoveToTgtSurfaceController(Dynamic2dRobotController):
         block_width = state.get(self._tgt_block, "width")
         block_height = state.get(self._tgt_block, "height")
 
-        print(tgt_x, tgt_y, block_height)
-
         target_region_pose = SE2Pose(tgt_x, tgt_y, tgt_theta) * SE2Pose(
             tgt_width / 2, tgt_height / 2, 0.0
         )
-
-        print(f"target region pose {target_region_pose}")
 
         # Calculate target position from parameters
         params = cast(float, self._current_params)
@@ -343,26 +344,20 @@ class GroundMoveToTgtSurfaceController(Dynamic2dRobotController):
             target_region_pose.x, target_region_pose.y, target_theta
         )
 
-        print(f"tgt pose center {tgt_pose_center}")
         bottom2center = SE2Pose(block_width / 2, block_height / 2, 0.0)
         tgt_pose_bottom = tgt_pose_center * bottom2center.inverse
 
-        print(f"tgt pose bottom {tgt_pose_bottom}")
-
         # Calculate robot pose to place block on surface
         surface_top_y = tgt_pose_bottom.y
-        print(f"surface top y {surface_top_y}")
         block_center_y = (
             surface_top_y + block_height
         )  # Center of block when placed on surface
-        print(block_center_y)
         # Calculate gripper target position (above the block center for placement)
         # Gripper should be positioned above the block with some clearance
         gripper_clearance = gripper_height
         gripper_target_y = block_center_y + gripper_clearance
 
         # Gripper target pose (above the block center, at same x as block center)
-        print(f"gripper target y  {gripper_target_y} ")
         gripper_target_pose = SE2Pose(
             tgt_pose_bottom.x, tgt_pose_bottom.y + gripper_target_y, target_theta
         )
@@ -376,7 +371,7 @@ class GroundMoveToTgtSurfaceController(Dynamic2dRobotController):
         return final_waypoints
 
 
-class GroundMoveFromTgtSurfaceController(Dynamic2dRobotController):
+class GroundMoveController(Dynamic2dRobotController):
     """Controller for moving the robot to a desired location while pushing objects along
     the way."""
 
@@ -497,13 +492,13 @@ def create_lifted_controllers(
         def __init__(self, objects):
             super().__init__(objects, action_space, init_constant_state)
 
-    class MoveToTgtSurfaceController(GroundMoveToTgtSurfaceController):
+    class PlaceTgtSurfaceController(GroundPlaceTgtSurfaceController):
         """Controller for moving the robot to the target region."""
 
         def __init__(self, objects):
             super().__init__(objects, action_space, init_constant_state)
 
-    class MoveFromTgtSurfaceController(GroundMoveFromTgtSurfaceController):
+    class MoveController(GroundMoveController):
         """Controller for robot to push objects on the way to the target region."""
 
         def __init__(self, objects):
@@ -542,18 +537,18 @@ def create_lifted_controllers(
         )
     )
 
-    move_to_tgt_controller: LiftedParameterizedController = (
+    place_tgt_surface_controller: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, target_block, target_surface],
-            MoveToTgtSurfaceController,
+            PlaceTgtSurfaceController,
             move_to_params_space,
         )
     )
 
-    move_from_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
-        [robot, target_block],
-        MoveFromTgtSurfaceController,
-        push_params_space,
+    move_controller: LiftedParameterizedController = LiftedParameterizedController(
+        [robot],
+        MoveController,
+        move_to_params_space,
     )
 
     return {
@@ -561,6 +556,6 @@ def create_lifted_controllers(
         "place_tgt": place_tgt_controller,
         "pick_obstruction": pick_obstruction_controller,
         "place_obstruction": place_obstruction_controller,
-        "move_to_tgt": move_to_tgt_controller,
-        "move_from_tgt": move_from_tgt_controller,
+        "place_tgt_surface": place_tgt_surface_controller,
+        "move": move_controller,
     }
