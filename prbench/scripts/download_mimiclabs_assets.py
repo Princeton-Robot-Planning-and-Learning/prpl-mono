@@ -1,5 +1,4 @@
-"""
-Script to download MimicLabs scene assets from Google Drive for PRBench.
+"""Script to download MimicLabs scene assets from Google Drive for PRBench.
 
 This downloads the MimicLabs realistic background scenes (lab2-lab8) and places them
 in the PRBench assets directory.
@@ -17,16 +16,19 @@ import gdown
 # Get the path to the prbench assets directory
 SCRIPT_DIR = Path(__file__).parent
 PRBENCH_ROOT = SCRIPT_DIR.parent
-ASSETS_DIR = PRBENCH_ROOT / "src" / "prbench" / "envs" / "dynamic3d" / "models" / "assets"
+ASSETS_DIR = (
+    PRBENCH_ROOT / "src" / "prbench" / "envs" / "dynamic3d" / "models" / "assets"
+)
 MIMICLABS_SCENES_DIR = ASSETS_DIR / "mimiclabs_scenes"
 
 # Google Drive URL for MimicLabs assets
-ASSETS_URL = "https://drive.google.com/file/d/1YPJWR8rtPR0NLp9W2G-qYDUH6F7uXU2l/view?usp=sharing"
+ASSETS_URL = (
+    "https://drive.google.com/file/d/1YPJWR8rtPR0NLp9W2G-qYDUH6F7uXU2l/view?usp=sharing"
+)
 
 
 def download_file_from_gdrive(url: str, download_dir: Path, dst_filename: str) -> None:
-    """
-    Download a file from Google Drive using gdown.
+    """Download a file from Google Drive using gdown.
 
     Args:
         url: Google Drive sharing URL
@@ -68,8 +70,7 @@ def download_file_from_gdrive(url: str, download_dir: Path, dst_filename: str) -
 
 
 def download_mimiclabs_assets() -> None:
-    """
-    Download the MimicLabs scene assets from Google Drive.
+    """Download the MimicLabs scene assets from Google Drive.
 
     This will:
     1. Download assets.zip from Google Drive
@@ -81,9 +82,7 @@ def download_mimiclabs_assets() -> None:
 
     # Check if mimiclabs_scenes already exists
     if MIMICLABS_SCENES_DIR.exists():
-        print(
-            f"\nWarning: Directory {MIMICLABS_SCENES_DIR} already exists."
-        )
+        print(f"\nWarning: Directory {MIMICLABS_SCENES_DIR} already exists.")
         inp = input("Would you like to remove it and re-download? y/n\n")
         if inp.lower() in ["y", "yes"]:
             shutil.rmtree(MIMICLABS_SCENES_DIR)
@@ -116,7 +115,9 @@ def download_mimiclabs_assets() -> None:
                 shutil.move(str(item), str(MIMICLABS_SCENES_DIR / item.name))
             print(f"Extracted assets to {MIMICLABS_SCENES_DIR}")
         else:
-            print(f"Warning: Expected scenes/mimiclabs_scenes not found in {unzipped_folder}")
+            print(
+                f"Warning: Expected scenes/mimiclabs_scenes not found in {unzipped_folder}"
+            )
 
         # Clean up unzipped folder
         shutil.rmtree(unzipped_folder)
@@ -130,7 +131,9 @@ def download_mimiclabs_assets() -> None:
 
     print(f"\n✓ MimicLabs scene assets successfully downloaded to:")
     print(f"  {MIMICLABS_SCENES_DIR}")
-    print("\nAvailable scenes: lab2.xml, lab3.xml, lab4.xml, lab5.xml, lab6.xml, lab7.xml, lab8.xml")
+    print(
+        "\nAvailable scenes: lab2.xml, lab3.xml, lab4.xml, lab5.xml, lab6.xml, lab7.xml, lab8.xml"
+    )
 
 
 if __name__ == "__main__":

@@ -40,8 +40,8 @@ from prbench.envs.dynamic3d.robots import (
     TidyBot3DRobotActionSpace,
     TidyBotRobotEnv,
 )
-from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
 from prbench.envs.dynamic3d.scene_loader import SceneLoader
+from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
 from prbench.envs.dynamic3d.utils import (
     convert_yaw_to_quaternion,
 )
@@ -371,7 +371,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
             # Get XML string from tree
             xml_string = ET.tostring(root, encoding="unicode")
-
 
         return xml_string
 
