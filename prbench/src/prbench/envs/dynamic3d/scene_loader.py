@@ -113,8 +113,9 @@ class MimicLabsSceneLoader:
         tree = ET.fromstring(xml_string)
 
         # Set meshdir and texturedir to absolute paths
-        # NOTE: mimiclabs XML files already include "meshes/" and "textures/" in file paths
-        # so meshdir/texturedir should point to mimiclabs_scenes directory
+        # NOTE: mimiclabs XML files already include "meshes/" and "textures/"
+        # in file paths, so meshdir/texturedir should point to
+        # mimiclabs_scenes directory
         meshdir = mimiclabs_scenes_dir
         texturedir = mimiclabs_scenes_dir
 

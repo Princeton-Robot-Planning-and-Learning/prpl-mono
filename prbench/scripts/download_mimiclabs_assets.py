@@ -116,23 +116,25 @@ def download_mimiclabs_assets() -> None:
             print(f"Extracted assets to {MIMICLABS_SCENES_DIR}")
         else:
             print(
-                f"Warning: Expected scenes/mimiclabs_scenes not found in {unzipped_folder}"
+                f"Warning: Expected scenes/mimiclabs_scenes not found in "
+                f"{unzipped_folder}"
             )
 
         # Clean up unzipped folder
         shutil.rmtree(unzipped_folder)
     else:
-        print(f"Warning: Unzipped folder 'assets' not found")
+        print("Warning: Unzipped folder 'assets' not found")
 
     # Remove the zip file
     if zip_path.exists():
         os.remove(zip_path)
         print(f"Removed {zip_filename}")
 
-    print(f"\n✓ MimicLabs scene assets successfully downloaded to:")
+    print("\n✓ MimicLabs scene assets successfully downloaded to:")
     print(f"  {MIMICLABS_SCENES_DIR}")
     print(
-        "\nAvailable scenes: lab2.xml, lab3.xml, lab4.xml, lab5.xml, lab6.xml, lab7.xml, lab8.xml"
+        "\nAvailable scenes: lab2.xml, lab3.xml, lab4.xml, lab5.xml, "
+        "lab6.xml, lab7.xml, lab8.xml"
     )
 
 

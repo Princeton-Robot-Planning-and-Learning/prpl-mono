@@ -101,7 +101,8 @@ class RobotEnv(MujocoEnv, abc.ABC):
                 input_section = input_root.find(child.tag)  # type: ignore[union-attr]
                 if input_section is not None:
                     # Get existing asset names in the scene to avoid duplicates
-                    # Track per asset type since MuJoCo allows same name for different types
+                    # Track per asset type since MuJoCo allows same name for
+                    # different types
                     existing_names: dict[str, set[str]] = {}
                     for existing_asset in input_section:
                         asset_tag = existing_asset.tag

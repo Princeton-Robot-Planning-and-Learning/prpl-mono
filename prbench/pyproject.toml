@@ -91,6 +91,7 @@ module = [
     "mujoco.*",
     "cv2.*",
     "pybullet.*",
+    "gdown.*",
 ]
 ignore_missing_imports = true
 

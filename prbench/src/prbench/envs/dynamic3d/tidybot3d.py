@@ -342,7 +342,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         if hasattr(obj, "get_assets"):
                             obj_assets = obj.get_assets()
                             # Get existing asset names to avoid duplicates
-                            # Track per asset type since MuJoCo allows same name for different types
+                            # Track per asset type since MuJoCo allows same name
+                            # for different types
                             existing_names: dict[str, set[str]] = {}
                             for existing_asset in asset_section:
                                 asset_tag = existing_asset.tag

@@ -20,6 +20,7 @@ MIMICLABS_SCENES_DIR = (
     / "models"
     / "assets"
     / "mimiclabs_scenes"
+    / "meshes"
 )
 
 
@@ -68,7 +69,8 @@ def test_straight_base_motion():
 
 @pytest.mark.skipif(
     not MIMICLABS_SCENES_DIR.exists(),
-    reason="MimicLabs scenes not downloaded. Run: python scripts/download_mimiclabs_assets.py",
+    reason="MimicLabs scenes not downloaded. "
+    "Run: python scripts/download_mimiclabs_assets.py",
 )
 @pytest.mark.parametrize("lab_num", [2, 3, 4, 5, 6, 7, 8])
 @pytest.mark.parametrize(
