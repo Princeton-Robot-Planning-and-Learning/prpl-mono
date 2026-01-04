@@ -534,8 +534,7 @@ class ObjectCentricDynObstruction2DEnv(
                 state.set(obj, "vy", pymunk_body.velocity.y)
                 state.set(obj, "omega", pymunk_body.angular_velocity)
                 # Update held status
-                assert self.robot is not None, "Robot not initialized"
-                
+                assert self.robot is not None, "Robot not initialized" 
                 if self.robot.body_in_hand(pymunk_body.id):
                     state.set(obj, "held", True)
                 else:

@@ -73,8 +73,6 @@ class SesamePlanner(BilevelPlanner[_X, _U, _S, _A]):
             # Get the next abstract plan.
             try:
                 s_plan, a_plan = next(gen)
-                print(f"State plan: {s_plan}")
-                print(f"Action plan: {a_plan}")
                 num_abstract_plans += 1
             except StopIteration:
                 break

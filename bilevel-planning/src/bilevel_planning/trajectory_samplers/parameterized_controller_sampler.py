@@ -65,12 +65,10 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
                 break
             # Get the next action.
             u = controller.step()
-
             # Move forward and terminate early upon transition failure.
             try:
                 nx = self._transition_function(x, u)
             except TransitionFailure:
-                print("transition failure")
                 break
             # Update the controller.
             controller.observe(nx)
@@ -91,5 +89,6 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
         if final_abstract_state == ns:
             # Success!
             return x_traj, u_traj
+        
         # Failure.
         raise TrajectorySamplingFailure()
