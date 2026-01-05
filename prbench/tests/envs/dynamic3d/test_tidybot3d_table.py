@@ -9,7 +9,7 @@ from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 def test_tidybot3d_table_observation_space():
     """Reset should return an observation within the observation space."""
     env = ObjectCentricTidyBot3DEnv(
-        scene_type="table", num_objects=3, render_images=False
+        scene_type="table", num_objects=3
     )
     obs, info = env.reset()
     assert env.observation_space.contains(obs)
@@ -20,7 +20,7 @@ def test_tidybot3d_table_observation_space():
 def test_tidybot3d_table_action_space():
     """A sampled action should be valid for the action space."""
     env = ObjectCentricTidyBot3DEnv(
-        scene_type="table", num_objects=3, render_images=False
+        scene_type="table", num_objects=3
     )
     action = env.action_space.sample()
     assert env.action_space.contains(action)
@@ -30,7 +30,7 @@ def test_tidybot3d_table_action_space():
 def test_tidybot3d_table_step():
     """Step should return a valid obs, float reward, bool done flags, and info dict."""
     env = ObjectCentricTidyBot3DEnv(
-        scene_type="table", num_objects=3, render_images=False
+        scene_type="table", num_objects=3
     )
     env.reset()
     action = env.action_space.sample()
@@ -46,7 +46,7 @@ def test_tidybot3d_table_step():
 def test_tidybot3d_table_reset_seed_reproducible():
     """Reset with the same seed should produce identical observations."""
     env = ObjectCentricTidyBot3DEnv(
-        scene_type="table", num_objects=3, render_images=False
+        scene_type="table", num_objects=3
     )
     obs1, _ = env.reset(seed=110)
     obs2, _ = env.reset(seed=110)
@@ -59,7 +59,7 @@ def test_tidybot3d_table_reset_changes_without_seed():
     """Consecutive resets without a seed should generally produce different
     observations."""
     env = ObjectCentricTidyBot3DEnv(
-        scene_type="table", num_objects=3, render_images=False
+        scene_type="table", num_objects=3
     )
     obs1, _ = env.reset(seed=1)
     obs2, _ = env.reset(seed=3)
@@ -77,7 +77,6 @@ def test_tidybot_table_clutter_pick_place_goals():
         scene_type="table",
         num_objects=7,
         task_config_path=str(tasks_root / "tidybot-table-o20-SortClutteredBlocks.json"),
-        render_images=False,
     )
 
     # Reset the environment
