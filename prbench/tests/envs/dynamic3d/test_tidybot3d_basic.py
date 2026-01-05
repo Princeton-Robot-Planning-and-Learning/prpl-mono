@@ -157,7 +157,8 @@ def test_tidybot3d_env_object_centric_state():
     env.close()
 
 
-def test_tidybot3d_env_set_state():  # pylint: disable=protected-access
+def test_tidybot3d_env_set_state():
+    # pylint: disable=protected-access
     """Test that the state of the environment can be consistently reset."""
     # Generate a random trajectory.
     states = []
@@ -191,7 +192,8 @@ def test_tidybot3d_env_set_state():  # pylint: disable=protected-access
     env.close()
 
 
-def test_tidybot3d_gripper_open_close():  # pylint: disable=protected-access
+def test_tidybot3d_gripper_open_close():
+    # pylint: disable=protected-access
     """Test that gripper opens and closes correctly based on action commands."""
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
     env.reset()
