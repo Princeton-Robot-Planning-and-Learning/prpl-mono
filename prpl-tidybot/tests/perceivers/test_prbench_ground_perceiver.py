@@ -40,7 +40,6 @@ def test_real_to_sim_prbench_ground():
     sim = ObjectCentricTidyBot3DEnv(
         scene_type="base_motion",
         num_objects=1,
-        render_images=True,
     )
 
     # Get the real state from the perceiver.

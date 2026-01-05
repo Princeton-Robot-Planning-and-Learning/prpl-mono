@@ -75,13 +75,13 @@ def test_tidybot3d_step_returns_valid_outputs():
     env.close()
 
 
-def test_tidybot3d_get_object_pos_quat():
+def test_tidybot3d_get_object_pos_quat():  # pylint: disable=protected-access
     """Test that get_object_pos_quat() returns valid position and orientation."""
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
     env.reset()
-    for obj in env._objects:  # pylint: disable=protected-access
+    for obj in env._objects:
         pos, quat = (
-            env._robot_env.get_joint_pos_quat(  # pylint: disable=protected-access
+            env._robot_env.get_joint_pos_quat(
                 obj.joint_name
             )
         )
@@ -90,24 +90,24 @@ def test_tidybot3d_get_object_pos_quat():
     env.close()
 
 
-def test_tidybot3d_set_get_object_pos_quat_consistency():
+def test_tidybot3d_set_get_object_pos_quat_consistency():  # pylint: disable=protected-access
     """Test that setting and then getting an object's position and orientation is
     consistent."""
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
     env.reset()
-    for obj in env._objects:  # pylint: disable=protected-access
+    for obj in env._objects:
         original_pos, original_quat = (
-            env._robot_env.get_joint_pos_quat(  # pylint: disable=protected-access
+            env._robot_env.get_joint_pos_quat(
                 obj.joint_name
             )
         )
         new_pos = [p + 0.1 for p in original_pos]
         new_quat = original_quat  # Keep orientation the same for simplicity
-        env._robot_env.set_joint_pos_quat(  # pylint: disable=protected-access
+        env._robot_env.set_joint_pos_quat(
             obj.joint_name, new_pos, new_quat
         )
         updated_pos, updated_quat = (
-            env._robot_env.get_joint_pos_quat(  # pylint: disable=protected-access
+            env._robot_env.get_joint_pos_quat(
                 obj.joint_name
             )
         )
@@ -120,12 +120,12 @@ def test_tidybot3d_set_get_object_pos_quat_consistency():
     env.close()
 
 
-def test_tidybot3d_object_centric_data():
+def test_tidybot3d_object_centric_data():  # pylint: disable=protected-access
     """Test that mujoco objects' get_object_centric_data() returns a valid
     ObjectCentricState."""
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
     env.reset()
-    for obj in env._objects:  # pylint: disable=protected-access
+    for obj in env._objects:
         data = obj.get_object_centric_data()
         assert isinstance(data, dict), "Object-centric data should be a dict"
         object_type = obj.symbolic_object.type
@@ -155,7 +155,7 @@ def test_tidybot3d_env_object_centric_state():
     env.close()
 
 
-def test_tidybot3d_env_set_state():
+def test_tidybot3d_env_set_state():  # pylint: disable=protected-access
     """Test that the state of the environment can be consistently reset."""
     # Generate a random trajectory.
     states = []
@@ -173,7 +173,7 @@ def test_tidybot3d_env_set_state():
     for state in states:
         env.set_state(state)
         recovered_state = (
-            env._get_object_centric_state()  # pylint: disable=protected-access
+            env._get_object_centric_state()
         )
         assert state.allclose(recovered_state, atol=1e-2)
 
@@ -189,7 +189,7 @@ def test_tidybot3d_env_set_state():
     env.close()
 
 
-def test_tidybot3d_gripper_open_close():
+def test_tidybot3d_gripper_open_close():  # pylint: disable=protected-access
     """Test that gripper opens and closes correctly based on action commands."""
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
     env.reset()
@@ -203,8 +203,10 @@ def test_tidybot3d_gripper_open_close():
     env.step(open_action)
 
     # Check that gripper control is set to open (0)
-    gripper_ctrl = env._robot_env.ctrl["gripper"][0]  # pylint: disable=protected-access
-    assert gripper_ctrl == 0, f"Gripper should be open (0), but got {gripper_ctrl}"
+    gripper_ctrl = env._robot_env.ctrl["gripper"][0]
+    assert (
+        gripper_ctrl == 0
+    ), f"Gripper should be open (0), but got {gripper_ctrl}"
 
     # Test gripper close (action[-1] = 1)
     close_action = base_action.copy()
@@ -212,7 +214,7 @@ def test_tidybot3d_gripper_open_close():
     env.step(close_action)
 
     # Check that gripper control is set to close (255)
-    gripper_ctrl = env._robot_env.ctrl["gripper"][0]  # pylint: disable=protected-access
+    gripper_ctrl = env._robot_env.ctrl["gripper"][0]
     assert (
         gripper_ctrl == 255
     ), f"Gripper should be closed (255), but got {gripper_ctrl}"
@@ -230,8 +232,12 @@ def test_tidybot3d_render_returns_image():
     assert image is not None, "render() should return an image"
     assert isinstance(image, np.ndarray), "render() should return a numpy array"
     assert image.dtype == np.uint8, "Image should be uint8"
-    assert len(image.shape) == 3, "Image should be 3D (height, width, channels)"
+    assert (
+        len(image.shape) == 3
+    ), "Image should be 3D (height, width, channels)"
     assert image.shape[2] == 3, "Image should have 3 color channels (RGB)"
-    assert image.shape[0] > 0 and image.shape[1] > 0, "Image should have non-zero dimensions"
+    assert (
+        image.shape[0] > 0 and image.shape[1] > 0
+    ), "Image should have non-zero dimensions"
 
     env.close()

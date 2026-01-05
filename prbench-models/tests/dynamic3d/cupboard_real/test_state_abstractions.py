@@ -30,7 +30,7 @@ def test_cupboard_real_state_abstraction():
             name_prefix="TidyBot3D-cupboard-real-state-abstraction",
         )
     sim = ObjectCentricTidyBot3DEnv(
-        scene_type="cupboard_real", num_objects=num_objects, render_images=False
+        scene_type="cupboard_real", num_objects=num_objects
     )
     abstractor = CupboardRealStateAbstractor(sim)
 
