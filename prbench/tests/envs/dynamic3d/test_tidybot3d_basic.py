@@ -75,7 +75,8 @@ def test_tidybot3d_step_returns_valid_outputs():
     env.close()
 
 
-def test_tidybot3d_get_object_pos_quat():  # pylint: disable=protected-access
+def test_tidybot3d_get_object_pos_quat():
+    # pylint: disable=protected-access
     """Test that get_object_pos_quat() returns valid position and orientation."""
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
     env.reset()
@@ -90,7 +91,8 @@ def test_tidybot3d_get_object_pos_quat():  # pylint: disable=protected-access
     env.close()
 
 
-def test_tidybot3d_set_get_object_pos_quat_consistency():  # pylint: disable=protected-access
+def test_tidybot3d_set_get_object_pos_quat_consistency():
+    # pylint: disable=protected-access
     """Test that setting and then getting an object's position and orientation is
     consistent."""
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
