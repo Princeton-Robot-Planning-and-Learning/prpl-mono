@@ -122,7 +122,8 @@ def test_tidybot3d_set_get_object_pos_quat_consistency():
     env.close()
 
 
-def test_tidybot3d_object_centric_data():  # pylint: disable=protected-access
+def test_tidybot3d_object_centric_data():
+    # pylint: disable=protected-access
     """Test that mujoco objects' get_object_centric_data() returns a valid
     ObjectCentricState."""
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
