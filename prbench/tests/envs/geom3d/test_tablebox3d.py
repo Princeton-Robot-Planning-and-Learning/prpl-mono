@@ -235,4 +235,4 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
-    # assert obs.grasped_object is None, "Object not released"
+    assert obs.grasped_object is None, "Object not released"

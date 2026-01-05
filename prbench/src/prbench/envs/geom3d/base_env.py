@@ -463,7 +463,9 @@ class ObjectCentricGeom3DRobotEnv(
                 self._grasped_object_transform = multiply_poses(
                     world_to_robot.invert(), world_to_object
                 )
-                extent_threshold = 0.04
+                extent_threshold = (
+                    0.04  # this is used to check if the object is a box / container.
+                )
                 if (
                     self._get_half_extents(self._grasped_object)[0] > extent_threshold
                     and self._get_half_extents(self._grasped_object)[1]
