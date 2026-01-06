@@ -12,7 +12,7 @@ from prbench.envs.dynamic3d.objects.base import (
     register_object,
 )
 from prbench.envs.dynamic3d.objects.fixtures import Cupboard, Table
-from prbench.envs.dynamic3d.objects.generated_objects import GeneratedBowl
+from prbench.envs.dynamic3d.objects.generated_objects import GeneratedBowl, GeneratedSeesaw
 from prbench.envs.dynamic3d.objects.primitive_objects import Cube, Cuboid
 
 __all__ = [
@@ -28,6 +28,8 @@ __all__ = [
     "Table",
     "Cupboard",
     "GeneratedBowl",
+    "GeneratedSeesaw",
     "generated_objects",
     "robocasa_objects",
 ]
+

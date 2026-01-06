@@ -699,6 +699,31 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     in_region = fixture.check_in_region(position, region_name)
 
                 successes.append(in_region)
+            elif pred[0] == "balanced":
+                # Check if a seesaw object is balanced (beam is horizontal)
+                # Format: ["balanced", "seesaw_name", tolerance_degrees]
+                obj_name = pred[1]
+                tolerance_degrees = float(pred[2]) if len(pred) > 2 else 5.0
+
+                # Get the seesaw object
+                if obj_name not in self._objects_dict:
+                    raise ValueError(f"Object '{obj_name}' not found for balance check")
+
+                seesaw_obj = self._objects_dict[obj_name]
+
+                # Import here to avoid circular imports
+                from prbench.envs.dynamic3d.objects.generated_objects import (
+                    GeneratedSeesaw,
+                )
+
+                if not isinstance(seesaw_obj, GeneratedSeesaw):
+                    raise ValueError(
+                        f"Object '{obj_name}' is not a GeneratedSeesaw, "
+                        f"got {type(seesaw_obj).__name__}"
+                    )
+
+                is_balanced = seesaw_obj.is_balanced(tolerance_degrees)
+                successes.append(is_balanced)
             else:
                 raise NotImplementedError(
                     f"Goal predicate {pred[0]} not implemented in _check_goals"
