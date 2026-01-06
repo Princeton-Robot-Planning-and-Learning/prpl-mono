@@ -118,7 +118,10 @@ def _skill_test_helper(ground_skill, env_models, env, obs, params=None):
 
 def test_tablebox3d_skills():
     """Tests for skills in the TableBox3D environment."""
-    env = prbench.make("prbench/TableBox3D-o1-v0", render_mode="rgb_array")
+    if not MAKE_VIDEOS:
+        env = prbench.make("prbench/TableBox3D-o1-v0")
+    else:
+        env = prbench.make("prbench/TableBox3D-o1-v0", render_mode="rgb_array")
     env_models = create_bilevel_planning_models(
         "tablebox3d", env.observation_space, env.action_space
     )
@@ -153,9 +156,9 @@ def test_tablebox3d_skills():
     OnGround = pred_name_to_pred["OnGround"]
     OnTable = pred_name_to_pred["OnTable"]
     # import ipdb; ipdb.set_trace()
-    # assert HandEmpty([robot]) not in abstract_state1.atoms
-    # assert OnGround([target]) not in abstract_state1.atoms
-    # assert Holding([robot, target]) in abstract_state1.atoms
+    assert HandEmpty([robot]) not in abstract_state1.atoms
+    assert OnGround([target]) not in abstract_state1.atoms
+    assert Holding([robot, target]) in abstract_state1.atoms
 
     # # Test Place skill
     # place_skill = Place.ground((robot, target, target_table))
