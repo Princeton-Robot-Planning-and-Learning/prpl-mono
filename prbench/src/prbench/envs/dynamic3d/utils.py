@@ -1,6 +1,7 @@
 """Utility functions for TidyBot environments."""
 
 import numpy as np
+import transforms3d.euler as t3d_euler  # type: ignore[import-untyped]
 from numpy.typing import NDArray
 
 
@@ -15,6 +16,57 @@ def convert_yaw_to_quaternion(yaw: float) -> list[float]:
     """
     half_yaw = yaw / 2
     return [np.cos(half_yaw), 0.0, 0.0, np.sin(half_yaw)]  # w, x, y, z
+
+
+def compute_camera_euler(
+    position: list[float], lookat: list[float]
+) -> tuple[float, float, float]:
+    """Compute euler angles for camera to look at target.
+
+    Args:
+        position: Camera position [x, y, z]
+        lookat: Target position to look at [x, y, z]
+
+    Returns:
+        Euler angles (roll, pitch, yaw) in radians for MuJoCo's XYZ convention.
+        After rotation, the camera's -Z axis will point from position to lookat,
+        and the +X axis will have a convex angle with the global -Z direction.
+    """
+    pos_array: NDArray[np.float64] = np.array(position, dtype=np.float64)
+    lookat_array: NDArray[np.float64] = np.array(lookat, dtype=np.float64)
+
+    # Direction vector from camera to target (where -Z should point)
+    direction: NDArray[np.float64] = pos_array - lookat_array
+    direction_norm = np.linalg.norm(direction)
+    if direction_norm < 1e-6:
+        # Camera and target are at the same position, default to looking forward
+        return (0.0, 0.0, 0.0)
+
+    # Step 1: Convert direction to spherical coordinates
+    # Spherical coordinates: (r, theta, phi)
+    # - r: radial distance
+    # - theta (polar angle): angle from positive z-axis [0, π]
+    # - phi (azimuthal angle): angle in xy-plane from positive x-axis [0, 2π)
+
+    r = direction_norm
+    theta = float(np.arccos(direction[2] / r))  # polar angle
+    phi = float(np.arctan2(direction[1], direction[0]))  # azimuthal angle
+
+    # Step 2: Convert spherical coordinates to Euler angles
+    # euler_zxy represents (Z-rotation, X-rotation, Y-rotation)
+    euler_zxy = (np.pi / 2 + phi, theta, 0)
+    rot_mat_zxy = t3d_euler.euler2mat(
+        euler_zxy[0], euler_zxy[1], euler_zxy[2], axes="rzxy"
+    )
+    euler_xyz = t3d_euler.mat2euler(rot_mat_zxy, axes="rxyz")
+
+    # Convert ZXY to XYZ (roll, pitch, yaw)
+    # roll = X-rotation, pitch = Y-rotation, yaw = Z-rotation
+    roll = euler_xyz[0]  # X-rotation = theta
+    pitch = euler_xyz[1]  # Y-rotation = 0
+    yaw = euler_xyz[2]  # Z-rotation = π/2 + phi
+
+    return (roll, pitch, yaw)
 
 
 def point_in_bbox_3d(

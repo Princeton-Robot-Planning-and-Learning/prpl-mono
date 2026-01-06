@@ -42,6 +42,7 @@ from prbench.envs.dynamic3d.robots import (
 )
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
 from prbench.envs.dynamic3d.utils import (
+    compute_camera_euler,
     convert_yaw_to_quaternion,
 )
 
@@ -79,7 +80,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Store instance attributes from kwargs
         self.scene_type = scene_type
         self.num_objects = num_objects
-        self.camera_names = config.camera_names
         self.show_images = show_images
         self.seed = seed
         self.config = config
@@ -98,6 +98,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
 
+        # Set camera names from config
+        self.camera_names = config.camera_names.copy()
+        if "cameras" in self.task_config:
+            self.camera_names.extend(list(self.task_config["cameras"].keys()))
+
         # Initialize robot environment
         robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
             self.task_config["robots"][0]
@@ -113,6 +118,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             show_viewer=self.config.show_viewer,
         )
 
+        # This camera's render will be returned by default.
         self._render_camera_name: str | None = "overview"
 
         # Initialize empty object and fixture lists, and ground fixture.
@@ -135,6 +141,41 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             value = obs[key]
             obs_vector.extend(value.flatten())
         return np.array(obs_vector, dtype=np.float32)
+
+    def _setup_cameras(self, root: ET.Element) -> None:
+        """Setup cameras from task configuration.
+
+        Reads camera configurations from self.task_config["cameras"] and creates
+        corresponding camera XML elements in the scene.
+
+        Args:
+            root: Root element of the MuJoCo XML tree
+        """
+        if "cameras" not in self.task_config:
+            return
+
+        cameras_config = self.task_config["cameras"]
+        worldbody = root.find("worldbody")
+        if worldbody is None:
+            print("No worldbody found in XML; cannot add cameras.")
+            return
+
+        for camera_name, camera_config in cameras_config.items():
+            position = camera_config.get("position", [0, 0, 1])
+            lookat = camera_config.get("lookat", [0, 0, 0])
+            fovy = camera_config.get("fovy", 45)
+            resolution = camera_config.get("resolution", [640, 480])
+
+            # Compute euler angles from position and lookat
+            euler = compute_camera_euler(position, lookat)
+
+            # Create camera element
+            camera_elem = ET.SubElement(worldbody, "camera")
+            camera_elem.set("name", camera_name)
+            camera_elem.set("pos", f"{position[0]} {position[1]} {position[2]}")
+            camera_elem.set("euler", f"{euler[0]} {euler[1]} {euler[2]}")
+            camera_elem.set("fovy", str(fovy))
+            camera_elem.set("resolution", f"{resolution[0]} {resolution[1]}")
 
     def _create_scene_xml(self) -> str:
         """Create the MuJoCo XML string for the current scene configuration."""
@@ -294,6 +335,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                             # to asset section
                             for asset_elem in obj_assets:
                                 asset_section.append(asset_elem)
+
+            # Setup cameras from task configuration
+            self._setup_cameras(root)
 
             # Get XML string from tree
             xml_string = ET.tostring(root, encoding="unicode")
@@ -718,8 +762,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             assert self._robot_env is not None, "Robot environment not initialized"
             images = self._robot_env.get_camera_images()
             if images is not None:
-                if self._render_camera_name and self._render_camera_name in images:
-                    return images[self._render_camera_name]
+                image_keys = [k.split("_image")[0] for k in images.keys()]
+                if self._render_camera_name and self._render_camera_name in image_keys:
+                    return images[f"{self._render_camera_name}_image"]
                 # Otherwise, return the first available image.
                 for _, value in images.items():
                     return value
