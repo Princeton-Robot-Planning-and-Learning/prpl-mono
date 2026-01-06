@@ -139,14 +139,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
 
-    for target_joints in joint_plan[1:]:
-        delta = np.subtract(target_joints[:7], obs.joint_positions)
-        delta_lst = [wrap_angle(a) for a in delta]
-        action_lst = [0.0] * 3 + delta_lst + [0.0]
-        action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
-        oc_obs = env.observation_space.devectorize(vec_obs)
-        obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+    obs = _execute_joint_plan(env, joint_plan, obs)
 
     # Step 3: Close the gripper to grasp cube1 (takes multiple steps)
     for _ in range(5):
@@ -182,14 +175,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
 
-    for target_joints in joint_plan[1:]:
-        delta = np.subtract(target_joints[:7], obs.joint_positions)
-        delta_lst = [wrap_angle(a) for a in delta]
-        action_lst = [0.0] * 3 + delta_lst + [0.0]
-        action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
-        oc_obs = env.observation_space.devectorize(vec_obs)
-        obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+    obs = _execute_joint_plan(env, joint_plan, obs)
 
     # Verify cube is still grasped after lifting
     assert obs.grasped_object == "box0"
@@ -272,14 +258,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
             joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
         )
 
-        for target_joints in joint_plan[1:]:
-            delta = np.subtract(target_joints[:7], obs.joint_positions)
-            delta_lst = [wrap_angle(a) for a in delta]
-            action_lst = [0.0] * 3 + delta_lst + [0.0]
-            action = np.array(action_lst, dtype=np.float32)
-            vec_obs, _, _, _, _ = env.step(action)
-            oc_obs = env.observation_space.devectorize(vec_obs)
-            obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+        obs = _execute_joint_plan(env, joint_plan, obs)
 
     # Debug: Check if box is close to table
     sim.set_state(obs)
