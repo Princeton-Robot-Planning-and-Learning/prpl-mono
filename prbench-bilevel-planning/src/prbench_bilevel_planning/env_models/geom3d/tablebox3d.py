@@ -80,7 +80,7 @@ def create_bilevel_planning_models(
         """Get the abstract state for the current state."""
         robot = x.get_objects(Geom3DRobotType)[0]
         target_objects = x.get_objects(Geom3DCuboidType)
-        target_fixtures = x.get_objects(Geom3DFixtureType)
+        target_table = x.get_object_from_name("table")
 
         atoms: set[GroundAtom] = set()
 
@@ -113,10 +113,10 @@ def create_bilevel_planning_models(
         # OnTable.
         for target in target_objects:
             if target.name != target_table.name:
-                if x.get(target, "pose_z") > 0.3:
+                if x.get(target, "pose_z") > 0.3 and x.get(target, "half_extent_z") > 0.08:
                     atoms.add(GroundAtom(OnTable, [target, target_table]))
 
-        objects = {robot} | set(target_objects) | set(target_fixtures)
+        objects = {robot} | set(target_objects)
         return RelationalAbstractState(atoms, objects)
 
     # Goal abstractor.
@@ -126,6 +126,7 @@ def create_bilevel_planning_models(
         target_box = x.get_object_from_name("box0")
         target_table = x.get_object_from_name("table")
         atoms: set[GroundAtom] = set()
+        atoms.add(GroundAtom(OnGround, [target_table]))
         atoms.add(GroundAtom(OnTable, [target_box, target_table]))
         atoms.add(GroundAtom(HandEmpty, [robot]))
         return RelationalAbstractGoal(atoms, state_abstractor)

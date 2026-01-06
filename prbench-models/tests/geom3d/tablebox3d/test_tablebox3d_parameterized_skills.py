@@ -34,7 +34,7 @@ def test_pick_controller():
     )
     lifted_controller = controllers["pick"]
     robot = state.get_object_from_name("robot")
-    target = state.get_object_from_name("cube0")
+    target = state.get_object_from_name("box0")
     object_parameters = (robot, target)
     controller = lifted_controller.ground(object_parameters)
 
@@ -76,7 +76,7 @@ def test_pick_and_place_controller():
     )
     lifted_controller = controllers["pick"]
     robot = state.get_object_from_name("robot")
-    target = state.get_object_from_name("cube0")
+    target = state.get_object_from_name("box0")
     object_parameters = (robot, target)
     controller = lifted_controller.ground(object_parameters)
 

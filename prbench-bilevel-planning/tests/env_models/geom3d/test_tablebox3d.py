@@ -155,20 +155,19 @@ def test_tablebox3d_skills():
     HandEmpty = pred_name_to_pred["HandEmpty"]
     OnGround = pred_name_to_pred["OnGround"]
     OnTable = pred_name_to_pred["OnTable"]
-    # import ipdb; ipdb.set_trace()
     assert HandEmpty([robot]) not in abstract_state1.atoms
     assert OnGround([target]) not in abstract_state1.atoms
     assert Holding([robot, target]) in abstract_state1.atoms
 
     # # Test Place skill
-    # place_skill = Place.ground((robot, target, target_table))
-    # obs2 = _skill_test_helper(place_skill, env_models, env, obs1)
-    # state2 = env_models.observation_to_state(obs2)
-    # abstract_state2 = env_models.state_abstractor(state2)
-    # assert HandEmpty([robot]) in abstract_state2.atoms
-    # assert OnGround([target]) not in abstract_state2.atoms
-    # assert Holding([robot, target]) not in abstract_state2.atoms
-    # assert OnTable([target, target_table]) in abstract_state2.atoms
+    place_skill = Place.ground((robot, target, target_table))
+    obs2 = _skill_test_helper(place_skill, env_models, env, obs1)
+    state2 = env_models.observation_to_state(obs2)
+    abstract_state2 = env_models.state_abstractor(state2)
+    assert HandEmpty([robot]) in abstract_state2.atoms
+    assert OnGround([target]) not in abstract_state2.atoms
+    assert Holding([robot, target]) not in abstract_state2.atoms
+    assert OnTable([target, target_table]) in abstract_state2.atoms
 
     env.close()
 
