@@ -10,7 +10,7 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
-from prbench.envs.geom3d.object_types import Geom3DCuboidType, Geom3DFixtureType
+from prbench.envs.geom3d.object_types import Geom3DCuboidType
 from prbench.envs.geom3d.tablebox3d import (
     Geom3DRobotType,
     ObjectCentricTableBox3DEnv,
@@ -20,10 +20,6 @@ from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
 )
 from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
-from pybullet_helpers.inverse_kinematics import (
-    InverseKinematicsError,
-    inverse_kinematics,
-)
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
@@ -39,7 +35,7 @@ from relational_structs import (
 )
 
 # constants
-GRASP_TRANSFORM_TO_OBJECT = Pose((0, 0.13, 0.06), (0.707, 0.707, 0, 0)) # side grasp
+GRASP_TRANSFORM_TO_OBJECT = Pose((0, 0.13, 0.06), (0.707, 0.707, 0, 0))  # side grasp
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
 GRIPPER_OPEN_THRESHOLD = 0.01
 HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
@@ -95,6 +91,8 @@ class GroundPickController(
         self._closed_gripper: bool = False
         self._lifted: bool = False
         self._last_gripper_state: float = 0.0
+        self._target_pick_pose_world: Pose | None = None
+        self._pre_pick_pose_world: Pose | None = None
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
@@ -183,19 +181,6 @@ class GroundPickController(
                     target_end_effector_pose.orientation,
                 )
 
-                # Run inverse kinematics to get joint positions.
-                try:
-                    joint_positions = inverse_kinematics(
-                        self._sim.robot.arm,
-                        target_end_effector_pose,
-                        validate=True,
-                        set_joints=False,
-                    )
-                except InverseKinematicsError as e:
-                    raise TrajectorySamplingFailure(
-                        f"IK failed for target pose {target_end_effector_pose}"
-                    ) from e
-
                 joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
                 # Run motion planning to the target joint positions.
                 joint_plan = smoothly_follow_end_effector_path(
@@ -207,16 +192,6 @@ class GroundPickController(
                     joint_distance_fn=joint_distance_fn,
                     max_smoothing_iters_per_step=1,
                 )
-                
-                # Run motion planning to the target joint positions.
-                # joint_plan = run_motion_planning(
-                #     self._sim.robot.arm,
-                #     initial_positions=self._sim.robot.arm.get_joint_positions(),
-                #     target_positions=joint_positions,
-                #     collision_bodies=set(),
-                #     seed=0,  # for determinism
-                #     physics_client_id=self._sim.physics_client_id,
-                # )
 
                 if joint_plan is None:
                     raise TrajectorySamplingFailure("Motion planning failed")
@@ -267,7 +242,7 @@ class GroundPickController(
                 self._sim.set_state(self._current_state)
 
                 # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
+                joint_plan = run_motion_planning(  # type: ignore
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
@@ -379,9 +354,9 @@ class GroundPlaceController(
                     + self._sim.config.table_half_extents[2]
                     + self._sim.config.box_wall_thickness
                     + self._sim.config.box_half_extents[2]
-                    + 0.05
+                    + 0.05,
                 ),
-                (np.pi, 0, np.pi / 2)
+                (np.pi, 0, np.pi / 2),
             )
             self._pre_place_pose_world = Pose(
                 (

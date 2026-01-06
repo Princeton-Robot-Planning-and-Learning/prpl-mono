@@ -17,7 +17,9 @@ prbench.register_all_environments()
 def test_pick_controller():
     """Test pick controller in TableBox3D environment."""
 
-    env = prbench.make("prbench/TableBox3D-o1-v0", render_mode="rgb_array", use_gui=False)
+    env = prbench.make(
+        "prbench/TableBox3D-o1-v0", render_mode="rgb_array", use_gui=False
+    )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
 
@@ -57,7 +59,9 @@ def test_pick_controller():
 def test_pick_and_place_controller():
     """Test pick and place controller in TableBox3D environment."""
 
-    env = prbench.make("prbench/TableBox3D-o1-v0", render_mode="rgb_array", use_gui=False)
+    env = prbench.make(
+        "prbench/TableBox3D-o1-v0", render_mode="rgb_array", use_gui=False
+    )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
 
