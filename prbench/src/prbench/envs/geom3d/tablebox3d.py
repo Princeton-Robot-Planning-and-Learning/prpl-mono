@@ -10,7 +10,7 @@ from typing import Any
 from typing import Type as TypingType
 
 import numpy as np
-from pybullet_helpers.geometry import Pose, set_pose
+from pybullet_helpers.geometry import Pose, set_pose, get_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import create_pybullet_block, create_pybullet_hollow_box
 from relational_structs import Object, ObjectCentricState
@@ -53,6 +53,9 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     box_half_extents: tuple[float, float, float] = (0.1, 0.1, 0.1)
     box_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
     box_wall_thickness: float = 0.01
+
+    # Gripper.
+    gripper_open_threshold: float = 0.01
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -346,7 +349,17 @@ class ObjectCentricTableBox3DEnv(
         return state
 
     def goal_reached(self) -> bool:
-        return False
+        robot_gripper_pose = self._robot_arm.get_finger_state()
+        robot_end_effector_pose = self._robot_arm.get_end_effector_pose()
+        if robot_gripper_pose > self.config.gripper_open_threshold:
+            return False
+        for _, box_id in self._boxes.items():
+            box_pose = get_pose(box_id, self.physics_client_id)
+            if np.linalg.norm(np.subtract(robot_end_effector_pose.position, box_pose.position)) < 0.2:
+                return False
+            if box_pose.position[2] < 0.3:
+                return False
+        return True
 
 
 class TableBox3DEnv(ConstantObjectPRBenchEnv):

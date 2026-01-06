@@ -158,6 +158,7 @@ def test_tablebox3d_skills():
     assert HandEmpty([robot]) not in abstract_state1.atoms
     assert OnGround([target]) not in abstract_state1.atoms
     assert Holding([robot, target]) in abstract_state1.atoms
+    assert OnTable([target, target_table]) not in abstract_state1.atoms
 
     # # Test Place skill
     place_skill = Place.ground((robot, target, target_table))
