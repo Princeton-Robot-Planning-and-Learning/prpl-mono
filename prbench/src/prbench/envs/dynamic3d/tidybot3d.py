@@ -31,6 +31,7 @@ from prbench.envs.dynamic3d.objects import (
     get_fixture_class,
     get_object_class,
 )
+from prbench.envs.dynamic3d.objects.generated_objects import GeneratedSeesaw
 from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_positions,
 )
@@ -710,11 +711,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     raise ValueError(f"Object '{obj_name}' not found for balance check")
 
                 seesaw_obj = self._objects_dict[obj_name]
-
-                # Import here to avoid circular imports
-                from prbench.envs.dynamic3d.objects.generated_objects import (
-                    GeneratedSeesaw,
-                )
 
                 if not isinstance(seesaw_obj, GeneratedSeesaw):
                     raise ValueError(

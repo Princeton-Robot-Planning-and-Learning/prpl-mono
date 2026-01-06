@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """View dynamic3D environments with an interactive MuJoCo viewer.
 
-This script uses MuJoCo's passive viewer which allows interactive camera control
-while the simulation runs (similar to PyBullet's GUI mode).
+This script uses MuJoCo's passive viewer which allows interactive
+camera control while the simulation runs (similar to PyBullet's GUI mode).
 
 Usage:
-    python prbench/scripts/view_dynamic3d_env.py prbench/TidyBot3D-table-o1-v0
-    python prbench/scripts/view_dynamic3d_env.py prbench/TidyBot3D-table-o1-v0 --seed 42
-    python prbench/scripts/view_dynamic3d_env.py prbench/TidyBot3D-table-o3-v0 --episodes 5
-    python prbench/scripts/view_dynamic3d_env.py prbench/TidyBot3D-table-o3-v0 --use-opencv
+    python prbench/scripts/view_dynamic3d_env.py \
+prbench/TidyBot3D-table-o1-v0
+    python prbench/scripts/view_dynamic3d_env.py \
+prbench/TidyBot3D-table-o1-v0 --seed 42
+    python prbench/scripts/view_dynamic3d_env.py \
+prbench/TidyBot3D-table-o3-v0 --episodes 5
+    python prbench/scripts/view_dynamic3d_env.py \
+prbench/TidyBot3D-table-o3-v0 --use-opencv
 
 Interactive MuJoCo Viewer Controls (default mode):
     - Left mouse drag: Rotate camera
@@ -32,7 +36,9 @@ import sys
 import tempfile
 import time
 import xml.etree.ElementTree as ET
+from typing import Any
 
+import cv2  # type: ignore
 import mujoco
 import mujoco.viewer
 import numpy as np
@@ -41,7 +47,9 @@ import prbench
 
 
 def update_xml_with_state(
-    xml_path: str, model: mujoco.MjModel, data: mujoco.MjData
+    xml_path: str,
+    model: "mujoco.MjModel",  # type: ignore  # pylint: disable=no-member
+    data: "mujoco.MjData",  # type: ignore  # pylint: disable=no-member
 ) -> None:
     """Update XML file with current simulation state (object positions/orientations).
 
@@ -70,7 +78,7 @@ def update_xml_with_state(
             if child.tag == "freejoint":
                 freejoint = child
                 break
-            elif child.tag == "joint" and child.get("type") == "free":
+            if child.tag == "joint" and child.get("type") == "free":
                 freejoint = child
                 break
 
@@ -79,14 +87,16 @@ def update_xml_with_state(
 
         # Get body ID
         try:
+            # pylint: disable=no-member
             body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, body_name)
-        except:
+        except Exception:  # pylint: disable=broad-except
             continue
 
         # Get the joint ID for this body's freejoint
         joint_id = None
         for jnt_id in range(model.njnt):
             jnt_body_id = model.jnt_bodyid[jnt_id]
+            # pylint: disable=no-member
             if (
                 jnt_body_id == body_id
                 and model.jnt_type[jnt_id] == mujoco.mjtJoint.mjJNT_FREE
@@ -117,7 +127,7 @@ def update_xml_with_state(
     tree.write(xml_path)
 
 
-def run_with_standalone_viewer(env, args):
+def run_with_standalone_viewer(env: Any, args: Any) -> None:
     """Run using standalone mujoco.viewer app (works great on macOS!).
 
     This launches the MuJoCo viewer as a separate process, avoiding threading issues.
@@ -127,6 +137,7 @@ def run_with_standalone_viewer(env, args):
     unwrapped_env = env.unwrapped
 
     # Navigate to robot env
+    # pylint: disable=protected-access
     if hasattr(unwrapped_env, "_object_centric_env"):
         object_centric_env = unwrapped_env._object_centric_env
         if hasattr(object_centric_env, "_robot_env"):
@@ -146,7 +157,7 @@ def run_with_standalone_viewer(env, args):
         print("=" * 60)
 
         # Reset environment to get a new configuration
-        obs, info = env.reset(seed=current_seed)
+        _, _ = env.reset(seed=current_seed)
         print(f"Environment reset with seed: {current_seed}")
 
         # Get the sim after reset
@@ -164,7 +175,7 @@ def run_with_standalone_viewer(env, args):
         model = sim.model.mj_model
         temp_fd, temp_xml_path = tempfile.mkstemp(suffix=".xml")
         os.close(temp_fd)
-        mujoco.mj_saveLastXML(temp_xml_path, model)
+        mujoco.mj_saveLastXML(temp_xml_path, model)  # pylint: disable=no-member
 
         # Update XML with current state (positions/orientations of objects)
         update_xml_with_state(temp_xml_path, model, sim.data.mj_data)
@@ -179,7 +190,7 @@ def run_with_standalone_viewer(env, args):
             shutil.copy(temp_xml_path, save_path)
             print(f"XML saved to: {save_path}")
 
-        print(f"\nLaunching standalone MuJoCo viewer...")
+        print("\nLaunching standalone MuJoCo viewer...")
         print(f"Model file: {temp_xml_path}")
         print("\nInteractive Viewer Controls:")
         print("  - Left mouse drag: Rotate camera")
@@ -194,7 +205,8 @@ def run_with_standalone_viewer(env, args):
 
         # Launch standalone viewer
         subprocess.run(
-            [sys.executable, "-m", "mujoco.viewer", f"--mjcf={temp_xml_path}"]
+            [sys.executable, "-m", "mujoco.viewer", f"--mjcf={temp_xml_path}"],
+            check=False,
         )
 
         # Clean up temp file
@@ -204,7 +216,7 @@ def run_with_standalone_viewer(env, args):
             current_seed += 1
 
 
-def run_with_mujoco_viewer(env, args):
+def run_with_mujoco_viewer(env: Any, args: Any) -> None:
     """Run environment with interactive MuJoCo viewer using blocking approach.
 
     Note: On macOS, passive viewer has threading issues, so this will automatically
@@ -224,6 +236,7 @@ def run_with_mujoco_viewer(env, args):
     unwrapped_env = env.unwrapped
 
     # Try to find the object_centric_env first
+    # pylint: disable=protected-access
     if hasattr(unwrapped_env, "_object_centric_env"):
         object_centric_env = unwrapped_env._object_centric_env
         if hasattr(object_centric_env, "_robot_env"):
@@ -258,7 +271,7 @@ def run_with_mujoco_viewer(env, args):
         print("=" * 60)
 
         # Reset environment (this creates the sim)
-        obs, info = env.reset(seed=current_seed)
+        _, _ = env.reset(seed=current_seed)
         print(f"Environment reset with seed: {current_seed}")
 
         # Get the sim after reset
@@ -280,21 +293,22 @@ def run_with_mujoco_viewer(env, args):
             while viewer.is_running() and step < args.max_steps:
                 if not args.no_random:
                     action = env.action_space.sample()
-                    obs, reward, terminated, truncated, info = env.step(action)
+                    _, reward, terminated, truncated, _ = env.step(action)
                     total_reward += float(reward)
                     step += 1
 
                     viewer.sync()
 
                     if step % 100 == 0:
-                        print(
-                            f"  Step {step}/{args.max_steps} | Total reward: {total_reward:.2f}"
+                        msg = (
+                            f"  Step {step}/{args.max_steps} | "
+                            f"Total reward: {total_reward:.2f}"
                         )
+                        print(msg)
 
                     if terminated or truncated:
-                        print(
-                            f"\n{'✓' if terminated else '⚠'} Episode ended at step {step}"
-                        )
+                        status = "✓" if terminated else "⚠"
+                        print(f"\n{status} Episode ended at step {step}")
                         print(f"  Total reward: {total_reward:.2f}")
                         time.sleep(2)
                         break
@@ -310,9 +324,8 @@ def run_with_mujoco_viewer(env, args):
             current_seed += 1
 
 
-def run_with_opencv_viewer(env, args):
+def run_with_opencv_viewer(env: Any, args: Any) -> None:
     """Run environment with OpenCV window (fallback mode)."""
-    import cv2
 
     window_name = f"PRBench Viewer - {args.env_id}"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
@@ -338,7 +351,7 @@ def run_with_opencv_viewer(env, args):
         print(f"Episode {episode + 1}/{args.episodes}")
         print("=" * 60)
 
-        obs, info = env.reset(seed=current_seed)
+        _, _ = env.reset(seed=current_seed)
         print(f"Environment reset with seed: {current_seed}")
 
         frame = env.render()
@@ -352,7 +365,10 @@ def run_with_opencv_viewer(env, args):
         while step < args.max_steps:
             display_frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
 
-            status_text = f"Episode {episode + 1}/{args.episodes} | Step {step}/{args.max_steps} | Reward: {total_reward:.2f}"
+            status_text = (
+                f"Episode {episode + 1}/{args.episodes} | "
+                f"Step {step}/{args.max_steps} | Reward: {total_reward:.2f}"
+            )
             if paused:
                 status_text += " | PAUSED"
 
@@ -372,27 +388,30 @@ def run_with_opencv_viewer(env, args):
             if key == ord("q"):
                 quit_requested = True
                 break
-            elif key == ord("r"):
+            if key == ord("r"):
                 break
-            elif key == ord(" "):
+            if key == ord(" "):
                 paused = not paused
 
             if paused or args.no_random:
                 continue
 
             action = env.action_space.sample()
-            obs, reward, terminated, truncated, info = env.step(action)
+            _, reward, terminated, truncated, _ = env.step(action)
             total_reward += float(reward)
             step += 1
             frame = env.render()
 
             if step % 100 == 0:
-                print(
-                    f"  Step {step}/{args.max_steps} | Total reward: {total_reward:.2f}"
+                msg = (
+                    f"  Step {step}/{args.max_steps} | "
+                    f"Total reward: {total_reward:.2f}"
                 )
+                print(msg)
 
             if terminated or truncated:
-                print(f"\n{'✓' if terminated else '⚠'} Episode ended at step {step}")
+                status = "✓" if terminated else "⚠"
+                print(f"\n{status} Episode ended at step {step}")
                 print(f"  Total reward: {total_reward:.2f}")
                 time.sleep(1)
                 break
@@ -510,7 +529,7 @@ def main() -> None:
     finally:
         print("\n" + "=" * 60)
         print("Closing environment...")
-        env.close()
+        env.close()  # type: ignore
         print("Done!")
 
 
