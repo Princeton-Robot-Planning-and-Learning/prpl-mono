@@ -72,6 +72,35 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             block_half_extents, self.table_half_extents, self.table_pose, rng
         )
 
+    def sample_block_on_ground(
+        self, block_half_extents: tuple[float, float, float], rng: np.random.Generator
+    ) -> Pose:
+        """Sample an initial block pose given sampled half extents."""
+
+        lb = (
+            self.x_lb,
+            self.y_lb,
+            block_half_extents[2],
+        )
+
+        ub = (
+            self.x_ub,
+            self.y_ub,
+            block_half_extents[2],
+        )
+
+        for _ in range(100):
+            x, y, z = rng.uniform(lb, ub)
+            if (
+                np.abs(x - self.table_pose.position[0]) > self.table_half_extents[0]
+                and np.abs(y - self.table_pose.position[1]) > self.table_half_extents[1]
+            ):
+                break
+        else:
+            raise RuntimeError("Failed to sample collision-free block pose on ground")
+
+        return Pose((x, y, z))
+
     def sample_block_in_box_pose(
         self,
         block_half_extents: tuple[float, float, float],
@@ -204,7 +233,12 @@ class ObjectCentricTableBox3DEnv(
                 self.config.box_half_extents[1],
                 self.config.box_half_extents[2],
             )
-            box_pose = self.config.sample_block_on_table_pose(
+            # on the table
+            # box_pose = self.config.sample_block_on_table_pose(
+            #     box_half_extents, self.np_random
+            # )
+            # on the ground
+            box_pose = self.config.sample_block_on_ground(
                 box_half_extents, self.np_random
             )
             set_pose(box_id, box_pose, self.physics_client_id)
