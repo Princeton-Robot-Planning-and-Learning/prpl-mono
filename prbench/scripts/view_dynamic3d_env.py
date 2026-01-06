@@ -40,7 +40,9 @@ import numpy as np
 import prbench
 
 
-def update_xml_with_state(xml_path: str, model: mujoco.MjModel, data: mujoco.MjData) -> None:
+def update_xml_with_state(
+    xml_path: str, model: mujoco.MjModel, data: mujoco.MjData
+) -> None:
     """Update XML file with current simulation state (object positions/orientations).
 
     This ensures objects appear at their current positions in the viewer, not at origin.
@@ -50,25 +52,25 @@ def update_xml_with_state(xml_path: str, model: mujoco.MjModel, data: mujoco.MjD
     root = tree.getroot()
 
     # Get all bodies in worldbody
-    worldbody = root.find('worldbody')
+    worldbody = root.find("worldbody")
     if worldbody is None:
         return
 
     updated_count = 0
 
     # Iterate through all bodies and update positions for freejoint bodies
-    for body in worldbody.iter('body'):
-        body_name = body.get('name')
+    for body in worldbody.iter("body"):
+        body_name = body.get("name")
         if body_name is None:
             continue
 
         # Check if this body has a freejoint
         freejoint = None
         for child in body:
-            if child.tag == 'freejoint':
+            if child.tag == "freejoint":
                 freejoint = child
                 break
-            elif child.tag == 'joint' and child.get('type') == 'free':
+            elif child.tag == "joint" and child.get("type") == "free":
                 freejoint = child
                 break
 
@@ -85,7 +87,10 @@ def update_xml_with_state(xml_path: str, model: mujoco.MjModel, data: mujoco.MjD
         joint_id = None
         for jnt_id in range(model.njnt):
             jnt_body_id = model.jnt_bodyid[jnt_id]
-            if jnt_body_id == body_id and model.jnt_type[jnt_id] == mujoco.mjtJoint.mjJNT_FREE:
+            if (
+                jnt_body_id == body_id
+                and model.jnt_type[jnt_id] == mujoco.mjtJoint.mjJNT_FREE
+            ):
                 joint_id = jnt_id
                 break
 
@@ -96,12 +101,12 @@ def update_xml_with_state(xml_path: str, model: mujoco.MjModel, data: mujoco.MjD
         qpos_addr = model.jnt_qposadr[joint_id]
 
         # Extract position (first 3 values) and quaternion (next 4 values)
-        pos = data.qpos[qpos_addr:qpos_addr+3]
-        quat = data.qpos[qpos_addr+3:qpos_addr+7]
+        pos = data.qpos[qpos_addr : qpos_addr + 3]
+        quat = data.qpos[qpos_addr + 3 : qpos_addr + 7]
 
         # Update body position in XML
-        body.set('pos', f'{pos[0]:.6f} {pos[1]:.6f} {pos[2]:.6f}')
-        body.set('quat', f'{quat[0]:.6f} {quat[1]:.6f} {quat[2]:.6f} {quat[3]:.6f}')
+        body.set("pos", f"{pos[0]:.6f} {pos[1]:.6f} {pos[2]:.6f}")
+        body.set("quat", f"{quat[0]:.6f} {quat[1]:.6f} {quat[2]:.6f} {quat[3]:.6f}")
 
         updated_count += 1
 
@@ -144,7 +149,6 @@ def run_with_standalone_viewer(env, args):
         obs, info = env.reset(seed=current_seed)
         print(f"Environment reset with seed: {current_seed}")
 
-
         # Get the sim after reset
         sim = robot_env.sim
         if sim is None:
@@ -154,11 +158,11 @@ def run_with_standalone_viewer(env, args):
         # Run a few simulation steps to let objects settle to their proper positions
         for _ in range(10):
             sim.forward()  # Update derived quantities
-            sim.step()     # Step physics
+            sim.step()  # Step physics
 
         # Get the XML model and export to temporary file
         model = sim.model.mj_model
-        temp_fd, temp_xml_path = tempfile.mkstemp(suffix='.xml')
+        temp_fd, temp_xml_path = tempfile.mkstemp(suffix=".xml")
         os.close(temp_fd)
         mujoco.mj_saveLastXML(temp_xml_path, model)
 
@@ -189,10 +193,9 @@ def run_with_standalone_viewer(env, args):
         print("\nClose the viewer window to continue to next episode...\n")
 
         # Launch standalone viewer
-        subprocess.run([
-            sys.executable, "-m", "mujoco.viewer",
-            f"--mjcf={temp_xml_path}"
-        ])
+        subprocess.run(
+            [sys.executable, "-m", "mujoco.viewer", f"--mjcf={temp_xml_path}"]
+        )
 
         # Clean up temp file
         os.unlink(temp_xml_path)
@@ -284,10 +287,14 @@ def run_with_mujoco_viewer(env, args):
                     viewer.sync()
 
                     if step % 100 == 0:
-                        print(f"  Step {step}/{args.max_steps} | Total reward: {total_reward:.2f}")
+                        print(
+                            f"  Step {step}/{args.max_steps} | Total reward: {total_reward:.2f}"
+                        )
 
                     if terminated or truncated:
-                        print(f"\n{'✓' if terminated else '⚠'} Episode ended at step {step}")
+                        print(
+                            f"\n{'✓' if terminated else '⚠'} Episode ended at step {step}"
+                        )
                         print(f"  Total reward: {total_reward:.2f}")
                         time.sleep(2)
                         break
@@ -349,8 +356,15 @@ def run_with_opencv_viewer(env, args):
             if paused:
                 status_text += " | PAUSED"
 
-            cv2.putText(display_frame, status_text, (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            cv2.putText(
+                display_frame,
+                status_text,
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2,
+            )
 
             cv2.imshow(window_name, display_frame)
             key = cv2.waitKey(frame_delay) & 0xFF
@@ -373,7 +387,9 @@ def run_with_opencv_viewer(env, args):
             frame = env.render()
 
             if step % 100 == 0:
-                print(f"  Step {step}/{args.max_steps} | Total reward: {total_reward:.2f}")
+                print(
+                    f"  Step {step}/{args.max_steps} | Total reward: {total_reward:.2f}"
+                )
 
             if terminated or truncated:
                 print(f"\n{'✓' if terminated else '⚠'} Episode ended at step {step}")

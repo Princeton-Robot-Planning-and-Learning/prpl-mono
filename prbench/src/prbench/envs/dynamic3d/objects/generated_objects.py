@@ -601,4 +601,3 @@ class GeneratedSeesaw(MujocoObject):
         """
         angle_degrees = abs(self.get_beam_tilt_angle_degrees())
         return angle_degrees <= tolerance_degrees
-
