@@ -72,7 +72,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     initial_finger_state: float = 0.0
     end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.025)
     end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    max_action_mag: float = 0.05
+    max_action_mag: float = 0.2
     check_base_collisions: bool = False
 
     # This is used to check whether a grasped object can be placed on a surface.
@@ -243,6 +243,11 @@ class ObjectCentricGeom3DRobotEnv(
         self._grasped_object: str | None = None
         self._grasped_object_transform: Pose | None = None
 
+        # Track inside objects.
+        self._inside_object_list: list[str] = []
+        self._inside_object_id_list: list[int] = []
+        self._inside_object_transform_list: list[Pose] = []
+
     @property
     @abc.abstractmethod
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
@@ -368,6 +373,22 @@ class ObjectCentricGeom3DRobotEnv(
         self._grasped_object_transform = obs.grasped_object_transform
         self._set_object_states(obs)
 
+    def _is_inside_object(
+        self,
+        obj_pose: Pose,
+        grasped_object_pose: Pose,
+        half_extents: tuple[float, float, float],
+    ) -> bool:
+        """Check if an object is inside the grasped object."""
+        return (
+            obj_pose.position[0] > grasped_object_pose.position[0] - half_extents[0]
+            and obj_pose.position[0] < grasped_object_pose.position[0] + half_extents[0]
+            and obj_pose.position[1] > grasped_object_pose.position[1] - half_extents[1]
+            and obj_pose.position[1] < grasped_object_pose.position[1] + half_extents[1]
+            and obj_pose.position[2] > grasped_object_pose.position[2] - half_extents[2]
+            and obj_pose.position[2] < grasped_object_pose.position[2] + half_extents[2]
+        )
+
     def step(self, action: Array) -> tuple[_ObsType, float, bool, bool, dict]:
         # execute the base action
         base_action = action[:3]
@@ -442,6 +463,31 @@ class ObjectCentricGeom3DRobotEnv(
                 self._grasped_object_transform = multiply_poses(
                     world_to_robot.invert(), world_to_object
                 )
+                extent_threshold = (
+                    0.04  # this is used to check if the object is a box / container.
+                )
+                if (
+                    self._get_half_extents(self._grasped_object)[0] > extent_threshold
+                    and self._get_half_extents(self._grasped_object)[1]
+                    > extent_threshold
+                    and self._get_half_extents(self._grasped_object)[2]
+                    > extent_threshold
+                ):
+                    for obj in self._get_movable_object_names():
+                        if obj == self._grasped_object:
+                            continue
+                        obj_id = self._object_name_to_pybullet_id(obj)
+                        obj_pose = get_pose(obj_id, self.physics_client_id)
+                        if self._is_inside_object(
+                            obj_pose,
+                            world_to_object,
+                            self._get_half_extents(self._grasped_object),
+                        ):
+                            self._inside_object_list.append(obj)
+                            self._inside_object_id_list.append(obj_id)
+                            self._inside_object_transform_list.append(
+                                multiply_poses(world_to_robot.invert(), obj_pose)
+                            )
                 # Close the fingers until they are touching the object.
                 while not check_body_collisions(
                     self._grasped_object_id,
@@ -485,6 +531,9 @@ class ObjectCentricGeom3DRobotEnv(
             surface_supports = self._get_surfaces_supporting_object(
                 self._grasped_object_id
             )
+            self._inside_object_list = []
+            self._inside_object_id_list = []
+            self._inside_object_transform_list = []
             # Placement is successful.
             if surface_supports:
                 self._grasped_object = None
@@ -516,6 +565,19 @@ class ObjectCentricGeom3DRobotEnv(
             self._grasped_object_transform,
             extend_joints_to_include_fingers(joints),
         )
+        if len(self._inside_object_list) > 0:
+            for obj_id, obj_transform in zip(
+                self._inside_object_id_list,
+                self._inside_object_transform_list,
+                strict=True,
+            ):
+                set_robot_joints_with_held_object(
+                    self._robot_arm,
+                    self.physics_client_id,
+                    obj_id,
+                    obj_transform,
+                    extend_joints_to_include_fingers(joints),
+                )
         # Now handle the fingers.
         self._robot_arm.set_finger_state(finger_state)
         # Update the end effector visualization.

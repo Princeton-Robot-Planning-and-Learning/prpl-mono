@@ -12,6 +12,7 @@ dependencies = [
    "matplotlib",
    "numpy",
    "spatialmath-python",
+   "opencv-python>=4.9.0",
 ]
 
 [project.optional-dependencies]

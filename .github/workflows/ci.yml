@@ -12,6 +12,9 @@ env:
   # Base SHA for selective testing in PRs
   CI_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
 
+  # Run tests sequentially instead of in parallel
+  SEQUENTIAL: "true"
+
 jobs:
   autoformat:
     runs-on: ubuntu-latest

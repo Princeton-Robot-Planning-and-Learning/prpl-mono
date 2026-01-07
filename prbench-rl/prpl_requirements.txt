@@ -1,2 +1,2 @@
 # PRPL mono requirements.
-../prbench
+../prbench[all]
