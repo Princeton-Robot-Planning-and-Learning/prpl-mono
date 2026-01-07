@@ -169,7 +169,7 @@ def test_tablebox3d_skills():
 def test_tablebox3d_bilevel_planning(seed):
     """Tests for bilevel planning in the TableBox3D environment."""
 
-    num_objects = 1
+    num_objects = 2
     env = prbench.make(f"prbench/TableBox3D-o{num_objects}-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:
