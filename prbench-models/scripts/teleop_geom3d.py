@@ -77,7 +77,8 @@ def run_teleop(
             start_time = time.time()
             for step_idx in range(max_steps):
                 # Enforce desired control frequency
-                step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD
+                # 10hz -> 5hz due to pybullet rendering speed.
+                step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD * 2
                 while time.time() < step_end_time:
                     time.sleep(0.0001)
 
@@ -91,6 +92,7 @@ def run_teleop(
                 )
 
                 # Create observation dict for policy
+                all_images = env.unwrapped._object_centric_env.render_all_cameras() # type: ignore # pylint: disable=protected-access
                 obs_dict: dict[str, Any] = {
                     "base_pose": np.array(
                         [
@@ -102,8 +104,9 @@ def run_teleop(
                     "arm_pos": current_position,
                     "arm_quat": current_orientation,
                     "gripper_pos": np.array([state.get(robot, "finger_state")]),
-                    "overview_image": env.unwrapped._object_centric_env.render(), # type: ignore # pylint: disable=protected-access # pylint: disable=line-too-long
-                    "base_image": env.unwrapped._object_centric_env.render_base_camera(), # type: ignore # pylint: disable=protected-access # pylint: disable=line-too-long
+                    "overview_image": all_images["overview"],
+                    "base_image": all_images["base"],
+                    "wrist_image": all_images["wrist"],
                 }
 
                 # Get action from policy
