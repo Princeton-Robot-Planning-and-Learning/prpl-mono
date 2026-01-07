@@ -52,7 +52,9 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
 
     control_frequency: int = 10
     horizon: int = 1000
-    camera_names: list[str] = field(default_factory=lambda: ["overview"])
+    camera_names: list[str] = field(
+        default_factory=lambda: ["overview", "base", "wrist"]
+    )
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
