@@ -40,7 +40,8 @@ def run_teleop(
     """
     # Create the environment
     env = prbench.make(
-        f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0",
+        f"prbench/Shelf3D-o{num_cubes}-v0",
+        use_gui=True,
         render_mode="rgb_array",
     )
 
@@ -61,7 +62,7 @@ def run_teleop(
 
             # Reset the environment
             episode_seed = seed + episode_idx
-            obs, _, raw_obs = env.reset_with_images(seed=episode_seed)  # type: ignore
+            obs, _ = env.reset(seed=episode_seed)  # type: ignore
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
@@ -82,7 +83,7 @@ def run_teleop(
                 # Get robot state
                 robot = state.get_object_from_name("robot")
                 current_joints = np.array(
-                    [state.get(robot, f"pos_arm_joint{i}") for i in range(1, 8)]
+                    [state.get(robot, f"joint_{i}") for i in range(1, 8)]
                 )
                 current_position, current_orientation = fk_solver.forward_kinematics(
                     current_joints
@@ -99,10 +100,7 @@ def run_teleop(
                     ),
                     "arm_pos": current_position,
                     "arm_quat": current_orientation,
-                    "gripper_pos": np.array([state.get(robot, "pos_gripper")]),
-                    "base_image": raw_obs["raw_obs"]["base_image"].copy(),
-                    "wrist_image": raw_obs["raw_obs"]["wrist_image"].copy(),
-                    "overview_image": raw_obs["raw_obs"]["overview_image"].copy(),
+                    "gripper_pos": np.array([state.get(robot, "finger_state")]),
                 }
 
                 # Get action from policy
@@ -144,7 +142,7 @@ def run_teleop(
                     writer.step(obs_dict, action_dict, target_object_key)  # type: ignore
 
                 # Execute action in environment
-                obs, reward, terminated, truncated, _, raw_obs = env.step_with_images(  # type: ignore # pylint: disable=line-too-long
+                obs, reward, terminated, truncated, _ = env.step(  # type: ignore # pylint: disable=line-too-long
                     action
                 )
                 next_state = env.observation_space.devectorize(obs)
@@ -179,7 +177,7 @@ def main() -> None:
         description="Run teleoperation in prbench environment"
     )
     parser.add_argument(
-        "--output-dir", default="data/teleop", help="Directory to save episodes"
+        "--output-dir", default="data/teleop_geom3d", help="Directory to save episodes"
     )
     parser.add_argument(
         "--seed", type=int, default=123, help="Random seed for reproducibility"
