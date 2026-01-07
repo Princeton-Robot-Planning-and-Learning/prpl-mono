@@ -10,7 +10,7 @@ from typing import Any
 from typing import Type as TypingType
 
 import numpy as np
-from pybullet_helpers.geometry import Pose, set_pose, get_pose
+from pybullet_helpers.geometry import Pose, get_pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import create_pybullet_block, create_pybullet_hollow_box
 from relational_structs import Object, ObjectCentricState
@@ -355,7 +355,12 @@ class ObjectCentricTableBox3DEnv(
             return False
         for _, box_id in self._boxes.items():
             box_pose = get_pose(box_id, self.physics_client_id)
-            if np.linalg.norm(np.subtract(robot_end_effector_pose.position, box_pose.position)) < 0.2:
+            if (
+                np.linalg.norm(
+                    np.subtract(robot_end_effector_pose.position, box_pose.position)
+                )
+                < 0.2
+            ):
                 return False
             if box_pose.position[2] < 0.3:
                 return False
