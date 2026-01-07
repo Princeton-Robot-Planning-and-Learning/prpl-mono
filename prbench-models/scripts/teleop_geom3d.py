@@ -101,6 +101,7 @@ def run_teleop(
                     "arm_pos": current_position,
                     "arm_quat": current_orientation,
                     "gripper_pos": np.array([state.get(robot, "finger_state")]),
+                    "overview_image": env.render(),
                 }
 
                 # Get action from policy
