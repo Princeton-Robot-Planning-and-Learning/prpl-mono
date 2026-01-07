@@ -113,8 +113,17 @@ def create_bilevel_planning_models(
         # OnTable.
         for target in target_objects:
             if target.name != target_table.name:
-                if x.get(target, "pose_z") > 0.3 and x.get(target, "half_extent_z") > 0.08:
-                    if abs(x.get(target, "pose_x") - x.get(target_table, "pose_x")) < x.get(target_table, "half_extent_x") and abs(x.get(target, "pose_y") - x.get(target_table, "pose_y")) < x.get(target_table, "half_extent_y"):
+                if (
+                    x.get(target, "pose_z") > 0.3
+                    and x.get(target, "half_extent_z") > 0.08
+                ):
+                    if abs(
+                        x.get(target, "pose_x") - x.get(target_table, "pose_x")
+                    ) < x.get(target_table, "half_extent_x") and abs(
+                        x.get(target, "pose_y") - x.get(target_table, "pose_y")
+                    ) < x.get(
+                        target_table, "half_extent_y"
+                    ):
                         atoms.add(GroundAtom(OnTable, [target, target_table]))
 
         objects = {robot} | set(target_objects)
@@ -135,7 +144,7 @@ def create_bilevel_planning_models(
     # Operators.
     robot = Variable("?robot", Geom3DRobotType)
     target = Variable("?target", Geom3DCuboidType)
-    
+
     PickOperator = LiftedOperator(
         "Pick",
         [robot, target],

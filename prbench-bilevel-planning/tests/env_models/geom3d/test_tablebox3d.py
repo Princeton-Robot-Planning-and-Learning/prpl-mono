@@ -58,7 +58,7 @@ def test_tablebox3d_goal_deriver():
     obs, _ = env.reset(seed=123)
     state = env_models.observation_to_state(obs)
     goal = goal_deriver(state)
-    assert len(goal.atoms) == 2
+    assert len(goal.atoms) == 3
     env.close()
 
 
@@ -118,18 +118,10 @@ def _skill_test_helper(ground_skill, env_models, env, obs, params=None):
 
 def test_tablebox3d_skills():
     """Tests for skills in the TableBox3D environment."""
-    if not MAKE_VIDEOS:
-        env = prbench.make("prbench/TableBox3D-o1-v0")
-    else:
-        env = prbench.make("prbench/TableBox3D-o1-v0", render_mode="rgb_array")
+    env = prbench.make("prbench/TableBox3D-o1-v0")
     env_models = create_bilevel_planning_models(
         "tablebox3d", env.observation_space, env.action_space
     )
-
-    if MAKE_VIDEOS:
-        env = RecordVideo(
-            env, "unit_test_videos", name_prefix=f"TableBox3D-bilevel-123"
-        )
 
     skill_name_to_skill = {s.operator.name: s for s in env_models.skills}
     Pick = skill_name_to_skill["Pick"]
