@@ -71,7 +71,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         scene_type: str = "ground",
         num_objects: int = 3,
         task_config_path: str | None = None,
-        render_images: bool = False,
         show_images: bool = False,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
@@ -80,7 +79,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Store instance attributes from kwargs
         self.scene_type = scene_type
         self.num_objects = num_objects
-        self.render_images = render_images
         self.camera_names = config.camera_names
         self.show_images = show_images
         self.seed = seed
@@ -112,15 +110,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             camera_width=self.config.camera_width,
             camera_height=self.config.camera_height,
             seed=seed if seed is not None else self.seed,
-            render_images=self.render_images,
             show_viewer=self.config.show_viewer,
         )
 
         self._render_camera_name: str | None = "overview"
-
-        # Cannot show images if not rendering images
-        if show_images and not render_images:
-            raise ValueError("Cannot show images if render_images is False")
 
         # Initialize empty object and fixture lists, and ground fixture.
         # These will be populated based on the task configuration
@@ -622,11 +615,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Visualization loop for rendered image
         if self.show_images:
-            for camera_name in self._robot_env.camera_names:
-                self._visualize_image_in_window(
-                    raw_obs[f"{camera_name}_image"],
-                    f"TidyBot {camera_name} camera",
-                )
+            camera_images = self._robot_env.get_camera_images()
+            if camera_images is not None:
+                for camera_name in self._robot_env.camera_names:
+                    if camera_name in camera_images:
+                        self._visualize_image_in_window(
+                            camera_images[camera_name],
+                            f"TidyBot {camera_name} camera",
+                        )
 
         # Calculate reward and termination
         reward = self.reward(raw_obs)
@@ -651,11 +647,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Visualization loop for rendered image
         if self.show_images:
-            for camera_name in self._robot_env.camera_names:
-                self._visualize_image_in_window(
-                    raw_obs[f"{camera_name}_image"],
-                    f"TidyBot {camera_name} camera",
-                )
+            camera_images = self._robot_env.get_camera_images()
+            if camera_images is not None:
+                for camera_name in self._robot_env.camera_names:
+                    if camera_name in camera_images:
+                        self._visualize_image_in_window(
+                            camera_images[camera_name],
+                            f"TidyBot {camera_name} camera",
+                        )
 
         # Calculate reward and termination
         reward = self.reward(raw_obs)

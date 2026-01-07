@@ -2,7 +2,7 @@
 TidyBot robot in simulation."""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 from relational_structs import Array
@@ -39,11 +39,10 @@ class TidyBotRobotEnv(RobotEnv):
         control_frequency: float,
         act_delta: bool = True,
         horizon: int = 1000,
-        camera_names: Optional[list[str]] = None,
+        camera_names: list[str] | None = None,
         camera_width: int = 640,
         camera_height: int = 480,
-        seed: Optional[int] = None,
-        render_images: bool = False,
+        seed: int | None = None,
         show_viewer: bool = False,
     ) -> None:
         """
@@ -65,7 +64,6 @@ class TidyBotRobotEnv(RobotEnv):
             camera_width=camera_width,
             camera_height=camera_height,
             seed=seed,
-            render_images=render_images,
             show_viewer=show_viewer,
         )
 
