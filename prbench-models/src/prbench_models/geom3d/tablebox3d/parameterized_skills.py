@@ -1,4 +1,4 @@
-"""Parameterized skills for the Shelf3D environment."""
+"""Parameterized skills for the TableBox3D environment."""
 
 from typing import Any, Sequence
 
@@ -10,25 +10,23 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
-from prbench.envs.geom3d.object_types import Geom3DCuboidType, Geom3DFixtureType
-from prbench.envs.geom3d.shelf3d import (
+from prbench.envs.geom3d.object_types import Geom3DCuboidType
+from prbench.envs.geom3d.tablebox3d import (
     Geom3DRobotType,
-    ObjectCentricShelf3DEnv,
-    Shelf3DObjectCentricState,
+    ObjectCentricTableBox3DEnv,
+    TableBox3DObjectCentricState,
 )
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
 )
 from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
-from pybullet_helpers.inverse_kinematics import (
-    InverseKinematicsError,
-    inverse_kinematics,
-)
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
+    create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
     run_motion_planning,
     run_single_arm_mobile_base_motion_planning,
+    smoothly_follow_end_effector_path,
 )
 from relational_structs import (
     Object,
@@ -40,13 +38,13 @@ from prbench_models.geom3d.base_controllers import BasePlaceController
 from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 
 # constants
-GRASP_TRANSFORM_TO_OBJECT = Pose((0.005, 0, 0.005), (0.707, 0.707, 0, 0))
+GRASP_TRANSFORM_TO_OBJECT = Pose((0.0, 0.10, 0.08), (0.707, 0.707, 0, 0))  # side grasp
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
-PLACE_X_OFFSET_BOUNDS = (-0.15, 0.15)
-PLACE_Y_OFFSET_BOUNDS = (-0.05, 0.1)
+PLACE_X_OFFSET_BOUNDS = (-0.1, 0)
+PLACE_Y_OFFSET_BOUNDS = (-0.05, 0.05)
 
 
 # Controllers.
@@ -58,7 +56,7 @@ class GroundPickController(
     def __init__(
         self,
         objects: Sequence[Object],
-        sim: ObjectCentricShelf3DEnv,
+        sim: ObjectCentricTableBox3DEnv,
     ) -> None:
         super().__init__(objects)
         self._sim = sim
@@ -74,10 +72,12 @@ class GroundPickController(
         self._closed_gripper: bool = False
         self._lifted: bool = False
         self._last_gripper_state: float = 0.0
+        self._target_pick_pose_world: Pose | None = None
+        self._pre_pick_pose_world: Pose | None = None
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
-        assert isinstance(x, Shelf3DObjectCentricState)
+        assert isinstance(x, TableBox3DObjectCentricState)
         distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)  # type: ignore
         rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
@@ -93,7 +93,7 @@ class GroundPickController(
     def step(self) -> np.ndarray:
         assert self._current_state is not None
         assert self._current_params is not None
-        assert isinstance(self._current_state, Shelf3DObjectCentricState)
+        assert isinstance(self._current_state, TableBox3DObjectCentricState)
 
         # Generate the motion plan if it doesn't exist yet.
         if self._current_plan is None:
@@ -152,27 +152,26 @@ class GroundPickController(
                     GRASP_TRANSFORM_TO_OBJECT,
                 )
 
-                # Run inverse kinematics to get joint positions.
-                try:
-                    joint_positions = inverse_kinematics(
-                        self._sim.robot.arm,
-                        target_end_effector_pose,
-                        validate=True,
-                        set_joints=False,
-                    )
-                except InverseKinematicsError as e:
-                    raise TrajectorySamplingFailure(
-                        f"IK failed for target pose {target_end_effector_pose}"
-                    ) from e
+                self._target_pick_pose_world = target_end_effector_pose
+                self._pre_pick_pose_world = Pose(
+                    (
+                        target_end_effector_pose.position[0],
+                        target_end_effector_pose.position[1],
+                        target_end_effector_pose.position[2] + 0.1,
+                    ),
+                    target_end_effector_pose.orientation,
+                )
 
+                joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
                 # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
+                joint_plan = smoothly_follow_end_effector_path(
                     self._sim.robot.arm,
-                    initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=joint_positions,
-                    collision_bodies=set(),
+                    [self._pre_pick_pose_world, self._target_pick_pose_world],
+                    initial_joints=self._sim.robot.arm.get_joint_positions(),
+                    collision_ids=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
-                    physics_client_id=self._sim.physics_client_id,
+                    joint_distance_fn=joint_distance_fn,
+                    max_smoothing_iters_per_step=1,
                 )
 
                 if joint_plan is None:
@@ -224,7 +223,7 @@ class GroundPickController(
                 self._sim.set_state(self._current_state)
 
                 # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
+                joint_plan = run_motion_planning(  # type: ignore
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
@@ -280,15 +279,10 @@ class GroundPlaceController(BasePlaceController):
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
-        assert isinstance(x, Shelf3DObjectCentricState)
+        assert isinstance(x, TableBox3DObjectCentricState)
         place_x_offset = rng.uniform(*PLACE_X_OFFSET_BOUNDS)  # type: ignore
         place_y_offset = rng.uniform(*PLACE_Y_OFFSET_BOUNDS)  # type: ignore
         return np.array([place_x_offset, place_y_offset])
-
-    def reset(self, x: ObjectCentricState, params: Any) -> None:
-        self._current_params = params
-        self._current_plan = None
-        self._current_state = x
 
     def terminated(self) -> bool:
         return self._lifted
@@ -296,7 +290,7 @@ class GroundPlaceController(BasePlaceController):
     def step(self) -> np.ndarray:
         assert self._current_state is not None
         assert self._current_params is not None
-        assert isinstance(self._current_state, Shelf3DObjectCentricState)
+        assert isinstance(self._current_state, TableBox3DObjectCentricState)
 
         # Generate the motion plan if it doesn't exist yet.
         if self._current_plan is None:
@@ -306,19 +300,20 @@ class GroundPlaceController(BasePlaceController):
             self._target_place_pose_world = Pose.from_rpy(
                 (
                     target_pose.position[0] + self._current_params[0],
-                    target_pose.position[1] - 0.05 + self._current_params[1],
-                    self._sim.config.shelf_spacing * 2
-                    + self._sim.config.shelf_height / 2 * 2
-                    + self._sim.config.block_half_extents[0]
-                    + 0.015,
+                    target_pose.position[1] + self._current_params[1],
+                    target_pose.position[2]
+                    + self._sim.config.table_half_extents[2]
+                    + self._sim.config.box_wall_thickness
+                    + self._sim.config.box_half_extents[2]
+                    + 0.03,
                 ),
-                (-np.pi / 2, np.pi, 0),
+                (np.pi, 0, np.pi / 2),
             )
             self._pre_place_pose_world = Pose(
                 (
                     self._target_place_pose_world.position[0],
-                    self._target_place_pose_world.position[1] - 0.1,
-                    self._target_place_pose_world.position[2] + 0.02,
+                    self._target_place_pose_world.position[1],
+                    self._target_place_pose_world.position[2] + 0.03,
                 ),
                 self._target_place_pose_world.orientation,
             )
@@ -329,7 +324,7 @@ class GroundPlaceController(BasePlaceController):
                 target_pose_temp_se2.rot,
             )
             target_base_pose = get_target_robot_pose_from_parameters(
-                self._target_place_pose_se2, 0.8, np.pi / 2
+                self._target_place_pose_se2, 0.65, 0.0
             )
 
             # Run base motion planning to the target pose.
@@ -364,9 +359,9 @@ class GroundPlaceController(BasePlaceController):
 
 def create_lifted_controllers(
     action_space: Geom3DRobotActionSpace,
-    sim: ObjectCentricShelf3DEnv,
+    sim: ObjectCentricTableBox3DEnv,
 ) -> dict[str, LiftedParameterizedController]:
-    """Create lifted parameterized controllers for Shelf3D."""
+    """Create lifted parameterized controllers for TableBox3D."""
 
     # Create partial controller classes that include the sim
     class PickController(GroundPickController):
@@ -395,11 +390,11 @@ def create_lifted_controllers(
     # Create variables for lifted controllers
     robot = Variable("?robot", Geom3DRobotType)
     target = Variable("?target", Geom3DCuboidType)
-    target_shelf = Variable("?target_shelf", Geom3DFixtureType)
+    target_table = Variable("?target_table", Geom3DCuboidType)
 
     # lifted place controller
     place_controller: LiftedParameterizedController = LiftedParameterizedController(
-        [robot, target, target_shelf],
+        [robot, target, target_table],
         PlaceController,
         action_space,
     )
