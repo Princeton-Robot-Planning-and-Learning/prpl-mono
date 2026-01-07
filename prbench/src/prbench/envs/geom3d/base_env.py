@@ -12,7 +12,7 @@ import gymnasium
 import numpy as np
 import pybullet as p
 from numpy.typing import NDArray
-from pybullet_helpers.camera import capture_image
+from pybullet_helpers.camera import capture_image, capture_image_from_pose
 from pybullet_helpers.geometry import Pose, SE2Pose, get_pose, multiply_poses, set_pose
 from pybullet_helpers.gui import create_gui_connection
 from pybullet_helpers.inverse_kinematics import (
@@ -31,6 +31,7 @@ from relational_structs import (
     Type,
 )
 from relational_structs.utils import create_state_from_dict
+from scipy.spatial.transform import Rotation
 
 from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionSpace
 from prbench.envs.geom3d.object_types import (
@@ -81,8 +82,24 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # For rendering.
     render_dpi: int = 300
     render_fps: int = 20
-    render_image_width: int = 836
-    render_image_height: int = 450
+    render_image_width: int = 640
+    render_image_height: int = 360
+
+    # Base camera (mounted on robot base) - matches dynamics3d tidybot
+    # From tidybot.xml: pos="0.2525 0 0.335" euler="0 -0.7853981634 -1.5707963268"
+    base_camera_offset: tuple[float, float, float] = (0.2525, 0.0, 0.335)
+    base_camera_euler: tuple[float, float, float] = (0.0, -0.7853981634, -1.5707963268)
+    base_camera_fov: float = 52.23384539951277
+    base_camera_image_width: int = 640
+    base_camera_image_height: int = 360
+
+    # End-effector camera (mounted on wrist) - matches dynamics3d tidybot
+    # From tidybot.xml: pos="0 -0.05639 -0.058475" quat="0 0 0 1"
+    ee_camera_offset: tuple[float, float, float] = (0.0, -0.05639, -0.058475)
+    ee_camera_quat_local: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
+    ee_camera_fov: float = 41.83792730009236
+    ee_camera_image_width: int = 640
+    ee_camera_image_height: int = 360
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -551,6 +568,99 @@ class ObjectCentricGeom3DRobotEnv(
             image_height=self.config.render_image_height,
             **self.config.get_camera_kwargs(),
         )
+
+    def render_base_camera(self) -> NDArray[np.uint8]:
+        """Render from the base-mounted camera.
+
+        The camera is attached to the robot base with the same pose as in
+        dynamics3d tidybot: pos=(0.2525, 0, 0.335), euler=(0, -45°, -90°).
+        """
+        # Get current base pose
+        base_pose = self.robot.get_base()
+
+        # Camera offset in base frame
+        offset = np.array(self.config.base_camera_offset)
+
+        # Convert base rotation to rotation matrix
+        base_rot = Rotation.from_euler("z", base_pose.rot)
+
+        # Transform offset from base frame to world frame
+        world_offset = base_rot.apply(offset)
+
+        # Camera position in world frame
+        camera_pos = (
+            base_pose.x + world_offset[0],
+            base_pose.y + world_offset[1],
+            self.config.robot_base_z + world_offset[2],
+        )
+
+        # Camera orientation: combine base rotation with local camera euler angles
+        # Local euler angles from MuJoCo XML (in radians): roll=0, pitch=-45°, yaw=-90°
+        local_rot = Rotation.from_euler(
+            "xyz", self.config.base_camera_euler, degrees=False
+        )
+        camera_rot = base_rot * local_rot
+        camera_quat = camera_rot.as_quat()  # (x, y, z, w)
+
+        return capture_image_from_pose(
+            self.physics_client_id,
+            camera_position=camera_pos,
+            camera_orientation=tuple(camera_quat),  # type: ignore
+            image_width=self.config.base_camera_image_width,
+            image_height=self.config.base_camera_image_height,
+            fov=self.config.base_camera_fov,
+        )
+
+    def render_ee_camera(self) -> NDArray[np.uint8]:
+        """Render from the end-effector mounted camera.
+
+        The camera is attached to the end-effector (wrist) with the same pose as
+        in dynamics3d tidybot: pos=(0, -0.05639, -0.058475), quat=(0, 0, 0, 1).
+        """
+        # Get current end-effector pose
+        ee_pose = self.robot.arm.get_end_effector_pose()
+
+        # Camera offset in end-effector frame
+        offset = np.array(self.config.ee_camera_offset)
+
+        # Convert EE orientation to rotation
+        ee_rot = Rotation.from_quat(ee_pose.orientation)  # (x, y, z, w)
+
+        # Transform offset from EE frame to world frame
+        world_offset = ee_rot.apply(offset)
+
+        # Camera position in world frame
+        camera_pos = (
+            ee_pose.position[0] + world_offset[0],
+            ee_pose.position[1] + world_offset[1],
+            ee_pose.position[2] + world_offset[2],
+        )
+
+        # Camera orientation: combine EE rotation with local camera quaternion
+        local_rot = Rotation.from_quat(self.config.ee_camera_quat_local)  # (x, y, z, w)
+        camera_rot = ee_rot * local_rot
+        camera_quat = camera_rot.as_quat()  # (x, y, z, w)
+
+        return capture_image_from_pose(
+            self.physics_client_id,
+            camera_position=camera_pos,
+            camera_orientation=tuple(camera_quat),  # type: ignore
+            image_width=self.config.ee_camera_image_width,
+            image_height=self.config.ee_camera_image_height,
+            fov=self.config.ee_camera_fov,
+        )
+
+    def render_all_cameras(self) -> dict[str, NDArray[np.uint8]]:
+        """Render from all cameras and return as a dictionary.
+
+        Returns:
+            Dictionary with keys "overview", "base", "wrist" mapping to images.
+        """
+        return {
+            "overview": self.render(),
+            "base": self.render_base_camera(),
+            "wrist": self.render_ee_camera(),
+        }
 
     def _set_robot_and_held_object(
         self, base_pose: SE2Pose, joints: JointPositions, finger_state: float

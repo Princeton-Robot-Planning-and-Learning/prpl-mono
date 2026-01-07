@@ -102,7 +102,8 @@ def run_teleop(
                     "arm_pos": current_position,
                     "arm_quat": current_orientation,
                     "gripper_pos": np.array([state.get(robot, "finger_state")]),
-                    "overview_image": env.render(),
+                    "overview_image": env.unwrapped._object_centric_env.render(), # type: ignore # pylint: disable=protected-access # pylint: disable=line-too-long
+                    "base_image": env.unwrapped._object_centric_env.render_base_camera(), # type: ignore # pylint: disable=protected-access # pylint: disable=line-too-long
                 }
 
                 # Get action from policy
