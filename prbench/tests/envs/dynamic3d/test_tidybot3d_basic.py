@@ -81,11 +81,7 @@ def test_tidybot3d_get_object_pos_quat():
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
     env.reset()
     for obj in env._objects:
-        pos, quat = (
-            env._robot_env.get_joint_pos_quat(
-                obj.joint_name
-            )
-        )
+        pos, quat = env._robot_env.get_joint_pos_quat(obj.joint_name)
         assert len(pos) == 3, "Position should have 3 elements"
         assert len(quat) == 4, "Quaternion should have 4 elements"
     env.close()
@@ -98,21 +94,11 @@ def test_tidybot3d_set_get_object_pos_quat_consistency():
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
     env.reset()
     for obj in env._objects:
-        original_pos, original_quat = (
-            env._robot_env.get_joint_pos_quat(
-                obj.joint_name
-            )
-        )
+        original_pos, original_quat = env._robot_env.get_joint_pos_quat(obj.joint_name)
         new_pos = [p + 0.1 for p in original_pos]
         new_quat = original_quat  # Keep orientation the same for simplicity
-        env._robot_env.set_joint_pos_quat(
-            obj.joint_name, new_pos, new_quat
-        )
-        updated_pos, updated_quat = (
-            env._robot_env.get_joint_pos_quat(
-                obj.joint_name
-            )
-        )
+        env._robot_env.set_joint_pos_quat(obj.joint_name, new_pos, new_quat)
+        updated_pos, updated_quat = env._robot_env.get_joint_pos_quat(obj.joint_name)
         assert all(
             abs(o - u) < 1e-5 for o, u in zip(new_pos, updated_pos)
         ), "Position not set correctly"
@@ -176,9 +162,7 @@ def test_tidybot3d_env_set_state():
     # First just try resetting each state in the trajectory.
     for state in states:
         env.set_state(state)
-        recovered_state = (
-            env._get_object_centric_state()
-        )
+        recovered_state = env._get_object_centric_state()
         assert state.allclose(recovered_state, atol=1e-2)
 
     # Now also try resetting to an intermediate state (with nonzero velocity) and make
@@ -209,9 +193,7 @@ def test_tidybot3d_gripper_open_close():
 
     # Check that gripper control is set to open (0)
     gripper_ctrl = env._robot_env.ctrl["gripper"][0]
-    assert (
-        gripper_ctrl == 0
-    ), f"Gripper should be open (0), but got {gripper_ctrl}"
+    assert gripper_ctrl == 0, f"Gripper should be open (0), but got {gripper_ctrl}"
 
     # Test gripper close (action[-1] = 1)
     close_action = base_action.copy()
@@ -237,9 +219,7 @@ def test_tidybot3d_render_returns_image():
     assert image is not None, "render() should return an image"
     assert isinstance(image, np.ndarray), "render() should return a numpy array"
     assert image.dtype == np.uint8, "Image should be uint8"
-    assert (
-        len(image.shape) == 3
-    ), "Image should be 3D (height, width, channels)"
+    assert len(image.shape) == 3, "Image should be 3D (height, width, channels)"
     assert image.shape[2] == 3, "Image should have 3 color channels (RGB)"
     assert (
         image.shape[0] > 0 and image.shape[1] > 0
