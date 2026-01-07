@@ -70,7 +70,6 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         camera_width: int = 640,
         camera_height: int = 480,
         seed: int | None = None,
-        render_images: bool = False,
         show_viewer: bool = False,
     ) -> None:
         """
@@ -93,7 +92,6 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         self.camera_names: list[str] = camera_names if camera_names is not None else []
         self.camera_width: int = camera_width
         self.camera_height: int = camera_height
-        self.render_images: bool = render_images
 
         # Initialize random number generator
         self.np_random = np.random.default_rng(seed)
@@ -234,12 +232,6 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
             "qpos": np.copy(self.sim.data.mj_data.qpos),
             "qvel": np.copy(self.sim.data.mj_data.qvel),
         }
-
-        # Render images and update obs_dict
-        if self.render_images:
-            images: dict[str, NDArray[Any]] | None = self.get_camera_images()
-            if images is not None:
-                obs_dict.update(images)
 
         return obs_dict
 
