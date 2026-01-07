@@ -40,9 +40,9 @@ from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 # constants
 GRASP_TRANSFORM_TO_OBJECT = Pose((0.0, 0.10, 0.08), (0.707, 0.707, 0, 0))  # side grasp
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
-MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.5, 0.5)
+MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
-MOVE_TO_TARGET_ROT_BOUNDS = (0, 0)
+MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
 PLACE_X_OFFSET_BOUNDS = (-0.1, 0)
 PLACE_Y_OFFSET_BOUNDS = (-0.05, 0.05)
 
