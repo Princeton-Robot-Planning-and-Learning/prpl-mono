@@ -2,6 +2,7 @@
 
 import argparse
 import time
+from typing import Any
 
 import numpy as np
 import prbench
@@ -90,7 +91,7 @@ def run_teleop(
                 )
 
                 # Create observation dict for policy
-                obs_dict = {
+                obs_dict: dict[str, Any] = {
                     "base_pose": np.array(
                         [
                             state.get(robot, "pos_base_x"),
