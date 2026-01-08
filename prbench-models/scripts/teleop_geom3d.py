@@ -38,6 +38,7 @@ def run_teleop(
     num_cubes: int = 2,
     enable_web_server: bool = True,
     port: int = 5000,
+    show_images: bool = False,
 ) -> None:
     """Run teleoperation in the prbench environment.
 
@@ -105,9 +106,10 @@ def run_teleop(
 
                 # Create observation dict for policy
                 all_images = env.unwrapped._object_centric_env.render_all_cameras() # type: ignore # pylint: disable=protected-access
-                # _visualize_image_in_window(all_images["overview"], "overview")
-                # _visualize_image_in_window(all_images["base"], "base")
-                # _visualize_image_in_window(all_images["wrist"], "wrist")
+                if show_images:
+                    _visualize_image_in_window(all_images["overview"], "overview")
+                    _visualize_image_in_window(all_images["base"], "base")
+                    _visualize_image_in_window(all_images["wrist"], "wrist")
                 obs_dict: dict[str, Any] = {
                     "base_pose": np.array(
                         [
@@ -206,6 +208,9 @@ def main() -> None:
     parser.add_argument(
         "--save", action="store_true", default=True, help="Save episodes"
     )
+    parser.add_argument(
+        "--show-images", action="store_true", default=False, help="Show images in OpenCV windows"
+    )
     parser.add_argument("--no-save", dest="save", action="store_false")
     parser.add_argument(
         "--num-episodes", type=int, default=1, help="Number of episodes to run"
@@ -241,6 +246,7 @@ def main() -> None:
         num_cubes=args.num_cubes,
         enable_web_server=args.enable_web_server,
         port=args.port,
+        show_images=args.show_images,
     )
 
 

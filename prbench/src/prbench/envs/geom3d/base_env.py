@@ -88,15 +88,15 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # Base camera (mounted on robot base) - matches dynamics3d tidybot
     # From tidybot.xml: pos="0.2525 0 0.335" euler="0 -0.7853981634 -1.5707963268"
     base_camera_offset: tuple[float, float, float] = (0.2525, 0.0, 0.335)
-    base_camera_euler: tuple[float, float, float] = (0.0, -0.7853981634, -1.5707963268)
+    base_camera_euler: tuple[float, float, float] = (0, -np.pi/4, -np.pi/2)
     base_camera_fov: float = 52.23384539951277
     base_camera_image_width: int = 640
     base_camera_image_height: int = 360
 
     # End-effector camera (mounted on wrist) - matches dynamics3d tidybot
     # From tidybot.xml: pos="0 -0.05639 -0.058475" quat="0 0 0 1"
-    ee_camera_offset: tuple[float, float, float] = (0.0, -0.05639, -0.058475)
-    ee_camera_quat_local: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
+    ee_camera_offset: tuple[float, float, float] = (0.0, 0.05639, -0.058475)
+    ee_camera_euler: tuple[float, float, float] = (np.pi, 0.0, 0.0)
     ee_camera_fov: float = 41.83792730009236
     ee_camera_image_width: int = 640
     ee_camera_image_height: int = 360
@@ -579,13 +579,18 @@ class ObjectCentricGeom3DRobotEnv(
         base_pose = self.robot.get_base()
 
         base_pose_se3 = base_pose.to_se3(0.0)
-        camera_to_base_transform = Pose.from_rpy(
-            translation=(0.2525, 0, 0.335),
-            rpy=(0.0, -np.pi / 4, -np.pi / 2),
+        rot = Rotation.from_euler('zyx', self.config.base_camera_euler)  # MuJoCo convention
+        camera_to_base_transform = Pose(
+            position=self.config.base_camera_offset,
+            orientation=rot.as_quat()[[1,2,3,0]], # (w,x,y,z) -> (x,y,z,w)
         )
 
         camera_pose = multiply_poses(base_pose_se3, camera_to_base_transform)
 
+        # for debugging
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(base_pose_se3, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
         return capture_image_from_pose(
             self.physics_client_id,
             camera_position=camera_pose.position,
@@ -604,31 +609,23 @@ class ObjectCentricGeom3DRobotEnv(
         # Get current end-effector pose
         ee_pose = self.robot.arm.get_end_effector_pose()
 
-        # Camera offset in end-effector frame
-        offset = np.array(self.config.ee_camera_offset)
-
-        # Convert EE orientation to rotation
-        ee_rot = Rotation.from_quat(ee_pose.orientation)  # (x, y, z, w)
-
-        # Transform offset from EE frame to world frame
-        world_offset = ee_rot.apply(offset)
-
-        # Camera position in world frame
-        camera_pos = (
-            ee_pose.position[0] + world_offset[0],
-            ee_pose.position[1] + world_offset[1],
-            ee_pose.position[2] + world_offset[2],
+        rot = Rotation.from_euler('zyx', self.config.ee_camera_euler)  # MuJoCo convention
+        camera_to_ee_transform = Pose(
+            position=self.config.ee_camera_offset,
+            orientation=rot.as_quat()[[1,2,3,0]], # (w,x,y,z) -> (x,y,z,w)
         )
 
-        # Camera orientation: combine EE rotation with local camera quaternion
-        local_rot = Rotation.from_quat(self.config.ee_camera_quat_local)  # (x, y, z, w)
-        camera_rot = ee_rot * local_rot
-        camera_quat = camera_rot.as_quat()  # (x, y, z, w)
+        camera_pose = multiply_poses(ee_pose, camera_to_ee_transform)
+
+        # for debugging
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(ee_pose, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
 
         return capture_image_from_pose(
             self.physics_client_id,
-            camera_position=camera_pos,
-            camera_orientation=tuple(camera_quat),  # type: ignore
+            camera_position=camera_pose.position,
+            camera_orientation=camera_pose.orientation,
             image_width=self.config.ee_camera_image_width,
             image_height=self.config.ee_camera_image_height,
             fov=self.config.ee_camera_fov,
