@@ -88,7 +88,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # Base camera (mounted on robot base) - matches dynamics3d tidybot
     # From tidybot.xml: pos="0.2525 0 0.335" euler="0 -0.7853981634 -1.5707963268"
     base_camera_offset: tuple[float, float, float] = (0.2525, 0.0, 0.335)
-    base_camera_euler: tuple[float, float, float] = (0, -np.pi/4, -np.pi/2)
+    base_camera_euler: tuple[float, float, float] = (0, -np.pi / 4, -np.pi / 2)
     base_camera_fov: float = 52.23384539951277
     base_camera_image_width: int = 640
     base_camera_image_height: int = 360
@@ -579,10 +579,12 @@ class ObjectCentricGeom3DRobotEnv(
         base_pose = self.robot.get_base()
 
         base_pose_se3 = base_pose.to_se3(0.0)
-        rot = Rotation.from_euler('zyx', self.config.base_camera_euler)  # MuJoCo convention
+        rot = Rotation.from_euler(
+            "zyx", self.config.base_camera_euler
+        )  # MuJoCo convention
         camera_to_base_transform = Pose(
             position=self.config.base_camera_offset,
-            orientation=rot.as_quat()[[1,2,3,0]], # (w,x,y,z) -> (x,y,z,w)
+            orientation=rot.as_quat()[[1, 2, 3, 0]],  # (w,x,y,z) -> (x,y,z,w)
         )
 
         camera_pose = multiply_poses(base_pose_se3, camera_to_base_transform)
@@ -609,10 +611,12 @@ class ObjectCentricGeom3DRobotEnv(
         # Get current end-effector pose
         ee_pose = self.robot.arm.get_end_effector_pose()
 
-        rot = Rotation.from_euler('zyx', self.config.ee_camera_euler)  # MuJoCo convention
+        rot = Rotation.from_euler(
+            "zyx", self.config.ee_camera_euler
+        )  # MuJoCo convention
         camera_to_ee_transform = Pose(
             position=self.config.ee_camera_offset,
-            orientation=rot.as_quat()[[1,2,3,0]], # (w,x,y,z) -> (x,y,z,w)
+            orientation=rot.as_quat()[[1, 2, 3, 0]],  # (w,x,y,z) -> (x,y,z,w)
         )
 
         camera_pose = multiply_poses(ee_pose, camera_to_ee_transform)

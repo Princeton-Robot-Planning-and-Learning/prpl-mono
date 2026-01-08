@@ -3,12 +3,13 @@
 import argparse
 import time
 from typing import Any
+
 import cv2 as cv
 import numpy as np
 import prbench
-from numpy.typing import NDArray
 from constants import POLICY_CONTROL_PERIOD
 from episode_storage import EpisodeWriter
+from numpy.typing import NDArray
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
@@ -17,9 +18,8 @@ from prbench_models.teleop_utils import TeleopPolicy
 
 prbench.register_all_environments()
 
-def _visualize_image_in_window(
-    image: NDArray[np.uint8], window_name: str
-) -> None:
+
+def _visualize_image_in_window(image: NDArray[np.uint8], window_name: str) -> None:
     """Visualize an image in an OpenCV window."""
     if image.dtype == np.uint8 and len(image.shape) == 3:
         # Convert RGB to BGR for proper color display in OpenCV
@@ -28,6 +28,7 @@ def _visualize_image_in_window(
         )
         cv.imshow(window_name, display_image)  # pylint: disable=no-member
         cv.waitKey(1)  # pylint: disable=no-member
+
 
 def run_teleop(
     output_dir: str = "data/teleop",
@@ -105,7 +106,7 @@ def run_teleop(
                 )
 
                 # Create observation dict for policy
-                all_images = env.unwrapped._object_centric_env.render_all_cameras() # type: ignore # pylint: disable=protected-access
+                all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
                 if show_images:
                     _visualize_image_in_window(all_images["overview"], "overview")
                     _visualize_image_in_window(all_images["base"], "base")
@@ -209,7 +210,10 @@ def main() -> None:
         "--save", action="store_true", default=True, help="Save episodes"
     )
     parser.add_argument(
-        "--show-images", action="store_true", default=False, help="Show images in OpenCV windows"
+        "--show-images",
+        action="store_true",
+        default=False,
+        help="Show images in OpenCV windows",
     )
     parser.add_argument("--no-save", dest="save", action="store_false")
     parser.add_argument(
