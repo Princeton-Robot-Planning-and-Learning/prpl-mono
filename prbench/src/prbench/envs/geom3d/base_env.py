@@ -578,34 +578,18 @@ class ObjectCentricGeom3DRobotEnv(
         # Get current base pose
         base_pose = self.robot.get_base()
 
-        # Camera offset in base frame
-        offset = np.array(self.config.base_camera_offset)
-
-        # Convert base rotation to rotation matrix
-        base_rot = Rotation.from_euler("z", base_pose.rot)
-
-        # Transform offset from base frame to world frame
-        world_offset = base_rot.apply(offset)
-
-        # Camera position in world frame
-        camera_pos = (
-            base_pose.x + world_offset[0],
-            base_pose.y + world_offset[1],
-            self.config.robot_base_z + world_offset[2],
+        base_pose_se3 = base_pose.to_se3(0.0)
+        camera_to_base_transform = Pose.from_rpy(
+            translation=(0.2525, 0, 0.335),
+            rpy=(0.0, -np.pi / 4, -np.pi / 2),
         )
 
-        # Camera orientation: combine base rotation with local camera euler angles
-        # Local euler angles from MuJoCo XML (in radians): roll=0, pitch=-45°, yaw=-90°
-        local_rot = Rotation.from_euler(
-            "xyz", self.config.base_camera_euler, degrees=False
-        )
-        camera_rot = base_rot * local_rot
-        camera_quat = camera_rot.as_quat()  # (x, y, z, w)
+        camera_pose = multiply_poses(base_pose_se3, camera_to_base_transform)
 
         return capture_image_from_pose(
             self.physics_client_id,
-            camera_position=camera_pos,
-            camera_orientation=tuple(camera_quat),  # type: ignore
+            camera_position=camera_pose.position,
+            camera_orientation=camera_pose.orientation,
             image_width=self.config.base_camera_image_width,
             image_height=self.config.base_camera_image_height,
             fov=self.config.base_camera_fov,
