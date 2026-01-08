@@ -3,9 +3,10 @@
 import argparse
 import time
 from typing import Any
-
+import cv2 as cv
 import numpy as np
 import prbench
+from numpy.typing import NDArray
 from constants import POLICY_CONTROL_PERIOD
 from episode_storage import EpisodeWriter
 from relational_structs.spaces import ObjectCentricBoxSpace
@@ -16,6 +17,17 @@ from prbench_models.teleop_utils import TeleopPolicy
 
 prbench.register_all_environments()
 
+def _visualize_image_in_window(
+    image: NDArray[np.uint8], window_name: str
+) -> None:
+    """Visualize an image in an OpenCV window."""
+    if image.dtype == np.uint8 and len(image.shape) == 3:
+        # Convert RGB to BGR for proper color display in OpenCV
+        display_image = cv.cvtColor(  # pylint: disable=no-member
+            image, cv.COLOR_RGB2BGR  # pylint: disable=no-member
+        )
+        cv.imshow(window_name, display_image)  # pylint: disable=no-member
+        cv.waitKey(1)  # pylint: disable=no-member
 
 def run_teleop(
     output_dir: str = "data/teleop",
@@ -93,6 +105,9 @@ def run_teleop(
 
                 # Create observation dict for policy
                 all_images = env.unwrapped._object_centric_env.render_all_cameras() # type: ignore # pylint: disable=protected-access
+                # _visualize_image_in_window(all_images["overview"], "overview")
+                # _visualize_image_in_window(all_images["base"], "base")
+                # _visualize_image_in_window(all_images["wrist"], "wrist")
                 obs_dict: dict[str, Any] = {
                     "base_pose": np.array(
                         [
