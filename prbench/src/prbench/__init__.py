@@ -143,6 +143,16 @@ def register_all_environments() -> None:
             kwargs={"num_cubes": num_cube},
         )
 
+    # TableBox3D environment.
+    num_cubes = [1, 2]
+    num_boxes = 1
+    for num_cube in num_cubes:
+        _register(
+            id=f"prbench/TableBox3D-o{num_cube}-v0",
+            entry_point="prbench.envs.geom3d.tablebox3d:TableBox3DEnv",
+            kwargs={"num_cubes": num_cube, "num_boxes": num_boxes},
+        )
+
     # Shelf3D environment.
     num_cubes = [1, 2, 3, 5, 10]
     for num_cube in num_cubes:

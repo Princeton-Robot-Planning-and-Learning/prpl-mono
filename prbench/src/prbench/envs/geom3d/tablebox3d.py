@@ -10,7 +10,7 @@ from typing import Any
 from typing import Type as TypingType
 
 import numpy as np
-from pybullet_helpers.geometry import Pose, set_pose
+from pybullet_helpers.geometry import Pose, get_pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import create_pybullet_block, create_pybullet_hollow_box
 from relational_structs import Object, ObjectCentricState
@@ -35,9 +35,9 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for TableBox3DEnv()."""
 
     # Table.
-    table_pose: Pose = Pose((0.6, 0.0, 0.25))
+    table_pose: Pose = Pose((0.6, 0.0, 0.2))
     table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
-    table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.25)
+    table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.2)
 
     # World bounds.
     x_lb: float = -1
@@ -53,6 +53,9 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     box_half_extents: tuple[float, float, float] = (0.1, 0.1, 0.1)
     box_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
     box_wall_thickness: float = 0.01
+
+    # Gripper.
+    gripper_open_threshold: float = 0.01
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -71,6 +74,35 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         return self._sample_block_on_block_pose(
             block_half_extents, self.table_half_extents, self.table_pose, rng
         )
+
+    def sample_block_on_ground(
+        self, block_half_extents: tuple[float, float, float], rng: np.random.Generator
+    ) -> Pose:
+        """Sample an initial block pose given sampled half extents."""
+
+        lb = (
+            self.x_lb,
+            self.y_lb,
+            block_half_extents[2],
+        )
+
+        ub = (
+            self.x_ub,
+            self.y_ub,
+            block_half_extents[2],
+        )
+
+        for _ in range(100):
+            x, y, z = rng.uniform(lb, ub)
+            if (
+                np.abs(x - self.table_pose.position[0]) > self.table_half_extents[0]
+                and np.abs(y - self.table_pose.position[1]) > self.table_half_extents[1]
+            ):
+                break
+        else:
+            raise RuntimeError("Failed to sample collision-free block pose on ground")
+
+        return Pose((x, y, z))
 
     def sample_block_in_box_pose(
         self,
@@ -204,7 +236,12 @@ class ObjectCentricTableBox3DEnv(
                 self.config.box_half_extents[1],
                 self.config.box_half_extents[2],
             )
-            box_pose = self.config.sample_block_on_table_pose(
+            # on the table
+            # box_pose = self.config.sample_block_on_table_pose(
+            #     box_half_extents, self.np_random
+            # )
+            # on the ground
+            box_pose = self.config.sample_block_on_ground(
                 box_half_extents, self.np_random
             )
             set_pose(box_id, box_pose, self.physics_client_id)
@@ -312,7 +349,22 @@ class ObjectCentricTableBox3DEnv(
         return state
 
     def goal_reached(self) -> bool:
-        return False
+        robot_gripper_pose = self._robot_arm.get_finger_state()
+        robot_end_effector_pose = self._robot_arm.get_end_effector_pose()
+        if robot_gripper_pose > self.config.gripper_open_threshold:
+            return False
+        for _, box_id in self._boxes.items():
+            box_pose = get_pose(box_id, self.physics_client_id)
+            if (
+                np.linalg.norm(
+                    np.subtract(robot_end_effector_pose.position, box_pose.position)
+                )
+                < 0.2
+            ):
+                return False
+            if box_pose.position[2] < 0.3:
+                return False
+        return True
 
 
 class TableBox3DEnv(ConstantObjectPRBenchEnv):
