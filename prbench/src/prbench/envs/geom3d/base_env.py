@@ -584,7 +584,7 @@ class ObjectCentricGeom3DRobotEnv(
         )  # MuJoCo convention
         camera_to_base_transform = Pose(
             position=self.config.base_camera_offset,
-            orientation=rot.as_quat()[[1, 2, 3, 0]],  # (w,x,y,z) -> (x,y,z,w)
+            orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)
         )
 
         camera_pose = multiply_poses(base_pose_se3, camera_to_base_transform)
@@ -616,7 +616,7 @@ class ObjectCentricGeom3DRobotEnv(
         )  # MuJoCo convention
         camera_to_ee_transform = Pose(
             position=self.config.ee_camera_offset,
-            orientation=rot.as_quat()[[1, 2, 3, 0]],  # (w,x,y,z) -> (x,y,z,w)
+            orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)
         )
 
         camera_pose = multiply_poses(ee_pose, camera_to_ee_transform)
