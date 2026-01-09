@@ -6,9 +6,14 @@ This script can generate GIFs from demonstration files in several modes:
 2. Latest demo: python generate_demo_video.py --latest
 3. All demos: python generate_demo_video.py --all [--max-demos N]
 4. Environment demos: python generate_demo_video.py --env prbench/Motion2D-p1
+5. One per variant: python generate_demo_video.py --one-per-variant [--force]
 
 The script automatically discovers demonstration files in the demos/ directory
 and generates appropriately named output files in docs/envs/assets/demo_gifs/.
+
+The --one-per-variant mode is recommended for generating documentation. It creates
+exactly one representative GIF for each registered environment variant, using a
+consistent naming scheme (variant_name.gif instead of variant_name_seedX_timestampY.gif).
 
 NOTE: this currently assumes that environments are deterministic. If that is
 not the case, we will need to be able to render observations (which are being
@@ -76,6 +81,20 @@ def discover_demos_by_env(env_id: str, demos_dir: Path = Path("demos")) -> List[
     # Sort by modification time (newest first)
     demo_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     return demo_files
+
+
+def find_best_demo_for_variant(env_id: str, demos_dir: Path = Path("demos")) -> Optional[Path]:
+    """Find the best demo for a variant (most recent).
+
+    Args:
+        env_id: Environment ID (e.g., 'prbench/ClutteredStorage2D-b1-v0')
+        demos_dir: Directory containing demos
+
+    Returns:
+        Path to the best demo file, or None if no demos found.
+    """
+    demos = discover_demos_by_env(env_id, demos_dir)
+    return demos[0] if demos else None
 
 
 def find_latest_demo(demos_dir: Path = Path("demos")) -> Optional[Path]:
@@ -372,6 +391,94 @@ def generate_env_demo_videos(
         print()
 
 
+def generate_one_per_variant(
+    demos_dir: Path = Path("demos"),
+    output_dir: Optional[Path] = None,
+    fps: Optional[int] = None,
+    loop: int = 0,
+    force: bool = False,
+) -> None:
+    """Generate exactly one representative GIF for each environment variant.
+
+    Args:
+        demos_dir: Directory containing demo files
+        output_dir: Output directory for GIFs
+        fps: Frames per second for the video
+        loop: Number of loops for GIF (0 = infinite)
+        force: If True, regenerate even if GIF already exists
+    """
+    if output_dir is None:
+        output_dir = Path("./docs/envs/assets/demo_gifs")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Get all registered environment variants
+    prbench.register_all_environments()
+    env_classes = prbench.get_env_classes()
+
+    # Collect all variant IDs
+    all_variants = []
+    for class_name, class_info in env_classes.items():
+        all_variants.extend(class_info["variants"])
+
+    print(f"Found {len(all_variants)} registered variants")
+    print("Generating one representative GIF per variant...\n")
+
+    successful = 0
+    skipped_no_demo = 0
+    skipped_exists = 0
+    failed = 0
+    failed_variants = []
+
+    for i, variant_id in enumerate(all_variants, 1):
+        try:
+            sanitized_variant = sanitize_env_id(variant_id)
+            variant_subdir = output_dir / sanitized_variant
+            variant_subdir.mkdir(parents=True, exist_ok=True)
+
+            # Use consistent naming without timestamp
+            output_filename = f"{sanitized_variant}.gif"
+            output_path = variant_subdir / output_filename
+
+            # Check if output already exists
+            if output_path.exists() and not force:
+                print(f"[{i}/{len(all_variants)}] Skipping {variant_id} (GIF exists)")
+                skipped_exists += 1
+                continue
+
+            # Find the best demo for this variant
+            demo_path = find_best_demo_for_variant(variant_id, demos_dir)
+            if demo_path is None:
+                print(f"[{i}/{len(all_variants)}] Skipping {variant_id} (no demos available)")
+                skipped_no_demo += 1
+                continue
+
+            print(f"[{i}/{len(all_variants)}] Generating {variant_id} from {demo_path.name}")
+            generate_demo_video(demo_path, output_path, fps, loop)
+            successful += 1
+
+        except Exception as e:
+            error_msg = f"{variant_id}: {e}"
+            failed_variants.append(error_msg)
+            print(f"[{i}/{len(all_variants)}] Error processing {variant_id}: {e}")
+            failed += 1
+            continue
+
+    print(f"\n{'='*60}")
+    print(f"Summary:")
+    print(f"  Successful: {successful}")
+    print(f"  Skipped (no demo): {skipped_no_demo}")
+    print(f"  Skipped (exists): {skipped_exists}")
+    print(f"  Failed: {failed}")
+    print(f"{'='*60}")
+
+    # Report all failed variants at the end
+    if failed_variants:
+        print(f"\n=== Failed Variants ({len(failed_variants)}) ===")
+        for error_msg in failed_variants:
+            print(f"  • {error_msg}")
+        print()
+
+
 def _main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate videos from pickled demonstrations"
@@ -394,6 +501,11 @@ def _main() -> None:
         "--env",
         type=str,
         help="Generate GIFs for all demos of the specified environment",
+    )
+    input_group.add_argument(
+        "--one-per-variant",
+        action="store_true",
+        help="Generate exactly one representative GIF for each registered environment variant",
     )
 
     # Common options
@@ -424,6 +536,11 @@ def _main() -> None:
         "--max-demos",
         type=int,
         help="Maximum number of demos to process (for --all and --env modes)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force regeneration even if GIF already exists (for --one-per-variant mode)",
     )
 
     args = parser.parse_args()
@@ -488,6 +605,16 @@ def _main() -> None:
             fps=args.fps,
             loop=args.loop,
             max_demos=args.max_demos,
+        )
+
+    elif args.one_per_variant:
+        # Generate one GIF per variant
+        generate_one_per_variant(
+            demos_dir=args.demos_dir,
+            output_dir=args.output_dir,
+            fps=args.fps,
+            loop=args.loop,
+            force=args.force,
         )
 
 

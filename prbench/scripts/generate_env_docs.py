@@ -294,23 +294,31 @@ def generate_markdown(
         variant_subdir_name = sanitize_env_id(variant_id)
         demo_subdir = OUTPUT_DIR / "assets" / "demo_gifs" / variant_subdir_name
         if demo_subdir.exists():
-            gif_files = sorted(
-                [f for f in demo_subdir.iterdir() if f.suffix.lower() == ".gif"]
-            )
-            if gif_files:
-                first_gif = gif_files[0].name
-                md += f"![demo GIF](assets/demo_gifs/{variant_subdir_name}/{first_gif})\n\n"  # pylint: disable=line-too-long
-                demo_gif_found = True
+            # First, look for the canonical GIF (from --one-per-variant mode)
+            canonical_gif = demo_subdir / f"{variant_subdir_name}.gif"
+            if canonical_gif.exists():
+                gif_to_use = canonical_gif
+            else:
+                # Fall back to any GIF in the directory (old naming scheme)
+                gif_files = sorted(
+                    [f for f in demo_subdir.iterdir() if f.suffix.lower() == ".gif"]
+                )
+                if not gif_files:
+                    continue
+                gif_to_use = gif_files[0]
 
-                # Try to load stats from JSON file
-                json_file = gif_files[0].with_suffix(".json")
-                if json_file.exists():
-                    try:
-                        with open(json_file, "r", encoding="utf-8") as f:
-                            demo_stats = json.load(f)
-                    except Exception:
-                        pass  # Silently ignore if stats can't be loaded
-                break
+            md += f"![demo GIF](assets/demo_gifs/{variant_subdir_name}/{gif_to_use.name})\n\n"  # pylint: disable=line-too-long
+            demo_gif_found = True
+
+            # Try to load stats from JSON file
+            json_file = gif_to_use.with_suffix(".json")
+            if json_file.exists():
+                try:
+                    with open(json_file, "r", encoding="utf-8") as f:
+                        demo_stats = json.load(f)
+                except Exception:
+                    pass  # Silently ignore if stats can't be loaded
+            break
 
     if demo_gif_found:
         # Display demo stats if available
