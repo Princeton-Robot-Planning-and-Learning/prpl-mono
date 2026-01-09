@@ -17,6 +17,8 @@ The task requires planning to grasp and move obstructions out of the way, then p
 
 
 ## Available Variants
+The number of obstructions differs between environment variants. For example, Obstruction3D-o0 has no obstructions, while Obstruction3D-o4 has 4 obstructions.
+
 - `prbench/Obstruction3D-o0-v0` (o0)
 - `prbench/Obstruction3D-o1-v0` (o1)
 - `prbench/Obstruction3D-o2-v0` (o2)

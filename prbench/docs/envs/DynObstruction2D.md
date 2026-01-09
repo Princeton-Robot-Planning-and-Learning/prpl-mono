@@ -19,6 +19,8 @@ Each object includes physics properties like mass, moment of inertia (for dynami
 
 
 ## Available Variants
+The number of obstructions differs between environment variants. For example, DynObstruction2D-o0 has no obstructions, while DynObstruction2D-o3 has 3 obstructions.
+
 - `prbench/DynObstruction2D-o0-v0` (o0)
 - `prbench/DynObstruction2D-o1-v0` (o1)
 - `prbench/DynObstruction2D-o2-v0` (o2)

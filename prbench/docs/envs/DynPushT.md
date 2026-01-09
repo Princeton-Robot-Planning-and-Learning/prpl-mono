@@ -15,6 +15,8 @@ Each object includes physics properties like mass, moment of inertia, and color 
 
 
 ## Available Variants
+This environment has only one variant.
+
 - `prbench/DynPushT-t1-v0` (t1)
 
 ## Initial State Distribution

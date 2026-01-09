@@ -6,6 +6,8 @@
 Environment where only base motion planning is needed to reach a goal.
 
 ## Available Variants
+This environment has only one variant.
+
 - `prbench/BaseMotion3D-v0` (v0)
 
 ## Initial State Distribution

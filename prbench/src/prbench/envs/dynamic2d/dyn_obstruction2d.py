@@ -637,6 +637,10 @@ The robot has a movable circular base and an extendable arm with gripper fingers
 Each object includes physics properties like mass, moment of inertia (for dynamic objects), and color information for rendering.
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of obstructions differs between environment variants. For example, DynObstruction2D-o0 has no obstructions, while DynObstruction2D-o3 has 3 obstructions."
+
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return f"""A penalty of -1.0 is given at every time step until termination, which occurs when the target block is completely "on" the target surface.

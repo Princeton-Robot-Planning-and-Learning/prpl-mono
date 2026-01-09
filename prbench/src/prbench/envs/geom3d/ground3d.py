@@ -180,6 +180,10 @@ class Ground3DEnv(ConstantObjectPRBenchEnv):
 - **cubes**: The poses of the cubes.
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of cubes differs between environment variants. For example, Ground3D-o1 has 1 cube, while Ground3D-o3 has 3 cubes."
+
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long

@@ -763,6 +763,10 @@ The robot has a movable circular base and an extendable arm with gripper fingers
 Each object includes physics properties like mass, moment of inertia (for dynamic objects), and color information for rendering.
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of obstructions differs between environment variants. For example, DynPushPullHook2D-o0 has no obstructions, while DynPushPullHook2D-o5 has 5 obstructions."
+
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return """A penalty of -1.0 is given at every time step until termination, which occurs when the target block reaches the middle wall (goal surface).
