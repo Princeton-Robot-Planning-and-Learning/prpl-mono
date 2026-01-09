@@ -99,17 +99,17 @@ def create_random_action_gif(
 
 def create_initial_state_gif(
     class_name: str,
-    env: gymnasium.Env,
-    num_resets: int = 25,
+    variant_ids: list[str],
+    num_resets_per_variant: int = 5,
     seed: int = 0,
     fps: int = 10,
 ) -> bool:
-    """Create a GIF of different initial states by calling reset().
+    """Create a GIF showing initial states across all variants.
 
     Args:
         class_name: The environment class name (e.g., "ClutteredStorage2D")
-        env: The environment instance to use for generating the GIF
-        num_resets: Number of resets to show different initial states
+        variant_ids: List of all variant IDs for this class
+        num_resets_per_variant: Number of resets to show for each variant
         seed: Random seed
         fps: Frames per second for the GIF
 
@@ -118,9 +118,11 @@ def create_initial_state_gif(
     """
     try:
         imgs: list = []
-        for i in range(num_resets):
-            env.reset(seed=seed + i)
-            imgs.append(env.render())
+        for variant_id in variant_ids:
+            env = prbench.make(variant_id, render_mode="rgb_array")
+            for i in range(num_resets_per_variant):
+                env.reset(seed=seed + i)
+                imgs.append(env.render())
         class_filename = sanitize_class_name(class_name)
         outfile = OUTPUT_DIR / "assets" / "initial_state_gifs" / f"{class_filename}.gif"
         iio.mimsave(outfile, imgs, fps=fps, loop=0)
@@ -271,7 +273,7 @@ def _main() -> None:
         if args.force or class_changed:
             print(f"  Regenerating {class_name}...")
             has_random_gif = create_random_action_gif(class_name, env)
-            has_initial_gif = create_initial_state_gif(class_name, env)
+            has_initial_gif = create_initial_state_gif(class_name, variants)
             md = generate_markdown(
                 class_name, env, variants, has_random_gif, has_initial_gif
             )
@@ -283,7 +285,7 @@ def _main() -> None:
         elif args.force_tidybot and "TidyBot3D" in class_name:
             print(f"  Regenerating {class_name}...")
             has_random_gif = create_random_action_gif(class_name, env)
-            has_initial_gif = create_initial_state_gif(class_name, env)
+            has_initial_gif = create_initial_state_gif(class_name, variants)
             md = generate_markdown(
                 class_name, env, variants, has_random_gif, has_initial_gif
             )
