@@ -385,7 +385,7 @@ class ClutteredStorage2DEnv(ConstantObjectPRBenchEnv):
 
     def _create_env_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return f"""A 2D environment where the goal is to put all blocks inside a shelf.
+        return """A 2D environment where the goal is to put all blocks inside a shelf.
 
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 """
