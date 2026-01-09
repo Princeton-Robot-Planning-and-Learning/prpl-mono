@@ -1,4 +1,10 @@
-"""Automatically create markdown documents for every registered environment."""
+"""Automatically create markdown documents for every registered environment.
+
+Usage:
+  python generate_env_docs.py                    # Generate docs for changed environments
+  python generate_env_docs.py --force            # Force regenerate all environments
+  python generate_env_docs.py --env Motion2D     # Generate docs for specific environment
+"""
 
 import argparse
 import inspect
@@ -292,17 +298,17 @@ def _main() -> None:
         "--force", action="store_true", help="Force regeneration of all environments"
     )
     parser.add_argument(
-        "--force-tidybot",
-        action="store_true",
-        help="Force regeneration of all environments for tidybot",
+        "--env",
+        type=str,
+        help="Generate docs for a specific environment class (e.g., Motion2D)",
     )
     args = parser.parse_args()
 
     print("Regenerating environment docs...")
     if args.force:
         print("Force flag detected - regenerating all environment classes")
-    elif args.force_tidybot:
-        print("Force tidybot flag detected - regenerating all tidybot classes")
+    elif args.env:
+        print(f"Generating docs for environment: {args.env}")
     else:
         print("Checking for changes using git diff origin/main...")
 
@@ -319,6 +325,14 @@ def _main() -> None:
 
     env_classes = prbench.get_env_classes()
 
+    # Filter to specific environment if requested
+    if args.env:
+        if args.env not in env_classes:
+            print(f"Error: Environment class '{args.env}' not found")
+            print(f"Available classes: {', '.join(sorted(env_classes.keys()))}")
+            return
+        env_classes = {args.env: env_classes[args.env]}
+
     for class_name, class_info in env_classes.items():
         total_classes += 1
         variants = class_info["variants"]
@@ -333,26 +347,7 @@ def _main() -> None:
             for v in variants
         )
 
-        if args.force or class_changed:
-            print(f"  Regenerating {class_name}...")
-            has_random_gif, random_action_stats = create_random_action_gif(
-                class_name, env
-            )
-            has_initial_gif = create_initial_state_gif(class_name, variants)
-            md = generate_markdown(
-                class_name,
-                env,
-                variants,
-                has_random_gif,
-                has_initial_gif,
-                random_action_stats,
-            )
-            class_filename = sanitize_class_name(class_name)
-            filename = OUTPUT_DIR / f"{class_filename}.md"
-            with open(filename, "w", encoding="utf-8") as f:
-                f.write(md)
-            regenerated_classes += 1
-        elif args.force_tidybot and "TidyBot3D" in class_name:
+        if args.force or args.env or class_changed:
             print(f"  Regenerating {class_name}...")
             has_random_gif, random_action_stats = create_random_action_gif(
                 class_name, env
