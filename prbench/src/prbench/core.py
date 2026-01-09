@@ -175,6 +175,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         env_md = self._create_env_markdown_description()
         reward_md = self._create_reward_markdown_description()
         references_md = self._create_references_markdown_description()
+        variant_md = self._create_variant_markdown_description()
         # Update the metadata. Note that we need to define the render_modes in the class
         # rather than in the instance because gym.make() extracts render_modes from cls.
         self.metadata = self.metadata.copy()
@@ -185,6 +186,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
                 "action_space_description": act_md,
                 "reward_description": reward_md,
                 "references": references_md,
+                "variant_description": variant_md,
                 "render_fps": self._object_centric_env.metadata.get("render_fps", 20),
             }
         )
@@ -205,7 +207,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         """Create a markdown description of the overall environment."""
 
     def _create_variant_markdown_description(self) -> str:
-        """Create a markdown description of the variant details (e.g. object nums)."""
+        """Create a markdown description of what differs between variations."""
         # NOTE: this will be filled in gradually as we audit environments, and then we
         # can remove it once all are finished.
         return "Variant description not defined"
