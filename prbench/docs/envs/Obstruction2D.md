@@ -11,6 +11,8 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 
 
 ## Available Variants
+The number of obstructions differs between environment variants. For example, Obstruction2D-o0 has no obstructions, while Obstruction2D-o4 has 4 obstructions.
+
 - `prbench/Obstruction2D-o0-v0` (o0)
 - `prbench/Obstruction2D-o1-v0` (o1)
 - `prbench/Obstruction2D-o2-v0` (o2)

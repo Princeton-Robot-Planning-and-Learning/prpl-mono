@@ -390,6 +390,10 @@ class TableBox3DEnv(ConstantObjectPRBenchEnv):
         """Create environment description."""
         return """A 3D environment where the goal is to pick up a box from the table."""
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of cubes differs between environment variants. For example, TableBox3D-o1 has 1 cube, while TableBox3D-o2 has 2 cubes."
+
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""
         return """Observations consist of:

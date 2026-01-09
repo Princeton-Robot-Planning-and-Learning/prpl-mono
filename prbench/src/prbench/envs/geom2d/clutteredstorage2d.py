@@ -384,14 +384,15 @@ class ClutteredStorage2DEnv(ConstantObjectPRBenchEnv):
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
-        num_blocks = len(self._constant_objects) - 2
         # pylint: disable=line-too-long
         return f"""A 2D environment where the goal is to put all blocks inside a shelf.
 
-There are always {num_blocks} blocks in this environment.
-
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 """
+
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of blocks differs between environment variants. For example, ClutteredStorage2D-b1 has 1 block, while ClutteredStorage2D-b15 has 15 blocks."
 
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until termination, which occurs when all blocks are inside the shelf.\n"  # pylint: disable=line-too-long

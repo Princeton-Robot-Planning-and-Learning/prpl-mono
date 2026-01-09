@@ -6,6 +6,8 @@
 A 3D environment where the goal is to pick up a cube from the table.
 
 ## Available Variants
+The number of cubes differs between environment variants. For example, Table3D-o1 has 1 cube, while Table3D-o3 has 3 cubes.
+
 - `prbench/Table3D-o1-v0` (o1)
 - `prbench/Table3D-o2-v0` (o2)
 - `prbench/Table3D-o3-v0` (o3)

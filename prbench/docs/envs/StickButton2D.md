@@ -11,6 +11,8 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 
 
 ## Available Variants
+The number of buttons differs between environment variants. For example, StickButton2D-b1 has 1 button, while StickButton2D-b10 has 10 buttons.
+
 - `prbench/StickButton2D-b1-v0` (b1)
 - `prbench/StickButton2D-b2-v0` (b2)
 - `prbench/StickButton2D-b3-v0` (b3)
