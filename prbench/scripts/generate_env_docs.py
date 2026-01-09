@@ -8,8 +8,6 @@ from pathlib import Path
 
 import gymnasium
 import imageio.v2 as iio
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
 
 import prbench
 
@@ -60,69 +58,6 @@ def sanitize_class_name(class_name: str) -> str:
     return class_name.replace("/", "_")
 
 
-def add_text_to_image(
-    img: np.ndarray, text: str, position: str = "top-left", font_size: int = 20
-) -> np.ndarray:
-    """Add text overlay to an image.
-
-    Args:
-        img: The image as a numpy array (H, W, C)
-        text: The text to add
-        position: Position of text ("top-left", "top-right", "bottom-left", "bottom-right")
-        font_size: Size of the font
-
-    Returns:
-        Modified image as numpy array
-    """
-    # Convert to PIL Image
-    pil_img = Image.fromarray(img.astype(np.uint8))
-    draw = ImageDraw.Draw(pil_img)
-
-    # Try to use a default font, fall back to default if not available
-    try:
-        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
-    except:
-        try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
-        except:
-            font = ImageFont.load_default()
-
-    # Get text bounding box
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-
-    # Determine position
-    padding = 10
-    if position == "top-left":
-        xy = (padding, padding)
-    elif position == "top-right":
-        xy = (pil_img.width - text_width - padding, padding)
-    elif position == "bottom-left":
-        xy = (padding, pil_img.height - text_height - padding - 5)
-    elif position == "bottom-right":
-        xy = (pil_img.width - text_width - padding, pil_img.height - text_height - padding - 5)
-    else:
-        xy = (padding, padding)
-
-    # Draw background rectangle for better readability
-    rect_padding = 5
-    draw.rectangle(
-        [
-            xy[0] - rect_padding,
-            xy[1] - rect_padding,
-            xy[0] + text_width + rect_padding,
-            xy[1] + text_height + rect_padding,
-        ],
-        fill=(0, 0, 0, 200),
-    )
-
-    # Draw text
-    draw.text(xy, text, fill=(255, 255, 255), font=font)
-
-    return np.array(pil_img)
-
-
 def create_random_action_gif(
     class_name: str,
     env: gymnasium.Env,
@@ -158,7 +93,7 @@ def create_random_action_gif(
         for _ in range(num_actions):
             action = env.action_space.sample()
             _, reward, terminated, truncated, _ = env.step(action)
-            total_reward += reward
+            total_reward += float(reward)
             num_steps += 1
             imgs.append(env.render())
 
@@ -251,7 +186,11 @@ def generate_markdown(
             success = random_action_stats.get("terminated_successfully", False)
             num_steps = random_action_stats.get("num_steps", 0)
             success_text = "Yes" if success else "No"
-            md += f"**Random Action Stats**: Total Reward: {total_reward:.2f}, Success: {success_text}, Steps: {num_steps}\n\n"
+            stats_line = (
+                f"**Random Action Stats**: Total Reward: {total_reward:.2f}, "
+                f"Success: {success_text}, Steps: {num_steps}\n\n"
+            )
+            md += stats_line
     else:
         md += "*(Random action GIF could not be generated due to rendering issues)*\n\n"
 
@@ -327,7 +266,11 @@ def generate_markdown(
             success = demo_stats.get("terminated_successfully", False)
             num_steps = demo_stats.get("num_steps", 0)
             success_text = "Yes" if success else "No"
-            md += f"**Demo Stats**: Total Reward: {total_reward:.2f}, Success: {success_text}, Steps: {num_steps}\n\n"
+            stats_line = (
+                f"**Demo Stats**: Total Reward: {total_reward:.2f}, "
+                f"Success: {success_text}, Steps: {num_steps}\n\n"
+            )
+            md += stats_line
     else:
         md += "*(No demonstration GIFs available)*\n\n"
 
@@ -392,10 +335,17 @@ def _main() -> None:
 
         if args.force or class_changed:
             print(f"  Regenerating {class_name}...")
-            has_random_gif, random_action_stats = create_random_action_gif(class_name, env)
+            has_random_gif, random_action_stats = create_random_action_gif(
+                class_name, env
+            )
             has_initial_gif = create_initial_state_gif(class_name, variants)
             md = generate_markdown(
-                class_name, env, variants, has_random_gif, has_initial_gif, random_action_stats
+                class_name,
+                env,
+                variants,
+                has_random_gif,
+                has_initial_gif,
+                random_action_stats,
             )
             class_filename = sanitize_class_name(class_name)
             filename = OUTPUT_DIR / f"{class_filename}.md"
@@ -404,10 +354,17 @@ def _main() -> None:
             regenerated_classes += 1
         elif args.force_tidybot and "TidyBot3D" in class_name:
             print(f"  Regenerating {class_name}...")
-            has_random_gif, random_action_stats = create_random_action_gif(class_name, env)
+            has_random_gif, random_action_stats = create_random_action_gif(
+                class_name, env
+            )
             has_initial_gif = create_initial_state_gif(class_name, variants)
             md = generate_markdown(
-                class_name, env, variants, has_random_gif, has_initial_gif, random_action_stats
+                class_name,
+                env,
+                variants,
+                has_random_gif,
+                has_initial_gif,
+                random_action_stats,
             )
             class_filename = sanitize_class_name(class_name)
             filename = OUTPUT_DIR / f"{class_filename}.md"

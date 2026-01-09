@@ -27,7 +27,6 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import imageio.v2 as iio
-import numpy as np
 from generate_env_docs import sanitize_env_id
 
 import prbench
@@ -83,7 +82,9 @@ def discover_demos_by_env(env_id: str, demos_dir: Path = Path("demos")) -> List[
     return demo_files
 
 
-def find_best_demo_for_variant(env_id: str, demos_dir: Path = Path("demos")) -> Optional[Path]:
+def find_best_demo_for_variant(
+    env_id: str, demos_dir: Path = Path("demos")
+) -> Optional[Path]:
     """Find the best demo for a variant (most recent).
 
     Args:
@@ -184,14 +185,15 @@ def generate_demo_video(
     for i, action in enumerate(actions):
         try:
             _, reward, terminated, truncated, _ = env.step(action)
-            total_reward += reward
+            total_reward += float(reward)
 
             frame = env.render()  # type: ignore
             frames.append(frame)
 
             if terminated or truncated:
                 terminated_successfully = terminated
-                print(f"Episode ended after {i+1} actions (success: {terminated_successfully})")
+                print(f"Episode ended after {i+1} actions")
+                print(f"Success: {terminated_successfully}")
                 break
         except Exception as e:
             print(f"Error during action {i}: {e}")
@@ -417,7 +419,7 @@ def generate_one_per_variant(
 
     # Collect all variant IDs
     all_variants = []
-    for class_name, class_info in env_classes.items():
+    for _, class_info in env_classes.items():
         all_variants.extend(class_info["variants"])
 
     print(f"Found {len(all_variants)} registered variants")
@@ -448,11 +450,13 @@ def generate_one_per_variant(
             # Find the best demo for this variant
             demo_path = find_best_demo_for_variant(variant_id, demos_dir)
             if demo_path is None:
-                print(f"[{i}/{len(all_variants)}] Skipping {variant_id} (no demos available)")
+                msg = f"[{i}/{len(all_variants)}] Skipping {variant_id}"
+                print(f"{msg} (no demos available)")
                 skipped_no_demo += 1
                 continue
 
-            print(f"[{i}/{len(all_variants)}] Generating {variant_id} from {demo_path.name}")
+            msg = f"[{i}/{len(all_variants)}] Generating {variant_id}"
+            print(f"{msg} from {demo_path.name}")
             generate_demo_video(demo_path, output_path, fps, loop)
             successful += 1
 
@@ -464,7 +468,7 @@ def generate_one_per_variant(
             continue
 
     print(f"\n{'='*60}")
-    print(f"Summary:")
+    print("Summary:")
     print(f"  Successful: {successful}")
     print(f"  Skipped (no demo): {skipped_no_demo}")
     print(f"  Skipped (exists): {skipped_exists}")
@@ -505,7 +509,7 @@ def _main() -> None:
     input_group.add_argument(
         "--one-per-variant",
         action="store_true",
-        help="Generate exactly one representative GIF for each registered environment variant",
+        help="Generate one representative GIF per registered environment variant",
     )
 
     # Common options
@@ -540,7 +544,7 @@ def _main() -> None:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Force regeneration even if GIF already exists (for --one-per-variant mode)",
+        help="Force regeneration even if GIF exists (--one-per-variant)",
     )
 
     args = parser.parse_args()
