@@ -5,7 +5,7 @@
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Description
-A 2D environment where the goal is to "pick up" (suction) a target block.
+A 2D environment where the goal is to retrieve a target block and place it inside a target region.
 
 The target block may be initially obstructed.
 
@@ -174,7 +174,7 @@ The entries of an array in this Box space correspond to the following action fea
 
 
 ## Rewards
-A penalty of -1.0 is given at every time step until termination, which occurs when the target block is held.
+A penalty of -1.0 is given at every time step until termination, which occurs when the target block is inside the target region.
 
 
 ## References
