@@ -1,4 +1,4 @@
-"""Teleoperation script for prbench environments using WebXR phone app."""
+"""Teleoperation script for prbench dynamics3d environments."""
 
 import argparse
 import time

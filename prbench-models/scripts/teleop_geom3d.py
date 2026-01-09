@@ -1,4 +1,4 @@
-"""Teleoperation script for prbench environments using WebXR phone app."""
+"""Teleoperation script for prbench geom3d environments."""
 
 import argparse
 import time
@@ -36,7 +36,7 @@ def run_teleop(
     save: bool = True,
     num_episodes: int = 1,
     max_steps: int = 1000,
-    num_cubes: int = 2,
+    env_name: str = "Shelf3D-o2-v0",
     enable_web_server: bool = True,
     port: int = 5000,
     show_images: bool = False,
@@ -49,13 +49,13 @@ def run_teleop(
         save: Whether to save the episode data to disk.
         num_episodes: Number of episodes to run.
         max_steps: Maximum steps per episode.
-        num_cubes: Number of cubes in the environment.
+        env_name: Name of the environment.
         enable_web_server: Whether to enable the WebXR web server.
         port: Port for the WebXR web server.
     """
     # Create the environment
     env = prbench.make(
-        f"prbench/Shelf3D-o{num_cubes}-v0",
+        f"prbench/{env_name}",
         use_gui=True,
         render_mode="rgb_array",
     )
@@ -81,8 +81,8 @@ def run_teleop(
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
-            # Target object for this episode
-            target_object_key = "cube0"
+            # Language annotation for this episode
+            language_annotation = "Grasp the cube0."
 
             # Reset the policy (waits for user to start if web server enabled)
             policy.reset()
@@ -163,7 +163,7 @@ def run_teleop(
 
                 # Record observation and action before stepping
                 if writer is not None:
-                    writer.step(obs_dict, action_dict, target_object_key)  # type: ignore
+                    writer.step(obs_dict, action_dict, language_annotation)  # type: ignore
 
                 # Execute action in environment
                 obs, reward, terminated, truncated, _ = env.step(  # type: ignore # pylint: disable=line-too-long
@@ -223,7 +223,7 @@ def main() -> None:
         "--max-steps", type=int, default=1000, help="Maximum steps per episode"
     )
     parser.add_argument(
-        "--num-cubes", type=int, default=2, help="Number of cubes in environment"
+        "--env-name", type=str, default="Shelf3D-o2-v0", help="Name of the environment"
     )
     parser.add_argument(
         "--no-web-server",
@@ -247,7 +247,7 @@ def main() -> None:
         save=args.save,
         num_episodes=args.num_episodes,
         max_steps=args.max_steps,
-        num_cubes=args.num_cubes,
+        env_name=args.env_name,
         enable_web_server=args.enable_web_server,
         port=args.port,
         show_images=args.show_images,
