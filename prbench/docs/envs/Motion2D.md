@@ -11,6 +11,8 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 
 
 ## Available Variants
+The number of narrow passages differs between environment variants. For example, Motion2D-p0 has no passages (open space), while Motion2D-p5 has 5 narrow passages.
+
 - `prbench/Motion2D-p0-v0` (p0)
 - `prbench/Motion2D-p1-v0` (p1)
 - `prbench/Motion2D-p2-v0` (p2)

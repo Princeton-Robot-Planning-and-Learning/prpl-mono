@@ -20,6 +20,8 @@ Each object includes physics properties like mass, moment of inertia (for dynami
 
 
 ## Available Variants
+The number of obstructions differs between environment variants. For example, DynPushPullHook2D-o0 has no obstructions, while DynPushPullHook2D-o5 has 5 obstructions.
+
 - `prbench/DynPushPullHook2D-o0-v0` (o0)
 - `prbench/DynPushPullHook2D-o1-v0` (o1)
 - `prbench/DynPushPullHook2D-o5-v0` (o5)

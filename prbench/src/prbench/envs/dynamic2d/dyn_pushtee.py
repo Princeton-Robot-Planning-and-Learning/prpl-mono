@@ -563,6 +563,10 @@ Each object includes physics properties like mass, moment of inertia, and color 
 **Task**: Push the T-shaped block so that it covers at least 95% of the goal pose (position and orientation).
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "This environment has only one variant."
+
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
