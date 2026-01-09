@@ -2,10 +2,12 @@
 
 ![random action GIF](assets/random_action_gifs/ClutteredRetrieval2D.gif)
 
-## Description
-A 2D environment where the goal is to "pick up" (suction) a target block.
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
-The target block may be initially obstructed. In this environment, there are always 11 obstacle blocks.
+## Description
+A 2D environment where the goal is to retrieve a target block and place it inside a target region.
+
+The target block may be initially obstructed.
 
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 
@@ -21,7 +23,9 @@ The number of obstructions differs between environment variants. For example, Cl
 ![initial state GIF](assets/initial_state_gifs/ClutteredRetrieval2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/ClutteredRetrieval2D-o25/ClutteredRetrieval2D-o25_1758719976.gif)
+![demo GIF](assets/demo_gifs/ClutteredRetrieval2D-o10/ClutteredRetrieval2D-o10_seed0_1767991986.gif)
+
+**Demo Stats**: Total Reward: -259.00, Success: Yes, Steps: 259
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
@@ -170,7 +174,7 @@ The entries of an array in this Box space correspond to the following action fea
 
 
 ## Rewards
-A penalty of -1.0 is given at every time step until termination, which occurs when the target block is held.
+A penalty of -1.0 is given at every time step until termination, which occurs when the target block is inside the target region.
 
 
 ## References

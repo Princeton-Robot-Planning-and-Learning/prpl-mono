@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/Ground3D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 3D environment where the goal is to pick up a cube from the ground.
 

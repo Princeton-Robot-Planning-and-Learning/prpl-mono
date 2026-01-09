@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/DynObstruction2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D physics-based environment where the goal is to place a target block onto a target surface using a fingered robot with PyMunk physics simulation. The block must be completely on the surface.
 
@@ -30,7 +32,7 @@ The number of obstructions differs between environment variants. For example, Dy
 ![initial state GIF](assets/initial_state_gifs/DynObstruction2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynObstruction2D-o3/DynObstruction2D-o3_1762182807.gif)
+*(No demonstration GIFs available)*
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

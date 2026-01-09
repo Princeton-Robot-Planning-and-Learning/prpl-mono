@@ -2,10 +2,12 @@
 
 ![random action GIF](assets/random_action_gifs/Obstruction2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment where the goal is to place a target block onto a target surface. The block must be completely contained within the surface boundaries.
 
-The target surface may be initially obstructed. In this environment, there are always 2 obstacle blocks.
+The target surface may be initially obstructed.
 
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 
@@ -23,7 +25,9 @@ The number of obstructions differs between environment variants. For example, Ob
 ![initial state GIF](assets/initial_state_gifs/Obstruction2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/Obstruction2D-o4/Obstruction2D-o4_seed4_1751655586.gif)
+![demo GIF](assets/demo_gifs/Obstruction2D-o4/Obstruction2D-o4.gif)
+
+**Demo Stats**: Total Reward: -455.00, Success: Yes, Steps: 455
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

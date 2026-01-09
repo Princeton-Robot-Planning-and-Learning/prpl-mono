@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/TidyBot3D.gif)
 
+**Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
+
 ## Description
 A 3D mobile manipulation environment using the TidyBot platform.
 

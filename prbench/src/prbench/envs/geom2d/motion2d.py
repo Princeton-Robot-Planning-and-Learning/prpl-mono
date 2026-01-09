@@ -293,15 +293,11 @@ class Motion2DEnv(ConstantObjectPRBenchEnv):
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
-        num_passages = (len(self._constant_objects) - 2) // 2
         # pylint: disable=line-too-long
-        if num_passages > 0:
-            obstacle_sentence = f"\nIn this environment, there are always {num_passages} narrow passages.\n"
-        else:
-            obstacle_sentence = ""
+        return """A 2D environment where the goal is to reach a target region while avoiding static obstacles.
 
-        return f"""A 2D environment where the goal is to reach a target region while avoiding static obstacles.
-{obstacle_sentence}
+There may be narrow passages.
+        
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. The arm and vacuum do not need to be used in this environment.
 """
 
