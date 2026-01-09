@@ -1,0 +1,178 @@
+"""Tests for ground parameterized skills."""
+
+import argparse
+
+import numpy as np
+import prbench
+from episode_storage import EpisodeWriter
+from prbench.envs.geom3d.shelf3d import ObjectCentricShelf3DEnv
+from relational_structs.spaces import ObjectCentricBoxSpace
+
+from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
+from prbench_models.geom3d.shelf3d.parameterized_skills import (
+    create_lifted_controllers,
+)
+from prbench_models.teleop_utils import _visualize_image_in_window
+
+prbench.register_all_environments()
+
+
+def collect_data(
+    output_dir: str = "data/demos",
+    num_cubes: int = 1,
+    env_name: str = "Shelf3D-o1-v0",
+    seed: int = 123,
+    save: bool = True,
+    show_images: bool = False,
+):
+    """Collect pick and place demonstration data in ground environment.
+
+    Args:
+        output_dir: Directory to save episode data.
+        seed: Random seed for reproducibility.
+        save: Whether to save the episode data to disk.
+    """
+
+    # Create the environment.
+    env = prbench.make(f"prbench/{env_name}", render_mode="rgb_array")
+
+    # Create episode writer if saving is enabled.
+    writer = EpisodeWriter(output_dir) if save else None
+
+    # Reset the environment and get the initial state.
+    obs, _ = env.reset(seed=seed)
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    state = env.observation_space.devectorize(obs)
+
+    assert state is not None
+
+    fk_solver = TidybotFKSolver(ee_offset=0.12)
+
+    # Target object for this episode
+    target_object_key = f"cube{num_cubes - 1}"
+
+    # Create the pick ground controller.
+    sim = ObjectCentricShelf3DEnv(num_cubes=num_cubes)
+    controllers = create_lifted_controllers(
+        env.action_space,  # type: ignore
+        sim,
+    )
+    lifted_controller = controllers["pick"]
+    robot = state.get_object_from_name("robot")
+    cube = state.get_object_from_name(target_object_key)
+    object_parameters = (robot, cube)
+    controller = lifted_controller.ground(object_parameters)
+
+    rng = np.random.default_rng(123)
+    params = controller.sample_parameters(state, rng)
+
+    controller.reset(state, params)
+    for step_idx in range(400):
+        action = controller.step()
+        robot = state.get_object_from_name("robot")
+        current_joints = [
+            state.get(robot, "joint_1"),
+            state.get(robot, "joint_2"),
+            state.get(robot, "joint_3"),
+            state.get(robot, "joint_4"),
+            state.get(robot, "joint_5"),
+            state.get(robot, "joint_6"),
+            state.get(robot, "joint_7"),
+        ]
+        current_position, current_orientation = fk_solver.forward_kinematics(
+            np.array(current_joints)
+        )
+
+        target_base_pose = np.array(
+            [
+                state.get(robot, "pos_base_x") + action[0],
+                state.get(robot, "pos_base_y") + action[1],
+                state.get(robot, "pos_base_rot") + action[2],
+            ]
+        )
+        target_joints = current_joints + action[3:10]
+        target_position, target_orientation = fk_solver.forward_kinematics(
+            np.array(target_joints)
+        )
+
+        all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
+        if show_images:
+            _visualize_image_in_window(all_images["overview"], "overview")
+            _visualize_image_in_window(all_images["base"], "base")
+            _visualize_image_in_window(all_images["wrist"], "wrist")
+
+        # Record observation and action before stepping
+        if writer is not None:
+            # Create observation dict with state vector and images
+            obs_dict = {
+                "base_pose": np.array(
+                    [
+                        state.get(robot, "pos_base_x"),
+                        state.get(robot, "pos_base_y"),
+                        state.get(robot, "pos_base_rot"),
+                    ]
+                ),
+                "arm_pos": current_position,
+                "arm_quat": current_orientation,
+                "gripper_pos": np.array([state.get(robot, "finger_state")]),
+                "base_image": all_images["base"],
+                "wrist_image": all_images["wrist"],
+                "overview_image": all_images["overview"],
+            }
+            # Convert action to dict format
+            action_dict = {
+                "base_pose": target_base_pose,
+                "arm_pos": target_position,
+                "arm_quat": target_orientation,
+                "gripper_pos": np.array([action[-1]]),
+            }
+            writer.step(obs_dict, action_dict, target_object_key)
+
+        obs, _, _, _, _ = env.step(action)  # type: ignore
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            print(f"Pick controller terminated after {step_idx + 1} steps")
+            break
+    else:
+        print("Warning: Pick controller did not terminate within 400 steps")
+
+    # Save episode data to disk
+    if writer is not None and len(writer) > 0:
+        writer.flush_async()
+        writer.wait_for_flush()
+        print(f"Episode saved with {len(writer)} steps")
+
+    env.close()  # type: ignore
+
+
+def main() -> None:
+    """Main function to collect demonstration data."""
+    parser = argparse.ArgumentParser(description="Collect demonstration data")
+    parser.add_argument("--output-dir", default="data/demos", help="Output dir")
+    parser.add_argument("--seed", type=int, default=123, help="Random seed")
+    parser.add_argument("--save", action="store_true", default=True)
+    parser.add_argument("--num-cubes", type=int, default=1, help="Number of cubes")
+    parser.add_argument(
+        "--env-name", type=str, default="Shelf3D-o1-v0", help="Environment name"
+    )
+    parser.add_argument("--show-images", action="store_true", default=False)
+    parser.add_argument("--no-save", dest="save", action="store_false")
+    parser.add_argument(
+        "--n-demos", type=int, default=1, help="Number of demos to collect"
+    )
+    args = parser.parse_args()
+    for demo_idx in range(args.n_demos):
+        collect_data(
+            output_dir=args.output_dir,
+            seed=args.seed + demo_idx,
+            save=args.save,
+            num_cubes=args.num_cubes,
+            env_name=args.env_name,
+            show_images=args.show_images,
+        )
+
+
+if __name__ == "__main__":
+    main()

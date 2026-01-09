@@ -4,30 +4,17 @@ import argparse
 import time
 from typing import Any
 
-import cv2 as cv
 import numpy as np
 import prbench
 from constants import POLICY_CONTROL_PERIOD
 from episode_storage import EpisodeWriter
-from numpy.typing import NDArray
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
-from prbench_models.teleop_utils import TeleopPolicy
+from prbench_models.teleop_utils import TeleopPolicy, _visualize_image_in_window
 
 prbench.register_all_environments()
-
-
-def _visualize_image_in_window(image: NDArray[np.uint8], window_name: str) -> None:
-    """Visualize an image in an OpenCV window."""
-    if image.dtype == np.uint8 and len(image.shape) == 3:
-        # Convert RGB to BGR for proper color display in OpenCV
-        display_image = cv.cvtColor(  # pylint: disable=no-member
-            image, cv.COLOR_RGB2BGR  # pylint: disable=no-member
-        )
-        cv.imshow(window_name, display_image)  # pylint: disable=no-member
-        cv.waitKey(1)  # pylint: disable=no-member
 
 
 def run_teleop(
