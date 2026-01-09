@@ -1,6 +1,6 @@
 # ClutteredRetrieval2D
 
-*(Random action GIF could not be generated due to rendering issues)*
+![random action GIF](assets/random_action_gifs/ClutteredRetrieval2D.gif)
 
 ## Description
 A 2D environment where the goal is to "pick up" (suction) a target block.
@@ -18,7 +18,7 @@ The number of obstructions differs between environment variants. For example, Cl
 - `prbench/ClutteredRetrieval2D-o25-v0` (o25)
 
 ## Initial State Distribution
-*(Initial state GIF could not be generated due to rendering issues)*
+![initial state GIF](assets/initial_state_gifs/ClutteredRetrieval2D.gif)
 
 ## Example Demonstration
 *(No demonstration GIFs available)*
