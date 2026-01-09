@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/ClutteredStorage2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment where the goal is to put all blocks inside a shelf.
 
@@ -20,7 +22,7 @@ The number of blocks differs between environment variants. For example, Cluttere
 ![initial state GIF](assets/initial_state_gifs/ClutteredStorage2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/ClutteredStorage2D-b15/ClutteredStorage2D-b15_seed0_1752341751.gif)
+*(No demonstration GIFs available)*
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

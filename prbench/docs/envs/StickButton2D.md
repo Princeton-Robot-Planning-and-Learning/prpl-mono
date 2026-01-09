@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/StickButton2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment where the goal is to touch all buttons, possibly by using a stick for buttons that are out of the robot's direct reach.
 
@@ -23,7 +25,9 @@ The number of buttons differs between environment variants. For example, StickBu
 ![initial state GIF](assets/initial_state_gifs/StickButton2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/StickButton2D-b10/StickButton2D-b10_seed1_1752262385.gif)
+![demo GIF](assets/demo_gifs/StickButton2D-b10/StickButton2D-b10.gif)
+
+**Demo Stats**: Total Reward: -468.00, Success: Yes, Steps: 468
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
