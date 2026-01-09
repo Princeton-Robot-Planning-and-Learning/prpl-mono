@@ -204,6 +204,12 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
     def _create_env_markdown_description(self) -> str:
         """Create a markdown description of the overall environment."""
 
+    def _create_variant_markdown_description(self) -> str:
+        """Create a markdown description of the variant details (e.g. object nums)."""
+        # NOTE: this will be filled in gradually as we audit environments, and then we
+        # can remove it once all are finished.
+        return "Variant description not defined"
+
     @abc.abstractmethod
     def _create_reward_markdown_description(self) -> str:
         """Create a markdown description of the environment rewards."""
