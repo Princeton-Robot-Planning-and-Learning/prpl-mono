@@ -2,11 +2,14 @@
 
 import argparse
 import inspect
+import json
 import subprocess
 from pathlib import Path
 
 import gymnasium
 import imageio.v2 as iio
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 import prbench
 
@@ -57,13 +60,76 @@ def sanitize_class_name(class_name: str) -> str:
     return class_name.replace("/", "_")
 
 
+def add_text_to_image(
+    img: np.ndarray, text: str, position: str = "top-left", font_size: int = 20
+) -> np.ndarray:
+    """Add text overlay to an image.
+
+    Args:
+        img: The image as a numpy array (H, W, C)
+        text: The text to add
+        position: Position of text ("top-left", "top-right", "bottom-left", "bottom-right")
+        font_size: Size of the font
+
+    Returns:
+        Modified image as numpy array
+    """
+    # Convert to PIL Image
+    pil_img = Image.fromarray(img.astype(np.uint8))
+    draw = ImageDraw.Draw(pil_img)
+
+    # Try to use a default font, fall back to default if not available
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
+    except:
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+        except:
+            font = ImageFont.load_default()
+
+    # Get text bounding box
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+
+    # Determine position
+    padding = 10
+    if position == "top-left":
+        xy = (padding, padding)
+    elif position == "top-right":
+        xy = (pil_img.width - text_width - padding, padding)
+    elif position == "bottom-left":
+        xy = (padding, pil_img.height - text_height - padding - 5)
+    elif position == "bottom-right":
+        xy = (pil_img.width - text_width - padding, pil_img.height - text_height - padding - 5)
+    else:
+        xy = (padding, padding)
+
+    # Draw background rectangle for better readability
+    rect_padding = 5
+    draw.rectangle(
+        [
+            xy[0] - rect_padding,
+            xy[1] - rect_padding,
+            xy[0] + text_width + rect_padding,
+            xy[1] + text_height + rect_padding,
+        ],
+        fill=(0, 0, 0, 200),
+    )
+
+    # Draw text
+    draw.text(xy, text, fill=(255, 255, 255), font=font)
+
+    return np.array(pil_img)
+
+
 def create_random_action_gif(
     class_name: str,
     env: gymnasium.Env,
     num_actions: int = 25,
     seed: int = 0,
     default_fps: int = 10,
-) -> bool:
+) -> tuple[bool, dict[str, float | bool]]:
     """Create a GIF of taking random actions in the environment.
 
     Args:
@@ -74,27 +140,46 @@ def create_random_action_gif(
         default_fps: Default FPS if not specified in metadata
 
     Returns:
-        bool: True if successful, False if rendering failed.
+        Tuple of (success, stats_dict) where stats_dict contains:
+            - total_reward: cumulative reward
+            - terminated_successfully: whether episode terminated successfully
+            - num_steps: number of steps taken
     """
     try:
         imgs: list = []
+        total_reward = 0.0
+        terminated_successfully = False
+        num_steps = 0
+
         env.reset(seed=seed)
         env.action_space.seed(seed)
         imgs.append(env.render())
+
         for _ in range(num_actions):
             action = env.action_space.sample()
-            _, _, terminated, truncated, _ = env.step(action)
+            _, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
+            num_steps += 1
             imgs.append(env.render())
+
             if terminated or truncated:
+                terminated_successfully = terminated
                 break
+
         class_filename = sanitize_class_name(class_name)
         outfile = OUTPUT_DIR / "assets" / "random_action_gifs" / f"{class_filename}.gif"
         fps = env.metadata.get("render_fps", default_fps)
         iio.mimsave(outfile, imgs, fps=fps, loop=0)
-        return True
+
+        stats = {
+            "total_reward": float(total_reward),
+            "terminated_successfully": bool(terminated_successfully),
+            "num_steps": int(num_steps),
+        }
+        return True, stats
     except Exception as e:
         print(f"    Warning: Failed to create random action GIF for {class_name}: {e}")
-        return False
+        return False, {}
 
 
 def create_initial_state_gif(
@@ -138,6 +223,7 @@ def generate_markdown(
     variants: list[str],
     has_random_gif: bool = True,
     has_initial_gif: bool = True,
+    random_action_stats: dict[str, float | bool] | None = None,
 ) -> str:
     """Generate markdown for a given environment class.
 
@@ -147,6 +233,7 @@ def generate_markdown(
         variants: List of all variant IDs for this class
         has_random_gif: Whether the random action GIF was successfully generated
         has_initial_gif: Whether the initial state GIF was successfully generated
+        random_action_stats: Stats from random action GIF (reward, success, num_steps)
 
     Returns:
         The markdown content as a string
@@ -158,6 +245,13 @@ def generate_markdown(
         md += (
             f"![random action GIF](assets/random_action_gifs/{class_filename}.gif)\n\n"
         )
+        # Add stats if available
+        if random_action_stats:
+            total_reward = random_action_stats.get("total_reward", 0.0)
+            success = random_action_stats.get("terminated_successfully", False)
+            num_steps = random_action_stats.get("num_steps", 0)
+            success_text = "Yes" if success else "No"
+            md += f"**Random Action Stats**: Total Reward: {total_reward:.2f}, Success: {success_text}, Steps: {num_steps}\n\n"
     else:
         md += "*(Random action GIF could not be generated due to rendering issues)*\n\n"
 
@@ -192,6 +286,7 @@ def generate_markdown(
 
     # Search for demo GIFs across all variant subdirectories
     demo_gif_found = False
+    demo_stats = None
     # Search backwards, assuming that later variants are "harder" and therefore more
     # interesting to show demonstrations for.
     for variant_id in variants[::-1]:
@@ -206,9 +301,26 @@ def generate_markdown(
                 first_gif = gif_files[0].name
                 md += f"![demo GIF](assets/demo_gifs/{variant_subdir_name}/{first_gif})\n\n"  # pylint: disable=line-too-long
                 demo_gif_found = True
+
+                # Try to load stats from JSON file
+                json_file = gif_files[0].with_suffix(".json")
+                if json_file.exists():
+                    try:
+                        with open(json_file, "r", encoding="utf-8") as f:
+                            demo_stats = json.load(f)
+                    except Exception:
+                        pass  # Silently ignore if stats can't be loaded
                 break
 
-    if not demo_gif_found:
+    if demo_gif_found:
+        # Display demo stats if available
+        if demo_stats:
+            total_reward = demo_stats.get("total_reward", 0.0)
+            success = demo_stats.get("terminated_successfully", False)
+            num_steps = demo_stats.get("num_steps", 0)
+            success_text = "Yes" if success else "No"
+            md += f"**Demo Stats**: Total Reward: {total_reward:.2f}, Success: {success_text}, Steps: {num_steps}\n\n"
+    else:
         md += "*(No demonstration GIFs available)*\n\n"
 
     md += "## Observation Space\n"
@@ -272,10 +384,10 @@ def _main() -> None:
 
         if args.force or class_changed:
             print(f"  Regenerating {class_name}...")
-            has_random_gif = create_random_action_gif(class_name, env)
+            has_random_gif, random_action_stats = create_random_action_gif(class_name, env)
             has_initial_gif = create_initial_state_gif(class_name, variants)
             md = generate_markdown(
-                class_name, env, variants, has_random_gif, has_initial_gif
+                class_name, env, variants, has_random_gif, has_initial_gif, random_action_stats
             )
             class_filename = sanitize_class_name(class_name)
             filename = OUTPUT_DIR / f"{class_filename}.md"
@@ -284,10 +396,10 @@ def _main() -> None:
             regenerated_classes += 1
         elif args.force_tidybot and "TidyBot3D" in class_name:
             print(f"  Regenerating {class_name}...")
-            has_random_gif = create_random_action_gif(class_name, env)
+            has_random_gif, random_action_stats = create_random_action_gif(class_name, env)
             has_initial_gif = create_initial_state_gif(class_name, variants)
             md = generate_markdown(
-                class_name, env, variants, has_random_gif, has_initial_gif
+                class_name, env, variants, has_random_gif, has_initial_gif, random_action_stats
             )
             class_filename = sanitize_class_name(class_name)
             filename = OUTPUT_DIR / f"{class_filename}.md"

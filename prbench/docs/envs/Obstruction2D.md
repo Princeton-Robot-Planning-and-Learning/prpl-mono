@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/Obstruction2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment where the goal is to place a target block onto a target surface. The block must be completely contained within the surface boundaries.
 

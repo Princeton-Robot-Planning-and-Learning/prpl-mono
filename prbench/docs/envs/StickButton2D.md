@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/StickButton2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment where the goal is to touch all buttons, possibly by using a stick for buttons that are out of the robot's direct reach.
 

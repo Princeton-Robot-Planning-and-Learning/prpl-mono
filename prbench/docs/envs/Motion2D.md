@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/Motion2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment where the goal is to reach a target region while avoiding static obstacles.
 

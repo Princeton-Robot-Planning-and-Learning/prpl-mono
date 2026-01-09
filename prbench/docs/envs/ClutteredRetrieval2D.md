@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/ClutteredRetrieval2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment where the goal is to "pick up" (suction) a target block.
 

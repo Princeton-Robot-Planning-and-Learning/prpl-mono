@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/PushPullHook2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment with a robot, a hook (L-shape), a movable button, and a target button.The robot can use the hook to push the movable button towards the target button.The movable button only moves if the hook is in contact and the robot moves in the direction of contact.
 

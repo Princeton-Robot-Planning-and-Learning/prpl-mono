@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/BaseMotion3D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 Environment where only base motion planning is needed to reach a goal.
 

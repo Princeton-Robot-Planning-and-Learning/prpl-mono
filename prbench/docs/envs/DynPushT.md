@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/DynPushT.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D physics-based environment where the goal is to push a T-shaped block to match a goal pose using a simple dot robot (kinematic circle) with PyMunk physics simulation.
 
@@ -21,7 +23,9 @@ Each object includes physics properties like mass, moment of inertia, and color 
 ![initial state GIF](assets/initial_state_gifs/DynPushT.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/demo_gifs/DynPushT-t1/DynPushT-t1_seed0_1759591501.gif)
+
+**Demo Stats**: Total Reward: -1254.00, Success: Yes, Steps: 1254
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

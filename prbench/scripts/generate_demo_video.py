@@ -16,11 +16,13 @@ saving in the demonstrations also).
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 import imageio.v2 as iio
+import numpy as np
 from generate_env_docs import sanitize_env_id
 
 import prbench
@@ -152,6 +154,8 @@ def generate_demo_video(
 
     # Collect frames by replaying the demonstration.
     frames = []
+    total_reward = 0.0
+    terminated_successfully = False
 
     # Add initial frame.
     initial_frame = env.render()  # type: ignore
@@ -160,12 +164,15 @@ def generate_demo_video(
     # Replay each action and capture frames.
     for i, action in enumerate(actions):
         try:
-            _, _, terminated, truncated, _ = env.step(action)
+            _, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
+
             frame = env.render()  # type: ignore
             frames.append(frame)
 
             if terminated or truncated:
-                print(f"Episode ended after {i+1} actions")
+                terminated_successfully = terminated
+                print(f"Episode ended after {i+1} actions (success: {terminated_successfully})")
                 break
         except Exception as e:
             print(f"Error during action {i}: {e}")
@@ -179,12 +186,27 @@ def generate_demo_video(
     # Save the video.
     print(f"Saving video to {output_path}")
     print(f"Video specs: {len(frames)} frames, {fps} fps")
+    print(f"Total reward: {total_reward:.2f}, Success: {terminated_successfully}")
 
     try:
         iio.mimsave(output_path, frames, fps=fps, loop=loop)  # type: ignore
         print("Video saved successfully!")
     except Exception as e:
         raise ValueError(f"Error saving video: {e}") from e
+
+    # Save stats to JSON file alongside the GIF.
+    stats_path = output_path.with_suffix(".json")
+    stats = {
+        "total_reward": float(total_reward),
+        "terminated_successfully": bool(terminated_successfully),
+        "num_steps": len(actions),
+    }
+    try:
+        with open(stats_path, "w", encoding="utf-8") as f:
+            json.dump(stats, f, indent=2)
+        print(f"Stats saved to {stats_path}")
+    except Exception as e:
+        print(f"Warning: Failed to save stats to {stats_path}: {e}")
 
 
 def generate_latest_demo_video(

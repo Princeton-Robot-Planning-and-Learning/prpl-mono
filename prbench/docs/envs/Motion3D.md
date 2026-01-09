@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/Motion3D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 3D motion planning environment where the goal is to reach a target sphere with the robot's end effector.
 
