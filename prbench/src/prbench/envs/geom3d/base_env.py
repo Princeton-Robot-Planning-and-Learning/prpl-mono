@@ -12,7 +12,7 @@ import gymnasium
 import numpy as np
 import pybullet as p
 from numpy.typing import NDArray
-from pybullet_helpers.camera import capture_image, capture_image_from_pose
+from pybullet_helpers.camera import capture_image
 from pybullet_helpers.geometry import Pose, SE2Pose, get_pose, multiply_poses, set_pose
 from pybullet_helpers.gui import create_gui_connection
 from pybullet_helpers.inverse_kinematics import (
@@ -593,8 +593,9 @@ class ObjectCentricGeom3DRobotEnv(
         # from pybullet_helpers.gui import visualize_pose
         # visualize_pose(base_pose_se3, self.physics_client_id)
         # visualize_pose(camera_pose, self.physics_client_id)
-        return capture_image_from_pose(
+        return capture_image(
             self.physics_client_id,
+            specify_position=True,
             camera_position=camera_pose.position,
             camera_orientation=camera_pose.orientation,
             image_width=self.config.base_camera_image_width,
@@ -626,8 +627,9 @@ class ObjectCentricGeom3DRobotEnv(
         # visualize_pose(ee_pose, self.physics_client_id)
         # visualize_pose(camera_pose, self.physics_client_id)
 
-        return capture_image_from_pose(
+        return capture_image(
             self.physics_client_id,
+            specify_position=True,
             camera_position=camera_pose.position,
             camera_orientation=camera_pose.orientation,
             image_width=self.config.ee_camera_image_width,
