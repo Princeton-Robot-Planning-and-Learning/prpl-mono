@@ -272,3 +272,332 @@ class GeneratedBowl(MujocoObject):
             f"outer_radius={self.outer_radius}, inner_radius={self.inner_radius}, "
             f"height={self.height}, mass={self.mass})"
         )
+
+
+@register_object(name="generated_seesaw")
+class GeneratedSeesaw(MujocoObject):
+    """A procedurally generated seesaw object for dynamic3d environments.
+
+    The seesaw consists of:
+    - A long, narrow beam (board) that can tilt
+    - A triangular pivot (fulcrum) that supports the beam at its center
+
+    The beam can rotate freely around the pivot point via a hinge joint.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        env: MujocoEnv | None = None,
+        options: dict | None = None,
+    ) -> None:
+        """Initialize a GeneratedSeesaw object.
+
+        Args:
+            name: Name of the seesaw body in the XML
+            env: Reference to the environment
+            options: Dictionary of seesaw options:
+                - beam_length: Length of the beam (default: 0.4m)
+                - beam_width: Width of the beam (default: 0.06m)
+                - beam_thickness: Thickness of the beam (default: 0.01m)
+                - pivot_height: Height of the pivot/fulcrum (default: 0.04m)
+                - pivot_width: Width of the pivot base (default: 0.04m)
+                - beam_rgba: Color of the beam (default: "0.6 0.4 0.2 1")
+                - pivot_rgba: Color of the pivot (default: "0.4 0.4 0.4 1")
+                - beam_mass: Mass of the beam (default: 0.1)
+                - pivot_mass: Mass of the pivot (default: 0.2)
+                - damping: Joint damping coefficient (default: 0.01)
+        """
+        # Initialize base class
+        super().__init__(name, env, options)
+
+        # Override object type
+        self.symbolic_object = Object(self.name, MujocoMovableObjectType)
+
+        # Beam parameters
+        self.beam_length: float = float(self.options.get("beam_length", 0.4))
+        self.beam_width: float = float(self.options.get("beam_width", 0.06))
+        self.beam_thickness: float = float(self.options.get("beam_thickness", 0.01))
+
+        # Pivot (fulcrum) parameters
+        self.pivot_height: float = float(self.options.get("pivot_height", 0.04))
+        self.pivot_width: float = float(self.options.get("pivot_width", 0.04))
+
+        # Handle beam rgba parameter
+        beam_rgba = self.options.get("beam_rgba", "0.6 0.4 0.2 1")
+        if isinstance(beam_rgba, str):
+            self.beam_rgba = beam_rgba
+        else:
+            self.beam_rgba = " ".join(str(x) for x in beam_rgba)
+
+        # Handle pivot rgba parameter
+        pivot_rgba = self.options.get("pivot_rgba", "0.4 0.4 0.4 1")
+        if isinstance(pivot_rgba, str):
+            self.pivot_rgba = pivot_rgba
+        else:
+            self.pivot_rgba = " ".join(str(x) for x in pivot_rgba)
+
+        self.beam_mass: float = float(self.options.get("beam_mass", 0.1))
+        self.pivot_mass: float = float(self.options.get("pivot_mass", 0.2))
+        self.damping: float = float(self.options.get("damping", 0.01))
+
+        # Generate mesh for pivot and save to temporary OBJ file
+        self.pivot_mesh_file = self._generate_and_save_pivot_mesh()
+        self.pivot_mesh_name = f"{self.name}_pivot_mesh"
+
+        # Create the XML element
+        self.xml_element = self._create_xml_element()
+
+    def _generate_and_save_pivot_mesh(self) -> str:
+        """Generate triangular prism pivot mesh and save to a temporary OBJ file.
+
+        Returns:
+            Path to the generated OBJ file
+        """
+        # Generate mesh vertices and faces
+        vertices, faces = self._generate_pivot_mesh()
+
+        # Define directory for temporary meshes
+        mesh_dir = Path(__file__).parents[1] / "models" / "assets" / ".tmp"
+
+        # Save mesh using utility function
+        return save_mesh(vertices, faces, mesh_dir)
+
+    def _generate_pivot_mesh(self) -> tuple[np.ndarray, np.ndarray]:
+        """Generate a triangular prism mesh for the pivot/fulcrum.
+
+        The pivot is a triangular prism oriented so the ridge runs along Y-axis
+        (parallel to the beam width), allowing the beam to tilt along the X-axis.
+
+        Returns:
+            Tuple of (vertices, faces) arrays
+        """
+        # Half dimensions
+        half_width = self.pivot_width / 2  # Base half-width in X
+        half_depth = self.beam_width / 2  # Depth in Y (same as beam width)
+        height = self.pivot_height
+
+        # Vertices of triangular prism
+        # Front face (y = -half_depth): triangle with apex at top
+        # Back face (y = +half_depth): triangle with apex at top
+        vertices = np.array(
+            [
+                # Front face triangle (y = -half_depth)
+                [-half_width, -half_depth, 0],  # 0: bottom left
+                [half_width, -half_depth, 0],  # 1: bottom right
+                [0, -half_depth, height],  # 2: top apex
+                # Back face triangle (y = +half_depth)
+                [-half_width, half_depth, 0],  # 3: bottom left
+                [half_width, half_depth, 0],  # 4: bottom right
+                [0, half_depth, height],  # 5: top apex
+            ]
+        )
+
+        # Faces (triangles with correct winding for outward normals)
+        faces = np.array(
+            [
+                # Front face (facing -Y)
+                [0, 2, 1],
+                # Back face (facing +Y)
+                [3, 4, 5],
+                # Bottom face (facing -Z)
+                [0, 1, 4],
+                [0, 4, 3],
+                # Left slope face (facing -X, +Z)
+                [0, 3, 5],
+                [0, 5, 2],
+                # Right slope face (facing +X, +Z)
+                [1, 2, 5],
+                [1, 5, 4],
+            ]
+        )
+
+        return vertices, faces
+
+    def get_assets(self) -> list[ET.Element]:
+        """Get the asset elements (mesh) for this seesaw.
+
+        Returns:
+            List of ET.Element containing mesh asset for the pivot
+        """
+        # Create mesh asset element for pivot
+        mesh_elem = ET.Element("mesh")
+        mesh_elem.set("file", self.pivot_mesh_file)
+        mesh_elem.set("name", self.pivot_mesh_name)
+
+        return [mesh_elem]
+
+    def _create_xml_element(self) -> ET.Element:
+        """Create the XML Element for this seesaw.
+
+        The seesaw structure:
+        - Base body (pivot/fulcrum) - static relative to parent
+        - Child body (beam) - connected via hinge joint
+
+        Returns:
+            ET.Element representing the seesaw body hierarchy
+        """
+        # Create main body element (this will be positioned by the environment)
+        body = ET.Element("body", name=self.name)
+
+        # Add freejoint for the entire seesaw to be positionable
+        ET.SubElement(body, "freejoint", name=self.joint_name)
+
+        # Add pivot (fulcrum) geom using generated mesh
+        ET.SubElement(
+            body,
+            "geom",
+            name=f"{self.name}_pivot",
+            type="mesh",
+            mesh=self.pivot_mesh_name,
+            rgba=self.pivot_rgba,
+            mass=str(self.pivot_mass),
+        )
+
+        # Create beam as a child body with hinge joint
+        # Position beam at the top of the pivot
+        beam_body = ET.SubElement(
+            body,
+            "body",
+            name=f"{self.name}_beam",
+            pos=f"0 0 {self.pivot_height}",
+        )
+
+        # Add hinge joint for beam rotation around Y-axis (tilt left-right)
+        ET.SubElement(
+            beam_body,
+            "joint",
+            name=f"{self.name}_hinge",
+            type="hinge",
+            axis="0 1 0",  # Rotate around Y-axis
+            damping=str(self.damping),
+        )
+
+        # Add beam geom (box shape)
+        # Beam is centered at the hinge point
+        beam_half_length = self.beam_length / 2
+        beam_half_width = self.beam_width / 2
+        beam_half_thickness = self.beam_thickness / 2
+
+        ET.SubElement(
+            beam_body,
+            "geom",
+            name=f"{self.name}_beam_geom",
+            type="box",
+            size=f"{beam_half_length} {beam_half_width} {beam_half_thickness}",
+            rgba=self.beam_rgba,
+            mass=str(self.beam_mass),
+        )
+
+        return body
+
+    def get_bounding_box_dimensions(self) -> tuple[float, float, float]:
+        """Get the bounding box dimensions for this seesaw.
+
+        Returns:
+            Tuple of (width, depth, height) for the bounding box
+        """
+        # Seesaw dimensions: beam_length x beam_width x (pivot_height + beam_thickness)
+        total_height = self.pivot_height + self.beam_thickness
+        return (self.beam_length, self.beam_width, total_height)
+
+    @staticmethod
+    def get_bounding_box_from_config(
+        pos: NDArray[np.float32], object_config: dict[str, str | float]
+    ) -> list[float]:
+        """Get bounding box for a seesaw given its position and config.
+
+        Args:
+            pos: Position of the seesaw as [x, y, z] array
+            object_config: Dictionary containing seesaw configuration
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+        """
+        # Extract seesaw parameters
+        beam_length = float(object_config.get("beam_length", 0.4))
+        beam_width = float(object_config.get("beam_width", 0.06))
+        beam_thickness = float(object_config.get("beam_thickness", 0.01))
+        pivot_height = float(object_config.get("pivot_height", 0.04))
+
+        # Half-extents
+        half_length = beam_length / 2
+        half_width = beam_width / 2
+        total_height = pivot_height + beam_thickness
+
+        return [
+            float(pos[0]) - half_length,  # x_min
+            float(pos[1]) - half_width,  # y_min
+            float(pos[2]),  # z_min (base at position)
+            float(pos[0]) + half_length,  # x_max
+            float(pos[1]) + half_width,  # y_max
+            float(pos[2]) + total_height,  # z_max
+        ]
+
+    def __str__(self) -> str:
+        """String representation of the seesaw."""
+        return (
+            f"GeneratedSeesaw(name='{self.name}', "
+            f"beam_length={self.beam_length}, beam_width={self.beam_width}, "
+            f"pivot_height={self.pivot_height})"
+        )
+
+    def __repr__(self) -> str:
+        """Detailed string representation of the seesaw."""
+        return (
+            f"GeneratedSeesaw(name='{self.name}', joint_name='{self.joint_name}', "
+            f"beam_length={self.beam_length}, beam_width={self.beam_width}, "
+            f"beam_thickness={self.beam_thickness}, pivot_height={self.pivot_height}, "
+            f"beam_mass={self.beam_mass}, pivot_mass={self.pivot_mass})"
+        )
+
+    def get_beam_tilt_angle(self) -> float:
+        """Get the current tilt angle of the beam in radians.
+
+        The hinge joint angle represents the rotation of the beam around the Y-axis.
+        A positive angle means the right side (positive X) is tilted down.
+        A negative angle means the left side (negative X) is tilted down.
+        An angle of 0 means the beam is level/balanced.
+
+        Returns:
+            The beam tilt angle in radians.
+
+        Raises:
+            ValueError: If environment is not set.
+        """
+        if self.env is None:
+            raise ValueError("Environment must be set to get beam tilt angle")
+
+        assert self.env.sim is not None, "Simulation not initialized"
+
+        # Get the hinge joint angle from the simulation
+        hinge_joint_name = f"{self.name}_hinge"
+        joint_qpos_addr = self.env.sim.model.get_joint_qpos_addr(hinge_joint_name)
+        angle = float(self.env.sim.data.mj_data.qpos[joint_qpos_addr])
+        return angle
+
+    def get_beam_tilt_angle_degrees(self) -> float:
+        """Get the current tilt angle of the beam in degrees.
+
+        Returns:
+            The beam tilt angle in degrees.
+
+        Raises:
+            ValueError: If environment is not set.
+        """
+        return np.degrees(self.get_beam_tilt_angle())
+
+    def is_balanced(self, tolerance_degrees: float = 5.0) -> bool:
+        """Check if the beam is balanced (within tolerance of horizontal).
+
+        Args:
+            tolerance_degrees: Maximum allowed deviation from horizontal in degrees.
+
+        Returns:
+            True if the beam tilt is within the tolerance, False otherwise.
+
+        Raises:
+            ValueError: If environment is not set.
+        """
+        angle_degrees = abs(self.get_beam_tilt_angle_degrees())
+        return angle_degrees <= tolerance_degrees

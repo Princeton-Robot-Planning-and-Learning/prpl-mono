@@ -74,6 +74,64 @@ def test_shelf3d_env(env):  # pylint: disable=redefined-outer-name
         obs, _, _, _, _ = env.step(act)
 
 
+def test_camera_rendering(env):  # pylint: disable=redefined-outer-name
+    """Test rendering from overview, base, and end-effector cameras."""
+    env.reset(seed=123)
+
+    # Get the object-centric env for direct camera access
+    oc_env = env.unwrapped._object_centric_env
+    config = oc_env.config
+
+    # Test overview camera (default render)
+    overview_image = oc_env.render()
+    assert overview_image is not None
+    assert overview_image.shape == (
+        config.render_image_height,
+        config.render_image_width,
+        3,
+    )
+    assert overview_image.dtype == np.uint8
+
+    # Test base camera
+    base_image = oc_env.render_base_camera()
+    assert base_image is not None
+    assert base_image.shape == (
+        config.base_camera_image_height,
+        config.base_camera_image_width,
+        3,
+    )
+    assert base_image.dtype == np.uint8
+
+    # Test end-effector camera
+    ee_image = oc_env.render_ee_camera()
+    assert ee_image is not None
+    assert ee_image.shape == (
+        config.ee_camera_image_height,
+        config.ee_camera_image_width,
+        3,
+    )
+    assert ee_image.dtype == np.uint8
+
+    # Test render_all_cameras
+    all_images = oc_env.render_all_cameras()
+    assert isinstance(all_images, dict)
+    assert set(all_images.keys()) == {"overview", "base", "wrist"}
+    assert all_images["overview"].shape == overview_image.shape
+    assert all_images["base"].shape == base_image.shape
+    assert all_images["wrist"].shape == ee_image.shape
+
+    # Take a few steps and verify cameras still work (poses change)
+    for _ in range(5):
+        act = env.action_space.sample()
+        env.step(act)
+
+    # Verify cameras work after robot has moved
+    all_images_after = oc_env.render_all_cameras()
+    assert all_images_after["overview"].shape == overview_image.shape
+    assert all_images_after["base"].shape == base_image.shape
+    assert all_images_after["wrist"].shape == ee_image.shape
+
+
 def test_pick_place(env):  # pylint: disable=redefined-outer-name
     """Test picking and placing a cube into the shelf."""
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
