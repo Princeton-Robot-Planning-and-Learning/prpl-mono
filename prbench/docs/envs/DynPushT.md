@@ -21,7 +21,7 @@ Each object includes physics properties like mass, moment of inertia, and color 
 ![initial state GIF](assets/initial_state_gifs/DynPushT.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynPushT/DynPushT_seed0_1759590231.gif)
+*(No demonstration GIFs available)*
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

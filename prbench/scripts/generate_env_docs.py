@@ -180,18 +180,23 @@ def generate_markdown(
 
     md += "## Example Demonstration\n"
 
-    # Use the new subdirectory structure to select the first demo GIF
-    demo_subdir = OUTPUT_DIR / "assets" / "demo_gifs" / class_filename
-    if demo_subdir.exists():
-        gif_files = sorted(
-            [f for f in demo_subdir.iterdir() if f.suffix.lower() == ".gif"]
-        )
-        if gif_files:
-            first_gif = gif_files[0].name
-            md += f"![demo GIF](assets/demo_gifs/{class_filename}/{first_gif})\n\n"
-        else:
-            md += "*(No demonstration GIFs available)*\n\n"
-    else:
+    # Search for demo GIFs across all variant subdirectories
+    demo_gif_found = False
+    for variant_id in variants:
+        # Convert variant ID to the subdirectory name format
+        variant_subdir_name = sanitize_env_id(variant_id)
+        demo_subdir = OUTPUT_DIR / "assets" / "demo_gifs" / variant_subdir_name
+        if demo_subdir.exists():
+            gif_files = sorted(
+                [f for f in demo_subdir.iterdir() if f.suffix.lower() == ".gif"]
+            )
+            if gif_files:
+                first_gif = gif_files[0].name
+                md += f"![demo GIF](assets/demo_gifs/{variant_subdir_name}/{first_gif})\n\n"
+                demo_gif_found = True
+                break
+
+    if not demo_gif_found:
         md += "*(No demonstration GIFs available)*\n\n"
 
     md += "## Observation Space\n"

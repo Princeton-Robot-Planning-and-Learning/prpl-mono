@@ -32,7 +32,7 @@ All objects include physics properties like mass, moment of inertia, and color i
 ![initial state GIF](assets/initial_state_gifs/DynScoopPour.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/demo_gifs/DynScoopPour-o30/DynScoopPour-o30_1762183067.gif)
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
