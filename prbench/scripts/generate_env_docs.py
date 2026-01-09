@@ -153,7 +153,9 @@ def generate_markdown(
     class_filename = sanitize_class_name(class_name)
 
     if has_random_gif:
-        md += f"![random action GIF](assets/random_action_gifs/{class_filename}.gif)\n\n"
+        md += (
+            f"![random action GIF](assets/random_action_gifs/{class_filename}.gif)\n\n"
+        )
     else:
         md += "*(Random action GIF could not be generated due to rendering issues)*\n\n"
 
@@ -167,14 +169,20 @@ def generate_markdown(
         md += f"{variant_description}\n\n"
     for variant_id in variants:
         # Extract just the variant suffix (e.g., "b1" from "prbench/ClutteredStorage2D-b1-v0")
-        variant_suffix = variant_id.replace("prbench/", "").replace(f"{class_name}-", "").replace("-v0", "")
+        variant_suffix = (
+            variant_id.replace("prbench/", "")
+            .replace(f"{class_name}-", "")
+            .replace("-v0", "")
+        )
         md += f"- `{variant_id}` ({variant_suffix})\n"
     md += "\n"
 
     md += "## Initial State Distribution\n"
 
     if has_initial_gif:
-        md += f"![initial state GIF](assets/initial_state_gifs/{class_filename}.gif)\n\n"
+        md += (
+            f"![initial state GIF](assets/initial_state_gifs/{class_filename}.gif)\n\n"
+        )
     else:
         md += "*(Initial state GIF could not be generated due to rendering issues)*\n\n"
 
@@ -182,7 +190,9 @@ def generate_markdown(
 
     # Search for demo GIFs across all variant subdirectories
     demo_gif_found = False
-    for variant_id in variants:
+    # Search backwards, assuming that later variants are "harder" and therefore more
+    # interesting to show demonstrations for.
+    for variant_id in variants[::-1]:
         # Convert variant ID to the subdirectory name format
         variant_subdir_name = sanitize_env_id(variant_id)
         demo_subdir = OUTPUT_DIR / "assets" / "demo_gifs" / variant_subdir_name
@@ -253,13 +263,18 @@ def _main() -> None:
         env = prbench.make(representative_variant, render_mode="rgb_array")
 
         # Check if any variant of this class has changed
-        class_changed = any(is_env_changed(prbench.make(v, render_mode="rgb_array"), changed_files) for v in variants)
+        class_changed = any(
+            is_env_changed(prbench.make(v, render_mode="rgb_array"), changed_files)
+            for v in variants
+        )
 
         if args.force or class_changed:
             print(f"  Regenerating {class_name}...")
             has_random_gif = create_random_action_gif(class_name, env)
             has_initial_gif = create_initial_state_gif(class_name, env)
-            md = generate_markdown(class_name, env, variants, has_random_gif, has_initial_gif)
+            md = generate_markdown(
+                class_name, env, variants, has_random_gif, has_initial_gif
+            )
             class_filename = sanitize_class_name(class_name)
             filename = OUTPUT_DIR / f"{class_filename}.md"
             with open(filename, "w", encoding="utf-8") as f:
@@ -269,7 +284,9 @@ def _main() -> None:
             print(f"  Regenerating {class_name}...")
             has_random_gif = create_random_action_gif(class_name, env)
             has_initial_gif = create_initial_state_gif(class_name, env)
-            md = generate_markdown(class_name, env, variants, has_random_gif, has_initial_gif)
+            md = generate_markdown(
+                class_name, env, variants, has_random_gif, has_initial_gif
+            )
             class_filename = sanitize_class_name(class_name)
             filename = OUTPUT_DIR / f"{class_filename}.md"
             with open(filename, "w", encoding="utf-8") as f:
@@ -278,7 +295,9 @@ def _main() -> None:
         else:
             print(f"  Skipping {class_name} (no changes detected)")
 
-    print(f"Finished generating environment docs. Regenerated {regenerated_classes}/{total_classes} classes.")
+    print(
+        f"Finished generating environment docs. Regenerated {regenerated_classes}/{total_classes} classes."
+    )
 
     # Add the results.
     subprocess.run(["git", "add", OUTPUT_DIR], check=True)

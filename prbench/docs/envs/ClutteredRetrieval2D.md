@@ -21,7 +21,7 @@ The number of obstructions differs between environment variants. For example, Cl
 ![initial state GIF](assets/initial_state_gifs/ClutteredRetrieval2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/ClutteredRetrieval2D-o1/ClutteredRetrieval2D-o1_1758719765.gif)
+![demo GIF](assets/demo_gifs/ClutteredRetrieval2D-o25/ClutteredRetrieval2D-o25_1758719976.gif)
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

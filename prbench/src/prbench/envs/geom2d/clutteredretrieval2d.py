@@ -379,7 +379,7 @@ class ClutteredRetrieval2DEnv(ConstantObjectPRBenchEnv):
 {obstruction_sentence}
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 """
-    
+
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "The number of obstructions differs between environment variants. For example, ClutteredRetrieval2D-o5 has 5 obstructions."

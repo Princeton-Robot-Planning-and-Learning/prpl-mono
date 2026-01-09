@@ -21,7 +21,7 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 ![initial state GIF](assets/initial_state_gifs/Obstruction2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/Obstruction2D-o0/Obstruction2D-o0_seed0_1751655006.gif)
+![demo GIF](assets/demo_gifs/Obstruction2D-o4/Obstruction2D-o4_seed4_1751655586.gif)
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
