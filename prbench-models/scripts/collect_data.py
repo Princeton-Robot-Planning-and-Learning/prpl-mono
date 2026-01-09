@@ -49,7 +49,7 @@ def collect_data(
 
     controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim)  # type: ignore # pylint: disable=line-too-long
 
-    fk_solver = TidybotFKSolver(ee_offset=0.0)
+    fk_solver = TidybotFKSolver(ee_offset=0.12)
 
     # Target object for this episode
     target_object_key = "cube1"
