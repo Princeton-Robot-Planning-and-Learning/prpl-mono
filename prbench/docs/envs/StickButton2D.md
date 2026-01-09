@@ -25,7 +25,9 @@ The number of buttons differs between environment variants. For example, StickBu
 ![initial state GIF](assets/initial_state_gifs/StickButton2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/StickButton2D-b10/StickButton2D-b10_seed1_1752262385.gif)
+![demo GIF](assets/demo_gifs/StickButton2D-b10/StickButton2D-b10.gif)
+
+**Demo Stats**: Total Reward: -468.00, Success: Yes, Steps: 468
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

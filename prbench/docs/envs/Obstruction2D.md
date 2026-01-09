@@ -25,7 +25,9 @@ The number of obstructions differs between environment variants. For example, Ob
 ![initial state GIF](assets/initial_state_gifs/Obstruction2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/Obstruction2D-o4/Obstruction2D-o4_seed4_1751655586.gif)
+![demo GIF](assets/demo_gifs/Obstruction2D-o4/Obstruction2D-o4.gif)
+
+**Demo Stats**: Total Reward: -455.00, Success: Yes, Steps: 455
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

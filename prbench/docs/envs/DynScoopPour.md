@@ -36,7 +36,9 @@ The number of small objects differs between environment variants. For example, D
 ![initial state GIF](assets/initial_state_gifs/DynScoopPour.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynScoopPour-o30/DynScoopPour-o30_1762183067.gif)
+![demo GIF](assets/demo_gifs/DynScoopPour-o30/DynScoopPour-o30.gif)
+
+**Demo Stats**: Total Reward: -810.00, Success: No, Steps: 810
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

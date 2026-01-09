@@ -25,9 +25,9 @@ This environment has only one variant.
 ![initial state GIF](assets/initial_state_gifs/DynPushT.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynPushT-t1/DynPushT-t1_seed0_1759591501.gif)
+![demo GIF](assets/demo_gifs/DynPushT-t1/DynPushT-t1.gif)
 
-**Demo Stats**: Total Reward: -1254.00, Success: Yes, Steps: 1254
+**Demo Stats**: Total Reward: -576.00, Success: Yes, Steps: 576
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

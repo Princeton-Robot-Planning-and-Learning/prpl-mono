@@ -32,7 +32,7 @@ The number of obstructions differs between environment variants. For example, Dy
 ![initial state GIF](assets/initial_state_gifs/DynObstruction2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynObstruction2D-o3/DynObstruction2D-o3_1762182807.gif)
+*(No demonstration GIFs available)*
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
