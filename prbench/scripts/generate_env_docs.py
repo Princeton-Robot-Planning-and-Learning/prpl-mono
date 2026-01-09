@@ -258,11 +258,8 @@ def generate_markdown(
             # Try to load stats from JSON file
             json_file = gif_to_use.with_suffix(".json")
             if json_file.exists():
-                try:
-                    with open(json_file, "r", encoding="utf-8") as f:
-                        demo_stats = json.load(f)
-                except Exception:
-                    pass  # Silently ignore if stats can't be loaded
+                with open(json_file, "r", encoding="utf-8") as f:
+                    demo_stats = json.load(f)
             break
 
     if demo_gif_found:
