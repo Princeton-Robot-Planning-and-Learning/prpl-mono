@@ -151,6 +151,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         Reads camera configurations from self.task_config["cameras"] and creates
         corresponding camera XML elements in the scene.
 
+        Expected camera config kwargs:
+            position: [x, y, z] camera position (default: [0, 0, 1])
+            lookat: [x, y, z] point camera looks at (default: [0, 0, 0])
+            fovy: field of view angle in degrees (default: 45)
+            resolution: [width, height] in pixels (default: [640, 480])
+
         Args:
             root: Root element of the MuJoCo XML tree
         """
