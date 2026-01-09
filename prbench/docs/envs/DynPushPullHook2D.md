@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/DynPushPullHook2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D physics-based tool-use environment where a robot must use a Hook to push/pull a target block onto a middle wall (goal surface). The target block is positioned in the upper region of the world, while the middle wall is located at the center. The robot must manipulate the Hook to navigate the target block downward through obstacles.
 
@@ -30,7 +32,7 @@ The number of obstructions differs between environment variants. For example, Dy
 ![initial state GIF](assets/initial_state_gifs/DynPushPullHook2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynPushPullHook2D-o5/DynPushPullHook2D-o5_1762182922.gif)
+*(No demonstration GIFs available)*
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

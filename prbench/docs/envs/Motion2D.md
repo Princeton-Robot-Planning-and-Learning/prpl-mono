@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/Motion2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment where the goal is to reach a target region while avoiding static obstacles.
 
@@ -24,7 +26,9 @@ The number of narrow passages differs between environment variants. For example,
 ![initial state GIF](assets/initial_state_gifs/Motion2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/Motion2D-p5/Motion2D-p5_seed0_1752189694.gif)
+![demo GIF](assets/demo_gifs/Motion2D-p5/Motion2D-p5.gif)
+
+**Demo Stats**: Total Reward: -137.00, Success: Yes, Steps: 137
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

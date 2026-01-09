@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/DynScoopPour.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D physics-based tool-use environment where a robot must use an L-shaped hook to scoop small objects from the left side of a middle wall and pour them onto the right side. The middle wall is half the height of the world, allowing objects to be scooped over it.
 
@@ -34,7 +36,9 @@ The number of small objects differs between environment variants. For example, D
 ![initial state GIF](assets/initial_state_gifs/DynScoopPour.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynScoopPour-o30/DynScoopPour-o30_1762183067.gif)
+![demo GIF](assets/demo_gifs/DynScoopPour-o30/DynScoopPour-o30.gif)
+
+**Demo Stats**: Total Reward: -810.00, Success: No, Steps: 810
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

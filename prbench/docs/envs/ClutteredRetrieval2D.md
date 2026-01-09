@@ -2,6 +2,8 @@
 
 ![random action GIF](assets/random_action_gifs/ClutteredRetrieval2D.gif)
 
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Description
 A 2D environment where the goal is to "pick up" (suction) a target block.
 
@@ -21,7 +23,7 @@ The number of obstructions differs between environment variants. For example, Cl
 ![initial state GIF](assets/initial_state_gifs/ClutteredRetrieval2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/ClutteredRetrieval2D-o25/ClutteredRetrieval2D-o25_1758719976.gif)
+*(No demonstration GIFs available)*
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
