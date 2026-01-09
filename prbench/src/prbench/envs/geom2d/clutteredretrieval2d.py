@@ -184,7 +184,7 @@ class ObjectCentricClutteredRetrieval2DEnv(
                 full_state, {target_region}, {robot} | static_objects, {}
             ):
                 continue
-            # Check that target_block doesn't collide with robot, target_region, or static objects.
+            # Check that target_block doesn't collide with obstacles.
             if not state_2d_has_collision(
                 full_state, {target_block}, {robot, target_region} | static_objects, {}
             ):
