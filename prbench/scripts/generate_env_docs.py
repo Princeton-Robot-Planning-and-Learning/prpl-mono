@@ -168,7 +168,7 @@ def generate_markdown(
     if variant_description and variant_description != "Variant description not defined":
         md += f"{variant_description}\n\n"
     for variant_id in variants:
-        # Extract just the variant suffix (e.g., "b1" from "prbench/ClutteredStorage2D-b1-v0")
+        # Extract just the suffix (e.g., "b1" from "prbench/ClutteredStorage2D-b1-v0")
         variant_suffix = (
             variant_id.replace("prbench/", "")
             .replace(f"{class_name}-", "")
@@ -202,7 +202,7 @@ def generate_markdown(
             )
             if gif_files:
                 first_gif = gif_files[0].name
-                md += f"![demo GIF](assets/demo_gifs/{variant_subdir_name}/{first_gif})\n\n"
+                md += f"![demo GIF](assets/demo_gifs/{variant_subdir_name}/{first_gif})\n\n"  # pylint: disable=line-too-long
                 demo_gif_found = True
                 break
 
@@ -296,7 +296,8 @@ def _main() -> None:
             print(f"  Skipping {class_name} (no changes detected)")
 
     print(
-        f"Finished generating environment docs. Regenerated {regenerated_classes}/{total_classes} classes."
+        "Finished generating environment docs. "
+        f"Regenerated {regenerated_classes}/{total_classes} classes."
     )
 
     # Add the results.
