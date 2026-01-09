@@ -61,7 +61,7 @@ def run_teleop(
     )
 
     # Create FK/IK solvers for computing end-effector pose
-    fk_solver = TidybotFKSolver(ee_offset=0.0)
+    fk_solver = TidybotFKSolver(ee_offset=0.12)
     ik_solver = TidybotIKSolver(ee_offset=0.12)
 
     # Create teleop policy

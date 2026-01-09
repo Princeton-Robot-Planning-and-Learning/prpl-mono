@@ -69,7 +69,6 @@ class TidybotFKSolver:
 
         # Get position from site
         pos = self.site_pos.copy()
-        pos[2] = pos[2] - 0.12
 
         # Get orientation as quaternion
         mujoco.mju_mat2Quat(self.site_quat, self.site_mat)  # pylint: disable=no-member
