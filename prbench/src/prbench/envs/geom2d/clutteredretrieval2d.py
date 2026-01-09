@@ -368,15 +368,11 @@ class ClutteredRetrieval2DEnv(ConstantObjectPRBenchEnv):
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
-        num_obstructions = len(self._constant_objects) - 2
         # pylint: disable=line-too-long
-        if num_obstructions > 0:
-            obstruction_sentence = f"\nThe target block may be initially obstructed. In this environment, there are always {num_obstructions} obstacle blocks.\n"
-        else:
-            obstruction_sentence = ""
+        return """A 2D environment where the goal is to "pick up" (suction) a target block.
 
-        return f"""A 2D environment where the goal is to "pick up" (suction) a target block.
-{obstruction_sentence}
+The target block may be initially obstructed.
+
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 """
 
