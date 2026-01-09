@@ -1,25 +1,17 @@
-# Motion3D
+# Ground3D
 
-![random action GIF](assets/random_action_gifs/Motion3D.gif)
+![random action GIF](assets/random_action_gifs/Ground3D.gif)
 
 ## Description
-A 3D motion planning environment where the goal is to reach a target sphere with the robot's end effector.
-
-The robot is a Kinova Gen-3 with 7 degrees of freedom. The target is a sphere with radius 0.100m positioned randomly within the workspace bounds.
-
-The workspace bounds are:
-- X: [0.1, 0.6]
-- Y: [0.1, 0.9]
-- Z: [0.4, 0.9]
-
-Only targets that are reachable via inverse kinematics are sampled.
-
+A 3D environment where the goal is to pick up a cube from the ground.
 
 ## Available Variants
-- `prbench/Motion3D-v0` (v0)
+- `prbench/Ground3D-o1-v0` (o1)
+- `prbench/Ground3D-o2-v0` (o2)
+- `prbench/Ground3D-o3-v0` (o3)
 
 ## Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/Motion3D.gif)
+![initial state GIF](assets/initial_state_gifs/Ground3D.gif)
 
 ## Example Demonstration
 *(No demonstration GIFs available)*
@@ -47,9 +39,30 @@ The entries of an array in this Box space correspond to the following object fea
 | 16 | robot | grasp_tf_qy |
 | 17 | robot | grasp_tf_qz |
 | 18 | robot | grasp_tf_qw |
-| 19 | target | x |
-| 20 | target | y |
-| 21 | target | z |
+| 19 | cube0 | pose_x |
+| 20 | cube0 | pose_y |
+| 21 | cube0 | pose_z |
+| 22 | cube0 | pose_qx |
+| 23 | cube0 | pose_qy |
+| 24 | cube0 | pose_qz |
+| 25 | cube0 | pose_qw |
+| 26 | cube0 | grasp_active |
+| 27 | cube0 | object_type |
+| 28 | cube0 | half_extent_x |
+| 29 | cube0 | half_extent_y |
+| 30 | cube0 | half_extent_z |
+| 31 | cube1 | pose_x |
+| 32 | cube1 | pose_y |
+| 33 | cube1 | pose_z |
+| 34 | cube1 | pose_qx |
+| 35 | cube1 | pose_qy |
+| 36 | cube1 | pose_qz |
+| 37 | cube1 | pose_qw |
+| 38 | cube1 | grasp_active |
+| 39 | cube1 | object_type |
+| 40 | cube1 | half_extent_x |
+| 41 | cube1 | half_extent_y |
+| 42 | cube1 | half_extent_z |
 
 
 ## Action Space
@@ -61,12 +74,7 @@ An action space for a 7 DOF robot that can open and close its gripper.
 
 
 ## Rewards
-The reward structure is simple:
-- **-1.0** penalty at every timestep until the goal is reached
-- **Termination** occurs when the end effector is within 0.100m of the target center
-
-This encourages the robot to reach the target as quickly as possible while avoiding infinite episodes.
-
+The reward is a small negative reward (-0.01) per timestep to encourage exploration.
 
 ## References
 This is a very common kind of environment.

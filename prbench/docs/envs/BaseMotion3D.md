@@ -1,25 +1,15 @@
-# Motion3D
+# BaseMotion3D
 
-![random action GIF](assets/random_action_gifs/Motion3D.gif)
+![random action GIF](assets/random_action_gifs/BaseMotion3D.gif)
 
 ## Description
-A 3D motion planning environment where the goal is to reach a target sphere with the robot's end effector.
-
-The robot is a Kinova Gen-3 with 7 degrees of freedom. The target is a sphere with radius 0.100m positioned randomly within the workspace bounds.
-
-The workspace bounds are:
-- X: [0.1, 0.6]
-- Y: [0.1, 0.9]
-- Z: [0.4, 0.9]
-
-Only targets that are reachable via inverse kinematics are sampled.
-
+Environment where only base motion planning is needed to reach a goal.
 
 ## Available Variants
-- `prbench/Motion3D-v0` (v0)
+- `prbench/BaseMotion3D-v0` (v0)
 
 ## Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/Motion3D.gif)
+![initial state GIF](assets/initial_state_gifs/BaseMotion3D.gif)
 
 ## Example Demonstration
 *(No demonstration GIFs available)*
@@ -61,12 +51,7 @@ An action space for a 7 DOF robot that can open and close its gripper.
 
 
 ## Rewards
-The reward structure is simple:
-- **-1.0** penalty at every timestep until the goal is reached
-- **Termination** occurs when the end effector is within 0.100m of the target center
-
-This encourages the robot to reach the target as quickly as possible while avoiding infinite episodes.
-
+The reward is a small negative reward (-0.01) per timestep to encourage exploration.
 
 ## References
 This is a very common kind of environment.
