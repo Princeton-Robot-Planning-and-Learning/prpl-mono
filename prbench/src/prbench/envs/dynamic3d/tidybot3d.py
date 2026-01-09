@@ -900,6 +900,10 @@ The robot can control:
 - Gripper position (open/close)
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants."
+
     def _create_obs_markdown_description(self) -> str:
         """Create observation space description."""
         return """Observation includes:
@@ -1028,6 +1032,10 @@ The robot can control:
 - Arm orientation (quaternion)
 - Gripper position (open/close)
 """
+
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants."
 
     def _create_obs_markdown_description(self) -> str:
         """Create observation space description."""

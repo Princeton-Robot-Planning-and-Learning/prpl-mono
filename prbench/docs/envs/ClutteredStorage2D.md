@@ -7,12 +7,12 @@
 ## Description
 A 2D environment where the goal is to put all blocks inside a shelf.
 
-There are always 7 blocks in this environment.
-
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 
 
 ## Available Variants
+The number of blocks differs between environment variants. For example, ClutteredStorage2D-b1 has 1 block, while ClutteredStorage2D-b15 has 15 blocks.
+
 - `prbench/ClutteredStorage2D-b1-v0` (b1)
 - `prbench/ClutteredStorage2D-b3-v0` (b3)
 - `prbench/ClutteredStorage2D-b7-v0` (b7)

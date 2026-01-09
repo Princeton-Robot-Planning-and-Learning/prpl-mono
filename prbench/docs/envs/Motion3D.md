@@ -18,6 +18,8 @@ Only targets that are reachable via inverse kinematics are sampled.
 
 
 ## Available Variants
+This environment has only one variant.
+
 - `prbench/Motion3D-v0` (v0)
 
 ## Initial State Distribution

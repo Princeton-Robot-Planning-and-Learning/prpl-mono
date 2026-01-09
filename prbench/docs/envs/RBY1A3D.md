@@ -16,6 +16,8 @@ The robot can control:
 
 
 ## Available Variants
+This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
+
 - `prbench/RBY1A3D-cupboard-o8-v0` (cupboard-o8)
 
 ## Initial State Distribution

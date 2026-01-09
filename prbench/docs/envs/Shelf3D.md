@@ -8,6 +8,8 @@
 A 3D environment where the goal is to pick up a cube from the ground and place it on a shelf.
 
 ## Available Variants
+The number of cubes differs between environment variants. For example, Shelf3D-o1 has 1 cube, while Shelf3D-o10 has 10 cubes.
+
 - `prbench/Shelf3D-o1-v0` (o1)
 - `prbench/Shelf3D-o2-v0` (o2)
 - `prbench/Shelf3D-o3-v0` (o3)

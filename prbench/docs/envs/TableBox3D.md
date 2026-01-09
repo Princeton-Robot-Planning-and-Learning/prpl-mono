@@ -8,6 +8,8 @@
 A 3D environment where the goal is to pick up a box from the table.
 
 ## Available Variants
+The number of cubes differs between environment variants. For example, TableBox3D-o1 has 1 cube, while TableBox3D-o2 has 2 cubes.
+
 - `prbench/TableBox3D-o1-v0` (o1)
 - `prbench/TableBox3D-o2-v0` (o2)
 

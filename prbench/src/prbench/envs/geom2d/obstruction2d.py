@@ -419,6 +419,10 @@ class Obstruction2DEnv(ConstantObjectPRBenchEnv):
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of obstructions differs between environment variants. For example, Obstruction2D-o0 has no obstructions, while Obstruction2D-o4 has 4 obstructions."
+
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return f"""A penalty of -1.0 is given at every time step until termination, which occurs when the target block is "on" the target surface. The definition of "on" is given below:

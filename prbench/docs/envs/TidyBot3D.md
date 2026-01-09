@@ -18,6 +18,8 @@ The robot can control:
 
 
 ## Available Variants
+This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
+
 - `prbench/TidyBot3D-table-o5-v0` (table-o5)
 - `prbench/TidyBot3D-cupboard-o12-ConstrainedFitting-v0` (cupboard-o12-ConstrainedFitting)
 - `prbench/TidyBot3D-ground-o1-v0` (ground-o1)

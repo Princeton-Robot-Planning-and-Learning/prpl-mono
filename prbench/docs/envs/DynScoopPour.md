@@ -25,6 +25,8 @@ All objects include physics properties like mass, moment of inertia, and color i
 
 
 ## Available Variants
+The number of small objects differs between environment variants. For example, DynScoopPour-o10 has 10 small objects, while DynScoopPour-o50 has 50 small objects.
+
 - `prbench/DynScoopPour-o10-v0` (o10)
 - `prbench/DynScoopPour-o20-v0` (o20)
 - `prbench/DynScoopPour-o30-v0` (o30)
