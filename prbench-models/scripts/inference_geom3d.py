@@ -160,8 +160,11 @@ def run_inference(
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
-            # Target object for this episode (can be detected or specified)
-            target_object_key = f"cube{num_cubes - 1}"
+            if "Shelf3D" in env_name:
+                # Target object for this episode (can be detected or specified)
+                target_object_key = f"cube{num_cubes - 1}"
+            else:
+                raise ValueError(f"Environment {env_name} not supported")
 
             # Reset the policy
             policy.reset(target_object_key)  # type: ignore

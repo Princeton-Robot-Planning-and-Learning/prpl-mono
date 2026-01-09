@@ -1,4 +1,5 @@
-"""Tests for ground parameterized skills."""
+"""Dataset collection using bilevel planning parameterized skills for geom3d
+environments."""
 
 import argparse
 
@@ -52,7 +53,10 @@ def collect_data(
     target_object_key = f"cube{num_cubes - 1}"
 
     # Create the pick ground controller.
-    sim = ObjectCentricShelf3DEnv(num_cubes=num_cubes)
+    if "Shelf3D" in env_name:
+        sim = ObjectCentricShelf3DEnv(num_cubes=num_cubes)
+    else:
+        raise ValueError(f"Environment {env_name} not supported")
     controllers = create_lifted_controllers(
         env.action_space,  # type: ignore
         sim,
