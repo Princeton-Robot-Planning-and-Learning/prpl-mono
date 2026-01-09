@@ -163,7 +163,7 @@ def run_teleop(
 
                 # Record observation and action before stepping
                 if writer is not None:
-                    writer.step(obs_dict, action_dict, language_annotation)  # type: ignore
+                    writer.step(obs_dict, action_dict, language_annotation)  # type: ignore # pylint: disable=line-too-long
 
                 # Execute action in environment
                 obs, reward, terminated, truncated, _ = env.step(  # type: ignore # pylint: disable=line-too-long
