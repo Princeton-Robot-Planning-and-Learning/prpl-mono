@@ -53,12 +53,12 @@ def collect_data(
     # Create the pick ground controller.
     if "Shelf3D" in env_name:
         sim = ObjectCentricShelf3DEnv(num_cubes=num_cubes)
-        from prbench_models.geom3d.shelf3d.parameterized_skills import ( # pylint: disable=import-outside-toplevel
+        from prbench_models.geom3d.shelf3d.parameterized_skills import (  # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
     elif "Ground3D" in env_name:
         sim = ObjectCentricGround3DEnv(num_cubes=num_cubes)  # type: ignore
-        from prbench_models.geom3d.ground3d.parameterized_skills import ( # pylint: disable=import-outside-toplevel # type: ignore
+        from prbench_models.geom3d.ground3d.parameterized_skills import (   # type: ignore # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
     else:
