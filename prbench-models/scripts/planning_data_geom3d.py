@@ -61,15 +61,15 @@ def collect_data(
     if "Shelf3D" in env_name:
         sim = ObjectCentricShelf3DEnv(num_cubes=num_cubes)
     elif "Table3D" in env_name:
-        sim = ObjectCentricTable3DEnv(num_cubes=num_cubes) # type: ignore
+        sim = ObjectCentricTable3DEnv(num_cubes=num_cubes)  # type: ignore
     elif "BaseMotion3D" in env_name:
-        sim = ObjectCentricBaseMotion3DEnv() # type: ignore
+        sim = ObjectCentricBaseMotion3DEnv()  # type: ignore
     elif "TableBox3D" in env_name:
-        sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes) # type: ignore
+        sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes)  # type: ignore
     elif "Ground3D" in env_name:
-        sim = ObjectCentricGround3DEnv() # type: ignore
+        sim = ObjectCentricGround3DEnv(num_cubes=num_cubes)  # type: ignore
     elif "Motion3D" in env_name:
-        sim = ObjectCentricMotion3DEnv() # type: ignore
+        sim = ObjectCentricMotion3DEnv()  # type: ignore
     else:
         raise ValueError(f"Environment {env_name} not supported")
     controllers = create_lifted_controllers(
