@@ -6,18 +6,11 @@ import argparse
 import numpy as np
 import prbench
 from episode_storage import EpisodeWriter
-from prbench.envs.geom3d.base_motion3d import ObjectCentricBaseMotion3DEnv
 from prbench.envs.geom3d.ground3d import ObjectCentricGround3DEnv
-from prbench.envs.geom3d.motion3d import ObjectCentricMotion3DEnv
 from prbench.envs.geom3d.shelf3d import ObjectCentricShelf3DEnv
-from prbench.envs.geom3d.table3d import ObjectCentricTable3DEnv
-from prbench.envs.geom3d.tablebox3d import ObjectCentricTableBox3DEnv
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
-from prbench_models.geom3d.shelf3d.parameterized_skills import (
-    create_lifted_controllers,
-)
 from prbench_models.teleop_utils import _visualize_image_in_window
 
 prbench.register_all_environments()
@@ -60,16 +53,14 @@ def collect_data(
     # Create the pick ground controller.
     if "Shelf3D" in env_name:
         sim = ObjectCentricShelf3DEnv(num_cubes=num_cubes)
-    elif "Table3D" in env_name:
-        sim = ObjectCentricTable3DEnv(num_cubes=num_cubes)  # type: ignore
-    elif "BaseMotion3D" in env_name:
-        sim = ObjectCentricBaseMotion3DEnv()  # type: ignore
-    elif "TableBox3D" in env_name:
-        sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes)  # type: ignore
+        from prbench_models.geom3d.shelf3d.parameterized_skills import ( # pylint: disable=import-outside-toplevel
+            create_lifted_controllers,
+        )
     elif "Ground3D" in env_name:
         sim = ObjectCentricGround3DEnv(num_cubes=num_cubes)  # type: ignore
-    elif "Motion3D" in env_name:
-        sim = ObjectCentricMotion3DEnv()  # type: ignore
+        from prbench_models.geom3d.ground3d.parameterized_skills import ( # pylint: disable=import-outside-toplevel # type: ignore
+            create_lifted_controllers,
+        )
     else:
         raise ValueError(f"Environment {env_name} not supported")
     controllers = create_lifted_controllers(
