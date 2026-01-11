@@ -31,6 +31,7 @@ from relational_structs import (
     Type,
 )
 from relational_structs.utils import create_state_from_dict
+from scipy.spatial.transform import Rotation
 
 from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionSpace
 from prbench.envs.geom3d.object_types import (
@@ -81,8 +82,24 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # For rendering.
     render_dpi: int = 300
     render_fps: int = 20
-    render_image_width: int = 836
-    render_image_height: int = 450
+    render_image_width: int = 640
+    render_image_height: int = 360
+
+    # Base camera (mounted on robot base) - matches dynamics3d tidybot
+    # From tidybot.xml: pos="0.2525 0 0.335" euler="0 -0.7853981634 -1.5707963268"
+    base_camera_offset: tuple[float, float, float] = (0.2525, 0.0, 0.335)
+    base_camera_euler: tuple[float, float, float] = (0, -np.pi / 4, -np.pi / 2)
+    base_camera_fov: float = 52.23384539951277
+    base_camera_image_width: int = 640
+    base_camera_image_height: int = 360
+
+    # End-effector camera (mounted on wrist) - matches dynamics3d tidybot
+    # From tidybot.xml: pos="0 -0.05639 -0.058475" quat="0 0 0 1"
+    ee_camera_offset: tuple[float, float, float] = (0.0, 0.05639, -0.058475)
+    ee_camera_euler: tuple[float, float, float] = (np.pi, 0.0, 0.0)
+    ee_camera_fov: float = 41.83792730009236
+    ee_camera_image_width: int = 640
+    ee_camera_image_height: int = 360
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -531,6 +548,9 @@ class ObjectCentricGeom3DRobotEnv(
             surface_supports = self._get_surfaces_supporting_object(
                 self._grasped_object_id
             )
+            self._inside_object_list = []
+            self._inside_object_id_list = []
+            self._inside_object_transform_list = []
             # Placement is successful.
             if surface_supports:
                 self._grasped_object = None
@@ -548,6 +568,86 @@ class ObjectCentricGeom3DRobotEnv(
             image_height=self.config.render_image_height,
             **self.config.get_camera_kwargs(),
         )
+
+    def render_base_camera(self) -> NDArray[np.uint8]:
+        """Render from the base-mounted camera.
+
+        The camera is attached to the robot base with the same pose as in
+        dynamics3d tidybot: pos=(0.2525, 0, 0.335), euler=(0, -45°, -90°).
+        """
+        # Get current base pose
+        base_pose = self.robot.get_base()
+
+        base_pose_se3 = base_pose.to_se3(0.0)
+        rot = Rotation.from_euler(
+            "zyx", self.config.base_camera_euler
+        )  # MuJoCo convention
+        camera_to_base_transform = Pose(
+            position=self.config.base_camera_offset,
+            orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)
+        )
+
+        camera_pose = multiply_poses(base_pose_se3, camera_to_base_transform)
+
+        # for debugging
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(base_pose_se3, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
+        return capture_image(
+            self.physics_client_id,
+            specify_position=True,
+            camera_position=camera_pose.position,
+            camera_orientation=camera_pose.orientation,
+            image_width=self.config.base_camera_image_width,
+            image_height=self.config.base_camera_image_height,
+            fov=self.config.base_camera_fov,
+        )
+
+    def render_ee_camera(self) -> NDArray[np.uint8]:
+        """Render from the end-effector mounted camera.
+
+        The camera is attached to the end-effector (wrist) with the same pose as
+        in dynamics3d tidybot: pos=(0, -0.05639, -0.058475), quat=(0, 0, 0, 1).
+        """
+        # Get current end-effector pose
+        ee_pose = self.robot.arm.get_end_effector_pose()
+
+        rot = Rotation.from_euler(
+            "zyx", self.config.ee_camera_euler
+        )  # MuJoCo convention
+        camera_to_ee_transform = Pose(
+            position=self.config.ee_camera_offset,
+            orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)
+        )
+
+        camera_pose = multiply_poses(ee_pose, camera_to_ee_transform)
+
+        # for debugging
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(ee_pose, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
+
+        return capture_image(
+            self.physics_client_id,
+            specify_position=True,
+            camera_position=camera_pose.position,
+            camera_orientation=camera_pose.orientation,
+            image_width=self.config.ee_camera_image_width,
+            image_height=self.config.ee_camera_image_height,
+            fov=self.config.ee_camera_fov,
+        )
+
+    def render_all_cameras(self) -> dict[str, NDArray[np.uint8]]:
+        """Render from all cameras and return as a dictionary.
+
+        Returns:
+            Dictionary with keys "overview", "base", "wrist" mapping to images.
+        """
+        return {
+            "overview": self.render(),
+            "base": self.render_base_camera(),
+            "wrist": self.render_ee_camera(),
+        }
 
     def _set_robot_and_held_object(
         self, base_pose: SE2Pose, joints: JointPositions, finger_state: float

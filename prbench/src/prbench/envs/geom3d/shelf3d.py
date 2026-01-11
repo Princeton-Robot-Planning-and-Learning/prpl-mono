@@ -216,6 +216,10 @@ class Shelf3DEnv(ConstantObjectPRBenchEnv):
         # pylint: disable=line-too-long
         return """A 3D environment where the goal is to pick up a cube from the ground and place it on a shelf."""
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of cubes differs between environment variants. For example, Shelf3D-o1 has 1 cube, while Shelf3D-o10 has 10 cubes."
+
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""
         return """Observations consist of:

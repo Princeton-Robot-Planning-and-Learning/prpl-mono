@@ -3,6 +3,7 @@
 import numpy as np
 import pybullet as p
 from prpl_utils.structs import Image
+from scipy.spatial.transform import Rotation
 
 from pybullet_helpers.geometry import Pose3D
 
@@ -15,23 +16,50 @@ def capture_image(
     camera_target: Pose3D = (0, 0, 0.5),
     image_width: int = 1674,
     image_height: int = 900,
+    near_val: float = 0.1,
+    far_val: float = 100.0,
+    fov: float = 60.0,
+    specify_position: bool = False,
+    camera_position: Pose3D = (0, 0, 0),
+    camera_orientation: tuple[float, float, float, float] = (0, 0, 0, 1),
 ) -> Image:
     """Capture an image."""
-    view_matrix = p.computeViewMatrixFromYawPitchRoll(
-        cameraTargetPosition=camera_target,
-        distance=camera_distance,
-        yaw=camera_yaw,
-        pitch=camera_pitch,
-        roll=0,
-        upAxisIndex=2,
-        physicsClientId=physics_client_id,
-    )
+    if specify_position:
+        # Convert quaternion to rotation matrix
+        rot = Rotation.from_quat(camera_orientation)  # scipy uses (x, y, z, w)
+        rot_matrix = rot.as_matrix()
+
+        # Camera looks along -Z axis in its local frame, up is +Y
+        # Get the forward direction (negative Z in camera frame)
+        forward = -rot_matrix[:, 2]
+        up = rot_matrix[:, 1]
+
+        # Compute target position (a point in front of the camera)
+        camera_pos = np.array(camera_position)
+        target_pos = camera_pos + forward
+
+        view_matrix = p.computeViewMatrix(
+            cameraEyePosition=camera_pos.tolist(),
+            cameraTargetPosition=target_pos.tolist(),
+            cameraUpVector=up.tolist(),
+            physicsClientId=physics_client_id,
+        )
+    else:
+        view_matrix = p.computeViewMatrixFromYawPitchRoll(
+            cameraTargetPosition=camera_target,
+            distance=camera_distance,
+            yaw=camera_yaw,
+            pitch=camera_pitch,
+            roll=0,
+            upAxisIndex=2,
+            physicsClientId=physics_client_id,
+        )
 
     proj_matrix = p.computeProjectionMatrixFOV(
-        fov=60,
+        fov=fov,
         aspect=float(image_width / image_height),
-        nearVal=0.1,
-        farVal=100.0,
+        nearVal=near_val,
+        farVal=far_val,
         physicsClientId=physics_client_id,
     )
 

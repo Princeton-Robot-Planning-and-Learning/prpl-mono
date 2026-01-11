@@ -441,6 +441,10 @@ Obstructions have random dimensions between {config.obstruction_half_extents_lb}
 The task requires planning to grasp and move obstructions out of the way, then place the target block on the target region.
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of obstructions differs between environment variants. For example, Obstruction3D-o0 has no obstructions, while Obstruction3D-o4 has 4 obstructions."
+
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""
         # pylint: disable=line-too-long

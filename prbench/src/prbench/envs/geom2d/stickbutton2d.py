@@ -363,6 +363,10 @@ In this environment, there are always {num_buttons} buttons.
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector.
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of buttons differs between environment variants. For example, StickButton2D-b1 has 1 button, while StickButton2D-b10 has 10 buttons."
+
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until termination, which occurs when all buttons have been pressed.\n"  # pylint: disable=line-too-long
 

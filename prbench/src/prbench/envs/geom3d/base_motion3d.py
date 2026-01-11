@@ -185,6 +185,10 @@ class BaseMotion3DEnv(ConstantObjectPRBenchEnv):
             """Environment where only base motion planning is needed to reach a goal."""
         )
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "This environment has only one variant."
+
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""
         # pylint: disable=line-too-long
