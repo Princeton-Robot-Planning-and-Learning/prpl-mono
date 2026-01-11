@@ -17,6 +17,7 @@ from prbench.envs.dynamic2d.object_types import DynRectangleType, KinRobotType
 from prbench.envs.dynamic2d.utils import KinRobotActionSpace
 from prbench.envs.geom2d.structs import SE2Pose
 from prbench.envs.utils import state_2d_has_collision
+from prpl_utils.utils import wrap_angle
 from relational_structs.object_centric_state import ObjectCentricState
 from relational_structs.objects import Object, Variable
 
@@ -54,7 +55,7 @@ class GroundPickController(Dynamic2dRobotController):
         arm_length = rng.uniform(min_arm_length, max_arm_length)
 
         # Pack parameters: side determines grasp approach, ratio determines position
-        return (grasp_ratio, side, arm_length)
+        return grasp_ratio, side, arm_length
 
     def _requires_multi_phase_gripper(self) -> bool:
         """Pick controller always uses two phases: move to block, then close gripper."""
@@ -94,7 +95,7 @@ class GroundPickController(Dynamic2dRobotController):
         # Get block properties
         block_x = state.get(self._block, "x")
         block_y = state.get(self._block, "y")
-        block_theta = state.get(self._block, "theta")
+        block_theta = wrap_angle(state.get(self._block, "theta"))
         block_width = state.get(self._block, "width")
         block_height = state.get(self._block, "height")
 
@@ -110,9 +111,6 @@ class GroundPickController(Dynamic2dRobotController):
             custom_dtheta = np.pi
         elif 0.5 <= side < 0.75:  # top side
             custom_dx = ratio * block_width
-            # import ipdb
-
-            # ipdb.set_trace()
             custom_dy = arm_length + gripper_height - 0.05
             custom_dtheta = -np.pi / 2
         else:  # bottom side
@@ -135,7 +133,7 @@ class GroundPickController(Dynamic2dRobotController):
         desired_arm_length = params[2]
         robot_x = state.get(self._robot, "x")
         robot_y = state.get(self._robot, "y")
-        robot_theta = state.get(self._robot, "theta")
+        robot_theta = wrap_angle(state.get(self._robot, "theta"))
         robot_radius = state.get(self._robot, "base_radius")
         # Calculate grasp point and robot target position
         target_se2_pose = self._calculate_grasp_robot_pose(
@@ -225,7 +223,7 @@ class GroundPlaceController(Dynamic2dRobotController):
     ) -> list[tuple[SE2Pose, float]]:
         robot_x = state.get(self._robot, "x")
         robot_y = state.get(self._robot, "y")
-        robot_theta = state.get(self._robot, "theta")
+        robot_theta = wrap_angle(state.get(self._robot, "theta"))
         robot_arm_joint = state.get(self._robot, "arm_joint")
         # Calculate place position
         params = cast(tuple[float, ...], self._current_params)
@@ -235,7 +233,7 @@ class GroundPlaceController(Dynamic2dRobotController):
         final_robot_y = (
             self.world_y_min + (self.world_y_max - self.world_y_min) * params[1]
         )
-        final_robot_theta = -np.pi + (2 * np.pi) * params[2]
+        final_robot_theta = wrap_angle(-np.pi + (2 * np.pi) * params[2])
         final_robot_pose = SE2Pose(final_robot_x, final_robot_y, final_robot_theta)
 
         current_wp = (
@@ -265,8 +263,8 @@ class GroundPlaceController(Dynamic2dRobotController):
                     pass
 
         # Check collision
-        moving_objects = {self._robot} | set(held_objects)
-        static_objects = set(full_state) - moving_objects
+        moving_objects = {self._robot}  # ignore held objects.
+        static_objects = set(full_state) - moving_objects - set(held_objects)
         if state_2d_has_collision(
             full_state, moving_objects, static_objects, {}, ignore_z_orders=True
         ):
@@ -280,8 +278,8 @@ class GroundPlaceController(Dynamic2dRobotController):
         return final_waypoints
 
 
-class GroundMoveToController(Dynamic2dRobotController):
-    """Controller for moving the robot to the target region."""
+class GroundPlaceTgtSurfaceController(Dynamic2dRobotController):
+    """Controller for moving the robot to the target surface."""
 
     def __init__(
         self,
@@ -308,15 +306,17 @@ class GroundMoveToController(Dynamic2dRobotController):
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
         """Get gripper actions for move-to: keep current gap during movement,
-        no change after.
+        open gripper after.
 
         Returns:
             (delta_during, delta_after) where:
             - delta_during: 0.0 (keep current gap during movement)
-            - delta_after: 0.0 (no change after moving)
+            - delta_after: delta to open gripper to max
         """
-        # Keep gripper at current gap during movement, no change after
-        return 0.0, 0.0
+        curr_finger_gap = state.get(self._robot, "finger_gap")
+        desired_finger_gap = self.finger_gap_max
+        delta_to_open = desired_finger_gap - curr_finger_gap
+        return 0.0, delta_to_open
 
     def _generate_waypoints(
         self, state: ObjectCentricState
@@ -325,86 +325,56 @@ class GroundMoveToController(Dynamic2dRobotController):
         gripper_height = state.get(self._robot, "gripper_base_height")
         tgt_x = state.get(self._tgt_surface, "x")
         tgt_y = state.get(self._tgt_surface, "y")
-        tgt_theta = state.get(self._tgt_surface, "theta")
+        tgt_theta = wrap_angle(state.get(self._tgt_surface, "theta"))
         tgt_width = state.get(self._tgt_surface, "width")
         tgt_height = state.get(self._tgt_surface, "height")
-        block_width = state.get(self._tgt_block, "width")
         block_height = state.get(self._tgt_block, "height")
-
-        print(tgt_x, tgt_y, block_height)
 
         target_region_pose = SE2Pose(tgt_x, tgt_y, tgt_theta) * SE2Pose(
             tgt_width / 2, tgt_height / 2, 0.0
         )
 
-        print(f"target region pose {target_region_pose}")
-
         # Calculate target position from parameters
         params = cast(float, self._current_params)
-        target_theta = params * 2 * np.pi - np.pi
+        target_theta = wrap_angle(params * 2 * np.pi - np.pi)
         tgt_pose_center = SE2Pose(
-            target_region_pose.x, target_region_pose.y, target_theta
+            target_region_pose.x - tgt_width / 2,
+            target_region_pose.y + tgt_height / 2,
+            target_theta,
         )
 
-        print(f"tgt pose center {tgt_pose_center}")
-        bottom2center = SE2Pose(block_width / 2, block_height / 2, 0.0)
-        tgt_pose_bottom = tgt_pose_center * bottom2center.inverse
-
-        print(f"tgt pose bottom {tgt_pose_bottom}")
-
         # Calculate robot pose to place block on surface
-        surface_top_y = tgt_pose_bottom.y
-        print(f"surface top y {surface_top_y}")
+        surface_top_y = tgt_pose_center.y
         block_center_y = (
             surface_top_y + block_height
         )  # Center of block when placed on surface
-        print(block_center_y)
         # Calculate gripper target position (above the block center for placement)
         # Gripper should be positioned above the block with some clearance
         gripper_clearance = gripper_height
         gripper_target_y = block_center_y + gripper_clearance
 
         # Gripper target pose (above the block center, at same x as block center)
-        print(f"gripper target y  {gripper_target_y} ")
         gripper_target_pose = SE2Pose(
-            tgt_pose_bottom.x, tgt_pose_bottom.y + gripper_target_y, target_theta
+            tgt_pose_center.x, tgt_pose_center.y + gripper_target_y, target_theta
         )
 
         robot_pose = gripper_target_pose
 
-        # Check if the target pose is collision-free
-        full_state = state.copy()
-        init_constant_state = self._init_constant_state
-        if init_constant_state is not None:
-            full_state.data.update(init_constant_state.data)
+        # Get current robot pose as starting waypoint
+        robot_x = state.get(self._robot, "x")
+        robot_y = state.get(self._robot, "y")
+        robot_theta = wrap_angle(state.get(self._robot, "theta"))
+        current_pose = SE2Pose(robot_x, robot_y, robot_theta)
 
-        # Convert to absolute coordinates within target bounds
-        full_state.set(self._tgt_block, "x", tgt_pose_bottom.x)
-        full_state.set(self._tgt_block, "y", tgt_pose_bottom.y)
-        full_state.set(self._tgt_block, "theta", target_theta)
-
-        full_state.set(self._robot, "x", robot_pose.x)
-        full_state.set(self._robot, "y", robot_pose.y)
-        full_state.set(self._robot, "theta", robot_pose.theta)
-
-        # Check collision
-        moving_objects = {self._robot, self._tgt_block, self._tgt_surface}
-        static_objects = set(full_state) - moving_objects
-        collision = state_2d_has_collision(
-            full_state, moving_objects, static_objects, {}
-        )
-        if collision:
-            raise TrajectorySamplingFailure(
-                "Failed to find a collision-free path to target."
-            )
-
-        # Simple waypoint generation
+        # IMPORTANT - Do not check if target pose is collision-free
+        # Simple waypoint generation: from current pose to target
         final_waypoints: list[tuple[SE2Pose, float]] = []
+        final_waypoints.append((current_pose, robot_arm_joint))
         final_waypoints.append((robot_pose, robot_arm_joint))
         return final_waypoints
 
 
-class GroundPushController(Dynamic2dRobotController):
+class GroundMoveController(Dynamic2dRobotController):
     """Controller for moving the robot to a desired location while pushing objects along
     the way."""
 
@@ -415,7 +385,6 @@ class GroundPushController(Dynamic2dRobotController):
         init_constant_state: Optional[ObjectCentricState] = None,
     ) -> None:
         super().__init__(objects, action_space, init_constant_state)
-        self._block = objects[1]
         self._action_space = action_space
         env_config = DynObstruction2DEnvConfig()
         self.world_x_min = env_config.world_min_x + env_config.robot_base_radius
@@ -452,7 +421,7 @@ class GroundPushController(Dynamic2dRobotController):
     ) -> list[tuple[SE2Pose, float]]:
         robot_x = state.get(self._robot, "x")
         robot_y = state.get(self._robot, "y")
-        robot_theta = state.get(self._robot, "theta")
+        robot_theta = wrap_angle(state.get(self._robot, "theta"))
         robot_arm_joint = state.get(self._robot, "arm_joint")
         # Calculate place position
         params = cast(tuple[float, ...], self._current_params)
@@ -462,7 +431,7 @@ class GroundPushController(Dynamic2dRobotController):
         final_robot_y = (
             self.world_y_min + (self.world_y_max - self.world_y_min) * params[1]
         )
-        final_robot_theta = -np.pi + (2 * np.pi) * params[2]
+        final_robot_theta = wrap_angle(-np.pi + (2 * np.pi) * params[2])
         final_robot_pose = SE2Pose(final_robot_x, final_robot_y, final_robot_theta)
 
         current_wp = (
@@ -507,11 +476,6 @@ def create_lifted_controllers(
         high=np.array([1.0]),
         dtype=np.float32,
     )
-    push_params_space = Box(
-        low=np.array([0.0, 0.0, 0.0]),
-        high=np.array([1.0, 1.0, 1.0]),
-        dtype=np.float32,
-    )
 
     # Create partial controller classes that include the action_space
     class PickController(GroundPickController):
@@ -526,13 +490,13 @@ def create_lifted_controllers(
         def __init__(self, objects):
             super().__init__(objects, action_space, init_constant_state)
 
-    class MoveToTgtController(GroundMoveToController):
+    class PlaceTgtSurfaceController(GroundPlaceTgtSurfaceController):
         """Controller for moving the robot to the target region."""
 
         def __init__(self, objects):
             super().__init__(objects, action_space, init_constant_state)
 
-    class PushController(GroundPushController):
+    class MoveController(GroundMoveController):
         """Controller for robot to push objects on the way to the target region."""
 
         def __init__(self, objects):
@@ -571,26 +535,18 @@ def create_lifted_controllers(
         )
     )
 
-    move_to_tgt_controller: LiftedParameterizedController = (
+    place_tgt_surface_controller: LiftedParameterizedController = (
         LiftedParameterizedController(
             [robot, target_block, target_surface],
-            MoveToTgtController,
+            PlaceTgtSurfaceController,
             move_to_params_space,
         )
     )
 
-    push_tgt_controller: LiftedParameterizedController = LiftedParameterizedController(
-        [robot, target_block],
-        PushController,
-        push_params_space,
-    )
-
-    push_obstruction_controller: LiftedParameterizedController = (
-        LiftedParameterizedController(
-            [robot, obstruction],
-            PushController,
-            push_params_space,
-        )
+    move_controller: LiftedParameterizedController = LiftedParameterizedController(
+        [robot],
+        MoveController,
+        move_to_params_space,
     )
 
     return {
@@ -598,7 +554,6 @@ def create_lifted_controllers(
         "place_tgt": place_tgt_controller,
         "pick_obstruction": pick_obstruction_controller,
         "place_obstruction": place_obstruction_controller,
-        "move_to_tgt": move_to_tgt_controller,
-        "push_tgt": push_tgt_controller,
-        "push_obstruction": push_obstruction_controller,
+        "place_tgt_surface": place_tgt_surface_controller,
+        "move": move_controller,
     }
