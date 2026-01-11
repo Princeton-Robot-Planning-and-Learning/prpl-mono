@@ -1,4 +1,5 @@
-"""Tests for ground parameterized skills."""
+"""Dataset collection using bilevel planning parameterized skills for dynamics3d
+environments."""
 
 import argparse
 
