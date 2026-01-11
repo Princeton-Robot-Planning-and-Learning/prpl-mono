@@ -160,9 +160,17 @@ def run_inference(
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
+            # Target object for this episode (can be detected or specified)
             if "Shelf3D" in env_name or "Ground3D" in env_name:
-                # Target object for this episode (can be detected or specified)
                 target_object_key = f"cube{num_cubes - 1}"
+            elif "TableBox3D" in env_name:
+                target_object_key = "box0"
+            elif "BaseMotion3D" in env_name:
+                target_object_key = "target"
+            elif "Motion3D" in env_name:
+                target_object_key = "target"
+            elif "Obstruction3D" in env_name:
+                target_object_key = "target_block"
             else:
                 raise ValueError(f"Environment {env_name} not supported")
 
