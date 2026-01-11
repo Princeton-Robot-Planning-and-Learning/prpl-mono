@@ -6,8 +6,12 @@ import argparse
 import numpy as np
 import prbench
 from episode_storage import EpisodeWriter
+from prbench.envs.geom3d.base_motion3d import ObjectCentricBaseMotion3DEnv
 from prbench.envs.geom3d.ground3d import ObjectCentricGround3DEnv
+from prbench.envs.geom3d.motion3d import ObjectCentricMotion3DEnv
+from prbench.envs.geom3d.obstruction3d import ObjectCentricObstruction3DEnv
 from prbench.envs.geom3d.shelf3d import ObjectCentricShelf3DEnv
+from prbench.envs.geom3d.tablebox3d import ObjectCentricTableBox3DEnv
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
@@ -47,9 +51,6 @@ def collect_data(
 
     fk_solver = TidybotFKSolver(ee_offset=0.12)
 
-    # Target object for this episode
-    target_object_key = f"cube{num_cubes - 1}"
-
     # Create the pick ground controller.
     if "Shelf3D" in env_name:
         sim = ObjectCentricShelf3DEnv(num_cubes=num_cubes)
@@ -58,19 +59,69 @@ def collect_data(
         )
     elif "Ground3D" in env_name:
         sim = ObjectCentricGround3DEnv(num_cubes=num_cubes)  # type: ignore
-        from prbench_models.geom3d.ground3d.parameterized_skills import (   # type: ignore # pylint: disable=import-outside-toplevel
+        from prbench_models.geom3d.ground3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
+            create_lifted_controllers,
+        )
+    elif "TableBox3D" in env_name:
+        sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes)  # type: ignore
+        from prbench_models.geom3d.tablebox3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
+            create_lifted_controllers,
+        )
+    elif "BaseMotion3D" in env_name:
+        sim = ObjectCentricBaseMotion3DEnv()  # type: ignore
+        from prbench_models.geom3d.base_motion3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
+            create_lifted_controllers,
+        )
+    elif "Motion3D" in env_name:
+        sim = ObjectCentricMotion3DEnv()  # type: ignore
+        from prbench_models.geom3d.motion3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
+            create_lifted_controllers,
+        )
+    elif "Obstruction3D" in env_name:
+        sim = ObjectCentricObstruction3DEnv(num_obstructions=num_cubes)  # type: ignore
+        from prbench_models.geom3d.obstruction3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
     else:
         raise ValueError(f"Environment {env_name} not supported")
+
+    # Create lifted controllers
     controllers = create_lifted_controllers(
         env.action_space,  # type: ignore
         sim,
     )
-    lifted_controller = controllers["pick"]
-    robot = state.get_object_from_name("robot")
-    cube = state.get_object_from_name(target_object_key)
-    object_parameters = (robot, cube)
+    if "Shelf3D" in env_name or "Ground3D" in env_name:
+        target_object_key = f"cube{num_cubes - 1}"
+        lifted_controller = controllers["pick"]
+        robot = state.get_object_from_name("robot")
+        cube = state.get_object_from_name(target_object_key)
+        object_parameters = (robot, cube)
+    elif "TableBox3D" in env_name:
+        target_object_key = "box0"
+        lifted_controller = controllers["pick"]
+        robot = state.get_object_from_name("robot")
+        target = state.get_object_from_name(target_object_key)
+        object_parameters = (robot, target)
+    elif "BaseMotion3D" in env_name:
+        target_object_key = "target"
+        lifted_controller = controllers["move_base_to_target"]
+        robot = state.get_object_from_name("robot")
+        target = state.get_object_from_name("target")
+        object_parameters = (robot, target)
+    elif "Motion3D" in env_name:
+        target_object_key = "target"
+        lifted_controller = controllers["move_to_target"]
+        robot = state.get_object_from_name("robot")
+        target = state.get_object_from_name("target")
+        object_parameters = (robot, target)
+    elif "Obstruction3D" in env_name:
+        target_object_key = "target_block"
+        lifted_controller = controllers["pick"]
+        robot = state.get_object_from_name("robot")
+        target = state.get_object_from_name(target_object_key)
+        object_parameters = (robot, target)
+    else:
+        raise ValueError(f"Environment {env_name} not supported")
     controller = lifted_controller.ground(object_parameters)
 
     rng = np.random.default_rng(123)
