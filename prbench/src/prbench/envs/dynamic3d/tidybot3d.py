@@ -201,8 +201,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     f"integers, got {resolution}"
                 )
 
+            # Cast to list[float] after validation
+            position_list: list[float] = list(position)  # type: ignore[arg-type]
+            lookat_list: list[float] = list(lookat)  # type: ignore[arg-type]
+
             # Compute euler angles from position and lookat
-            euler = compute_camera_euler(position, lookat)
+            euler = compute_camera_euler(position_list, lookat_list)
 
             # Create camera element
             camera_elem = ET.SubElement(worldbody, "camera")
