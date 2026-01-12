@@ -295,7 +295,7 @@ class ObjectCentricTableBox3DEnv(
         return set(self._cubes.keys()) | set(self._boxes.keys())
 
     def _get_surface_object_names(self) -> set[str]:
-        return {"table"}
+        return {"table", "box0"}
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         if object_name.startswith("cube"):
