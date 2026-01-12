@@ -803,6 +803,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 else:
                     # Check first in fixtures, then in objects
                     target = region_config["target"]
+                    entity: MujocoFixture | MujocoObject
                     if target in self._fixtures_dict:
                         entity = self._fixtures_dict[target]
                     elif target in self._objects_dict:
@@ -840,10 +841,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 )
         if goal_conjunction == "and":
             return all(successes)
-        elif goal_conjunction == "or":
+        if goal_conjunction == "or":
             return any(successes)
-        else:
-            raise ValueError(f"Unknown goal conjunction: {goal_conjunction}")
+        raise ValueError(f"Unknown goal conjunction: {goal_conjunction}")
 
     def reward(self, obs: dict[str, Any]) -> float:
         """Calculate reward based on task completion."""

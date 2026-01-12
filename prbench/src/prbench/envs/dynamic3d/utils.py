@@ -1,7 +1,6 @@
 """Utility functions for TidyBot environments."""
 
 import numpy as np
-import transforms3d.euler as t3d_euler  # type: ignore[import-untyped]
 from numpy.typing import NDArray
 
 

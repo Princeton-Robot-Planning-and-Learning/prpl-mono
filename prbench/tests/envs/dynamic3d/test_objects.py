@@ -662,20 +662,19 @@ class MockMujocoEnv:
             else np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
         )
 
-    def get_joint_pos_quat(self, joint_name: str):
+    def get_joint_pos_quat(self, _joint_name: str):
         """Return stored position and quaternion."""
         return self.joint_pos, self.joint_quat
 
-    def set_joint_pos_quat(self, joint_name: str, pos, quat):
+    def set_joint_pos_quat(self, _joint_name: str, pos, quat):
         """Update stored position and quaternion."""
         self.joint_pos = np.array(pos, dtype=np.float32)
         self.joint_quat = np.array(quat, dtype=np.float32)
 
-    def set_joint_vel(self, joint_name: str, linear_vel, angular_vel):
+    def set_joint_vel(self, _joint_name: str, linear_vel, angular_vel):
         """Placeholder for velocity setting."""
-        pass
 
-    def get_joint_vel(self, joint_name: str):
+    def get_joint_vel(self, _joint_name: str):
         """Return zero velocities."""
         return (
             np.array([0.0, 0.0, 0.0], dtype=np.float32),
