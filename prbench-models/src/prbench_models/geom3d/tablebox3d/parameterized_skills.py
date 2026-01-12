@@ -388,7 +388,7 @@ class GroundPlaceController(BasePlaceController):
                 self._target_place_pose_se2, distance, 0.0
             )
 
-            collision_ids = {self._sim.table_id} | set(self._sim._cubes.values())  # type: ignore # pylint: disable=line-too-long # pylint: disable=protected-access
+            collision_ids = {self._sim.table_id} | set(self._sim._cubes.values()) # type: ignore # pylint: disable=line-too-long # pylint: disable=protected-access
             if (
                 self._sim._grasped_object_id  # pylint: disable=protected-access
                 is not None

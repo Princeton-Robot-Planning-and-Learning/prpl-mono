@@ -113,9 +113,7 @@ def create_bilevel_planning_models(
         # OnTable.
         for target in target_objects:
             if target.name != target_table.name:
-                if (
-                    x.get(target, "pose_z") > 0.3
-                ):
+                if x.get(target, "pose_z") > 0.3:
                     if abs(
                         x.get(target, "pose_x") - x.get(target_table, "pose_x")
                     ) < x.get(target_table, "half_extent_x") and abs(

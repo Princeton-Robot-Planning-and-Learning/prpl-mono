@@ -336,6 +336,17 @@ class ObjectCentricTableBox3DEnv(
         robot_end_effector_pose = self._robot_arm.get_end_effector_pose()
         if robot_gripper_pose > self.config.gripper_open_threshold:
             return False
+        for _, cube_id in self._cubes.items():
+            cube_pose = get_pose(cube_id, self.physics_client_id)
+            if (
+                np.linalg.norm(
+                    np.subtract(robot_end_effector_pose.position, cube_pose.position)
+                )
+                < 0.2
+            ):
+                return False
+            if cube_pose.position[2] < 0.3:
+                return False
         for _, box_id in self._boxes.items():
             box_pose = get_pose(box_id, self.physics_client_id)
             if (
