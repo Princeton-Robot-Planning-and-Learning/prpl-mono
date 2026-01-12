@@ -50,8 +50,8 @@ PLACE_X_OFFSET_BOUNDS_BOX = (-0.1, 0.0)
 PLACE_Y_OFFSET_BOUNDS_BOX = (-0.05, 0.05)
 PLACE_X_OFFSET_BOUNDS_CUBE = (-0.05, 0.05)
 PLACE_Y_OFFSET_BOUNDS_CUBE = (-0.05, 0.05)
-PLACE_X_OFFSET_BOUNDS_CUBE = (-0.15, 0.15)
-PLACE_Y_OFFSET_BOUNDS_CUBE = (-0.25, 0.25)
+PLACE_X_OFFSET_BOUNDS_TABLE = (-0.15, 0.15)
+PLACE_Y_OFFSET_BOUNDS_TABLE = (-0.25, 0.25)
 
 
 # Controllers.
@@ -112,12 +112,22 @@ class GroundPickController(
             target_base_pose = get_target_robot_pose_from_parameters(
                 target_pose, self._current_params[0], self._current_params[1]
             )
+            collision_ids = {self._sim.table_id} | set(
+                self._sim._cubes.values()  # pylint: disable=protected-access
+            )
+            if (
+                self._sim._grasped_object_id  # pylint: disable=protected-access
+                is not None
+            ):
+                collision_ids.discard(
+                    self._sim._grasped_object_id  # pylint: disable=protected-access
+                )
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                collision_bodies=collision_ids,
                 seed=0,  # for determinism
             )
 
@@ -300,6 +310,8 @@ class GroundPlaceController(BasePlaceController):
         elif "cube" in self.objects[1].name and "table" in self.objects[2].name:
             place_x_offset_bounds = PLACE_X_OFFSET_BOUNDS_TABLE
             place_y_offset_bounds = PLACE_Y_OFFSET_BOUNDS_TABLE
+        else:
+            raise ValueError("Invalid target object")
         place_x_offset = rng.uniform(*place_x_offset_bounds)  # type: ignore
         place_y_offset = rng.uniform(*place_y_offset_bounds)  # type: ignore
         return np.array([place_x_offset, place_y_offset])
@@ -373,12 +385,20 @@ class GroundPlaceController(BasePlaceController):
                 self._target_place_pose_se2, 0.65, 0.0
             )
 
+            collision_ids = {self._sim.table_id} | set(self._sim._cubes.values())  # type: ignore # pylint: disable=line-too-long # pylint: disable=protected-access
+            if (
+                self._sim._grasped_object_id  # pylint: disable=protected-access
+                is not None
+            ):
+                collision_ids.discard(
+                    self._sim._grasped_object_id  # pylint: disable=protected-access
+                )
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                collision_bodies=collision_ids,
                 seed=0,  # for determinism
             )
 

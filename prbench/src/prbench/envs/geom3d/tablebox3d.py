@@ -290,8 +290,6 @@ class ObjectCentricTableBox3DEnv(
 
     def _get_collision_object_ids(self) -> set[int]:
         collision_ids = {self.table_id}
-        if self._grasped_object_id is not None:
-            collision_ids.discard(self._grasped_object_id)
         return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:

@@ -269,3 +269,68 @@ def test_pick_and_place_inside_box_controller():
         assert False, "Controller did not terminate"
 
     env.close()
+
+
+def test_pick_and_place_inside_box_1_controller():
+    """Test pick and place controller inside box in TableBox3D environment."""
+
+    num_cubes = 1
+    env = prbench.make(
+        f"prbench/TableBox3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False
+    )
+    if MAKE_VIDEOS:
+        env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
+
+    obs, _ = env.reset(seed=123)
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    state = env.observation_space.devectorize(obs)
+
+    sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes)
+    controllers = create_lifted_controllers(
+        env.action_space,
+        sim,
+    )
+    lifted_controller = controllers["pick"]
+    robot = state.get_object_from_name("robot")
+    target = state.get_object_from_name("cube0")
+    object_parameters = (robot, target)
+    controller = lifted_controller.ground(object_parameters)
+
+    rng = np.random.default_rng(123)
+    params = controller.sample_parameters(state, rng)
+
+    controller.reset(state, params)
+    for _ in range(500):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    lifted_controller = controllers["place"]
+    robot = state.get_object_from_name("robot")
+    target = state.get_object_from_name("cube0")
+    target_box = state.get_object_from_name("box0")
+    object_parameters = (robot, target, target_box)
+    controller = lifted_controller.ground(object_parameters)
+
+    rng = np.random.default_rng(123)
+    params = controller.sample_parameters(state, rng)
+
+    controller.reset(state, params)
+    for _ in range(500):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    env.close()
