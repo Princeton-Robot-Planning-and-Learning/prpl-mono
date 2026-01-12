@@ -7,10 +7,24 @@ import threading
 import time
 from queue import Queue
 
+import cv2 as cv
 import numpy as np
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
+from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R  # type: ignore
+
+
+def _visualize_image_in_window(image: NDArray[np.uint8], window_name: str) -> None:
+    """Visualize an image in an OpenCV window."""
+    if image.dtype == np.uint8 and len(image.shape) == 3:
+        # Convert RGB to BGR for proper color display in OpenCV
+        display_image = cv.cvtColor(  # pylint: disable=no-member
+            image, cv.COLOR_RGB2BGR  # pylint: disable=no-member
+        )
+        cv.imshow(window_name, display_image)  # pylint: disable=no-member
+        cv.waitKey(1)  # pylint: disable=no-member
+
 
 # ============================================================================
 # WebXR Web Server for Phone Teleoperation

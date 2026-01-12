@@ -9,8 +9,8 @@ import prbench
 import zmq
 from constants import (
     POLICY_CONTROL_PERIOD,
-    POLICY_IMAGE_HEIGHT_VLA,
-    POLICY_IMAGE_WIDTH_VLA,
+    POLICY_IMAGE_HEIGHT,
+    POLICY_IMAGE_WIDTH,
     POLICY_SERVER_HOST,
     POLICY_SERVER_PORT,
 )
@@ -19,6 +19,7 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
+from prbench_models.teleop_utils import _visualize_image_in_window
 
 prbench.register_all_environments()
 
@@ -30,8 +31,8 @@ class RemotePolicy:
         self,
         host: str = POLICY_SERVER_HOST,
         port: int = POLICY_SERVER_PORT,
-        image_width: int = POLICY_IMAGE_WIDTH_VLA,
-        image_height: int = POLICY_IMAGE_HEIGHT_VLA,
+        image_width: int = POLICY_IMAGE_WIDTH,
+        image_height: int = POLICY_IMAGE_HEIGHT,
     ):
         self.image_width = image_width
         self.image_height = image_height
@@ -107,8 +108,10 @@ def run_inference(
     max_steps: int = 100,
     policy_host: str = POLICY_SERVER_HOST,
     policy_port: int = POLICY_SERVER_PORT,
-    num_cubes: int = 2,
+    env_name: str = "Shelf3D-o1-v0",
     render: bool = False,
+    num_cubes: int = 1,
+    show_images: bool = False,
 ):
     """Run policy inference in the prbench environment.
 
@@ -120,18 +123,20 @@ def run_inference(
         max_steps: Maximum steps per episode.
         policy_host: Policy server hostname.
         policy_port: Policy server port.
-        num_cubes: Number of cubes in the environment.
+        env_name: Name of the environment.
         render: Whether to render the environment.
+        num_cubes: Number of cubes in the environment.
+        show_images: Whether to show images in a window.
     """
     # Create the environment
     render_mode = "rgb_array" if render or save else None
     env = prbench.make(
-        f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0",
+        f"prbench/{env_name}",
         render_mode=render_mode,
     )
 
     # Create FK solver for computing end-effector pose
-    fk_solver = TidybotFKSolver(ee_offset=0.0)
+    fk_solver = TidybotFKSolver(ee_offset=0.12)
     ik_solver = TidybotIKSolver(ee_offset=0.12)
 
     # Create remote policy
@@ -146,12 +151,28 @@ def run_inference(
 
             # Reset the environment
             episode_seed = seed + episode_idx
-            obs, _, raw_obs = env.reset_with_images(seed=episode_seed)  # type: ignore
+            (
+                obs,
+                _,
+            ) = env.reset(
+                seed=episode_seed
+            )  # type: ignore
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
             # Target object for this episode (can be detected or specified)
-            target_object_key = "cube1"
+            if "Shelf3D" in env_name or "Ground3D" in env_name:
+                target_object_key = f"cube{num_cubes - 1}"
+            elif "TableBox3D" in env_name:
+                target_object_key = "box0"
+            elif "BaseMotion3D" in env_name:
+                target_object_key = "target"
+            elif "Motion3D" in env_name:
+                target_object_key = "target"
+            elif "Obstruction3D" in env_name:
+                target_object_key = "target_block"
+            else:
+                raise ValueError(f"Environment {env_name} not supported")
 
             # Reset the policy
             policy.reset(target_object_key)  # type: ignore
@@ -159,7 +180,7 @@ def run_inference(
             start_time = time.time()
             for step_idx in range(max_steps):
                 # Enforce desired control frequency
-                step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD
+                step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD * 2
                 while time.time() < step_end_time:
                     time.sleep(0.0001)
 
@@ -168,19 +189,25 @@ def run_inference(
                 target_cube = state.get_object_from_name(target_object_key)
                 target_cube_pos = np.array(
                     [
-                        state.get(target_cube, "x"),
-                        state.get(target_cube, "y"),
-                        state.get(target_cube, "z"),
+                        state.get(target_cube, "pose_x"),
+                        state.get(target_cube, "pose_y"),
+                        state.get(target_cube, "pose_z"),
                     ]
                 )
                 if target_cube_pos[2] > 0.05:
                     break
                 current_joints = np.array(
-                    [state.get(robot, f"pos_arm_joint{i}") for i in range(1, 8)]
+                    [state.get(robot, f"joint_{i}") for i in range(1, 8)]
                 )
                 current_position, current_orientation = fk_solver.forward_kinematics(
                     current_joints
                 )
+
+                all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
+                if show_images:
+                    _visualize_image_in_window(all_images["overview"], "overview")
+                    _visualize_image_in_window(all_images["base"], "base")
+                    _visualize_image_in_window(all_images["wrist"], "wrist")
 
                 # Create observation dict for policy
                 obs_dict = {
@@ -193,10 +220,10 @@ def run_inference(
                     ),
                     "arm_pos": current_position,
                     "arm_quat": current_orientation,
-                    "gripper_pos": np.array([state.get(robot, "pos_gripper")]),
-                    "base_image": raw_obs["raw_obs"]["base_image"].copy(),
-                    "wrist_image": raw_obs["raw_obs"]["wrist_image"].copy(),
-                    "overview_image": raw_obs["raw_obs"]["overview_image"].copy(),
+                    "gripper_pos": np.array([state.get(robot, "finger_state")]),
+                    "base_image": all_images["base"],
+                    "wrist_image": all_images["wrist"],
+                    "overview_image": all_images["overview"],
                 }
 
                 # Get action from policy
@@ -230,7 +257,7 @@ def run_inference(
                     writer.step(obs_dict, action_dict, target_object_key)
 
                 # Execute action in environment
-                obs, reward, terminated, truncated, _, raw_obs = env.step_with_images(  # type: ignore # pylint: disable=line-too-long
+                obs, reward, terminated, truncated, _ = env.step(  # type: ignore # pylint: disable=line-too-long
                     action
                 )
                 next_state = env.observation_space.devectorize(obs)
@@ -275,6 +302,9 @@ def main() -> None:
         "--num-episodes", type=int, default=1, help="Number of episodes to run"
     )
     parser.add_argument(
+        "--num-cubes", type=int, default=1, help="Number of cubes in environment"
+    )
+    parser.add_argument(
         "--max-steps", type=int, default=100, help="Maximum steps per episode"
     )
     parser.add_argument(
@@ -289,7 +319,13 @@ def main() -> None:
         help="Policy server port",
     )
     parser.add_argument(
-        "--num-cubes", type=int, default=2, help="Number of cubes in environment"
+        "--env-name", type=str, default="Shelf3D-o1-v0", help="Name of the environment"
+    )
+    parser.add_argument(
+        "--show-images",
+        action="store_true",
+        default=False,
+        help="Show images in a window",
     )
     parser.add_argument("--render", action="store_true", help="Render the environment")
 
@@ -300,11 +336,13 @@ def main() -> None:
         seed=args.seed,
         save=args.save,
         num_episodes=args.num_episodes,
+        num_cubes=args.num_cubes,
         max_steps=args.max_steps,
         policy_host=args.policy_host,
         policy_port=args.policy_port,
-        num_cubes=args.num_cubes,
+        env_name=args.env_name,
         render=args.render,
+        show_images=args.show_images,
     )
 
 
