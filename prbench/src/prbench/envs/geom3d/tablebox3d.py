@@ -47,6 +47,9 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     y_lb: float = -1.5
     y_ub: float = 1.5
 
+    # Minimum distance between objects for placement.
+    min_placement_dist: float = 0.01
+
     # Blocks.
     block_size: float = 0.05  # cubes (height = width = length)
     block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)

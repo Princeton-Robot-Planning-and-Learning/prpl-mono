@@ -350,7 +350,7 @@ class GroundPlaceController(BasePlaceController):
                         target_pose.position[2]
                         + self._sim.config.table_half_extents[2]
                         + self._sim.config.block_size / 2
-                        + 0.03,
+                        + 0.015,
                     ),
                     (np.pi, 0, np.pi / 2),
                 )
@@ -367,11 +367,14 @@ class GroundPlaceController(BasePlaceController):
                 )
             else:
                 raise ValueError("Invalid target object")
+            distance = 0.65
+            pre_place_height = 0.03
+
             self._pre_place_pose_world = Pose(
                 (
                     self._target_place_pose_world.position[0],
                     self._target_place_pose_world.position[1],
-                    self._target_place_pose_world.position[2] + 0.03,
+                    self._target_place_pose_world.position[2] + pre_place_height,
                 ),
                 self._target_place_pose_world.orientation,
             )
@@ -382,7 +385,7 @@ class GroundPlaceController(BasePlaceController):
                 target_pose_temp_se2.rot,
             )
             target_base_pose = get_target_robot_pose_from_parameters(
-                self._target_place_pose_se2, 0.65, 0.0
+                self._target_place_pose_se2, distance, 0.0
             )
 
             collision_ids = {self._sim.table_id} | set(self._sim._cubes.values())  # type: ignore # pylint: disable=line-too-long # pylint: disable=protected-access
