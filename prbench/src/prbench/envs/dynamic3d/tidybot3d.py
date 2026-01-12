@@ -325,12 +325,24 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 objects = self.task_config.get("objects", {})
                 for object_type, object_configs in objects.items():
                     for object_name, object_config in object_configs.items():
+                        # Find regions for this object if specified
+                        regions_in_object = {}
+                        all_regions = self.task_config.get("regions", {})
+                        for region_name, region_config in all_regions.items():
+                            if region_config["target"] == object_name:
+                                regions_in_object[region_name] = region_config
+
+                        # Add regions to object config
+                        obj_options = object_config.copy() if object_config else {}
+                        obj_options["regions"] = regions_in_object
+
                         obj_cls = get_object_class(object_type)
                         obj = obj_cls(
                             name=object_name,
                             env=self._robot_env,
-                            options=object_config,
+                            options=obj_options,
                         )
+                        obj.visualize_regions()
                         body = obj.xml_element
                         worldbody.append(body)
                         self._objects.append(obj)
@@ -719,7 +731,20 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     def _check_goals(self) -> bool:
         """Check if the goal has been achieved."""
         state = self._get_current_state()
+
+        # Get all goal predicates, and determine if they should
+        # be combined with "and" or "or"
         goal_predicates = self.task_config.get("goal_state", [])
+        if goal_predicates[0] == "or":
+            goal_conjunction = "or"
+            goal_predicates = goal_predicates[1:]
+        elif goal_predicates[0] == "and":
+            goal_conjunction = "and"
+            goal_predicates = goal_predicates[1:]
+        else:
+            goal_conjunction = "and"
+
+        # Evaluate each goal predicate
         successes = []
         for pred in goal_predicates:
             if pred[0] == "on":
@@ -746,9 +771,17 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         position, region_ranges
                     )
                 else:
-                    # Sample pose on a fixture (table, etc.)
-                    fixture = self._fixtures_dict[region_config["target"]]
-                    in_region = fixture.check_in_region(position, region_name)
+                    # Check first in fixtures, then in objects
+                    target = region_config["target"]
+                    if target in self._fixtures_dict:
+                        entity = self._fixtures_dict[target]
+                    elif target in self._objects_dict:
+                        entity = self._objects_dict[target]
+                    else:
+                        raise ValueError(
+                            f"Target '{target}' not found in fixtures or objects"
+                        )
+                    in_region = entity.check_in_region(position, region_name)
 
                 successes.append(in_region)
             elif pred[0] == "balanced":
@@ -775,7 +808,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 raise NotImplementedError(
                     f"Goal predicate {pred[0]} not implemented in _check_goals"
                 )
-        return all(successes)
+        if goal_conjunction == "and":
+            return all(successes)
+        elif goal_conjunction == "or":
+            return any(successes)
+        else:
+            raise ValueError(f"Unknown goal conjunction: {goal_conjunction}")
 
     def reward(self, obs: dict[str, Any]) -> float:
         """Calculate reward based on task completion."""
