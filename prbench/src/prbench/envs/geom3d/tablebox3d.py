@@ -42,8 +42,8 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.2)
 
     # World bounds.
-    x_lb: float = -1
-    x_ub: float = 1
+    x_lb: float = -1.5
+    x_ub: float = 1.5
     y_lb: float = -1.5
     y_ub: float = 1.5
 
@@ -289,7 +289,10 @@ class ObjectCentricTableBox3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        return {self.table_id}
+        collision_ids = {self.table_id}
+        if self._grasped_object_id is not None:
+            collision_ids.discard(self._grasped_object_id)
+        return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys()) | set(self._boxes.keys())

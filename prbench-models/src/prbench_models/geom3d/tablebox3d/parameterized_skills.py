@@ -50,6 +50,8 @@ PLACE_X_OFFSET_BOUNDS_BOX = (-0.1, 0.0)
 PLACE_Y_OFFSET_BOUNDS_BOX = (-0.05, 0.05)
 PLACE_X_OFFSET_BOUNDS_CUBE = (-0.05, 0.05)
 PLACE_Y_OFFSET_BOUNDS_CUBE = (-0.05, 0.05)
+PLACE_X_OFFSET_BOUNDS_CUBE = (-0.15, 0.15)
+PLACE_Y_OFFSET_BOUNDS_CUBE = (-0.25, 0.25)
 
 
 # Controllers.
@@ -292,9 +294,12 @@ class GroundPlaceController(BasePlaceController):
         if "box" in self.objects[1].name:
             place_x_offset_bounds = PLACE_X_OFFSET_BOUNDS_BOX
             place_y_offset_bounds = PLACE_Y_OFFSET_BOUNDS_BOX
-        else:
+        elif "cube" in self.objects[1].name and "box" in self.objects[2].name:
             place_x_offset_bounds = PLACE_X_OFFSET_BOUNDS_CUBE
             place_y_offset_bounds = PLACE_Y_OFFSET_BOUNDS_CUBE
+        elif "cube" in self.objects[1].name and "table" in self.objects[2].name:
+            place_x_offset_bounds = PLACE_X_OFFSET_BOUNDS_TABLE
+            place_y_offset_bounds = PLACE_Y_OFFSET_BOUNDS_TABLE
         place_x_offset = rng.uniform(*place_x_offset_bounds)  # type: ignore
         place_y_offset = rng.uniform(*place_y_offset_bounds)  # type: ignore
         return np.array([place_x_offset, place_y_offset])
