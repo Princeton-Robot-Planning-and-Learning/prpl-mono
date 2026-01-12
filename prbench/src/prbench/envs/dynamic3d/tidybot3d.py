@@ -166,8 +166,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         cameras_config = self.task_config["cameras"]
         worldbody = root.find("worldbody")
         if worldbody is None:
-            print("No worldbody found in XML; cannot add cameras.")
-            return
+            raise RuntimeError("No worldbody found in XML; cannot add cameras.")
 
         for camera_name, camera_config in cameras_config.items():
             position = camera_config.get("position", [0, 0, 1])
@@ -175,8 +174,39 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             fovy = camera_config.get("fovy", 45)
             resolution = camera_config.get("resolution", [640, 480])
 
+            # Validate parameters
+            if not isinstance(position, (list, tuple)) or len(position) != 3:
+                raise ValueError(
+                    f"Camera '{camera_name}': position must be a 3-element list, "
+                    f"got {position}"
+                )
+            if not isinstance(lookat, (list, tuple)) or len(lookat) != 3:
+                raise ValueError(
+                    f"Camera '{camera_name}': lookat must be a 3-element list, "
+                    f"got {lookat}"
+                )
+            if not isinstance(fovy, (int, float)) or fovy <= 0:
+                raise ValueError(
+                    f"Camera '{camera_name}': fovy must be a positive number, "
+                    f"got {fovy}"
+                )
+            if not isinstance(resolution, (list, tuple)) or len(resolution) != 2:
+                raise ValueError(
+                    f"Camera '{camera_name}': resolution must be a 2-element list, "
+                    f"got {resolution}"
+                )
+            if not all(isinstance(r, int) and r > 0 for r in resolution):
+                raise ValueError(
+                    f"Camera '{camera_name}': resolution must contain positive "
+                    f"integers, got {resolution}"
+                )
+
+            # Cast to list[float] after validation
+            position_list: list[float] = list(position)  # type: ignore[arg-type]
+            lookat_list: list[float] = list(lookat)  # type: ignore[arg-type]
+
             # Compute euler angles from position and lookat
-            euler = compute_camera_euler(position, lookat)
+            euler = compute_camera_euler(position_list, lookat_list)
 
             # Create camera element
             camera_elem = ET.SubElement(worldbody, "camera")

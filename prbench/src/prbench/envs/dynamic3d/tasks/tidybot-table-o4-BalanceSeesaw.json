@@ -104,7 +104,8 @@
             "fovy": 42,
             "resolution": [640, 480]
         }
-    },    "init_state": [
+    },
+    "init_state": [
         [
             "on",
             "seesaw_1",
