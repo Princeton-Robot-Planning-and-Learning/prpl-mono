@@ -166,8 +166,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         cameras_config = self.task_config["cameras"]
         worldbody = root.find("worldbody")
         if worldbody is None:
-            print("No worldbody found in XML; cannot add cameras.")
-            return
+            raise RuntimeError("No worldbody found in XML; cannot add cameras.")
 
         for camera_name, camera_config in cameras_config.items():
             position = camera_config.get("position", [0, 0, 1])
