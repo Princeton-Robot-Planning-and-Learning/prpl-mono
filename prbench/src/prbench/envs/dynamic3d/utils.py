@@ -35,7 +35,7 @@ def compute_camera_euler(
     pos_array: NDArray[np.float64] = np.array(position, dtype=np.float64)
     lookat_array: NDArray[np.float64] = np.array(lookat, dtype=np.float64)
 
-    # Direction vector from camera to target (where -Z should point)
+    # Direction vector from target to camera (where +Z of camera should point)
     direction: NDArray[np.float64] = pos_array - lookat_array
     direction_norm = np.linalg.norm(direction)
     if direction_norm < 1e-6:
