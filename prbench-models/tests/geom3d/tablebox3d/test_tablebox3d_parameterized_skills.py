@@ -119,6 +119,7 @@ def test_pick_and_place_controller():
 
     env.close()
 
+
 def test_pick_and_place_inside_box_controller():
     """Test pick and place controller inside box in TableBox3D environment."""
 
@@ -207,6 +208,49 @@ def test_pick_and_place_inside_box_controller():
     target = state.get_object_from_name("cube1")
     target_box = state.get_object_from_name("box0")
     object_parameters = (robot, target, target_box)
+    controller = lifted_controller.ground(object_parameters)
+
+    rng = np.random.default_rng(123)
+    params = controller.sample_parameters(state, rng)
+
+    controller.reset(state, params)
+    for _ in range(500):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    lifted_controller = controllers["pick"]
+    robot = state.get_object_from_name("robot")
+    target = state.get_object_from_name("box0")
+    object_parameters = (robot, target)
+    controller = lifted_controller.ground(object_parameters)
+
+    rng = np.random.default_rng(123)
+    params = controller.sample_parameters(state, rng)
+
+    controller.reset(state, params)
+    for _ in range(500):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    lifted_controller = controllers["place"]
+    robot = state.get_object_from_name("robot")
+    target = state.get_object_from_name("box0")
+    target_table = state.get_object_from_name("table")
+    object_parameters = (robot, target, target_table)
     controller = lifted_controller.ground(object_parameters)
 
     rng = np.random.default_rng(123)
