@@ -106,7 +106,7 @@ def compute_camera_euler(
     # - phi (azimuthal angle): angle in xy-plane from positive x-axis [0, 2π)
 
     r = direction_norm
-    theta = float(np.arccos(direction[2] / r))  # polar angle
+    theta = float(np.arccos(np.clip(direction[2] / r, -1.0, 1.0)))  # polar angle
     phi = float(np.arctan2(direction[1], direction[0]))  # azimuthal angle
 
     # Step 2: Convert spherical coordinates to Euler angles
