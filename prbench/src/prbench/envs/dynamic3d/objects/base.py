@@ -159,7 +159,7 @@ class MujocoObject:
         the z dimension spans a small height above the object surface.
         """
         assert self.regions is not None, "Regions must be defined"
-        placement_threshold = 0.05  # 10cm tolerance for placement
+        placement_threshold = 0.01  # 1cm tolerance for placement
         # Note: we are currently hard-coding the z range for the bounding boxes
         # This could potentially be made configurable in the future.
 
@@ -169,12 +169,16 @@ class MujocoObject:
             for region_range in region_config["ranges"]:
                 x_start, y_start, x_end, y_end = region_range
 
-                # Create 3D bounding box with z range
-                # z_min at object surface, z_max is a small height above
-                z_min = -placement_threshold
-                z_max = placement_threshold
-
-                bbox = [x_start, y_start, z_min, x_end, y_end, z_max]
+                # Create 3D bounding box with z range and tolerance on x/y bounds
+                # Apply tolerance to x and y boundaries
+                bbox = [
+                    x_start - placement_threshold,
+                    y_start - placement_threshold,
+                    -placement_threshold,
+                    x_end + placement_threshold,
+                    y_end + placement_threshold,
+                    placement_threshold,
+                ]
                 region_bboxes.append(bbox)
 
             self.region_bboxes[region_name] = region_bboxes
