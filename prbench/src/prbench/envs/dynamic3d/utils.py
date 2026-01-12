@@ -1,8 +1,65 @@
 """Utility functions for TidyBot environments."""
 
 import numpy as np
-import transforms3d.euler as t3d_euler  # type: ignore[import-untyped]
 from numpy.typing import NDArray
+
+
+def euler2mat_rzxy(
+    angle_z: float, angle_x: float, angle_y: float
+) -> NDArray[np.float64]:
+    """Convert Euler angles to rotation matrix using RZXY convention.
+
+    Args:
+        angle_z: Z-rotation angle in radians
+        angle_x: X-rotation angle in radians
+        angle_y: Y-rotation angle in radians
+
+    Returns:
+        3x3 rotation matrix
+    """
+    # Create rotation matrices inline
+    cz, sz = np.cos(angle_z), np.sin(angle_z)
+    cx, sx = np.cos(angle_x), np.sin(angle_x)
+    cy, sy = np.cos(angle_y), np.sin(angle_y)
+
+    rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]], dtype=np.float64)
+    rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]], dtype=np.float64)
+    ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]], dtype=np.float64)
+
+    return rz @ rx @ ry  # type: ignore[operator]
+
+
+def mat2euler_rxyz(
+    rotation_matrix: NDArray[np.float64],
+) -> tuple[float, float, float]:
+    """Convert rotation matrix to Euler angles using RXYZ convention.
+
+    Args:
+        rotation_matrix: 3x3 rotation matrix
+
+    Returns:
+        Tuple of (roll, pitch, yaw) angles in radians
+    """
+    r = rotation_matrix
+
+    # Extract angles from rotation matrix for RXYZ convention
+    # R = Rz(yaw) * Ry(pitch) * Rx(roll)
+    # This is the standard aerospace convention
+
+    # Check for gimbal lock
+    sin_pitch = -r[2, 0]
+    sin_pitch = np.clip(sin_pitch, -1.0, 1.0)
+    pitch = float(np.arcsin(sin_pitch))
+
+    cos_pitch = np.cos(pitch)
+    if abs(cos_pitch) > 1e-6:  # Not in gimbal lock
+        roll = float(np.arctan2(r[2, 1], r[2, 2]))
+        yaw = float(np.arctan2(r[1, 0], r[0, 0]))
+    else:  # Gimbal lock case
+        roll = 0.0
+        yaw = float(np.arctan2(-r[0, 1], r[1, 1]))
+
+    return (roll, pitch, yaw)
 
 
 def convert_yaw_to_quaternion(yaw: float) -> list[float]:
@@ -55,12 +112,10 @@ def compute_camera_euler(
     # Step 2: Convert spherical coordinates to Euler angles
     # euler_zxy represents (Z-rotation, X-rotation, Y-rotation)
     euler_zxy = (np.pi / 2 + phi, theta, 0)
-    rot_mat_zxy = t3d_euler.euler2mat(
-        euler_zxy[0], euler_zxy[1], euler_zxy[2], axes="rzxy"
-    )
-    euler_xyz = t3d_euler.mat2euler(rot_mat_zxy, axes="rxyz")
+    rot_mat_zxy = euler2mat_rzxy(euler_zxy[0], euler_zxy[1], euler_zxy[2])
+    euler_xyz = mat2euler_rxyz(rot_mat_zxy)
 
-    # Convert ZXY to XYZ (roll, pitch, yaw)
+    # Convert to XYZ (roll, pitch, yaw)
     # roll = X-rotation, pitch = Y-rotation, yaw = Z-rotation
     roll = euler_xyz[0]  # X-rotation = theta
     pitch = euler_xyz[1]  # Y-rotation = 0
