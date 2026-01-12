@@ -1,5 +1,7 @@
 """Utility functions for TidyBot environments."""
 
+import math
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -17,16 +19,50 @@ def euler2mat_rzxy(
     Returns:
         3x3 rotation matrix
     """
-    # Create rotation matrices inline
-    cz, sz = np.cos(angle_z), np.sin(angle_z)
-    cx, sx = np.cos(angle_x), np.sin(angle_x)
-    cy, sy = np.cos(angle_y), np.sin(angle_y)
+    # Implementation copied from transforms3d.euler.euler2mat
 
-    rz = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]], dtype=np.float64)
-    rx = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]], dtype=np.float64)
-    ry = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]], dtype=np.float64)
+    # Axis constants for Euler angle conversions
+    _NEXT_AXIS = [1, 2, 0, 1]
 
-    return rz @ rx @ ry  # type: ignore[operator]
+    ai, aj, ak = angle_z, angle_x, angle_y
+    firstaxis, parity, repetition, frame = (1, 1, 0, 1)
+
+    if frame:
+        ai, ak = ak, ai
+    if parity:
+        ai, aj, ak = -ai, -aj, -ak
+
+    si, ci = math.sin(ai), math.cos(ai)
+    sj, cj = math.sin(aj), math.cos(aj)
+    sk, ck = math.sin(ak), math.cos(ak)
+
+    i = firstaxis
+    j = _NEXT_AXIS[i + parity]
+    k = _NEXT_AXIS[i - parity + 1]
+
+    mat = np.eye(3)
+    if repetition:
+        mat[i, i] = cj
+        mat[i, j] = sj * si
+        mat[i, k] = sj * ci
+        mat[j, i] = sj * sk
+        mat[j, j] = -cj * (si * sk) + (ci * ck)
+        mat[j, k] = -cj * (ci * sk) - (si * ck)
+        mat[k, i] = -sj * ck
+        mat[k, j] = cj * (si * ck) + (ci * sk)
+        mat[k, k] = cj * (ci * ck) - (si * sk)
+    else:
+        mat[i, i] = cj * ck
+        mat[i, j] = sj * (si * ck) - (ci * sk)
+        mat[i, k] = sj * (ci * ck) + (si * sk)
+        mat[j, i] = cj * sk
+        mat[j, j] = sj * (si * sk) + (ci * ck)
+        mat[j, k] = sj * (ci * sk) - (si * ck)
+        mat[k, i] = -sj
+        mat[k, j] = cj * si
+        mat[k, k] = cj * ci
+
+    return mat.astype(np.float64)
 
 
 def mat2euler_rxyz(
@@ -40,26 +76,48 @@ def mat2euler_rxyz(
     Returns:
         Tuple of (roll, pitch, yaw) angles in radians
     """
-    r = rotation_matrix
+    # Implementation copied from transforms3d.euler.mat2euler
 
-    # Extract angles from rotation matrix for RXYZ convention
-    # R = Rz(yaw) * Ry(pitch) * Rx(roll)
-    # This is the standard aerospace convention
+    _EPS4 = 8.881784197001252e-16
 
-    # Check for gimbal lock
-    sin_pitch = -r[2, 0]
-    sin_pitch = np.clip(sin_pitch, -1.0, 1.0)
-    pitch = float(np.arcsin(sin_pitch))
+    # Axis constants for Euler angle conversions
+    _NEXT_AXIS = [1, 2, 0, 1]
 
-    cos_pitch = np.cos(pitch)
-    if abs(cos_pitch) > 1e-6:  # Not in gimbal lock
-        roll = float(np.arctan2(r[2, 1], r[2, 2]))
-        yaw = float(np.arctan2(r[1, 0], r[0, 0]))
-    else:  # Gimbal lock case
-        roll = 0.0
-        yaw = float(np.arctan2(-r[0, 1], r[1, 1]))
+    firstaxis, parity, repetition, frame = (2, 1, 0, 1)
 
-    return (roll, pitch, yaw)
+    i = firstaxis
+    j = _NEXT_AXIS[i + parity]
+    k = _NEXT_AXIS[i - parity + 1]
+
+    mat = np.array(rotation_matrix, dtype=np.float64, copy=False)[:3, :3]
+
+    if repetition:
+        sy = math.sqrt(mat[i, j] * mat[i, j] + mat[i, k] * mat[i, k])
+        if sy > _EPS4:
+            ax = math.atan2(mat[i, j], mat[i, k])
+            ay = math.atan2(sy, mat[i, i])
+            az = math.atan2(mat[j, i], -mat[k, i])
+        else:
+            ax = math.atan2(-mat[j, k], mat[j, j])
+            ay = math.atan2(sy, mat[i, i])
+            az = 0.0
+    else:
+        cy = math.sqrt(mat[i, i] * mat[i, i] + mat[j, i] * mat[j, i])
+        if cy > _EPS4:
+            ax = math.atan2(mat[k, j], mat[k, k])
+            ay = math.atan2(-mat[k, i], cy)
+            az = math.atan2(mat[j, i], mat[i, i])
+        else:
+            ax = math.atan2(-mat[j, k], mat[j, j])
+            ay = math.atan2(-mat[k, i], cy)
+            az = 0.0
+
+    if parity:
+        ax, ay, az = -ax, -ay, -az
+    if frame:
+        ax, az = az, ax
+
+    return (float(ax), float(ay), float(az))
 
 
 def convert_yaw_to_quaternion(yaw: float) -> list[float]:
