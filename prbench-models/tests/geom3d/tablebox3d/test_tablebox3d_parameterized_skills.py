@@ -188,7 +188,7 @@ def test_pick_and_place_inside_box_controller():
     object_parameters = (robot, target)
     controller = lifted_controller.ground(object_parameters)
 
-    rng = np.random.default_rng(123)
+    rng = np.random.default_rng(122)
     params = controller.sample_parameters(state, rng)
 
     controller.reset(state, params)
