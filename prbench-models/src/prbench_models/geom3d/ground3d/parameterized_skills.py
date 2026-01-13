@@ -130,7 +130,7 @@ class GroundPickController(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=set(),
+                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                 seed=0,  # for determinism
             )
 
@@ -190,7 +190,7 @@ class GroundPickController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=joint_positions,
-                    collision_bodies=set(),
+                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
@@ -248,7 +248,7 @@ class GroundPickController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=set(),
+                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
@@ -364,7 +364,7 @@ class GroundPlaceController(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=set(),
+                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                 seed=0,  # for determinism
             )
 
@@ -422,7 +422,7 @@ class GroundPlaceController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=joint_positions,
-                    collision_bodies=set(),
+                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
@@ -475,7 +475,7 @@ class GroundPlaceController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=set(),
+                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
