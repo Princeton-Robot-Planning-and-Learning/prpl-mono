@@ -11,7 +11,6 @@ from typing import Type as TypingType
 
 import numpy as np
 from pybullet_helpers.geometry import Pose, get_pose, set_pose
-from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import create_pybullet_block, create_pybullet_hollow_box
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
@@ -26,7 +25,10 @@ from prbench.envs.geom3d.object_types import (
     Geom3DEnvTypeFeatures,
     Geom3DRobotType,
 )
-from prbench.envs.geom3d.utils import Geom3DObjectCentricState
+from prbench.envs.geom3d.utils import (
+    Geom3DObjectCentricState,
+    sample_collision_free_object_poses,
+)
 from prbench.envs.utils import PURPLE
 
 
@@ -40,10 +42,13 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.2)
 
     # World bounds.
-    x_lb: float = -1
-    x_ub: float = 1
-    y_lb: float = -1
-    y_ub: float = 1
+    x_lb: float = -1.5
+    x_ub: float = 1.5
+    y_lb: float = -1.5
+    y_ub: float = 1.5
+
+    # Minimum distance between objects for placement.
+    min_placement_dist: float = 0.01
 
     # Blocks.
     block_size: float = 0.05  # cubes (height = width = length)
@@ -245,42 +250,19 @@ class ObjectCentricTableBox3DEnv(
                 box_half_extents, self.np_random
             )
             set_pose(box_id, box_pose, self.physics_client_id)
-        for _ in range(100_000):
 
-            for cube_name, cube_id in self._cubes.items():
-                cube_half_extents = (
-                    self.config.block_size / 2,
-                    self.config.block_size / 2,
-                    self.config.block_size / 2,
-                )
-                # add orientation later
-                cube_pose = self.config.sample_block_in_box_pose(
-                    cube_half_extents,
-                    box_pose,
-                    box_half_extents,
-                    self.config.box_wall_thickness,
-                    self.np_random,
-                )
-                set_pose(cube_id, cube_pose, self.physics_client_id)
-
-            collision_free = True
-            for cube_name, cube_id in self._cubes.items():
-                for other_cube_name, other_cube_id in self._cubes.items():
-                    if cube_name == other_cube_name:
-                        continue
-                    if check_body_collisions(
-                        cube_id,
-                        other_cube_id,
-                        self.physics_client_id,
-                    ):
-                        collision_free = False
-                        break
-
-            if collision_free:
-                break
-
-        else:
-            raise RuntimeError("Failed to sample collision-free cube poses")
+        sample_collision_free_object_poses(
+            use_box=True,
+            box_pose=get_pose(self._boxes["box0"], self.physics_client_id),
+            table_pose=self.config.table_pose,
+            table_half_extents=self.config.table_half_extents,
+            object_ids=set(self._cubes.values()),
+            lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2),
+            ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2),
+            physics_client_id=self.physics_client_id,
+            rng=self.np_random,
+            other_collision_ids={self.robot.base.robot_id},
+        )
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
         assert isinstance(obs, TableBox3DObjectCentricState)
@@ -310,13 +292,14 @@ class ObjectCentricTableBox3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        return {self.table_id}
+        collision_ids = {self.table_id}
+        return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys()) | set(self._boxes.keys())
 
     def _get_surface_object_names(self) -> set[str]:
-        return {"table"}
+        return {"table", "box0"}
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         if object_name.startswith("cube"):
@@ -353,6 +336,17 @@ class ObjectCentricTableBox3DEnv(
         robot_end_effector_pose = self._robot_arm.get_end_effector_pose()
         if robot_gripper_pose > self.config.gripper_open_threshold:
             return False
+        for _, cube_id in self._cubes.items():
+            cube_pose = get_pose(cube_id, self.physics_client_id)
+            if (
+                np.linalg.norm(
+                    np.subtract(robot_end_effector_pose.position, cube_pose.position)
+                )
+                < 0.2
+            ):
+                return False
+            if cube_pose.position[2] < 0.3:
+                return False
         for _, box_id in self._boxes.items():
             box_pose = get_pose(box_id, self.physics_client_id)
             if (
