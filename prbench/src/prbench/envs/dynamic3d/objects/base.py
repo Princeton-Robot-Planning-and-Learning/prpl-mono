@@ -4,20 +4,18 @@ from __future__ import annotations
 
 import abc
 import xml.etree.ElementTree as ET
-from typing import TYPE_CHECKING, Callable, TypeVar, Union, overload
+from typing import Callable, TypeVar, Union, overload
 
 import numpy as np
 from numpy.typing import NDArray
 from relational_structs import Object
 
+from prbench.envs.dynamic3d import utils
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
 from prbench.envs.dynamic3d.object_types import (
     MujocoFixtureObjectType,
     MujocoMovableObjectType,
 )
-
-if TYPE_CHECKING:
-    from prbench.envs.dynamic3d import utils
 
 # Type variables for decorator type preservation
 FixtureT = TypeVar("FixtureT", bound="MujocoFixture")
@@ -132,16 +130,56 @@ class MujocoObject:
         Args:
             name: Name of the object body in the XML
             env: Reference to the environment (needed for position get/set operations)
+            options: Optional dictionary of configuration options. Can include:
+                - "regions": Optional dictionary of regions for this object
         """
         self.name = name
         self.joint_name = f"{name}_joint"
         self.env = env
         self.options = options if options is not None else {}
+        self.regions = self.options.get("regions")
 
         # Create the corresponding Object for state representation key
         self.symbolic_object = Object(self.name, MujocoMovableObjectType)
 
+        # Create region bounding boxes if regions are defined
+        self.region_bboxes: dict[str, list[list[float]]] = {}
+        if self.regions is not None:
+            self._create_region_bboxes()
+
         self.xml_element: ET.Element  # To be defined in subclasses
+
+    def _create_region_bboxes(self) -> None:
+        """Create 3D bounding boxes for each region.
+
+        Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted to 3D
+        bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where the z dimension
+        spans a small height above the object surface.
+        """
+        assert self.regions is not None, "Regions must be defined"
+        placement_threshold = 0.01  # 1cm tolerance for placement
+        # Note: we are currently hard-coding the z range for the bounding boxes
+        # This could potentially be made configurable in the future.
+
+        for region_name, region_config in self.regions.items():
+            region_bboxes = []
+
+            for region_range in region_config["ranges"]:
+                x_start, y_start, x_end, y_end = region_range
+
+                # Create 3D bounding box with z range and tolerance on x/y bounds
+                # Apply tolerance to x and y boundaries
+                bbox = [
+                    x_start - placement_threshold,
+                    y_start - placement_threshold,
+                    -placement_threshold,
+                    x_end + placement_threshold,
+                    y_end + placement_threshold,
+                    placement_threshold,
+                ]
+                region_bboxes.append(bbox)
+
+            self.region_bboxes[region_name] = region_bboxes
 
     def get_position(self) -> NDArray[np.float32]:
         """Get the object's current position.
@@ -326,6 +364,91 @@ class MujocoObject:
         }
         return obj_data
 
+    def check_in_region(
+        self,
+        position: NDArray[np.float32],
+        region_name: str,
+    ) -> bool:
+        """Check if a given position is within the specified region.
+
+        Args:
+            position: Position as [x, y, z] array in world coordinates
+            region_name: Name of the region to check
+
+        Returns:
+            True if the position is within the specified region, False otherwise
+
+        Raises:
+            ValueError: If regions are not defined or region not found
+            ValueError: If environment is not set (needed to get object position)
+        """
+        if self.regions is None:
+            raise ValueError("Regions must be defined for this object")
+        if region_name not in self.region_bboxes:
+            raise ValueError(f"Region {region_name} not found in object regions")
+
+        # Get the object's current position
+        obj_pos = self.get_position()
+
+        # Convert world coordinates to object-relative coordinates
+        object_relative_pos = np.array(
+            [
+                position[0] - obj_pos[0],
+                position[1] - obj_pos[1],
+                position[2] - obj_pos[2],
+            ]
+        )
+
+        # Check if position is in any of the region's bounding boxes
+        region_bboxes = self.region_bboxes[region_name]
+        for bbox in region_bboxes:
+            if utils.point_in_bbox_3d(object_relative_pos, bbox):
+                return True
+
+        return False
+
+    def visualize_regions(self) -> None:
+        """Visualize the object's regions in the MuJoCo environment.
+
+        This method adds visual elements to the MuJoCo XML to represent the regions
+        defined for this object in object-relative coordinates.
+        """
+        if self.regions is None:
+            return
+
+        for region_name, region_config in self.regions.items():
+            # Get the bounding boxes for this region
+            region_bboxes = self.region_bboxes.get(region_name, [])
+
+            for i_region, bbox in enumerate(region_bboxes):
+                # bbox is [x_min, y_min, z_min, x_max, y_max, z_max]
+                x_min, y_min, z_min, x_max, y_max, z_max = bbox
+
+                # Calculate center and half-sizes for MuJoCo box geom
+                region_center_x = (x_min + x_max) / 2
+                region_center_y = (y_min + y_max) / 2
+                region_center_z = (z_min + z_max) / 2
+
+                region_size_x = (x_max - x_min) / 2
+                region_size_y = (y_max - y_min) / 2
+                region_size_z = (z_max - z_min) / 2
+
+                # Create site element for the region visualization
+                region_site = ET.SubElement(self.xml_element, "site")
+                region_site.set("name", f"{self.name}_{region_name}_region_{i_region}")
+                region_site.set("type", "box")
+                region_site.set(
+                    "size",
+                    f"{region_size_x} {region_size_y} {region_size_z}",
+                )
+                region_site.set(
+                    "pos",
+                    f"{region_center_x} {region_center_y} {region_center_z}",
+                )
+                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
+                region_site.set("rgba", " ".join(map(str, rgba_values)))
+                region_site.set("group", "0")
+
 
 class MujocoFixture(abc.ABC):
     """Base class for MuJoCo fixtures (static objects).
@@ -375,10 +498,6 @@ class MujocoFixture(abc.ABC):
         Returns:
             Orientation as quaternion [w, x, y, z] list
         """
-        # Import here to avoid circular dependency
-        # pylint: disable=import-outside-toplevel
-        from prbench.envs.dynamic3d import utils
-
         return utils.convert_yaw_to_quaternion(self.yaw)
 
     @staticmethod
@@ -629,22 +748,21 @@ class MujocoGround:
                 region_size_y = (y_end - y_start) / 2
                 region_size_z = 0.001  # Very thin box for visualization
 
-                # Create geom element for the region visualization
-                region_geom = ET.SubElement(self.xml_element, "geom")
-                region_geom.set("name", f"{self.name}_{region_name}_region_{i_region}")
-                region_geom.set("type", "box")
-                region_geom.set(
+                # Create site element for the region visualization
+                region_site = ET.SubElement(self.xml_element, "site")
+                region_site.set("name", f"{self.name}_{region_name}_region_{i_region}")
+                region_site.set("type", "box")
+                region_site.set(
                     "size",
                     f"{region_size_x} {region_size_y} {region_size_z}",
                 )
-                region_geom.set(
+                region_site.set(
                     "pos",
                     f"{region_center_x} {region_center_y} {region_center_z}",
                 )
-                region_geom.set("rgba", " ".join(map(str, region_config["rgba"])))
-                # Disable collision for visual-only representation
-                region_geom.set("contype", "0")
-                region_geom.set("conaffinity", "0")
+                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
+                region_site.set("rgba", " ".join(map(str, rgba_values)))
+                region_site.set("group", "1")
 
     def __str__(self) -> str:
         """String representation of the ground."""
