@@ -36,15 +36,17 @@ from relational_structs import (
 
 from prbench_models.geom3d.base_controllers import BasePlaceController
 from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
+from prbench_models.geom3d.constants import (
+    HOME_JOINT_POSITIONS,
+)
 
 # constants
 GRASP_TRANSFORM_TO_OBJECT_BOX = Pose(
     (0.0, 0.10, 0.08), (0.707, 0.707, 0, 0)
 )  # side grasp
-GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.005), (0.707, 0.707, 0, 0))
+GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.0, 0, 0.02), (0.707, 0.707, 0, 0))
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
-HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
 PLACE_X_OFFSET_BOUNDS_BOX = (-0.1, 0.0)
 PLACE_Y_OFFSET_BOUNDS_BOX = (-0.05, 0.05)
@@ -117,19 +119,13 @@ class GroundPickController(
                 | set(self._sim._cubes.values())  # pylint: disable=protected-access
                 | set(self._sim._boxes.values())  # pylint: disable=protected-access
             )
-            if (
-                self._sim._grasped_object_id  # pylint: disable=protected-access
-                is not None
-            ):
-                collision_ids.discard(
-                    self._sim._grasped_object_id  # pylint: disable=protected-access
-                )
+            
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=collision_ids,
+                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                 seed=0,  # for determinism
             )
 
@@ -250,7 +246,7 @@ class GroundPickController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=set(),
+                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
@@ -390,20 +386,12 @@ class GroundPlaceController(BasePlaceController):
                 self._target_place_pose_se2, distance, 0.0
             )
 
-            collision_ids = {self._sim.table_id} | set(self._sim._cubes.values()) | set(self._sim._boxes.values())  # type: ignore # pylint: disable=line-too-long # pylint: disable=protected-access
-            if (
-                self._sim._grasped_object_id  # pylint: disable=protected-access
-                is not None
-            ):
-                collision_ids.discard(
-                    self._sim._grasped_object_id  # pylint: disable=protected-access
-                )
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=collision_ids,
+                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                 seed=0,  # for determinism
             )
 
