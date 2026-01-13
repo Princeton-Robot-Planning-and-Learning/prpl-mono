@@ -22,7 +22,9 @@ The number of blocks differs between environment variants. For example, Cluttere
 ![initial state GIF](assets/initial_state_gifs/ClutteredStorage2D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/demo_gifs/ClutteredStorage2D-b7/ClutteredStorage2D-b7_seed2_1768253526.gif)
+
+**Demo Stats**: Total Reward: -1099.00, Success: Yes, Steps: 1099
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
