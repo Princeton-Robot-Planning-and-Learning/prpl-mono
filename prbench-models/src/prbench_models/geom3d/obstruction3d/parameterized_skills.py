@@ -37,11 +37,11 @@ from relational_structs import (
     Variable,
 )
 
-# constants
-GRASP_TRANSFORM_TO_OBJECT = Pose((0.005, 0, 0.035), (0.707, 0.707, 0, 0))
-GRIPPER_OPEN_THRESHOLD = 0.01
-HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
-
+from prbench_models.geom3d.constants import (
+    GRASP_TRANSFORM_TO_OBJECT,
+    GRIPPER_OPEN_THRESHOLD,
+    HOME_JOINT_POSITIONS,
+)
 
 # Controllers.
 class GroundPickController(
@@ -118,7 +118,7 @@ class GroundPickController(
                 self._sim.robot.arm,
                 initial_positions=self._sim.robot.arm.get_joint_positions(),
                 target_positions=self._current_params,
-                collision_bodies=set(),
+                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                 seed=0,  # for determinism
                 physics_client_id=self._sim.physics_client_id,
             )
@@ -174,7 +174,7 @@ class GroundPickController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=set(),
+                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
@@ -305,7 +305,7 @@ class GroundPlaceController(
                 self._sim.robot.arm,
                 initial_positions=self._sim.robot.arm.get_joint_positions(),
                 target_positions=self._current_params,
-                collision_bodies=set(),
+                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                 seed=0,  # for determinism
                 physics_client_id=self._sim.physics_client_id,
             )
@@ -357,7 +357,7 @@ class GroundPlaceController(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=set(),
+                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )

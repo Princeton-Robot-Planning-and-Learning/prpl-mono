@@ -71,7 +71,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
         ]
     )
     initial_finger_state: float = 0.0
-    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.025)
+    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.035)
     end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
     max_action_mag: float = 0.2
     check_base_collisions: bool = False

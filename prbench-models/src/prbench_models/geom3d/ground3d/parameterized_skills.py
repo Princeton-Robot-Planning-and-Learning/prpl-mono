@@ -37,11 +37,13 @@ from relational_structs import (
     ObjectCentricState,
     Variable,
 )
+from prbench_models.geom3d.constants import (
+    GRASP_TRANSFORM_TO_OBJECT,
+    GRIPPER_OPEN_THRESHOLD,
+    HOME_JOINT_POSITIONS,
+)
 
 # constants
-GRASP_TRANSFORM_TO_OBJECT = Pose((0.005, 0, 0.005), (0.707, 0.707, 0, 0))
-GRIPPER_OPEN_THRESHOLD = 0.01
-HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 2, np.pi / 2)
 PLACE_X_OFFSET_BOUNDS = (-0.1, 0.1)
