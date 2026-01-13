@@ -37,6 +37,7 @@ from relational_structs import (
     ObjectCentricState,
     Variable,
 )
+
 from prbench_models.geom3d.constants import (
     GRASP_TRANSFORM_TO_OBJECT,
     GRIPPER_OPEN_THRESHOLD,
