@@ -4,20 +4,18 @@ from __future__ import annotations
 
 import abc
 import xml.etree.ElementTree as ET
-from typing import TYPE_CHECKING, Callable, TypeVar, Union, overload
+from typing import Callable, TypeVar, Union, overload
 
 import numpy as np
 from numpy.typing import NDArray
 from relational_structs import Object
 
+from prbench.envs.dynamic3d import utils
 from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
 from prbench.envs.dynamic3d.object_types import (
     MujocoFixtureObjectType,
     MujocoMovableObjectType,
 )
-
-if TYPE_CHECKING:
-    from prbench.envs.dynamic3d import utils
 
 # Type variables for decorator type preservation
 FixtureT = TypeVar("FixtureT", bound="MujocoFixture")
@@ -154,9 +152,9 @@ class MujocoObject:
     def _create_region_bboxes(self) -> None:
         """Create 3D bounding boxes for each region.
 
-        Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted
-        to 3D bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where
-        the z dimension spans a small height above the object surface.
+        Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted to 3D
+        bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where the z dimension
+        spans a small height above the object surface.
         """
         assert self.regions is not None, "Regions must be defined"
         placement_threshold = 0.01  # 1cm tolerance for placement
@@ -401,10 +399,6 @@ class MujocoObject:
             ]
         )
 
-        # Import here to avoid circular dependency
-        # pylint: disable=import-outside-toplevel
-        from prbench.envs.dynamic3d import utils
-
         # Check if position is in any of the region's bounding boxes
         region_bboxes = self.region_bboxes[region_name]
         for bbox in region_bboxes:
@@ -504,10 +498,6 @@ class MujocoFixture(abc.ABC):
         Returns:
             Orientation as quaternion [w, x, y, z] list
         """
-        # Import here to avoid circular dependency
-        # pylint: disable=import-outside-toplevel
-        from prbench.envs.dynamic3d import utils
-
         return utils.convert_yaw_to_quaternion(self.yaw)
 
     @staticmethod
