@@ -85,8 +85,12 @@ class BasePlaceController(
 
         return action
 
-    def pre_place(self) -> np.ndarray:
+    def pre_place(self, collision_ids: set[int] | None = None) -> np.ndarray:
         """Pre-place the object."""
+        if collision_ids is None:
+            collision_ids = (
+                self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+            )
         # Generate the motion plan if it doesn't exist yet.
         if self._current_arm_joint_plan is None:
             self._sim.set_state(self._current_state)
@@ -101,7 +105,7 @@ class BasePlaceController(
                 self._sim.robot.arm,
                 [self._pre_place_pose_world, self._target_place_pose_world],
                 initial_joints=self._sim.robot.arm.get_joint_positions(),
-                collision_ids=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                collision_ids=collision_ids,
                 seed=0,  # for determinism
                 joint_distance_fn=joint_distance_fn,
                 max_smoothing_iters_per_step=1,
@@ -146,8 +150,12 @@ class BasePlaceController(
         action = np.array(action_lst, dtype=np.float32)
         return action
 
-    def lift(self) -> np.ndarray:
+    def lift(self, collision_ids: set[int] | None = None) -> np.ndarray:
         """Lift the object."""
+        if collision_ids is None:
+            collision_ids = (
+                self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+            )
         # Generate the motion plan if it doesn't exist yet.
         if self._current_retract_plan is None:
 
@@ -158,7 +166,7 @@ class BasePlaceController(
                 self._sim.robot.arm,
                 initial_positions=self._sim.robot.arm.get_joint_positions(),
                 target_positions=HOME_JOINT_POSITIONS.tolist(),
-                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                collision_bodies=collision_ids,
                 seed=0,  # for determinism
                 physics_client_id=self._sim.physics_client_id,
             )

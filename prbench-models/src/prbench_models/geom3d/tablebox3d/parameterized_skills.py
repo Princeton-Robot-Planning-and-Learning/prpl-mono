@@ -38,13 +38,20 @@ from prbench_models.geom3d.base_controllers import BasePlaceController
 from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 
 # constants
-GRASP_TRANSFORM_TO_OBJECT = Pose((0.0, 0.10, 0.08), (0.707, 0.707, 0, 0))  # side grasp
+GRASP_TRANSFORM_TO_OBJECT_BOX = Pose(
+    (0.0, 0.10, 0.08), (0.707, 0.707, 0, 0)
+)  # side grasp
+GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.005), (0.707, 0.707, 0, 0))
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
-PLACE_X_OFFSET_BOUNDS = (-0.1, 0)
-PLACE_Y_OFFSET_BOUNDS = (-0.05, 0.05)
+PLACE_X_OFFSET_BOUNDS_BOX = (-0.1, 0.0)
+PLACE_Y_OFFSET_BOUNDS_BOX = (-0.05, 0.05)
+PLACE_X_OFFSET_BOUNDS_CUBE = (-0.05, 0.05)
+PLACE_Y_OFFSET_BOUNDS_CUBE = (-0.05, 0.05)
+PLACE_X_OFFSET_BOUNDS_TABLE = (-0.15, 0.15)
+PLACE_Y_OFFSET_BOUNDS_TABLE = (-0.25, 0.25)
 
 
 # Controllers.
@@ -105,12 +112,24 @@ class GroundPickController(
             target_base_pose = get_target_robot_pose_from_parameters(
                 target_pose, self._current_params[0], self._current_params[1]
             )
+            collision_ids = (
+                {self._sim.table_id}
+                | set(self._sim._cubes.values())  # pylint: disable=protected-access
+                | set(self._sim._boxes.values())  # pylint: disable=protected-access
+            )
+            if (
+                self._sim._grasped_object_id  # pylint: disable=protected-access
+                is not None
+            ):
+                collision_ids.discard(
+                    self._sim._grasped_object_id  # pylint: disable=protected-access
+                )
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=set(),
+                collision_bodies=collision_ids,
                 seed=0,  # for determinism
             )
 
@@ -147,9 +166,13 @@ class GroundPickController(
                     self.objects[1].name
                 )
 
+                if "box" in self.objects[1].name:
+                    grasp_transform = GRASP_TRANSFORM_TO_OBJECT_BOX
+                else:
+                    grasp_transform = GRASP_TRANSFORM_TO_OBJECT_CUBE
                 target_end_effector_pose = multiply_poses(
                     target_grasp_pose_world,
-                    GRASP_TRANSFORM_TO_OBJECT,
+                    grasp_transform,
                 )
 
                 self._target_pick_pose_world = target_end_effector_pose
@@ -280,8 +303,19 @@ class GroundPlaceController(BasePlaceController):
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
         assert isinstance(x, TableBox3DObjectCentricState)
-        place_x_offset = rng.uniform(*PLACE_X_OFFSET_BOUNDS)  # type: ignore
-        place_y_offset = rng.uniform(*PLACE_Y_OFFSET_BOUNDS)  # type: ignore
+        if "box" in self.objects[1].name:
+            place_x_offset_bounds = PLACE_X_OFFSET_BOUNDS_BOX
+            place_y_offset_bounds = PLACE_Y_OFFSET_BOUNDS_BOX
+        elif "cube" in self.objects[1].name and "box" in self.objects[2].name:
+            place_x_offset_bounds = PLACE_X_OFFSET_BOUNDS_CUBE
+            place_y_offset_bounds = PLACE_Y_OFFSET_BOUNDS_CUBE
+        elif "cube" in self.objects[1].name and "table" in self.objects[2].name:
+            place_x_offset_bounds = PLACE_X_OFFSET_BOUNDS_TABLE
+            place_y_offset_bounds = PLACE_Y_OFFSET_BOUNDS_TABLE
+        else:
+            raise ValueError("Invalid target object")
+        place_x_offset = rng.uniform(*place_x_offset_bounds)  # type: ignore
+        place_y_offset = rng.uniform(*place_y_offset_bounds)  # type: ignore
         return np.array([place_x_offset, place_y_offset])
 
     def terminated(self) -> bool:
@@ -297,23 +331,52 @@ class GroundPlaceController(BasePlaceController):
             self._sim.set_state(self._current_state)
 
             target_pose = self._current_state.get_object_pose(self.objects[2].name)
-            self._target_place_pose_world = Pose.from_rpy(
-                (
-                    target_pose.position[0] + self._current_params[0],
-                    target_pose.position[1] + self._current_params[1],
-                    target_pose.position[2]
-                    + self._sim.config.table_half_extents[2]
-                    + self._sim.config.box_wall_thickness
-                    + self._sim.config.box_half_extents[2]
-                    + 0.03,
-                ),
-                (np.pi, 0, np.pi / 2),
-            )
+            if "box" in self.objects[1].name and "table" in self.objects[2].name:
+                self._target_place_pose_world = Pose.from_rpy(
+                    (
+                        target_pose.position[0] + self._current_params[0],
+                        target_pose.position[1] + self._current_params[1],
+                        target_pose.position[2]
+                        + self._sim.config.table_half_extents[2]
+                        + self._sim.config.box_wall_thickness
+                        + self._sim.config.box_half_extents[2]
+                        + 0.03,
+                    ),
+                    (np.pi, 0, np.pi / 2),
+                )
+            elif "cube" in self.objects[1].name and "table" in self.objects[2].name:
+                self._target_place_pose_world = Pose.from_rpy(
+                    (
+                        target_pose.position[0] + self._current_params[0],
+                        target_pose.position[1] + self._current_params[1],
+                        target_pose.position[2]
+                        + self._sim.config.table_half_extents[2]
+                        + self._sim.config.block_size / 2
+                        + 0.015,
+                    ),
+                    (np.pi, 0, np.pi / 2),
+                )
+            elif "cube" in self.objects[1].name and "box" in self.objects[2].name:
+                self._target_place_pose_world = Pose.from_rpy(
+                    (
+                        target_pose.position[0] + self._current_params[0],
+                        target_pose.position[1] + self._current_params[1],
+                        self._sim.config.box_wall_thickness
+                        + self._sim.config.block_size / 2
+                        + 0.01,
+                    ),
+                    (np.pi, 0, np.pi / 2),
+                )
+            else:
+                raise ValueError("Invalid target object")
+            distance = 0.65
+            pre_place_height = 0.03
+
             self._pre_place_pose_world = Pose(
                 (
                     self._target_place_pose_world.position[0],
                     self._target_place_pose_world.position[1],
-                    self._target_place_pose_world.position[2] + 0.03,
+                    self._target_place_pose_world.position[2] + pre_place_height,
                 ),
                 self._target_place_pose_world.orientation,
             )
@@ -324,15 +387,23 @@ class GroundPlaceController(BasePlaceController):
                 target_pose_temp_se2.rot,
             )
             target_base_pose = get_target_robot_pose_from_parameters(
-                self._target_place_pose_se2, 0.65, 0.0
+                self._target_place_pose_se2, distance, 0.0
             )
 
+            collision_ids = {self._sim.table_id} | set(self._sim._cubes.values()) | set(self._sim._boxes.values())  # type: ignore # pylint: disable=line-too-long # pylint: disable=protected-access
+            if (
+                self._sim._grasped_object_id  # pylint: disable=protected-access
+                is not None
+            ):
+                collision_ids.discard(
+                    self._sim._grasped_object_id  # pylint: disable=protected-access
+                )
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                collision_bodies=collision_ids,
                 seed=0,  # for determinism
             )
 

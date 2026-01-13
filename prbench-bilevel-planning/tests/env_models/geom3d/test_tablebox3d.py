@@ -58,7 +58,7 @@ def test_tablebox3d_goal_deriver():
     obs, _ = env.reset(seed=123)
     state = env_models.observation_to_state(obs)
     goal = goal_deriver(state)
-    assert len(goal.atoms) == 3
+    assert len(goal.atoms) == 4
     env.close()
 
 
@@ -87,6 +87,7 @@ def test_tablebox3d_state_abstractor():
     # Initially hand should be empty and object should be on the ground
     assert HandEmpty([robot]) in abstract_state.atoms
     assert OnGround([target_box]) in abstract_state.atoms
+    assert OnGround([target]) in abstract_state.atoms
     assert Holding([robot, target]) not in abstract_state.atoms
     assert OnTable([target_box, target_table]) not in abstract_state.atoms
 
@@ -169,7 +170,7 @@ def test_tablebox3d_skills():
 def test_tablebox3d_bilevel_planning(seed):
     """Tests for bilevel planning in the TableBox3D environment."""
 
-    num_objects = 2
+    num_objects = 1
     env = prbench.make(f"prbench/TableBox3D-o{num_objects}-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:
