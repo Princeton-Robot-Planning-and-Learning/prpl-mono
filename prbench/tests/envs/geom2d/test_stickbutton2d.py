@@ -69,5 +69,5 @@ def test_stickbutton2d_termination():
     # Any action should now result in termination.
     action = env.action_space.sample()
     state, reward, terminated, _, _ = env.step(action)
-    assert reward == -1.0
+    assert reward == 0.0
     assert terminated

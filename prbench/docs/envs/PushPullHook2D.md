@@ -16,9 +16,9 @@ This environment has only one variant.
 ![initial state GIF](assets/initial_state_gifs/PushPullHook2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/PushPullHook2D/PushPullHook2D_seed0_1768421420.gif)
+![demo GIF](assets/demo_gifs/PushPullHook2D/PushPullHook2D_seed0_1768423887.gif)
 
-**Demo Stats**: Total Reward: -216.00, Success: Yes, Steps: 218
+**Demo Stats**: Total Reward: -113.00, Success: Yes, Steps: 114
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
@@ -76,7 +76,7 @@ The entries of an array in this Box space correspond to the following action fea
 
 
 ## Rewards
-A reward of +1 is given when both the movable button and the target button are pressed (i.e., in contact and colored green). Otherwise, a penalty of -1 is given at every time step until termination.
+A penalty of -1.0 is given at every time step until both the movable button and the target button are pressed (i.e., in contact and colored green, termination).
 
 ## References
 This environment is inspired by StickButton2DEnv but uses a hook and push-pull mechanics.
