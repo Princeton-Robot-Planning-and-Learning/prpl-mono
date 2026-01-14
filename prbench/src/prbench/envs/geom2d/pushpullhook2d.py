@@ -475,6 +475,7 @@ class PushPullHook2DEnv(ConstantObjectPRBenchEnv):
         return "This environment has only one variant."
 
     def _create_reward_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
         return (
             "A penalty of -1.0 is given at every time step until both the movable button "
             "and the target button are pressed (i.e., in contact and colored green, termination)."
