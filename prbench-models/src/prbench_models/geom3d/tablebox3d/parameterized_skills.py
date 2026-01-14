@@ -35,10 +35,10 @@ from relational_structs import (
 )
 
 from prbench_models.geom3d.base_controllers import BasePlaceController
-from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 from prbench_models.geom3d.constants import (
     HOME_JOINT_POSITIONS,
 )
+from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 
 # constants
 GRASP_TRANSFORM_TO_OBJECT_BOX = Pose(
@@ -119,7 +119,7 @@ class GroundPickController(
                 | set(self._sim._cubes.values())  # pylint: disable=protected-access
                 | set(self._sim._boxes.values())  # pylint: disable=protected-access
             )
-            
+
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,

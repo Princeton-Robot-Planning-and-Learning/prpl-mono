@@ -43,6 +43,7 @@ from prbench_models.geom3d.constants import (
     HOME_JOINT_POSITIONS,
 )
 
+
 # Controllers.
 class GroundPickController(
     GroundParameterizedController[ObjectCentricState, np.ndarray]

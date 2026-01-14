@@ -36,6 +36,8 @@ from prbench.envs.utils import PURPLE
 class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for TableBox3DEnv()."""
 
+    max_action_mag: float = 0.05
+    
     # Table.
     table_pose: Pose = Pose((0.6, 0.0, 0.2))
     table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
