@@ -16,9 +16,9 @@ This environment has only one variant.
 ![initial state GIF](assets/initial_state_gifs/PushPullHook2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/PushPullHook2D/PushPullHook2D.gif)
+![demo GIF](assets/demo_gifs/PushPullHook2D/PushPullHook2D_seed0_1768421420.gif)
 
-**Demo Stats**: Total Reward: -77.00, Success: Yes, Steps: 79
+**Demo Stats**: Total Reward: -216.00, Success: Yes, Steps: 218
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
