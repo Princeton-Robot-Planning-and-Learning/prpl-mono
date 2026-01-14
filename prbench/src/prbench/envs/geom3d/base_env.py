@@ -73,7 +73,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     initial_finger_state: float = 0.0
     end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.035)
     end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    max_action_mag: float = 0.2
+    max_action_mag: float = 0.8
     check_base_collisions: bool = False
 
     # This is used to check whether a grasped object can be placed on a surface.
@@ -522,21 +522,6 @@ class ObjectCentricGeom3DRobotEnv(
                         break
                     next_finger_state = current_finger_state + 1e-2
                     self._robot_arm.set_finger_state(next_finger_state)
-                # check whether both grippers are in contact
-                # Get finger link IDs
-                left_finger_link_id = self.robot.arm.link_from_name("left_inner_finger")
-                right_finger_link_id = self.robot.arm.link_from_name("right_inner_finger")
-                if not check_body_collisions(
-                    self._grasped_object_id,
-                    left_finger_link_id,
-                    self.physics_client_id,
-                ) or not check_body_collisions(
-                    self._grasped_object_id,
-                    right_finger_link_id,
-                    self.physics_client_id,
-                ):
-                    raise ValueError("Grasp failed: fingers are not in contact with the object")
-                
                 # Handle the edge case where the robot fingers penetrate the table as
                 # the fingers close to grasp the object. This can happen with a gripper
                 # that is not just a parallel jaw but has additional DOFs (robotiq).

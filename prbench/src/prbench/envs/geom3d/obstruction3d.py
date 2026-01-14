@@ -32,9 +32,6 @@ from prbench.envs.utils import PURPLE
 class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Obstruction3DEnv()."""
 
-    # Action space parameters.
-    max_action_mag: float = 0.05
-
     # Robot.
     robot_base_home_pose: SE2Pose = SE2Pose(-0.12, 0, 0)
     robot_base_z: float = -0.4
