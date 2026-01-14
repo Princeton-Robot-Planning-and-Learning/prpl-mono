@@ -478,7 +478,7 @@ class PushPullHook2DEnv(ConstantObjectPRBenchEnv):
             "A 2D environment with a robot, a hook (L-shape), a movable button, "
             "and a target button."
             "The robot can use the hook to push the movable button towards "
-            "the target button."
+            "the target button. "
             "The movable button only moves if the hook is in contact and "
             "the robot moves in the direction of contact."
         )
@@ -490,7 +490,7 @@ class PushPullHook2DEnv(ConstantObjectPRBenchEnv):
     def _create_reward_markdown_description(self) -> str:
         return (
             "A reward of +1 is given when both the movable button and the target button "
-            "are pressed (i.e., in contact and colored green)."
+            "are pressed (i.e., in contact and colored green). "
             "Otherwise, a penalty of -1 is given at every time step until termination."
         )
 

@@ -5,7 +5,7 @@
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Description
-A 2D environment with a robot, a hook (L-shape), a movable button, and a target button.The robot can use the hook to push the movable button towards the target button.The movable button only moves if the hook is in contact and the robot moves in the direction of contact.
+A 2D environment with a robot, a hook (L-shape), a movable button, and a target button.The robot can use the hook to push the movable button towards the target button. The movable button only moves if the hook is in contact and the robot moves in the direction of contact.
 
 ## Available Variants
 This environment has only one variant.
@@ -76,7 +76,7 @@ The entries of an array in this Box space correspond to the following action fea
 
 
 ## Rewards
-A reward of +1 is given when both the movable button and the target button are pressed (i.e., in contact and colored green).Otherwise, a penalty of -1 is given at every time step until termination.
+A reward of +1 is given when both the movable button and the target button are pressed (i.e., in contact and colored green). Otherwise, a penalty of -1 is given at every time step until termination.
 
 ## References
 This environment is inspired by StickButton2DEnv but uses a hook and push-pull mechanics.
