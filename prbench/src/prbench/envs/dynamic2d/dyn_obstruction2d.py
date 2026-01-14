@@ -613,11 +613,10 @@ class DynObstruction2DEnv(ConstantObjectPRBenchEnv):
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
-        return f"""A 2D physics-based environment where the goal is to place a target block onto a target surface using a fingered robot with PyMunk physics simulation. The block must be completely on the surface. The target surface may be initially obstructed.
+        # pylint: disable=line-too-long
+        return """A 2D physics-based environment where the goal is to place a target block onto a target surface using a two-fingered robot with PyMunk physics simulation. The block must be completely on the surface. The target surface may be initially obstructed.
 
 The robot has a movable circular base and an extendable arm with gripper fingers. Objects can be grasped and released through gripper actions. All objects follow realistic physics including gravity, friction, and collisions.
-
-Physics is implemented with PyMunk.
 
 Each object includes physics properties like mass, moment of inertia (for dynamic objects), and color information for rendering.
 """
@@ -628,7 +627,7 @@ Each object includes physics properties like mass, moment of inertia (for dynami
 
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return f"""A penalty of -1.0 is given at every time step until termination, which occurs when the target block is completely "on" the target surface. The "on" condition requires that the bottom vertices of the target block are within the bounds of the target surface.
+        return """A penalty of -1.0 is given at every time step until termination, which occurs when the target block is completely "on" the target surface. The "on" condition requires that the bottom vertices of the target block are within the bounds of the target surface.
 """
 
     def _create_references_markdown_description(self) -> str:
