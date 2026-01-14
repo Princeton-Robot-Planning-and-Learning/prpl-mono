@@ -93,7 +93,7 @@ The entries of an array in this Box space correspond to the following action fea
 
 
 ## Rewards
-A penalty of -1.0 is given at every time step until termination, which occurs when all buttons have been pressed.
+A penalty of -1.0 is given at every time step until all buttons have been pressed (termination).
 
 
 ## References

@@ -441,7 +441,7 @@ class ObjectCentricPushPullHook2DEnv(
         terminated = np.allclose(
             movable_color, self.config.movable_button_pressed_rgb
         ) and np.allclose(target_color, self.config.target_button_pressed_rgb)
-        reward = 1.0 if terminated else -1.0
+        reward = 0.0 if terminated else -1.0
         return reward, terminated
 
 
@@ -476,9 +476,8 @@ class PushPullHook2DEnv(ConstantObjectPRBenchEnv):
 
     def _create_reward_markdown_description(self) -> str:
         return (
-            "A reward of +1 is given when both the movable button and the target button "
-            "are pressed (i.e., in contact and colored green). "
-            "Otherwise, a penalty of -1 is given at every time step until termination."
+            "A penalty of -1.0 is given at every time step until both the movable button "
+            "and the target button are pressed (i.e., in contact and colored green, termination)."
         )
 
     def _create_references_markdown_description(self) -> str:

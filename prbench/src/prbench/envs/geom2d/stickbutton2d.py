@@ -333,7 +333,8 @@ class ObjectCentricStickButton2DEnv(
             if not np.allclose(color, self.config.button_pressed_rgb):
                 terminated = False
                 break
-        return -1.0, terminated
+        reward = 0.0 if terminated else -1.0
+        return reward, terminated
 
 
 class StickButton2DEnv(ConstantObjectPRBenchEnv):
@@ -368,7 +369,7 @@ The robot has a movable circular base and a retractable arm with a rectangular v
         return "The number of buttons differs between environment variants. For example, StickButton2D-b1 has 1 button, while StickButton2D-b10 has 10 buttons."
 
     def _create_reward_markdown_description(self) -> str:
-        return "A penalty of -1.0 is given at every time step until termination, which occurs when all buttons have been pressed.\n"  # pylint: disable=line-too-long
+        return "A penalty of -1.0 is given at every time step until all buttons have been pressed (termination).\n"  # pylint: disable=line-too-long
 
     def _create_references_markdown_description(self) -> str:
         return 'This environment is based on the Stick Button environment that was originally introduced in "Learning Neuro-Symbolic Skills for Bilevel Planning" (Silver et al., CoRL 2022). This version is simplified in that the robot or stick need only make contact with a button to press it, rather than explicitly pressing. Also, the full stick works for pressing, not just the tip.\n'  # pylint: disable=line-too-long

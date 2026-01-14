@@ -76,7 +76,7 @@ The entries of an array in this Box space correspond to the following action fea
 
 
 ## Rewards
-A reward of +1 is given when both the movable button and the target button are pressed (i.e., in contact and colored green). Otherwise, a penalty of -1 is given at every time step until termination.
+A penalty of -1.0 is given at every time step until both the movable button and the target button are pressed (i.e., in contact and colored green, termination).
 
 ## References
 This environment is inspired by StickButton2DEnv but uses a hook and push-pull mechanics.
