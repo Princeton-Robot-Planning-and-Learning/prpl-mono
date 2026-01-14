@@ -5,18 +5,11 @@
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Description
-A 2D physics-based tool-use environment where a robot must use a Hook to push/pull a target block onto a middle wall (goal surface). The target block is positioned in the upper region of the world, while the middle wall is located at the center. The robot must manipulate the Hook to navigate the target block downward through obstacles.
+A 2D physics-based tool-use environment where a robot must use a hook to push/pull a target block onto a middle wall (goal surface). The target block is positioned in the upper region of the world, while the middle wall is located at the center. The robot must manipulate the hook to navigate the target block downward through obstacles.
 
-The target block is initially surrounded by 1 obstacle blocks that form a barrier around it.
+The target block is initially surrounded by obstacle blocks.
 
-The robot has a movable circular base and an extendable arm with gripper fingers. The Hook is a kinematic object that can be grasped and used as a tool to indirectly manipulate the target block. All dynamic objects follow realistic PyMunk physics including gravity, friction, and collisions.
-
-**Observation Space**: The observation is a fixed-size vector containing the state of all objects:
-- **Robot**: position (x,y), orientation (θ), velocities (vx,vy,ω), arm extension, gripper gap
-- **Hook**: position, orientation, dimensions (kinematic tool object, can be grasped)
-- **Target Block**: position, orientation, velocities, dimensions (dynamic physics object)
-- **Middle Wall**: position, orientation, dimensions (kinematic goal surface at world center)
-- **Obstruction Blocks** (1): position, orientation, velocities, dimensions (dynamic objects sampled around target)
+The robot has a movable circular base and an extendable arm with gripper fingers. The hook is a kinematic object that can be grasped and used as a tool to indirectly manipulate the target block. All dynamic objects follow PyMunk physics including gravity, friction, and collisions.
 
 Each object includes physics properties like mass, moment of inertia (for dynamic objects), and color information for rendering.
 
@@ -32,7 +25,9 @@ The number of obstructions differs between environment variants. For example, Dy
 ![initial state GIF](assets/initial_state_gifs/DynPushPullHook2D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/demo_gifs/DynPushPullHook2D-o5/DynPushPullHook2D-o5_seed2_1768427291.gif)
+
+**Demo Stats**: Total Reward: -194.00, Success: Yes, Steps: 194
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
@@ -124,37 +119,5 @@ The entries of an array in this Box space correspond to the following action fea
 ## Rewards
 A penalty of -1.0 is given at every time step until termination, which occurs when the target block reaches the middle wall (goal surface).
 
-**Termination Condition**: The episode terminates when the target block geometrically intersects with the middle wall. This is detected using collision checking between the target block and middle wall.
-
-**Goal Achievement Strategy**: The robot must:
-1. Grasp the Hook tool with its gripper
-2. Use the Hook to push or pull the target block downward
-3. Navigate around or through the obstruction blocks
-4. Successfully move the target block until it contacts the middle wall
-
-**Physics Integration**: Since this environment uses PyMunk physics simulation, objects have realistic dynamics including:
-- Friction between surfaces
-- Collision response and momentum transfer
-- Realistic grasping and tool manipulation dynamics
-- Indirect manipulation through tool-object interactions
-- NOTE: all objects are on a 2D plane with no gravity, but damping is applied to simulate frictional losses
-
-
 ## References
-This environment implements a tool-use manipulation task with physics-based dynamics. It is inspired by cognitive science research on tool use and indirect manipulation, where an agent must use an intermediary object (Hook) to achieve goals that cannot be reached directly.
-
-**Key Features**:
-- **Tool-Use Paradigm**: Robot must grasp and manipulate a Hook to indirectly move the target block
-- **Spatial Reasoning**: Target block starts in upper region, must be moved downward to center goal
-- **Obstacle Navigation**: Obstructions are sampled via Gaussian distribution around the target, creating clustered barriers
-- **PyMunk Physics Engine**: Provides realistic 2D rigid body dynamics for tool-object interactions
-- **Z-Order Collision Control**: Hook and target have surface z-order to avoid collision with floor-level middle wall
-
-**Research Applications**:
-- Tool-use learning and reasoning
-- Indirect manipulation strategies
-- Multi-step planning with intermediate tool grasping
-- Physics-aware motion planning through obstacles
-- Comparative studies of direct vs. tool-mediated manipulation
-
-This environment enables evaluation of manipulation policies that require tool use, spatial reasoning, and multi-object interaction planning under realistic physics constraints.
+This is a dynamic version of PushPullHook2D.
