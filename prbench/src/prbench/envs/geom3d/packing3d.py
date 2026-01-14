@@ -143,16 +143,12 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
         triangle_type is encoded as:
         0 = equilateral
-        1 = isosceles
-        2 = right
+        1 = right
         """
-        triangle_type = rng.choice([0, 1, 2])
+        triangle_type = rng.choice([0, 1])
         if triangle_type == 0:  # equilateral
             side = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
             base = height = side
-        elif triangle_type == 1:  # isosceles
-            base = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
-            height = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
         else:  # right
             base = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
             height = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
@@ -186,7 +182,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
             # triangle base.
             side_a, side_b, _, triangle_type = self.get_object_triangle_features(name)
             vertices = get_triangle_vertices(
-                {0: "equilateral", 1: "isosceles", 2: "right"}[int(triangle_type)],
+                {0: "equilateral", 1: "right"}[int(triangle_type)],
                 (side_a, side_b),
             )
             centroid_x = sum(v[0] for v in vertices) / 3.0 + self.get(obj, "pose_x")
@@ -545,7 +541,7 @@ class ObjectCentricPacking3DEnv(
                 )
                 part_id = create_pybullet_triangle_with_peg(
                     self.config.part_rgba,
-                    triangle_type={0: "equilateral", 1: "isosceles", 2: "right"}[
+                    triangle_type={0: "equilateral", 1: "right"}[
                         int(triangle_type)
                     ],
                     side_lengths=(side_a, side_b),
