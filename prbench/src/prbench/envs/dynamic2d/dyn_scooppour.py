@@ -565,7 +565,7 @@ class ObjectCentricDynScoopPourEnv(
                         pymunk_angle -= 2 * np.pi
                     elif pymunk_angle < -np.pi:
                         pymunk_angle += 2 * np.pi
-                    state.set(obj, "theta", pymunk_body.angle)
+                    state.set(obj, "theta", pymunk_angle)
 
                 # Update held status (only hook can be held)
                 if obj.is_instance(HookType):
@@ -650,7 +650,7 @@ All objects include physics properties like mass, moment of inertia, and color i
 
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return """A penalty of -1.0 is given at every time step until termination, which occurs when at least 70% of the small objects have been moved to the right side of the middle wall."""
+        return """A penalty of -1.0 is given at every time step until termination, which occurs when at least 50% of the small objects have been moved to the right side of the middle wall."""
 
     def _create_references_markdown_description(self) -> str:
         # pylint: disable=line-too-long
