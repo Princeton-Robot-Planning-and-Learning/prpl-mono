@@ -114,11 +114,6 @@ class GroundPickController(
             target_base_pose = get_target_robot_pose_from_parameters(
                 target_pose, self._current_params[0], self._current_params[1]
             )
-            collision_ids = (
-                {self._sim.table_id}
-                | set(self._sim._cubes.values())  # pylint: disable=protected-access
-                | set(self._sim._boxes.values())  # pylint: disable=protected-access
-            )
 
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
