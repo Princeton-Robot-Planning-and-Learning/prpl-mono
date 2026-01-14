@@ -505,11 +505,13 @@ class ObjectCentricGeom3DRobotEnv(
                             self._inside_object_transform_list.append(
                                 multiply_poses(world_to_robot.invert(), obj_pose)
                             )
-                # Close the fingers until they are touching the object.
-                while not check_body_collisions(
-                    self._grasped_object_id,
-                    self.robot.arm.robot_id,
-                    self.physics_client_id,
+                
+                while not (
+                    check_body_collisions(
+                        self._grasped_object_id,
+                        self.robot.arm.robot_id,
+                        self.physics_client_id,
+                    )
                 ):
                     # If the fingers are fully closed, stop.
                     current_finger_state = self._robot_arm.get_finger_state()
@@ -520,6 +522,21 @@ class ObjectCentricGeom3DRobotEnv(
                         break
                     next_finger_state = current_finger_state + 1e-2
                     self._robot_arm.set_finger_state(next_finger_state)
+                # check whether both grippers are in contact
+                # Get finger link IDs
+                left_finger_link_id = self.robot.arm.link_from_name("left_inner_finger")
+                right_finger_link_id = self.robot.arm.link_from_name("right_inner_finger")
+                if not check_body_collisions(
+                    self._grasped_object_id,
+                    left_finger_link_id,
+                    self.physics_client_id,
+                ) or not check_body_collisions(
+                    self._grasped_object_id,
+                    right_finger_link_id,
+                    self.physics_client_id,
+                ):
+                    raise ValueError("Grasp failed: fingers are not in contact with the object")
+                
                 # Handle the edge case where the robot fingers penetrate the table as
                 # the fingers close to grasp the object. This can happen with a gripper
                 # that is not just a parallel jaw but has additional DOFs (robotiq).
