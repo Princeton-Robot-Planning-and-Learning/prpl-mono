@@ -645,3 +645,245 @@ def test_generated_bowl_mesh_generation_creates_vertices_and_faces():
     max_vertex_index = vertices.shape[0] - 1
     assert np.all(faces >= 0)
     assert np.all(faces <= max_vertex_index)
+
+
+# Tests for check_in_region method
+
+
+class MockMujocoEnv:
+    """Mock environment for testing MujocoObject methods."""
+
+    def __init__(self, joint_pos: list[float], joint_quat: list[float] | None = None):
+        """Initialize mock environment with fixed joint position."""
+        self.joint_pos = np.array(joint_pos, dtype=np.float32)
+        self.joint_quat = (
+            np.array(joint_quat, dtype=np.float32)
+            if joint_quat is not None
+            else np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
+        )
+
+    def get_joint_pos_quat(self, _joint_name: str):
+        """Return stored position and quaternion."""
+        return self.joint_pos, self.joint_quat
+
+    def set_joint_pos_quat(self, _joint_name: str, pos, quat):
+        """Update stored position and quaternion."""
+        self.joint_pos = np.array(pos, dtype=np.float32)
+        self.joint_quat = np.array(quat, dtype=np.float32)
+
+    def set_joint_vel(self, _joint_name: str, linear_vel, angular_vel):
+        """Placeholder for velocity setting."""
+
+    def get_joint_vel(self, _joint_name: str):
+        """Return zero velocities."""
+        return (
+            np.array([0.0, 0.0, 0.0], dtype=np.float32),
+            np.array([0.0, 0.0, 0.0], dtype=np.float32),
+        )
+
+
+def test_check_in_region_position_inside():
+    """Test check_in_region returns True for position inside region."""
+    regions = {
+        "region1": {
+            "ranges": [[0.0, 0.0, 0.1, 0.1]],  # x: 0.0-0.1, y: 0.0-0.1
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        }
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    # Position at (1.05, 2.05, 0.0) is at object-relative (0.05, 0.05)
+    # which is inside the region (0.0-0.1, 0.0-0.1)
+    world_position = np.array([1.05, 2.05, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position, "region1") is True
+
+
+def test_check_in_region_position_outside():
+    """Test check_in_region returns False for position outside region."""
+    regions = {
+        "region1": {
+            "ranges": [[0.0, 0.0, 0.1, 0.1]],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        }
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    # Position at (1.2, 2.2, 0.0) is at object-relative (0.2, 0.2)
+    # which is outside the region (0.0-0.1, 0.0-0.1)
+    world_position = np.array([1.2, 2.2, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position, "region1") is False
+
+
+def test_check_in_region_with_tolerance():
+    """Test check_in_region includes tolerance for boundary positions."""
+    regions = {
+        "region1": {
+            "ranges": [[0.0, 0.0, 0.1, 0.1]],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        }
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    # Position at (0.995, 1.995, 0.0) is at object-relative (-0.005, -0.005)
+    # This is before region start (0.0), but within tolerance (0.01), so should be inside
+    world_position = np.array([0.995, 1.995, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position, "region1") is True
+
+
+def test_check_in_region_beyond_tolerance():
+    """Test check_in_region rejects positions beyond tolerance."""
+    regions = {
+        "region1": {
+            "ranges": [[0.0, 0.0, 0.1, 0.1]],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        }
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    # Position at (1.12, 2.12, 0.0) is at object-relative (0.12, 0.12)
+    # with tolerance 0.01, region end is 0.1 + 0.01 = 0.11, so 0.12 > 0.11 is outside
+    world_position = np.array([1.12, 2.12, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position, "region1") is False
+
+
+def test_check_in_region_multiple_ranges():
+    """Test check_in_region with multiple ranges in same region."""
+    regions = {
+        "region1": {
+            "ranges": [
+                [0.0, 0.0, 0.1, 0.1],  # First range
+                [0.2, 0.2, 0.3, 0.3],  # Second range
+            ],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        }
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    # Position inside first range
+    world_position1 = np.array([1.05, 2.05, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position1, "region1") is True
+
+    # Position inside second range
+    world_position2 = np.array([1.25, 2.25, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position2, "region1") is True
+
+    # Position outside both ranges
+    world_position3 = np.array([1.15, 2.15, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position3, "region1") is False
+
+
+def test_check_in_region_no_regions_defined():
+    """Test check_in_region raises ValueError when regions not defined."""
+    cuboid = Cuboid("test_cuboid")
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    world_position = np.array([1.05, 2.05, 0.0], dtype=np.float32)
+    with pytest.raises(ValueError, match="Regions must be defined"):
+        cuboid.check_in_region(world_position, "region1")
+
+
+def test_check_in_region_region_not_found():
+    """Test check_in_region raises ValueError when region not found."""
+    regions = {
+        "region1": {
+            "ranges": [[0.0, 0.0, 0.1, 0.1]],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        }
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    world_position = np.array([1.05, 2.05, 0.0], dtype=np.float32)
+    with pytest.raises(ValueError, match="Region nonexistent not found"):
+        cuboid.check_in_region(world_position, "nonexistent")
+
+
+def test_check_in_region_no_environment():
+    """Test check_in_region raises ValueError when environment not set."""
+    regions = {
+        "region1": {
+            "ranges": [[0.0, 0.0, 0.1, 0.1]],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        }
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    # Don't set environment
+
+    world_position = np.array([1.05, 2.05, 0.0], dtype=np.float32)
+    with pytest.raises(ValueError, match="Environment must be set"):
+        cuboid.check_in_region(world_position, "region1")
+
+
+def test_check_in_region_at_region_boundary_start():
+    """Test check_in_region for position exactly at region start."""
+    regions = {
+        "region1": {
+            "ranges": [[0.0, 0.0, 0.1, 0.1]],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        }
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    # Position at (1.0, 2.0, 0.0) is at object-relative (0.0, 0.0)
+    # which is at the start of the region
+    world_position = np.array([1.0, 2.0, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position, "region1") is True
+
+
+def test_check_in_region_at_region_boundary_end():
+    """Test check_in_region for position exactly at region end."""
+    regions = {
+        "region1": {
+            "ranges": [[0.0, 0.0, 0.1, 0.1]],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        }
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    # Position at (1.1, 2.1, 0.0) is at object-relative (0.1, 0.1)
+    # which is at the end of the region
+    world_position = np.array([1.1, 2.1, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position, "region1") is True
+
+
+def test_check_in_region_multiple_regions_in_object():
+    """Test check_in_region with multiple regions defined."""
+    regions = {
+        "region1": {
+            "ranges": [[0.0, 0.0, 0.1, 0.1]],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        },
+        "region2": {
+            "ranges": [[0.2, 0.2, 0.3, 0.3]],
+            "rgba": [0.0, 1.0, 0.0, 0.3],
+        },
+    }
+
+    cuboid = Cuboid("test_cuboid", options={"regions": regions})
+    cuboid.env = MockMujocoEnv([1.0, 2.0, 0.0])
+
+    # Position inside region1
+    world_position1 = np.array([1.05, 2.05, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position1, "region1") is True
+    assert cuboid.check_in_region(world_position1, "region2") is False
+
+    # Position inside region2
+    world_position2 = np.array([1.25, 2.25, 0.0], dtype=np.float32)
+    assert cuboid.check_in_region(world_position2, "region1") is False
+    assert cuboid.check_in_region(world_position2, "region2") is True

@@ -113,10 +113,7 @@ def create_bilevel_planning_models(
         # OnTable.
         for target in target_objects:
             if target.name != target_table.name:
-                if (
-                    x.get(target, "pose_z") > 0.3
-                    and x.get(target, "half_extent_z") > 0.08
-                ):
+                if x.get(target, "pose_z") > 0.3:
                     if abs(
                         x.get(target, "pose_x") - x.get(target_table, "pose_x")
                     ) < x.get(target_table, "half_extent_x") and abs(
@@ -133,12 +130,14 @@ def create_bilevel_planning_models(
     def goal_deriver(x: ObjectCentricState) -> RelationalAbstractGoal:
         """The goal is to have the robot at the target pose."""
         robot = x.get_objects(Geom3DRobotType)[0]
-        target_box = x.get_object_from_name("box0")
+        target_objects = x.get_objects(Geom3DCuboidType)
         target_table = x.get_object_from_name("table")
         atoms: set[GroundAtom] = set()
         atoms.add(GroundAtom(OnGround, [target_table]))
-        atoms.add(GroundAtom(OnTable, [target_box, target_table]))
         atoms.add(GroundAtom(HandEmpty, [robot]))
+        for target in target_objects:
+            if target.name != target_table.name:
+                atoms.add(GroundAtom(OnTable, [target, target_table]))
         return RelationalAbstractGoal(atoms, state_abstractor)
 
     # Operators.

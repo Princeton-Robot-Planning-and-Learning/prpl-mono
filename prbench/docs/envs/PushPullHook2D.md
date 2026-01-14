@@ -1,15 +1,26 @@
-# prbench/PushPullHook2D-v0
+# PushPullHook2D
+
 ![random action GIF](assets/random_action_gifs/PushPullHook2D.gif)
 
-### Description
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
+## Description
 A 2D environment with a robot, a hook (L-shape), a movable button, and a target button.The robot can use the hook to push the movable button towards the target button.The movable button only moves if the hook is in contact and the robot moves in the direction of contact.
-### Initial State Distribution
+
+## Available Variants
+This environment has only one variant.
+
+- `prbench/PushPullHook2D-v0` (v0)
+
+## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/PushPullHook2D.gif)
 
-### Example Demonstration
-![demo GIF](assets/demo_gifs/PushPullHook2D/PushPullHook2D_seed0_1757012197.gif)
+## Example Demonstration
+![demo GIF](assets/demo_gifs/PushPullHook2D/PushPullHook2D.gif)
 
-### Observation Space
+**Demo Stats**: Total Reward: -77.00, Success: Yes, Steps: 79
+
+## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |
 | --- | --- | --- |
@@ -53,7 +64,7 @@ The entries of an array in this Box space correspond to the following object fea
 | 37 | target_button | radius |
 
 
-### Action Space
+## Action Space
 The entries of an array in this Box space correspond to the following action features:
 | **Index** | **Feature** | **Description** | **Min** | **Max** |
 | --- | --- | --- | --- | --- |
@@ -64,8 +75,8 @@ The entries of an array in this Box space correspond to the following action fea
 | 4 | vac | Directly sets the vacuum (0.0 is off, 1.0 is on) | 0.000 | 1.000 |
 
 
-### Rewards
+## Rewards
 A reward of +1 is given when both the movable button and the target button are pressed (i.e., in contact and colored green).Otherwise, a penalty of -1 is given at every time step until termination.
 
-### References
+## References
 This environment is inspired by StickButton2DEnv but uses a hook and push-pull mechanics.

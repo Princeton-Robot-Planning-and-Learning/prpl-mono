@@ -64,7 +64,7 @@ class EpisodeWriter:
         self,
         obs: dict[str, np.ndarray],
         action: dict[str, np.ndarray],
-        target_object_key: str,
+        target_object_key: str = "cube1",
     ):
         """Step the EpisodeWriter."""
         self.timestamps.append(time.time())

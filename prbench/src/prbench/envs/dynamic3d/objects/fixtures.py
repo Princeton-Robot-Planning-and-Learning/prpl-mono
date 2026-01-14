@@ -17,6 +17,8 @@ class Table(MujocoFixture):
     """A table fixture."""
 
     DEFAULT_REGION_HEIGHT: float = 0.2  # 20cm height for regions
+    DEFAULT_REGION_Z_OFFSET: float = 0.05  # 5cm offset above table surface
+    # (assumes max possible half-height of any object is 5cm)
 
     def __init__(
         self,
@@ -233,9 +235,10 @@ class Table(MujocoFixture):
                     )
 
                 # Create 3D bounding box:
-                # z_min is at the table surface, z_max is DEFAULT_REGION_HEIGHT above
-                z_min = self.table_height
-                z_max = self.table_height + self.DEFAULT_REGION_HEIGHT
+                # z_min is offset above table surface (assuming max object half-height)
+                # z_max is DEFAULT_REGION_HEIGHT above z_min
+                z_min = self.table_height + self.DEFAULT_REGION_Z_OFFSET
+                z_max = z_min + self.DEFAULT_REGION_HEIGHT
 
                 bbox = [x_start, y_start, z_min, x_end, y_end, z_max]
                 region_bboxes.append(bbox)

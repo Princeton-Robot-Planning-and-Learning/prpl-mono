@@ -293,17 +293,17 @@ class Motion2DEnv(ConstantObjectPRBenchEnv):
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
-        num_passages = (len(self._constant_objects) - 2) // 2
         # pylint: disable=line-too-long
-        if num_passages > 0:
-            obstacle_sentence = f"\nIn this environment, there are always {num_passages} narrow passages.\n"
-        else:
-            obstacle_sentence = ""
+        return """A 2D environment where the goal is to reach a target region while avoiding static obstacles.
 
-        return f"""A 2D environment where the goal is to reach a target region while avoiding static obstacles.
-{obstacle_sentence}
+There may be narrow passages.
+        
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. The arm and vacuum do not need to be used in this environment.
 """
+
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of narrow passages differs between environment variants. For example, Motion2D-p0 has no passages (open space), while Motion2D-p5 has 5 narrow passages."
 
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until termination, which occurs when the robot's position is within the target region.\n"  # pylint: disable=line-too-long

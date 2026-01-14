@@ -483,6 +483,10 @@ class PushPullHook2DEnv(ConstantObjectPRBenchEnv):
             "the robot moves in the direction of contact."
         )
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "This environment has only one variant."
+
     def _create_reward_markdown_description(self) -> str:
         return (
             "A reward of +1 is given when both the movable button and the target button "
