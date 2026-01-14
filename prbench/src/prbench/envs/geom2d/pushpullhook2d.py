@@ -114,7 +114,7 @@ class PushPullHook2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
 
     # Movable Button hyperparameters.
     movable_button_unpressed_rgb: tuple[float, float, float] = (0.0, 0.0, 0.9)
-    movable_button_pressed_rgb: tuple[float, float, float] = (0.0, 0.0, 0.9)
+    movable_button_pressed_rgb: tuple[float, float, float] = (0.0, 0.9, 0.0)
     movable_button_radius: float = robot_base_radius / 2
     movable_button_init_position_bounds: tuple[
         tuple[float, float], tuple[float, float]
@@ -375,20 +375,6 @@ class ObjectCentricPushPullHook2DEnv(
             del self._static_object_body_cache[button]
         return self._current_state
 
-    def push_movable_button(self):
-        """Utility function to push the movable button in the direction of travel of
-        robot if the hook and button are in contact.
-
-        If robot travels in opposite direction, button disconnects and does not move.
-        """
-        assert self._current_state is not None
-        assert self.initial_constant_state is not None
-
-        hook = self._current_state.get("hook")
-        button = self._current_state.get("movable_button")
-        assert hook is not None
-        assert button is not None
-
     def step(
         self, action: NDArray[np.float32]
     ) -> tuple[ObjectCentricState, float, bool, bool, dict]:
@@ -411,6 +397,7 @@ class ObjectCentricPushPullHook2DEnv(
         dist = np.linalg.norm(button_to_target)
         success = dist < self.config.target_button_radius * 2
         if success:
+            self.press_button(movable_button)
             self.press_button(target_button)
 
         reward, terminated = self._get_reward_and_done()
@@ -478,7 +465,7 @@ class PushPullHook2DEnv(ConstantObjectPRBenchEnv):
             "A 2D environment with a robot, a hook (L-shape), a movable button, "
             "and a target button."
             "The robot can use the hook to push the movable button towards "
-            "the target button."
+            "the target button. "
             "The movable button only moves if the hook is in contact and "
             "the robot moves in the direction of contact."
         )
@@ -490,7 +477,7 @@ class PushPullHook2DEnv(ConstantObjectPRBenchEnv):
     def _create_reward_markdown_description(self) -> str:
         return (
             "A reward of +1 is given when both the movable button and the target button "
-            "are pressed (i.e., in contact and colored green)."
+            "are pressed (i.e., in contact and colored green). "
             "Otherwise, a penalty of -1 is given at every time step until termination."
         )
 
