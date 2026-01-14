@@ -541,9 +541,7 @@ class ObjectCentricPacking3DEnv(
                 )
                 part_id = create_pybullet_triangle_with_peg(
                     self.config.part_rgba,
-                    triangle_type={0: "equilateral", 1: "right"}[
-                        int(triangle_type)
-                    ],
+                    triangle_type={0: "equilateral", 1: "right"}[int(triangle_type)],
                     side_lengths=(side_a, side_b),
                     depth=depth,
                     physics_client_id=self.physics_client_id,
