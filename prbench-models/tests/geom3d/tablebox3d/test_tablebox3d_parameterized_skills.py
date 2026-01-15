@@ -69,7 +69,7 @@ def test_pick_and_place_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=1)
+    sim = ObjectCentricTableBox3DEnv(num_cubes=1, use_gui=True)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
