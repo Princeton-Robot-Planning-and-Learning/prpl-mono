@@ -37,14 +37,11 @@ class TidyBotRobotEnv(RobotEnv):
     positions to torques. The base uses position control directly.
     """
 
-    # PID gains for arm torque control
-    # Tuned for stability - moderate gains with gravity compensation
-    ARM_KP: np.ndarray = np.array([1500.0, 1500.0, 1500.0, 1500.0, 600.0, 600.0, 600.0])
-    ARM_KI: np.ndarray = np.array([20.0, 20.0, 20.0, 20.0, 10.0, 10.0, 10.0])
-    ARM_KD: np.ndarray = np.array([200.0, 200.0, 200.0, 200.0, 80.0, 80.0, 80.0])
-
-    # Integral windup limits (radians * seconds) - generous limits for steady-state correction
-    ARM_INTEGRAL_LIMITS: np.ndarray = np.array([10.0, 10.0, 10.0, 10.0, 5.0, 5.0, 5.0])
+    # PD gains for arm torque control
+    # With gravity compensation, PD control provides stable and accurate tracking
+    # Lower gains for stability - can tune higher for better tracking if needed
+    ARM_KP: np.ndarray = np.array([200.0, 200.0, 200.0, 200.0, 100.0, 100.0, 100.0])
+    ARM_KD: np.ndarray = np.array([30.0, 30.0, 30.0, 30.0, 15.0, 15.0, 15.0])
 
     # Torque limits (Nm) - must match tidybot.xml actuator ctrlrange
     ARM_TORQUE_LIMITS: np.ndarray = np.array([200.0, 200.0, 200.0, 200.0, 100.0, 100.0, 100.0])
@@ -60,7 +57,6 @@ class TidyBotRobotEnv(RobotEnv):
         seed: int | None = None,
         show_viewer: bool = False,
         arm_kp: np.ndarray | None = None,
-        arm_ki: np.ndarray | None = None,
         arm_kd: np.ndarray | None = None,
     ) -> None:
         """
@@ -73,9 +69,8 @@ class TidyBotRobotEnv(RobotEnv):
             camera_height: Height of camera images.
             seed: Random seed for reproducibility.
             show_viewer: Whether to show the MuJoCo viewer.
-            arm_kp: Custom proportional gains for arm PID controller (7 values).
-            arm_ki: Custom integral gains for arm PID controller (7 values).
-            arm_kd: Custom derivative gains for arm PID controller (7 values).
+            arm_kp: Custom proportional gains for arm PD controller (7 values).
+            arm_kd: Custom derivative gains for arm PD controller (7 values).
         """
 
         super().__init__(
@@ -89,15 +84,10 @@ class TidyBotRobotEnv(RobotEnv):
         )
 
         self.act_delta = act_delta
-        self._control_dt = 1.0 / control_frequency  # Time step for integral term
 
-        # Allow custom PID gains
+        # Allow custom PD gains
         self.arm_kp = arm_kp if arm_kp is not None else self.ARM_KP.copy()
-        self.arm_ki = arm_ki if arm_ki is not None else self.ARM_KI.copy()
         self.arm_kd = arm_kd if arm_kd is not None else self.ARM_KD.copy()
-
-        # Integral state for PID control (accumulated error)
-        self._integral_error: np.ndarray = np.zeros(7)
 
     def _setup_robot_references(self) -> None:
         """Setup references to robot state/actuator buffers in the simulation data."""
@@ -263,9 +253,6 @@ class TidyBotRobotEnv(RobotEnv):
         # Setup references to robot state/actuator buffers
         self._setup_robot_references()
 
-        # Reset integral error for PID controller
-        self._integral_error = np.zeros(7)
-
         # Randomize the base pose of the robot in the sim
         self._randomize_base_pose()
         self._randomize_arm_pose()
@@ -326,13 +313,13 @@ class TidyBotRobotEnv(RobotEnv):
         ].copy()
 
     def _compute_arm_torques(self, target_positions: np.ndarray) -> np.ndarray:
-        """Compute arm torques using PID control with gravity compensation.
+        """Compute arm torques using PD control with gravity compensation.
 
         Uses the formula:
-            torque = Kp * error + Ki * integral(error) - Kd * velocity + gravity_comp
+            torque = Kp * (target - current) - Kd * velocity + gravity_comp
 
-        The integral term eliminates steady-state error, and gravity compensation
-        counteracts gravitational forces for accurate position tracking.
+        Gravity compensation counteracts gravitational forces, allowing
+        accurate position tracking with just PD control.
 
         Args:
             target_positions: Target joint positions for the 7 arm joints (radians).
@@ -343,28 +330,13 @@ class TidyBotRobotEnv(RobotEnv):
         current_positions = np.array(self.qpos["arm"])
         current_velocities = np.array(self.qvel["arm"])
 
-        # Compute position error
+        # PD control: torque = Kp * position_error - Kd * velocity
         position_error = target_positions - current_positions
-
-        # Update integral error with anti-windup
-        self._integral_error += position_error * self._control_dt
-        # Clamp integral to prevent windup
-        self._integral_error = np.clip(
-            self._integral_error,
-            -self.ARM_INTEGRAL_LIMITS,
-            self.ARM_INTEGRAL_LIMITS
-        )
-
-        # PID control: torque = Kp * error + Ki * integral - Kd * velocity
-        p_term = self.arm_kp * position_error
-        i_term = self.arm_ki * self._integral_error
-        d_term = self.arm_kd * current_velocities
-
-        pid_torques = p_term + i_term - d_term
+        pd_torques = self.arm_kp * position_error - self.arm_kd * current_velocities
 
         # Add gravity compensation (feedforward term)
         gravity_comp = self._get_gravity_compensation()
-        torques = pid_torques + gravity_comp
+        torques = pd_torques + gravity_comp
 
         # Clip torques to actuator limits
         torques = np.clip(torques, -self.ARM_TORQUE_LIMITS, self.ARM_TORQUE_LIMITS)

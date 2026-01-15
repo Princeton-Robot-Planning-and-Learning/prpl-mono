@@ -76,26 +76,21 @@ def test_torque_saturation(env):
     )
 
 
-def test_custom_pid_gains():
-    """Test that custom PID gains can be passed to the environment."""
+def test_custom_pd_gains():
+    """Test that custom PD gains can be passed to the environment."""
     from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBotRobotEnv
 
     custom_kp = np.array([50.0, 50.0, 50.0, 50.0, 25.0, 25.0, 25.0])
-    custom_ki = np.array([10.0, 10.0, 10.0, 10.0, 5.0, 5.0, 5.0])
     custom_kd = np.array([5.0, 5.0, 5.0, 5.0, 2.5, 2.5, 2.5])
 
     robot_env = TidyBotRobotEnv(
         control_frequency=20.0,
         arm_kp=custom_kp,
-        arm_ki=custom_ki,
         arm_kd=custom_kd,
     )
 
     assert np.allclose(robot_env.arm_kp, custom_kp), (
         f"Custom Kp not set correctly: {robot_env.arm_kp}"
-    )
-    assert np.allclose(robot_env.arm_ki, custom_ki), (
-        f"Custom Ki not set correctly: {robot_env.arm_ki}"
     )
     assert np.allclose(robot_env.arm_kd, custom_kd), (
         f"Custom Kd not set correctly: {robot_env.arm_kd}"
@@ -153,16 +148,12 @@ def test_arm_responds_to_target(env):
 def test_zero_velocity_zero_error_gives_gravity_compensation(env):
     """Test that with zero velocity and zero position error, torque equals gravity comp.
 
-    With PID control and gravity compensation, when there's no position error,
-    no velocity, and no accumulated integral, the output should be the gravity
-    compensation term (to hold the arm against gravity).
+    With PD control and gravity compensation, when there's no position error
+    and no velocity, the output should be exactly the gravity compensation term.
     """
     env.reset(seed=42)
 
     robot_env = env._robot_env  # pylint: disable=protected-access
-
-    # Reset integral error to ensure clean test
-    robot_env._integral_error = np.zeros(7)
 
     # Manually set velocity to zero for this test
     robot_env.qvel["arm"][:] = 0.0
@@ -177,9 +168,8 @@ def test_zero_velocity_zero_error_gives_gravity_compensation(env):
     # Get expected gravity compensation
     gravity_comp = robot_env._get_gravity_compensation()
 
-    # Torques should approximately equal gravity compensation
-    # (small difference due to integral term update during call)
-    assert np.allclose(torques, gravity_comp, atol=0.1), (
+    # With PD control, torques should exactly equal gravity compensation
+    assert np.allclose(torques, gravity_comp, atol=1e-6), (
         f"Expected gravity compensation {gravity_comp}, got {torques}"
     )
 
@@ -187,17 +177,12 @@ def test_zero_velocity_zero_error_gives_gravity_compensation(env):
 def test_velocity_damping(env):
     """Test that the D (derivative) term provides velocity damping.
 
-    When there's velocity but zero position error, torques should include:
-    - D term opposing velocity (-Kd * velocity)
-    - Gravity compensation
-    - I term (but should be near zero if just reset)
+    When there's velocity but zero position error, torques should be:
+    -Kd * velocity + gravity_compensation
     """
     env.reset(seed=42)
 
     robot_env = env._robot_env  # pylint: disable=protected-access
-
-    # Reset integral error to ensure clean test
-    robot_env._integral_error = np.zeros(7)
 
     # Get current position
     current_pos = np.array(robot_env.qpos["arm"]).copy()
@@ -212,19 +197,16 @@ def test_velocity_damping(env):
 
     torques = robot_env._compute_arm_torques(target_pos)
 
-    # Get gravity compensation
+    # Get gravity compensation (which changes after forward())
     gravity_comp = robot_env._get_gravity_compensation()
 
-    # After one call, integral will have a small value from dt * error
-    # But position error is zero, so integral term should still be ~zero
     # Expected: -Kd * velocity + gravity_compensation
     expected_torques = -robot_env.arm_kd * test_velocity + gravity_comp
     expected_torques = np.clip(
         expected_torques, -robot_env.ARM_TORQUE_LIMITS, robot_env.ARM_TORQUE_LIMITS
     )
 
-    # Allow slightly larger tolerance due to integral term updates
-    assert np.allclose(torques, expected_torques, atol=0.1), (
+    assert np.allclose(torques, expected_torques, atol=1e-6), (
         f"Expected {expected_torques}, got {torques}"
     )
 
@@ -298,97 +280,6 @@ def test_arm_converges_to_target_position():
         env.close()
 
 
-def test_integral_term_accumulates_error():
-    """Test that the integral term accumulates position error over time.
-
-    The integral term should change when there's a position error,
-    helping to eliminate steady-state error.
-    """
-    config = TidyBot3DConfig(act_delta=False)
-    env = ObjectCentricTidyBot3DEnv(config=config, num_objects=1)
-    try:
-        env.reset(seed=42)
-
-        robot_env = env._robot_env  # pylint: disable=protected-access
-
-        # Get initial positions
-        initial_base_pos = np.array(robot_env.qpos["base"]).copy()
-        initial_arm_pos = np.array(robot_env.qpos["arm"]).copy()
-
-        # Set a target that's different from current position
-        target_arm_pos = initial_arm_pos + 0.1  # Small constant offset
-
-        # Build action
-        action = np.zeros(11)
-        action[0:3] = initial_base_pos
-        action[3:10] = target_arm_pos
-        action[10] = 0.0
-
-        # Record initial integral error (should be zero after reset)
-        initial_integral = robot_env._integral_error.copy()
-        assert np.allclose(initial_integral, 0.0), (
-            f"Initial integral should be zero, got {initial_integral}"
-        )
-
-        # Run several steps
-        for _ in range(10):
-            env.step(action)
-
-        # Integral error should have changed (accumulated something)
-        final_integral = robot_env._integral_error.copy()
-
-        # The integral should be non-zero (has accumulated error)
-        assert not np.allclose(final_integral, 0.0, atol=1e-6), (
-            f"Integral didn't accumulate. Final: {final_integral}"
-        )
-
-        # At least some joints should have significant integral
-        max_integral = np.max(np.abs(final_integral))
-        assert max_integral > 0.01, (
-            f"Integral accumulation too small: {final_integral}"
-        )
-
-    finally:
-        env.close()
-
-
-def test_integral_windup_prevention():
-    """Test that integral windup is prevented by clamping."""
-    config = TidyBot3DConfig(act_delta=False)
-    env = ObjectCentricTidyBot3DEnv(config=config, num_objects=1)
-    try:
-        env.reset(seed=42)
-
-        robot_env = env._robot_env  # pylint: disable=protected-access
-
-        # Get initial positions
-        initial_base_pos = np.array(robot_env.qpos["base"]).copy()
-        initial_arm_pos = np.array(robot_env.qpos["arm"]).copy()
-
-        # Set a large target offset that would cause windup
-        target_arm_pos = initial_arm_pos + 5.0  # Large offset
-
-        # Build action
-        action = np.zeros(11)
-        action[0:3] = initial_base_pos
-        action[3:10] = target_arm_pos
-        action[10] = 0.0
-
-        # Run many steps to try to cause windup
-        for _ in range(100):
-            env.step(action)
-
-        # Integral should be clamped at the limits
-        assert np.all(np.abs(robot_env._integral_error) <= robot_env.ARM_INTEGRAL_LIMITS + 1e-6), (
-            f"Integral exceeded limits. "
-            f"Integral: {robot_env._integral_error}, "
-            f"Limits: {robot_env.ARM_INTEGRAL_LIMITS}"
-        )
-
-    finally:
-        env.close()
-
-
 def test_gravity_compensation_is_applied():
     """Test that gravity compensation is computed and applied to the torques.
 
@@ -445,12 +336,11 @@ def test_gravity_compensation_is_applied():
         env.close()
 
 
-def test_pid_achieves_accurate_tracking():
-    """Test that PID controller improves tracking over time.
+def test_pd_achieves_accurate_tracking():
+    """Test that PD controller with gravity compensation achieves accurate tracking.
 
-    With PID control (P + I + D) and gravity compensation, the arm should
-    make progress toward target positions. The integral term helps reduce
-    steady-state error over time.
+    With PD control and gravity compensation, the arm should accurately
+    track target positions with minimal steady-state error.
     """
     config = TidyBot3DConfig(act_delta=False)
     env = ObjectCentricTidyBot3DEnv(config=config, num_objects=1)
@@ -475,9 +365,9 @@ def test_pid_achieves_accurate_tracking():
 
         # Record error at different time points
         errors_over_time = []
-        for step in range(500):  # More steps for convergence
+        for step in range(500):
             env.step(action)
-            if step % 100 == 99:  # Record every 100 steps
+            if step % 100 == 99:
                 current_pos = np.array(robot_env.qpos["arm"]).copy()
                 error = np.linalg.norm(target_arm_pos - current_pos)
                 errors_over_time.append(error)
@@ -487,19 +377,15 @@ def test_pid_achieves_accurate_tracking():
         joint_errors = np.abs(target_arm_pos - final_arm_pos)
         total_error = np.linalg.norm(target_arm_pos - final_arm_pos)
 
-        # Total error should be bounded (stable system)
-        assert total_error < 2.0, (
+        # With gravity compensation, PD should achieve good tracking
+        # Total error should be small (< 0.5 radians total across all joints)
+        assert total_error < 0.5, (
             f"Total tracking error too large: {total_error:.4f} radians. "
             f"Joint errors: {joint_errors}"
         )
 
-        # Verify integral is being used (non-zero)
-        assert np.max(np.abs(robot_env._integral_error)) > 0.001, (
-            f"Integral term not being used: {robot_env._integral_error}"
-        )
-
         # The system should remain stable (error shouldn't explode)
-        assert all(e < 5.0 for e in errors_over_time), (
+        assert all(e < 2.0 for e in errors_over_time), (
             f"System became unstable. Errors over time: {errors_over_time}"
         )
 
