@@ -505,7 +505,7 @@ class ObjectCentricGeom3DRobotEnv(
                             self._inside_object_transform_list.append(
                                 multiply_poses(world_to_robot.invert(), obj_pose)
                             )
-                
+
                 while not (
                     check_body_collisions(
                         self._grasped_object_id,

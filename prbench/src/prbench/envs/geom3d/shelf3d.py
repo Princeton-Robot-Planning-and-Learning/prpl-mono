@@ -38,7 +38,7 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Shelf3DEnv()."""
 
     max_action_mag: float = 0.2
-    
+
     # Shelf.
     shelf_pose: Pose = Pose((0.0, 1.5, 0.0))
     shelf_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
