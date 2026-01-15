@@ -5,7 +5,6 @@ torques and that the arm behaves reasonably under control.
 """
 
 import numpy as np
-import pytest
 
 from prbench.envs.dynamic3d.tidybot3d import (
     ObjectCentricTidyBot3DEnv,
