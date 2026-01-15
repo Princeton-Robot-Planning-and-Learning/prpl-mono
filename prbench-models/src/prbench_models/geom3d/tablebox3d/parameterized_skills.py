@@ -46,7 +46,7 @@ GRASP_TRANSFORM_TO_OBJECT_BOX = Pose(
 )  # side grasp
 GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.005), (0.707, 0.707, 0, 0))
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
-MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
+MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.5, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
 PLACE_X_OFFSET_BOUNDS_BOX = (-0.1, 0.0)
 PLACE_Y_OFFSET_BOUNDS_BOX = (-0.05, 0.05)
@@ -354,7 +354,7 @@ class GroundPlaceController(BasePlaceController):
                         target_pose.position[1] + self._current_params[1],
                         self._sim.config.box_wall_thickness
                         + self._sim.config.block_size / 2
-                        + 0.01,
+                        + 0.015,
                     ),
                     (np.pi, 0, np.pi / 2),
                 )
@@ -400,13 +400,13 @@ class GroundPlaceController(BasePlaceController):
             return self.navigate()
 
         if self._navigated and not self._pre_place:
-            return self.pre_place()
+            return self.pre_place(collision_ids={self._sim.table_id}) # pylint: disable=protected-access
 
         if self._pre_place and not self._opened_gripper:
             return self.open_gripper()
 
         if self._opened_gripper and not self._lifted:
-            return self.lift()
+            return self.lift(collision_ids={self._sim.table_id}) # pylint: disable=protected-access)
 
         raise ValueError("Invalid state")
 
