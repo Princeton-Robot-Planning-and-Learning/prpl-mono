@@ -140,7 +140,7 @@ class GroundPickController(
             # Pop the next target joint positions from the plan.
             assert self._current_plan is not None
             target_joints = self._current_plan.pop(0)
-            if len(self._current_plan) == 1:
+            if len(self._current_plan) == 0:
                 self._pre_grasp = True
             # Compute delta joint positions.
             delta_lst = get_jointwise_difference(
@@ -194,7 +194,7 @@ class GroundPickController(
             # Pop the next target joint positions from the plan.
             assert self._current_retract_plan is not None
             target_joints = self._current_retract_plan.pop(0)
-            if len(self._current_retract_plan) == 1:
+            if len(self._current_retract_plan) == 0:
                 self._lifted = True
             # Compute delta joint positions.
             delta_lst = get_jointwise_difference(
@@ -327,7 +327,7 @@ class GroundPlaceController(
             # Pop the next target joint positions from the plan.
             assert self._current_plan is not None
             target_joints = self._current_plan.pop(0)
-            if len(self._current_plan) == 1:
+            if len(self._current_plan) == 0:
                 self._pre_place = True
             # Compute delta joint positions.
             delta_lst = get_jointwise_difference(
@@ -377,7 +377,7 @@ class GroundPlaceController(
             # Pop the next target joint positions from the plan.
             assert self._current_retract_plan is not None
             target_joints = self._current_retract_plan.pop(0)
-            if len(self._current_retract_plan) == 1:
+            if len(self._current_retract_plan) == 0:
                 self._returned = True
             # Compute delta joint positions.
             delta_lst = get_jointwise_difference(
