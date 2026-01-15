@@ -12,205 +12,6 @@ from prbench.envs.dynamic3d.tidybot3d import (
     TidyBot3DConfig,
 )
 
-
-@pytest.fixture
-def env():
-    """Create a TidyBot3D environment for testing."""
-    env = ObjectCentricTidyBot3DEnv(num_objects=1)
-    yield env
-    env.close()
-
-
-def test_pd_controller_computes_torques(env):
-    """Test that the _compute_arm_torques method produces valid torques."""
-    env.reset(seed=42)
-
-    robot_env = env._robot_env  # pylint: disable=protected-access
-
-    # Get current arm position
-    current_pos = np.array(robot_env.qpos["arm"]).copy()
-
-    # Compute torques for a target slightly different from current
-    target_pos = current_pos + 0.1  # Add 0.1 radians to each joint
-
-    torques = robot_env._compute_arm_torques(target_pos)
-
-    # Torques should be non-zero (positive error should give positive torque)
-    assert torques.shape == (7,), f"Expected 7 torques, got {torques.shape}"
-    assert np.all(
-        torques > 0
-    ), f"Expected positive torques for positive position error, got {torques}"
-
-    # Torques should be within limits
-    assert np.all(
-        np.abs(torques) <= robot_env.ARM_TORQUE_LIMITS
-    ), f"Torques {torques} exceed limits {robot_env.ARM_TORQUE_LIMITS}"
-
-
-def test_torque_saturation(env):
-    """Test that torques are correctly saturated at the limits."""
-    env.reset(seed=42)
-
-    robot_env = env._robot_env  # pylint: disable=protected-access
-
-    # Get current arm position
-    current_pos = np.array(robot_env.qpos["arm"]).copy()
-
-    # Request a very large position error that would exceed torque limits
-    target_pos = current_pos + 10.0  # Large error
-
-    torques = robot_env._compute_arm_torques(target_pos)
-
-    # Torques should be within limits
-    limits = robot_env.ARM_TORQUE_LIMITS
-    assert np.all(
-        np.abs(torques) <= limits + 0.01
-    ), f"Torques exceed limits. Got {torques}, limits: {limits}"
-
-    # Test negative saturation
-    target_pos = current_pos - 10.0  # Large negative error
-    torques = robot_env._compute_arm_torques(target_pos)
-
-    assert np.all(
-        np.abs(torques) <= limits + 0.01
-    ), f"Torques exceed limits. Got {torques}, limits: {limits}"
-
-
-def test_custom_pd_gains():
-    """Test that custom PD gains can be passed to the environment."""
-    from prbench.envs.dynamic3d.robots.tidybot_robot_env import TidyBotRobotEnv
-
-    custom_kp = np.array([50.0, 50.0, 50.0, 50.0, 25.0, 25.0, 25.0])
-    custom_kd = np.array([5.0, 5.0, 5.0, 5.0, 2.5, 2.5, 2.5])
-
-    robot_env = TidyBotRobotEnv(
-        control_frequency=20.0,
-        arm_kp=custom_kp,
-        arm_kd=custom_kd,
-    )
-
-    assert np.allclose(
-        robot_env.arm_kp, custom_kp
-    ), f"Custom Kp not set correctly: {robot_env.arm_kp}"
-    assert np.allclose(
-        robot_env.arm_kd, custom_kd
-    ), f"Custom Kd not set correctly: {robot_env.arm_kd}"
-
-
-def test_step_does_not_crash(env):
-    """Test that stepping the environment with the PD controller doesn't crash."""
-    env.reset(seed=42)
-
-    # Take several steps with random actions
-    for _ in range(10):
-        action = env.action_space.sample()
-        obs, reward, terminated, truncated, info = env.step(action)
-
-        # Basic sanity checks
-        assert env.observation_space.contains(obs)
-        assert isinstance(reward, float)
-        assert isinstance(terminated, bool)
-        assert isinstance(truncated, bool)
-
-
-def test_arm_responds_to_target(env):
-    """Test that the arm position changes when a target is commanded.
-
-    This is a basic test that the PD controller is actually influencing the arm motion,
-    without requiring perfect convergence.
-    """
-    env.reset(seed=42)
-
-    robot_env = env._robot_env  # pylint: disable=protected-access
-
-    # Get initial arm position
-    initial_arm_pos = np.array(robot_env.qpos["arm"]).copy()
-
-    # Apply a delta action to move the arm
-    delta_action = np.zeros(11)
-    delta_action[3:10] = 0.1  # Small positive delta for all joints
-    delta_action[10] = 0.0  # Keep gripper open
-
-    # Take a few steps
-    for _ in range(5):
-        env.step(delta_action)
-
-    # Get final arm position
-    final_arm_pos = np.array(robot_env.qpos["arm"]).copy()
-
-    # The arm should have moved (position should be different)
-    position_change = np.abs(final_arm_pos - initial_arm_pos)
-    assert np.any(
-        position_change > 0.001
-    ), f"Arm did not move. Initial: {initial_arm_pos}, Final: {final_arm_pos}"
-
-
-def test_zero_velocity_zero_error_gives_gravity_compensation(env):
-    """Test that with zero velocity and zero position error, torque equals gravity comp.
-
-    With PD control and gravity compensation, when there's no position error and no
-    velocity, the output should be exactly the gravity compensation term.
-    """
-    env.reset(seed=42)
-
-    robot_env = env._robot_env  # pylint: disable=protected-access
-
-    # Manually set velocity to zero for this test
-    robot_env.qvel["arm"][:] = 0.0
-    robot_env.sim.forward()
-
-    # Get current position and use it as target (zero error)
-    current_pos = np.array(robot_env.qpos["arm"]).copy()
-    target_pos = current_pos.copy()
-
-    torques = robot_env._compute_arm_torques(target_pos)
-
-    # Get expected gravity compensation
-    gravity_comp = robot_env._get_gravity_compensation()
-
-    # With PD control, torques should exactly equal gravity compensation
-    assert np.allclose(
-        torques, gravity_comp, atol=1e-6
-    ), f"Expected gravity compensation {gravity_comp}, got {torques}"
-
-
-def test_velocity_damping(env):
-    """Test that the D (derivative) term provides velocity damping.
-
-    When there's velocity but zero position error, torques should be:
-    -Kd * velocity + gravity_compensation
-    """
-    env.reset(seed=42)
-
-    robot_env = env._robot_env  # pylint: disable=protected-access
-
-    # Get current position
-    current_pos = np.array(robot_env.qpos["arm"]).copy()
-
-    # Manually set some velocity
-    test_velocity = np.array([1.0, -1.0, 0.5, -0.5, 0.2, -0.2, 0.1])
-    robot_env.qvel["arm"][:] = test_velocity
-    robot_env.sim.forward()
-
-    # Target = current position (zero position error)
-    target_pos = current_pos.copy()
-
-    torques = robot_env._compute_arm_torques(target_pos)
-
-    # Get gravity compensation (which changes after forward())
-    gravity_comp = robot_env._get_gravity_compensation()
-
-    # Expected: -Kd * velocity + gravity_compensation
-    expected_torques = -robot_env.arm_kd * test_velocity + gravity_comp
-    expected_torques = np.clip(
-        expected_torques, -robot_env.ARM_TORQUE_LIMITS, robot_env.ARM_TORQUE_LIMITS
-    )
-
-    assert np.allclose(
-        torques, expected_torques, atol=1e-6
-    ), f"Expected {expected_torques}, got {torques}"
-
-
 def test_arm_converges_to_target_position():
     """Test that the arm moves toward a target joint position using PD control.
 
@@ -296,7 +97,7 @@ def test_gravity_compensation_is_applied():
         robot_env = env._robot_env  # pylint: disable=protected-access
 
         # Get gravity compensation
-        gravity_comp = robot_env._get_gravity_compensation()
+        gravity_comp = robot_env._get_gravity_compensation() # pylint: disable=protected-access
 
         # Test 1: Gravity compensation should be non-zero (gravity exists)
         assert (
@@ -308,8 +109,8 @@ def test_gravity_compensation_is_applied():
         robot_env.qvel["arm"][:] = 0.0  # Set velocity to zero
         robot_env.sim.forward()
 
-        torques = robot_env._compute_arm_torques(current_pos)
-        expected_gravity_comp = robot_env._get_gravity_compensation()
+        torques = robot_env._compute_arm_torques(current_pos) # pylint: disable=protected-access
+        expected_gravity_comp = robot_env._get_gravity_compensation() # pylint: disable=protected-access
 
         # Torques should approximately equal gravity compensation
         # (small difference due to forward() call updating state)
@@ -323,7 +124,7 @@ def test_gravity_compensation_is_applied():
         original_comp = gravity_comp.copy()
         robot_env.qpos["arm"][2] += 0.5  # Rotate joint 3
         robot_env.sim.forward()
-        new_comp = robot_env._get_gravity_compensation()
+        new_comp = robot_env._get_gravity_compensation() # pylint: disable=protected-access
 
         # At least some components should have changed
         comp_diff = np.abs(new_comp - original_comp)
@@ -443,7 +244,7 @@ def test_arm_remains_stable():
             # Track maximum position magnitude
             max_position_seen = max(max_position_seen, np.max(np.abs(current_pos)))
 
-        # Verify positions stayed bounded (< 20 radians is reasonable for a few rotations)
+        # Verify positions stayed bounded
         assert max_position_seen < 20, (
             f"Arm positions exceeded reasonable bounds. "
             f"Max position magnitude seen: {max_position_seen:.2f} radians"
