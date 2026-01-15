@@ -2,11 +2,20 @@
 
 import os
 import sys
+import warnings
 from pathlib import Path
 from typing import Any
 
-import gymnasium
-from gymnasium.envs.registration import register
+# Silence warnings from third-party packages
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="kortex_api")
+warnings.filterwarnings("ignore", category=UserWarning, module="phoenix6")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="pkg_resources")
+
+# Need to import after silencing warnings
+import gymnasium  # pylint: disable=wrong-import-position
+from gymnasium.envs.registration import (  # pylint: disable=wrong-import-position
+    register,
+)
 
 # Registry of environment classes with their metadata
 ENV_CLASSES: dict[str, dict[str, Any]] = {}
@@ -118,7 +127,7 @@ def register_all_environments() -> None:
 
     # PushPullHook2D environment
     variant_id = "prbench/PushPullHook2D-v0"
-    register(
+    _register(
         id=variant_id,
         entry_point="prbench.envs.geom2d.pushpullhook2d:PushPullHook2DEnv",
     )
@@ -351,7 +360,7 @@ def register_all_environments() -> None:
         num_task_objects = int(config_name.split("-")[2][1:])
         task_cfg = "-".join(config_name.split("-")[1:])
         variant_id = f"prbench/{robot}-{task_cfg}-v0"
-        register(
+        _register(
             id=variant_id,
             entry_point=f"prbench.envs.dynamic3d.tidybot3d:{robot}Env",
             kwargs={
