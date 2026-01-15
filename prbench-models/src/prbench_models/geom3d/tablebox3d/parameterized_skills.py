@@ -42,9 +42,9 @@ from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 
 # constants
 GRASP_TRANSFORM_TO_OBJECT_BOX = Pose(
-    (0.0, 0.10, 0.08), (0.707, 0.707, 0, 0)
+    (0.0, 0.15, 0.08), (0.707, 0.707, 0, 0)
 )  # side grasp
-GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.005), (0.707, 0.707, 0, 0))
+GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.02), (0.707, 0.707, 0, 0))
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.5, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
@@ -354,7 +354,7 @@ class GroundPlaceController(BasePlaceController):
                         target_pose.position[2]
                         + self._sim.config.table_half_extents[2]
                         + self._sim.config.block_size / 2
-                        + 0.015,
+                        + 0.025,
                     ),
                     (np.pi, 0, np.pi / 2),
                 )
@@ -364,8 +364,7 @@ class GroundPlaceController(BasePlaceController):
                         target_pose.position[0] + self._current_params[0],
                         target_pose.position[1] + self._current_params[1],
                         self._sim.config.box_wall_thickness
-                        + self._sim.config.block_size / 2
-                        + 0.015,
+                        + self._sim.config.block_size / 2,
                     ),
                     (np.pi, 0, np.pi / 2),
                 )
@@ -402,11 +401,17 @@ class GroundPlaceController(BasePlaceController):
             all_collision_ids = (
                 self._sim._get_collision_object_ids()  # pylint: disable=protected-access
             )
+            if "box" in self.objects[1].name:
+                collision_bodies = {
+                    self._sim.table_id  # type: ignore # pylint: disable=protected-access
+                }
+            else:
+                collision_bodies = all_collision_ids - {grasped_object_id}
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=all_collision_ids - {grasped_object_id},
+                collision_bodies=collision_bodies,
                 seed=0,  # for determinism
                 held_object=grasped_object_id,
                 base_link_to_held_obj=grasped_object_transform,
@@ -422,17 +427,13 @@ class GroundPlaceController(BasePlaceController):
             return self.navigate()
 
         if self._navigated and not self._pre_place:
-            return self.pre_place(
-                collision_ids={self._sim.table_id}  # pylint: disable=protected-access
-            )
+            return self.pre_place()
 
         if self._pre_place and not self._opened_gripper:
             return self.open_gripper()
 
         if self._opened_gripper and not self._lifted:
-            return self.lift(
-                collision_ids={self._sim.table_id}  # pylint: disable=protected-access)
-            )
+            return self.lift()
 
         raise ValueError("Invalid state")
 
