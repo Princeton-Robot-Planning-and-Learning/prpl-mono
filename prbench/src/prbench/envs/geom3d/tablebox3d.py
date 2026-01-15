@@ -44,10 +44,10 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.2)
 
     # World bounds.
-    x_lb: float = -1.8
-    x_ub: float = 1.8
-    y_lb: float = -1.8
-    y_ub: float = 1.8
+    x_lb: float = -1.5
+    x_ub: float = 1.5
+    y_lb: float = -1.5
+    y_ub: float = 1.5
 
     # Minimum distance between objects for placement.
     min_placement_dist: float = 0.01
@@ -259,6 +259,7 @@ class ObjectCentricTableBox3DEnv(
             physics_client_id=self.physics_client_id,
             rng=self.np_random,
             other_collision_ids={self.robot.base.robot_id},
+            max_sampling_attempts=500_000,
         )
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
