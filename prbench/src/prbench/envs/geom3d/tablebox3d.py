@@ -44,10 +44,10 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.2)
 
     # World bounds.
-    x_lb: float = -1.5
-    x_ub: float = 1.5
-    y_lb: float = -1.5
-    y_ub: float = 1.5
+    x_lb: float = -1.8
+    x_ub: float = 1.8
+    y_lb: float = -1.8
+    y_ub: float = 1.8
 
     # Minimum distance between objects for placement.
     min_placement_dist: float = 0.01

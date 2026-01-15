@@ -366,8 +366,6 @@ class ObjectCentricObstruction3DEnv(
             self._target_region_id,
             self.table_id,
         } | set(self._obstruction_ids.values())
-        if self._grasped_object_id is not None:
-            collision_ids.discard(self._grasped_object_id)
         return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:

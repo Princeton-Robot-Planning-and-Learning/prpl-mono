@@ -171,11 +171,17 @@ class GroundPickController(
             if self._current_retract_plan is None:
 
                 # Run motion planning to the target joint positions.
+                grasped_object_id = (
+                    self._sim._grasped_object_id  # pylint: disable=protected-access
+                )
+                all_collision_ids = (
+                    self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+                )
                 joint_plan = run_motion_planning(
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                    collision_bodies=all_collision_ids - {grasped_object_id},
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
                 )
@@ -302,13 +308,24 @@ class GroundPlaceController(
         if self._current_plan is None:
 
             # Run motion planning to the target joint positions.
+            grasped_object_id = (
+                self._sim._grasped_object_id  # pylint: disable=protected-access
+            )
+            grasped_object_transform = (
+                self._sim._grasped_object_transform  # pylint: disable=protected-access
+            )
+            all_collision_ids = (
+                self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+            )
             joint_plan = run_motion_planning(
                 self._sim.robot.arm,
                 initial_positions=self._sim.robot.arm.get_joint_positions(),
                 target_positions=self._current_params,
-                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                collision_bodies=all_collision_ids - {grasped_object_id},
                 seed=0,  # for determinism
                 physics_client_id=self._sim.physics_client_id,
+                held_object=grasped_object_id,
+                base_link_to_held_obj=grasped_object_transform,
             )
 
             if joint_plan is None:

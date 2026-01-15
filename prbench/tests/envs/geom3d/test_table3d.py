@@ -181,7 +181,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
             current_end_effector_pose.position[1],
             obs.get_cuboid_pose("table").position[2]
             + config.table_half_extents[2] / 2
-            + obs.get_cuboid_half_extents("cube1")[2]
+            + obs.get_cuboid_half_extents("cube1")[2],
         ),
         current_end_effector_pose.orientation,
     )
