@@ -44,7 +44,9 @@ class TidyBotRobotEnv(RobotEnv):
     ARM_KD: np.ndarray = np.array([30.0, 30.0, 30.0, 30.0, 15.0, 15.0, 15.0])
 
     # Torque limits (Nm) - must match tidybot.xml actuator ctrlrange
-    ARM_TORQUE_LIMITS: np.ndarray = np.array([200.0, 200.0, 200.0, 200.0, 100.0, 100.0, 100.0])
+    ARM_TORQUE_LIMITS: np.ndarray = np.array(
+        [200.0, 200.0, 200.0, 200.0, 100.0, 100.0, 100.0]
+    )
 
     def __init__(
         self,
@@ -88,6 +90,10 @@ class TidyBotRobotEnv(RobotEnv):
         # Allow custom PD gains
         self.arm_kp = arm_kp if arm_kp is not None else self.ARM_KP.copy()
         self.arm_kd = arm_kd if arm_kd is not None else self.ARM_KD.copy()
+
+        # Initialize arm qvel start and end indices
+        self._arm_qvel_start: int = 0
+        self._arm_qvel_end: int = 0
 
     def _setup_robot_references(self) -> None:
         """Setup references to robot state/actuator buffers in the simulation data."""
