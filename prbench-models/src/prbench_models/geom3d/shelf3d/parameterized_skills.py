@@ -226,13 +226,25 @@ class GroundPickController(
                 self._sim.set_state(self._current_state)
 
                 # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
+                grasped_object_id = (
+                    self._sim._grasped_object_id  # pylint: disable=protected-access
+                )
+                grasped_object_transform = (
+                    self._sim._grasped_object_transform  # pylint: disable=protected-access
+                )
+                all_collision_ids = (
+                    self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+                )
+                # Run motion planning to the target joint positions.
+                joint_plan = run_motion_planning(  # type: ignore
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                    collision_bodies=all_collision_ids - {grasped_object_id},
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
+                    held_object=grasped_object_id,
+                    base_link_to_held_obj=grasped_object_transform,
                 )
 
                 if joint_plan is None:
@@ -334,13 +346,24 @@ class GroundPlaceController(BasePlaceController):
                 self._target_place_pose_se2, 0.8, np.pi / 2
             )
 
+            grasped_object_id = (
+                self._sim._grasped_object_id  # pylint: disable=protected-access
+            )
+            grasped_object_transform = (
+                self._sim._grasped_object_transform  # pylint: disable=protected-access
+            )
+            all_collision_ids = (
+                self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+            )
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                collision_bodies=all_collision_ids - {grasped_object_id},
                 seed=0,  # for determinism
+                held_object=grasped_object_id,
+                base_link_to_held_obj=grasped_object_transform,
             )
 
             if base_plan is None:
