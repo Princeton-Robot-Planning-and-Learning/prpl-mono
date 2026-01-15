@@ -295,7 +295,7 @@ class ObjectCentricTableBox3DEnv(
 
     def _get_collision_object_ids(self) -> set[int]:
         collision_ids = (
-            {self.table_id} # | set(self._cubes.values()) | set(self._boxes.values())
+            {self.table_id} | set(self._cubes.values()) | set(self._boxes.values())
         )
         return collision_ids
 
