@@ -32,7 +32,22 @@ class TidyBotRobotEnv(RobotEnv):
     """This is the base class for TidyBot environments that use MuJoCo for sim.
 
     It is still abstract: subclasses define rewards and add objects to the env.
+
+    The arm uses torque control with a PD controller that converts target joint
+    positions to torques. The base uses position control directly.
     """
+
+    # PID gains for arm torque control
+    # Tuned for stability - moderate gains with gravity compensation
+    ARM_KP: np.ndarray = np.array([1500.0, 1500.0, 1500.0, 1500.0, 600.0, 600.0, 600.0])
+    ARM_KI: np.ndarray = np.array([20.0, 20.0, 20.0, 20.0, 10.0, 10.0, 10.0])
+    ARM_KD: np.ndarray = np.array([200.0, 200.0, 200.0, 200.0, 80.0, 80.0, 80.0])
+
+    # Integral windup limits (radians * seconds) - generous limits for steady-state correction
+    ARM_INTEGRAL_LIMITS: np.ndarray = np.array([10.0, 10.0, 10.0, 10.0, 5.0, 5.0, 5.0])
+
+    # Torque limits (Nm) - must match tidybot.xml actuator ctrlrange
+    ARM_TORQUE_LIMITS: np.ndarray = np.array([200.0, 200.0, 200.0, 200.0, 100.0, 100.0, 100.0])
 
     def __init__(
         self,
@@ -44,6 +59,9 @@ class TidyBotRobotEnv(RobotEnv):
         camera_height: int = 480,
         seed: int | None = None,
         show_viewer: bool = False,
+        arm_kp: np.ndarray | None = None,
+        arm_ki: np.ndarray | None = None,
+        arm_kd: np.ndarray | None = None,
     ) -> None:
         """
         Args:
@@ -55,6 +73,9 @@ class TidyBotRobotEnv(RobotEnv):
             camera_height: Height of camera images.
             seed: Random seed for reproducibility.
             show_viewer: Whether to show the MuJoCo viewer.
+            arm_kp: Custom proportional gains for arm PID controller (7 values).
+            arm_ki: Custom integral gains for arm PID controller (7 values).
+            arm_kd: Custom derivative gains for arm PID controller (7 values).
         """
 
         super().__init__(
@@ -68,6 +89,15 @@ class TidyBotRobotEnv(RobotEnv):
         )
 
         self.act_delta = act_delta
+        self._control_dt = 1.0 / control_frequency  # Time step for integral term
+
+        # Allow custom PID gains
+        self.arm_kp = arm_kp if arm_kp is not None else self.ARM_KP.copy()
+        self.arm_ki = arm_ki if arm_ki is not None else self.ARM_KI.copy()
+        self.arm_kd = arm_kd if arm_kd is not None else self.ARM_KD.copy()
+
+        # Integral state for PID control (accumulated error)
+        self._integral_error: np.ndarray = np.zeros(7)
 
     def _setup_robot_references(self) -> None:
         """Setup references to robot state/actuator buffers in the simulation data."""
@@ -170,6 +200,10 @@ class TidyBotRobotEnv(RobotEnv):
         self.qvel["arm"] = self.sim.data.mj_data.qvel[arm_qvel_start:arm_qvel_end]
         self.ctrl["arm"] = self.sim.data.mj_data.ctrl[arm_ctrl_start:arm_ctrl_end]
 
+        # Store arm qvel indices for gravity compensation lookup
+        self._arm_qvel_start = arm_qvel_start
+        self._arm_qvel_end = arm_qvel_end
+
         # Create a custom wrapper that maintains references for
         # non-contiguous gripper indices
         class IndexedView:
@@ -229,6 +263,9 @@ class TidyBotRobotEnv(RobotEnv):
         # Setup references to robot state/actuator buffers
         self._setup_robot_references()
 
+        # Reset integral error for PID controller
+        self._integral_error = np.zeros(7)
+
         # Randomize the base pose of the robot in the sim
         self._randomize_base_pose()
         self._randomize_arm_pose()
@@ -268,8 +305,71 @@ class TidyBotRobotEnv(RobotEnv):
         theta = np.deg2rad([0, -20, 180, -146, 0, -50, 90])
         # Set the arm joint positions in the simulation
         self.qpos["arm"][:] = theta
-        self.ctrl["arm"][:] = theta
+        # For torque control, set initial torque to 0 (will be computed by PD controller)
+        self.ctrl["arm"][:] = 0.0
         self.sim.forward()  # Update the simulation state
+
+    def _get_gravity_compensation(self) -> np.ndarray:
+        """Get gravity compensation torques for the arm joints.
+
+        MuJoCo stores the bias forces (gravity + Coriolis) in qfrc_bias.
+        These torques, when applied, will counteract gravity.
+
+        Returns:
+            Gravity compensation torques for the 7 arm joints (Nm).
+        """
+        assert self.sim is not None, "Simulation must be initialized."
+        # qfrc_bias contains C(q,v)*v + g(q) - the forces needed to counteract
+        # gravity and Coriolis effects
+        return self.sim.data.mj_data.qfrc_bias[
+            self._arm_qvel_start : self._arm_qvel_end
+        ].copy()
+
+    def _compute_arm_torques(self, target_positions: np.ndarray) -> np.ndarray:
+        """Compute arm torques using PID control with gravity compensation.
+
+        Uses the formula:
+            torque = Kp * error + Ki * integral(error) - Kd * velocity + gravity_comp
+
+        The integral term eliminates steady-state error, and gravity compensation
+        counteracts gravitational forces for accurate position tracking.
+
+        Args:
+            target_positions: Target joint positions for the 7 arm joints (radians).
+
+        Returns:
+            Torques to apply to the arm joints (Nm), clipped to actuator limits.
+        """
+        current_positions = np.array(self.qpos["arm"])
+        current_velocities = np.array(self.qvel["arm"])
+
+        # Compute position error
+        position_error = target_positions - current_positions
+
+        # Update integral error with anti-windup
+        self._integral_error += position_error * self._control_dt
+        # Clamp integral to prevent windup
+        self._integral_error = np.clip(
+            self._integral_error,
+            -self.ARM_INTEGRAL_LIMITS,
+            self.ARM_INTEGRAL_LIMITS
+        )
+
+        # PID control: torque = Kp * error + Ki * integral - Kd * velocity
+        p_term = self.arm_kp * position_error
+        i_term = self.arm_ki * self._integral_error
+        d_term = self.arm_kd * current_velocities
+
+        pid_torques = p_term + i_term - d_term
+
+        # Add gravity compensation (feedforward term)
+        gravity_comp = self._get_gravity_compensation()
+        torques = pid_torques + gravity_comp
+
+        # Clip torques to actuator limits
+        torques = np.clip(torques, -self.ARM_TORQUE_LIMITS, self.ARM_TORQUE_LIMITS)
+
+        return torques
 
     def _update_ctrl(self, action: Array) -> None:
         """Update control values from action array.
@@ -284,24 +384,51 @@ class TidyBotRobotEnv(RobotEnv):
             start = end
 
     def step(self, action: Array) -> tuple[MjObs, float, bool, bool, dict[str, Any]]:
-        # Map gripper action from [0, 1] to [0, 255].
+        """Take a step in the environment.
+
+        The action space is joint positions: base (3) + arm (7) + gripper (1).
+        - Base: Uses position control directly (MuJoCo position actuators)
+        - Arm: Converts target positions to torques using PD controller
+        - Gripper: Uses tendon control with force range [0, 255]
+
+        Args:
+            action: Action array with shape (11,):
+                - [0:3]: Base position targets (x, y, theta) or deltas
+                - [3:10]: Arm joint position targets (radians) or deltas
+                - [10]: Gripper command in [0, 1] (0=open, 1=closed)
+
+        Returns:
+            Tuple of (observation, reward, terminated, truncated, info).
+        """
         action = action.copy()
-        action[-1] = action[-1] * 255.0
+
+        # Map gripper action from [0, 1] to [0, 255].
+        gripper_action = action[-1] * 255.0
         # Ctrl values > 127 apply closing force, < 127 apply opening force;
         # hence, 0 = fully open, 255 = fully closed, 127 = no force applied.
-        # To ensure full closure, map 1.0 to 255, as lower forces may not fully close
-        # the gripper due to opposing spring forces.
 
-        # Apply delta or absolute action
-        if self.act_delta:  # Interpret action as delta.
-            # Compute absolute joint action.
+        # Compute target positions (absolute)
+        if self.act_delta:
+            # Interpret action as delta, compute absolute targets
             curr_qpos = np.concatenate([self.qpos["base"], self.qpos["arm"]], -1)
-            abs_action = curr_qpos + action[:-1]
-            # Add gripper action
-            abs_action = np.concatenate([abs_action, [action[-1]]], -1)
-            return super().step(abs_action)
-        # Use action as-is.
-        return super().step(action)
+            target_positions = curr_qpos + action[:-1]
+        else:
+            target_positions = action[:-1]
+
+        # Split into base and arm targets
+        base_targets = target_positions[:3]
+        arm_targets = target_positions[3:10]
+
+        # Compute arm torques using PD controller
+        arm_torques = self._compute_arm_torques(arm_targets)
+
+        # Build the control array:
+        # - Base: position targets (position actuators)
+        # - Arm: torques (motor actuators)
+        # - Gripper: force command
+        ctrl_action = np.concatenate([base_targets, arm_torques, [gripper_action]])
+
+        return super().step(ctrl_action)
 
     def reward(self, obs: MjObs) -> float:
         """Compute the reward from an observation.
