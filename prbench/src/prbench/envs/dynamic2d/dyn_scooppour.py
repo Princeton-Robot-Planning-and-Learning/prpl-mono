@@ -565,7 +565,7 @@ class ObjectCentricDynScoopPourEnv(
                         pymunk_angle -= 2 * np.pi
                     elif pymunk_angle < -np.pi:
                         pymunk_angle += 2 * np.pi
-                    state.set(obj, "theta", pymunk_body.angle)
+                    state.set(obj, "theta", pymunk_angle)
 
                 # Update held status (only hook can be held)
                 if obj.is_instance(HookType):
@@ -636,37 +636,10 @@ class DynScoopPourEnv(ConstantObjectPRBenchEnv):
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
-        # Count small objects
-        num_circles = len(
-            [
-                obj
-                for obj in self._constant_objects
-                if obj.name.startswith("small_circle")
-            ]
-        )
-        num_squares = len(
-            [
-                obj
-                for obj in self._constant_objects
-                if obj.name.startswith("small_square")
-            ]
-        )
         # pylint: disable=line-too-long
-        return f"""A 2D physics-based tool-use environment where a robot must use an L-shaped hook to scoop small objects from the left side of a middle wall and pour them onto the right side. The middle wall is half the height of the world, allowing objects to be scooped over it.
+        return """A 2D physics-based tool-use environment where a robot must use an L-shaped hook to scoop small objects from the left side of a middle wall and pour them onto the right side. The middle wall is half the height of the world, allowing objects to be scooped over it.
 
-**Environment Setup**:
-- **Middle Wall**: A wall at the center of the world that extends from the floor to half the world height
-- **Small Objects**: {num_circles} circles and {num_squares} squares initially on the left side
-- **L-shaped Hook**: A tool that can be grasped and manipulated by the robot
-- **Four Boundary Walls**: Enclose the entire workspace
-
-The robot has a movable circular base and an extendable arm with gripper fingers. The hook is a kinematic object that can be grasped and used as a tool to scoop the small objects. Small objects are dynamic and follow realistic PyMunk physics, but they cannot be grasped directly by the robot.
-
-**Observation Space**: The observation is a fixed-size vector containing the state of all objects:
-- **Robot**: position (x,y), orientation (θ), velocities (vx,vy,ω), arm extension, gripper gap
-- **Hook**: position, orientation, dimensions (L-shaped tool, can be grasped)
-- **Small Circles** ({num_circles}): position, radius, velocities (dynamic, non-graspable)
-- **Small Squares** ({num_squares}): position, size, orientation, velocities (dynamic, non-graspable)
+The robot has a movable circular base and an extendable arm with gripper fingers. The hook is a kinematic object that can be grasped and used as a tool to scoop the small objects. Small objects are dynamic and follow PyMunk physics, but they cannot be grasped directly by the robot.
 
 All objects include physics properties like mass, moment of inertia, and color information for rendering.
 """
@@ -677,45 +650,8 @@ All objects include physics properties like mass, moment of inertia, and color i
 
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return """A penalty of -1.0 is given at every time step until termination, which occurs when at least 70% of the small objects have been moved to the right side of the middle wall.
-
-**Termination Condition**: The episode terminates when the fraction of small objects with x-position greater than the middle wall's x-position exceeds the success threshold (0.7).
-
-**Goal Achievement Strategy**: The robot must:
-1. Grasp the L-shaped hook tool with its gripper
-2. Position the hook to scoop small objects on the left side
-3. Lift and move the hook (with objects) over the half-height middle wall
-4. Pour the objects onto the right side
-5. Repeat until enough objects are transferred
-
-**Physics Integration**: Since this environment uses PyMunk physics simulation, objects have realistic dynamics including:
-- Friction between surfaces
-- Collision response and momentum transfer
-- Realistic grasping and tool manipulation dynamics
-- Indirect manipulation through tool-object interactions
-- NOTE: No gravity is applied, but damping simulates frictional losses
-- Small objects use NON_GRASPABLE_COLLISION_TYPE to prevent direct grasping
-"""
+        return """A penalty of -1.0 is given at every time step until termination, which occurs when at least 50% of the small objects have been moved to the right side of the middle wall."""
 
     def _create_references_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return """This environment implements a complex tool-use manipulation task with physics-based dynamics. It extends the concept of tool use to include scooping and pouring behaviors, requiring spatial reasoning about container-like tools.
-
-**Key Features**:
-- **Tool-Use Paradigm**: Robot must grasp and manipulate an L-shaped hook to indirectly move small objects
-- **Spatial Reasoning**: Objects must be scooped over a half-height wall dividing the workspace
-- **Non-Graspable Objects**: Small objects cannot be directly grasped, requiring tool-mediated manipulation
-- **Multi-Object Manipulation**: Handle many small objects simultaneously through containment
-- **PyMunk Physics Engine**: Provides realistic 2D rigid body dynamics for tool-object interactions
-- **Collision Type System**: Uses NON_GRASPABLE_COLLISION_TYPE to prevent direct grasping of small objects
-
-**Research Applications**:
-- Tool-use learning and reasoning
-- Container-based manipulation strategies
-- Multi-step planning with tool grasping and scooping
-- Physics-aware motion planning for pouring behaviors
-- Evaluation of indirect manipulation vs. direct grasping
-- Long-horizon task planning (repeated scoop-pour cycles)
-
-This environment enables evaluation of manipulation policies that require understanding of containment, tool use, and multi-object manipulation under realistic physics constraints. It tests the ability to reason about which objects can be manipulated directly vs. indirectly.
-"""
+        return """This is loosely inspired by the Kitchen2D environment from "Active model learning and diverse action sampling for task and motion planning" (Wang et al., 2018)."""
