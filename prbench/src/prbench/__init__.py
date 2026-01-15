@@ -11,8 +11,11 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="kortex_ap
 warnings.filterwarnings("ignore", category=UserWarning, module="phoenix6")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pkg_resources")
 
-import gymnasium
-from gymnasium.envs.registration import register
+# Need to import after silencing warnings
+import gymnasium  # pylint: disable=wrong-import-position
+from gymnasium.envs.registration import (  # pylint: disable=wrong-import-position
+    register,
+)
 
 # Registry of environment classes with their metadata
 ENV_CLASSES: dict[str, dict[str, Any]] = {}
