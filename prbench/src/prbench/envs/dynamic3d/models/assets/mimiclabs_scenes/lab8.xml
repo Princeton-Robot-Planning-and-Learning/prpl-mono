@@ -1,0 +1,303 @@
+<mujoco model="lab8">
+  <default>
+    <default class="visual">
+      <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+    </default>
+    <default class="collision">
+      <geom group="3" type="mesh"/>
+    </default>
+  </default>
+  <asset>
+    <texture builtin="gradient" height="256" rgb1=".9 .9 1." rgb2=".2 .3 .4" type="skybox" width="256"/>
+    <texture file="textures/tile_grigia_caldera_porcelain_floor.png" type="2d" name="texplane"/>
+    
+    <material name="floorplane" reflectance="0.0" shininess="0.0"
+	      specular="0.0" texrepeat="3 3" texture="texplane" texuniform="true" rgba="0.800000 0.800000 0.800000 0.000000"/>
+    <!-- ceramic table texture and material-->
+    <texture file="textures/tables/wood.png" type="cube" name="tex-table"/>
+    <material name="table_texture" reflectance="0.0" shininess="0.0" specular="0.2" texrepeat="1 1" texture="tex-table" />
+    <!-- steel legs -->
+    <texture file="textures/martin_novak_wood_table.png" type="cube" name="tex-table-legs"/>
+    <material name="table_legs" reflectance="0.8" shininess="0.8" texrepeat="1 1" texture="tex-table-legs" />
+    <!-- plaster walls -->
+    <texture file="textures/smooth_light_gray_plaster.png" type="2d" name="tex-wall"/>
+
+    <material name="walls_mat" reflectance="0.0" shininess="0.3" specular="0.8" texrepeat="3 3" texture="tex-wall" texuniform="true" />
+    <texture  name="textable" builtin="flat" height="512" width="512" rgb1="0.8 0.8 0.8" rgb2="0.8 0.8 0.8"/>
+    <material name="table_mat" texture="textable" />
+
+    
+    <texture type="2d" name="Vegan_0013" file="textures/lab8/Vegan_0013.png"/>
+    <material name="0000" texture="Vegan_0013" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Vegan_0002" file="textures/lab8/Vegan_0002.png"/>
+    <material name="000555" texture="Vegan_0002" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="African_stone_wall" file="textures/lab8/Oak(6)_2.png"/>
+    <material name="African_stone_wall" specular="0.5" shininess="0.010000005" texture="African_stone_wall"/>
+    <material name="BLACK" specular="0.5" shininess="0.33640005500000003" rgba="0.004677 0.004677 0.004677 1.000000"/>
+    <material name="Computer" specular="0.5" shininess="0.25" rgba="0.005203 0.005203 0.005203 1.000000"/>
+    <texture type="2d" name="Oak(6)_2" file="textures/lab8/Oak(6)_2.png"/>
+    <material name="Door_material" texture="Oak(6)_2" specular="0.5" shininess="0.25"/>
+    <material name="GLASS-011.003" specular="0.5" shininess="1.0" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Handle_material" specular="0.5" shininess="0.25" rgba="0.013340 0.013340 0.013340 1.000000"/>
+    <material name="Material.001" specular="0.5" shininess="0.532900024" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Material.002" specular="0.5" shininess="0.120598373" rgba="0.000135 0.000135 0.000135 1.000000"/>
+    <material name="Material.006" specular="0.5" shininess="1.0" rgba="1.000000 1.000000 1.000000 1.000000"/>
+    <texture type="2d" name="Marble005_1K_Color" file="textures/lab8/Marble005_1K_Color.png"/>
+    <material name="Material.009" texture="Marble005_1K_Color" specular="0.5" shininess="0.64"/>
+    <material name="Material.010" specular="0.240909" shininess="0.09" rgba="0.012092 0.012092 0.012092 1.000000"/>
+    <texture type="2d" name="Material_2" file="textures/lab8/Material_2.png"/>
+    <material name="Material_2_Mat" texture="Material_2" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Material_3" file="textures/lab8/Material_3.png"/>
+    <material name="Material_3_Mat" texture="Material_3" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="Material_4" file="textures/lab8/Material_4.png"/>
+    <material name="Material_4_Mat" texture="Material_4" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="2K-plaster_33_basecolor" file="textures/lab8/2K-plaster_33_basecolor.png"/>
+    <material name="Plaster" texture="2K-plaster_33_basecolor" specular="0.5" shininess="0.5"/>
+    <material name="Refrigerator" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="Metal011_4K_Color" file="textures/lab8/Metal011_4K_Color.png"/>
+    <material name="Refrigerator.001" texture="Metal011_4K_Color" specular="0.5" shininess="0.25"/>
+    <material name="Stylised_wood_2" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Wall" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="cgaxis_models_53_01_01" file="textures/lab8/cgaxis_models_53_01_01.png"/>
+    <material name="book1.001" texture="cgaxis_models_53_01_01" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_04_01" file="textures/lab8/cgaxis_models_53_04_01.png"/>
+    <material name="book16" texture="cgaxis_models_53_04_01" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_04_03" file="textures/lab8/cgaxis_models_53_04_03.png"/>
+    <material name="book17" texture="cgaxis_models_53_04_03" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_04_05" file="textures/lab8/cgaxis_models_53_04_05.png"/>
+    <material name="book18" texture="cgaxis_models_53_04_05" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_04_07" file="textures/lab8/cgaxis_models_53_04_07.png"/>
+    <material name="book19" texture="cgaxis_models_53_04_07" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_01_03" file="textures/lab8/cgaxis_models_53_01_03.png"/>
+    <material name="book2" texture="cgaxis_models_53_01_03" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_04_09" file="textures/lab8/cgaxis_models_53_04_09.png"/>
+    <material name="book20" texture="cgaxis_models_53_04_09" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_04_11" file="textures/lab8/cgaxis_models_53_04_11.png"/>
+    <material name="book21" texture="cgaxis_models_53_04_11" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_01_05" file="textures/lab8/cgaxis_models_53_01_05.png"/>
+    <material name="book3" texture="cgaxis_models_53_01_05" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_01_07" file="textures/lab8/cgaxis_models_53_01_07.png"/>
+    <material name="book4" texture="cgaxis_models_53_01_07" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_02_01" file="textures/lab8/cgaxis_models_53_02_01.png"/>
+    <material name="book5" texture="cgaxis_models_53_02_01" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_02_09" file="textures/lab8/cgaxis_models_53_02_09.png"/>
+    <material name="book6" texture="cgaxis_models_53_02_09" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_02_10" file="textures/lab8/cgaxis_models_53_02_10.png"/>
+    <material name="book7" texture="cgaxis_models_53_02_10" specular="0.5" shininess="0.25"/>
+    <material name="cabinet_" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="cushion.003" specular="0.222727" shininess="0.25" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="Kitaccessories-1_Base_color_1001" file="textures/lab8/Kitaccessories-1_Base_color_1001.png"/>
+    <material name="decore-2_.001" texture="Kitaccessories-1_Base_color_1001" specular="0.5" shininess="0.5"/>
+    <material name="factor" specular="0.5" shininess="0.801838806" rgba="0.141597 0.141597 0.141597 1.000000"/>
+    <texture type="2d" name="Concrete042A_1K-PNG_Color" file="textures/lab8/Concrete042A_1K-PNG_Color.png"/>
+    <material name="floor_" texture="Concrete042A_1K-PNG_Color" specular="0.5" shininess="0.25"/>
+    <material name="glaas_put_" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="glass3" specular="0.5" shininess="0.81" rgba="0.775135 0.000910 0.001365 1.000000"/>
+    <material name="glass_2" specular="0.5" shininess="1.0" rgba="0.118378 0.540664 0.009922 1.000000"/>
+    <texture type="2d" name="leather_Base_color" file="textures/lab8/leather_Base_color.png"/>
+    <material name="leather.002" texture="leather_Base_color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="leather_Base_color" file="textures/lab8/leather_Base_color.png"/>
+    <material name="leather.003" texture="leather_Base_color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="leather_Base_color" file="textures/lab8/leather_Base_color.png"/>
+    <material name="leather.004" texture="leather_Base_color" specular="0.5" shininess="0.5"/>
+    <material name="lighte3_" specular="0.5" shininess="0.25" rgba="0.531732 0.360699 0.171918 1.000000"/>
+    <material name="lighte_1_" specular="0.186364" shininess="0.555702454" rgba="0.314652 0.117848 0.068184 1.000000"/>
+    <material name="metal_-01_.003" specular="0.0" shininess="0.25" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="metal_.001" specular="0.5" shininess="0.64" rgba="0.276956 0.276956 0.276956 1.000000"/>
+    <material name="metal_blach_chair_" specular="0.5" shininess="0.25" rgba="0.004505 0.004505 0.004505 1.000000"/>
+    <texture type="2d" name="cgaxis_models_53_01_08" file="textures/lab8/cgaxis_models_53_01_08.png"/>
+    <material name="paper_book_" texture="cgaxis_models_53_01_08" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_01_08" file="textures/lab8/cgaxis_models_53_01_08.png"/>
+    <material name="paper_book_.001" texture="cgaxis_models_53_01_08" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Wood006_2K_Color" file="textures/lab8/Wood006_2K_Color.png"/>
+    <material name="picture" texture="Wood006_2K_Color" specular="0.5" shininess="0.25"/>
+    <material name="picture1_" specular="0.5" shininess="0.25" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="tropical-green-leaves-background" file="textures/lab8/tropical-green-leaves-background.png"/>
+    <material name="picture_3_" texture="tropical-green-leaves-background" specular="0.21363600000000002" shininess="0.156384338"/>
+    <material name="plant_2_Mat.009" specular="0.5" shininess="0.25" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="plant_3_Copy_Mat.003" specular="1.0" shininess="0.2" rgba="1.000000 1.000000 1.000000 1.000000"/>
+    <material name="plant_3_Mat.008" specular="1.0" shininess="0.2" rgba="1.000000 1.000000 1.000000 1.000000"/>
+    <material name="profile" specular="0.5" shininess="0.09" rgba="0.012514 0.012514 0.012514 1.000000"/>
+    <material name="sofa" specular="0.5" shininess="0.25" rgba="0.800000 0.082078 0.239961 1.000000"/>
+    <texture type="2d" name="Bricks075A_4K_Color" file="textures/lab8/Bricks075A_4K_Color.png"/>
+    <material name="stone1_" texture="Bricks075A_4K_Color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="Caesar-tiles-set26-ACC1_7502_V1_2k" file="textures/lab8/Caesar-tiles-set26-ACC1_7502_V1_2k.png"/>
+    <material name="stone_" texture="Caesar-tiles-set26-ACC1_7502_V1_2k" specular="0.5" shininess="0.597107361"/>
+    <material name="tv_" specular="0.5" shininess="0.883599976" rgba="0.010157 0.010157 0.010157 1.000000"/>
+    <material name="wall1" specular="0.5" shininess="0.25" rgba="0.800000 0.147756 0.031224 1.000000"/>
+    <texture type="2d" name="129_Walnutfinewoodtexture-seamless" file="textures/lab8/129_Walnutfinewoodtexture-seamless.png"/>
+    <material name="wood_1_" texture="129_Walnutfinewoodtexture-seamless" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="wood_1_0642_diffuse" file="textures/lab8/wood_1_0642_diffuse.png"/>
+    <material name="wood_2" texture="wood_1_0642_diffuse" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Wood005_2K_Color" file="textures/lab8/Wood005_2K_Color.png"/>
+    <material name="wood_3" texture="Wood005_2K_Color" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Wood007_2K_Color" file="textures/lab8/Wood007_2K_Color.png"/>
+    <material name="wood_5" texture="Wood007_2K_Color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="Wood066_2K_Color" file="textures/lab8/Wood066_2K_Color.png"/>
+    <material name="wood_tabel_.002" texture="Wood066_2K_Color" specular="0.5" shininess="0.5"/>
+    <mesh name="scene13_0" file="meshes/lab8/scene13_0.obj"/>
+    <mesh name="scene13_1" file="meshes/lab8/scene13_1.obj"/>
+    <mesh name="scene13_2" file="meshes/lab8/scene13_2.obj"/>
+    <mesh name="scene13_3" file="meshes/lab8/scene13_3.obj"/>
+    <mesh name="scene13_4" file="meshes/lab8/scene13_4.obj"/>
+    <mesh name="scene13_5" file="meshes/lab8/scene13_5.obj"/>
+    <mesh name="scene13_6" file="meshes/lab8/scene13_6.obj"/>
+    <mesh name="scene13_7" file="meshes/lab8/scene13_7.obj"/>
+    <mesh name="scene13_8" file="meshes/lab8/scene13_8.obj"/>
+    <mesh name="scene13_9" file="meshes/lab8/scene13_9.obj"/>
+    <mesh name="scene13_10" file="meshes/lab8/scene13_10.obj"/>
+    <mesh name="scene13_11" file="meshes/lab8/scene13_11.obj"/>
+    <mesh name="scene13_12" file="meshes/lab8/scene13_12.obj"/>
+    <mesh name="scene13_13" file="meshes/lab8/scene13_13.obj"/>
+    <mesh name="scene13_14" file="meshes/lab8/scene13_14.obj"/>
+    <mesh name="scene13_15" file="meshes/lab8/scene13_15.obj"/>
+    <mesh name="scene13_16" file="meshes/lab8/scene13_16.obj"/>
+    <mesh name="scene13_17" file="meshes/lab8/scene13_17.obj"/>
+    <mesh name="scene13_18" file="meshes/lab8/scene13_18.obj"/>
+    <mesh name="scene13_19" file="meshes/lab8/scene13_19.obj"/>
+    <mesh name="scene13_20" file="meshes/lab8/scene13_20.obj"/>
+    <mesh name="scene13_21" file="meshes/lab8/scene13_21.obj"/>
+    <mesh name="scene13_22" file="meshes/lab8/scene13_22.obj"/>
+    <mesh name="scene13_23" file="meshes/lab8/scene13_23.obj"/>
+    <mesh name="scene13_24" file="meshes/lab8/scene13_24.obj"/>
+    <mesh name="scene13_25" file="meshes/lab8/scene13_25.obj"/>
+    <mesh name="scene13_26" file="meshes/lab8/scene13_26.obj"/>
+    <mesh name="scene13_27" file="meshes/lab8/scene13_27.obj"/>
+    <mesh name="scene13_28" file="meshes/lab8/scene13_28.obj"/>
+    <!-- <mesh name="scene13_29" file="meshes/lab8/scene13_29.obj"/> -->
+    <!-- <mesh name="scene13_30" file="meshes/lab8/scene13_30.obj"/> -->
+    <!-- <mesh name="scene13_31" file="meshes/lab8/scene13_31.obj"/> -->
+    <mesh name="scene13_32" file="meshes/lab8/scene13_32.obj"/>
+    <mesh name="scene13_33" file="meshes/lab8/scene13_33.obj"/>
+    <mesh name="scene13_34" file="meshes/lab8/scene13_34.obj"/>
+    <mesh name="scene13_35" file="meshes/lab8/scene13_35.obj"/>
+    <mesh name="scene13_36" file="meshes/lab8/scene13_36.obj"/>
+    <mesh name="scene13_37" file="meshes/lab8/scene13_37.obj"/>
+    <mesh name="scene13_38" file="meshes/lab8/scene13_38.obj"/>
+    <mesh name="scene13_39" file="meshes/lab8/scene13_39.obj"/>
+    <mesh name="scene13_40" file="meshes/lab8/scene13_40.obj"/>
+    <mesh name="scene13_41" file="meshes/lab8/scene13_41.obj"/>
+    <mesh name="scene13_42" file="meshes/lab8/scene13_42.obj"/>
+    <mesh name="scene13_43" file="meshes/lab8/scene13_43.obj"/>
+    <mesh name="scene13_44" file="meshes/lab8/scene13_44.obj"/>
+    <mesh name="scene13_45" file="meshes/lab8/scene13_45.obj"/>
+    <!-- <mesh name="scene13_46" file="meshes/lab8/scene13_46.obj"/> -->
+    <mesh name="scene13_47" file="meshes/lab8/scene13_47.obj"/>
+    <!-- <mesh name="scene13_48" file="meshes/lab8/scene13_48.obj"/> -->
+    <mesh name="scene13_49" file="meshes/lab8/scene13_49.obj"/>
+    <mesh name="scene13_50" file="meshes/lab8/scene13_50.obj"/>
+    <mesh name="scene13_51" file="meshes/lab8/scene13_51.obj"/>
+    <mesh name="scene13_52" file="meshes/lab8/scene13_52.obj"/>
+    <mesh name="scene13_53" file="meshes/lab8/scene13_53.obj"/>
+    <mesh name="scene13_54" file="meshes/lab8/scene13_54.obj"/>
+    <mesh name="scene13_55" file="meshes/lab8/scene13_55.obj"/>
+    <mesh name="scene13_56" file="meshes/lab8/scene13_56.obj"/>
+    <mesh name="scene13_57" file="meshes/lab8/scene13_57.obj"/>
+    <mesh name="scene13_58" file="meshes/lab8/scene13_58.obj"/>
+    <mesh name="scene13_59" file="meshes/lab8/scene13_59.obj"/>
+    <mesh name="scene13_60" file="meshes/lab8/scene13_60.obj"/>
+    <mesh name="scene13_61" file="meshes/lab8/scene13_61.obj"/>
+    <mesh name="scene13_62" file="meshes/lab8/scene13_62.obj"/>
+    <mesh name="scene13_63" file="meshes/lab8/scene13_63.obj"/>
+    <mesh name="scene13_64" file="meshes/lab8/scene13_64.obj"/>
+  </asset>
+  <worldbody>
+    <body name="scene13">
+      <geom mesh="scene13_0" material="Material_4_Mat" class="visual"/>
+      <geom mesh="scene13_1" material="Material_3_Mat" class="visual"/>
+      <geom mesh="scene13_2" material="Material_2_Mat" class="visual"/>
+      <geom mesh="scene13_3" material="Material.006" class="visual"/>
+      <geom mesh="scene13_4" material="glaas_put_" class="visual"/>
+      <geom mesh="scene13_5" material="leather.003" class="visual"/>
+      <geom mesh="scene13_6" material="leather.002" class="visual"/>
+      <geom mesh="scene13_7" material="leather.004" class="visual"/>
+      <geom mesh="scene13_8" material="wood_tabel_.002" class="visual"/>
+      <geom mesh="scene13_9" material="plant_3_Copy_Mat.003" class="visual"/>
+      <geom mesh="scene13_10" material="plant_3_Mat.008" class="visual"/>
+      <geom mesh="scene13_11" material="plant_2_Mat.009" class="visual"/>
+      <geom mesh="scene13_12" material="GLASS-011.003" class="visual"/>
+      <geom mesh="scene13_13" material="book1.001" class="visual"/>
+      <geom mesh="scene13_14" material="book2" class="visual"/>
+      <geom mesh="scene13_15" material="book3" class="visual"/>
+      <geom mesh="scene13_16" material="book4" class="visual"/>
+      <geom mesh="scene13_17" material="book5" class="visual"/>
+      <geom mesh="scene13_18" material="book6" class="visual"/>
+      <geom mesh="scene13_19" material="book7" class="visual"/>
+      <geom mesh="scene13_20" material="paper_book_.001" class="visual"/>
+      <geom mesh="scene13_21" material="book16" class="visual"/>
+      <geom mesh="scene13_22" material="book17" class="visual"/>
+      <geom mesh="scene13_23" material="book18" class="visual"/>
+      <geom mesh="scene13_24" material="book19" class="visual"/>
+      <geom mesh="scene13_25" material="book20" class="visual"/>
+      <geom mesh="scene13_26" material="book21" class="visual"/>
+      <geom mesh="scene13_27" material="paper_book_" class="visual"/>
+      <geom mesh="scene13_28" material="Stylised_wood_2" class="visual"/>
+      <!-- <geom mesh="scene13_29" material="picture_3_" class="visual"/> -->
+      <!-- <geom mesh="scene13_30" material="picture1_" class="visual"/> -->
+      <!-- <geom mesh="scene13_31" material="picture" class="visual"/> -->
+      <geom mesh="scene13_32" material="lighte3_" class="visual"/>
+      <geom mesh="scene13_33" material="wood_1_" class="visual"/>
+      <geom mesh="scene13_34" material="tv_" class="visual"/>
+      <geom mesh="scene13_35" material="lighte_1_" class="visual"/>
+      <geom mesh="scene13_36" material="Computer" class="visual"/>
+      <geom mesh="scene13_37" material="glass_2" class="visual"/>
+      <geom mesh="scene13_38" material="glass3" class="visual"/>
+      <geom mesh="scene13_39" material="wood_2" class="visual"/>
+      <geom mesh="scene13_40" material="BLACK" class="visual"/>
+      <geom mesh="scene13_41" material="decore-2_.001" class="visual"/>
+      <geom mesh="scene13_42" material="0000" class="visual"/>
+      <geom mesh="scene13_43" material="000555" class="visual"/>
+      <geom mesh="scene13_44" material="Material.001" class="visual"/>
+      <geom mesh="scene13_45" material="metal_blach_chair_" class="visual"/>
+      <!-- <geom mesh="scene13_46" material="metal_.001" class="visual"/> -->
+      <geom mesh="scene13_47" material="Refrigerator.001" class="visual"/>
+      <!-- <geom mesh="scene13_48" material="Refrigerator" class="visual"/> -->
+      <geom mesh="scene13_49" material="factor" class="visual"/>
+      <geom mesh="scene13_50" material="Plaster" class="visual"/>
+      <geom mesh="scene13_51" material="stone_" class="visual"/>
+      <geom mesh="scene13_52" material="cabinet_" class="visual"/>
+      <geom mesh="scene13_53" material="African_stone_wall" class="visual"/>
+      <geom mesh="scene13_54" material="wood_3" class="visual"/>
+      <geom mesh="scene13_55" material="floor_" class="visual"/>
+      <geom mesh="scene13_56" material="Handle_material" class="visual"/>
+      <geom mesh="scene13_57" material="Door_material" class="visual"/>
+      <geom mesh="scene13_58" material="stone1_" class="visual"/>
+      <geom mesh="scene13_59" material="profile" class="visual"/>
+      <geom mesh="scene13_60" material="wall1" class="visual"/>
+      <geom mesh="scene13_61" material="Wall" class="visual"/>
+      <geom mesh="scene13_62" material="cushion.003" class="visual"/>
+      <geom mesh="scene13_63" material="wood_5" class="visual"/>
+      <geom mesh="scene13_64" material="sofa" class="visual"/>
+    </body>
+    <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false"/>
+    <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="5 5 .125" type="plane"/>
+
+    <!-- <geom pos="1.75 0 1.5" quat="0.5 0.5 -0.5 -0.5" size="3 10 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_front_visual" material="Metal3534"/> -->
+
+ 
+    <body name="table" pos="0 0 0.4">
+      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" group="0" name="table_collision" friction="1 0.005 0.0001"/>
+      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" conaffinity="0" contype="0" group="1" name="table_visual" material="table_texture"/>
+      <site pos="0 0 0.4" name="table_top" size="0.001 0.001 0.001" rgba="0 0 0 0"/>
+      <!-- Legs (visual only) -->
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg1_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg2_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg3_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg4_visual" material="table_legs"/>
+    </body>
+
+    <light name="light1" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="1 1 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+    <light name="light2" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="-3. -3. 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+
+    <!-- front view -->
+    <camera mode="fixed" name="frontview" pos="1.0 0 1.45" quat="0.56 0.43 0.43 0.56"/>
+    <!-- bird view -->
+    <camera mode="fixed" name="birdview" pos="-0.2 0 3.0" quat="0.7071 0 0 0.7071"/>
+    <!-- agent view -->
+    <camera mode="fixed" name="agentview" pos="0.5 0 1.35" quat="0.653 0.271 0.271 0.653"/>
+
+    <!-- side view -->
+    <camera mode="fixed" name="sideview" pos="-0.05651774593317116 1.2761224129427358 -1.4879572214102434" quat="0.009905065491771751 0.006877963156909582 0.5912228352893879 0.806418094001364" />
+
+  </worldbody>
+</mujoco>

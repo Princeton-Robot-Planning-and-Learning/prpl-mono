@@ -1,0 +1,130 @@
+<mujoco model="lab6">
+  <default>
+    <default class="visual">
+      <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+    </default>
+    <default class="collision">
+      <geom group="3" type="mesh"/>
+    </default>
+  </default>
+  <asset>
+    <texture builtin="gradient" height="256" rgb1=".9 .9 1." rgb2=".2 .3 .4" type="skybox" width="256"/>
+    <texture file="textures/wood_chevron.png" type="2d" name="texplane"/>
+
+    <!-- plaster walls -->
+    <texture file="textures/robocasa_textures/wall1.png" type="2d" name="tex-wall"/>
+    
+    <!-- ceramic table texture and material-->
+    <texture file="textures/tables/white_quartz_table.png" type="cube" name="tex-table"/>
+    <material name="table_texture" reflectance="0.0" shininess="0.0" specular="0.2" texrepeat="1 1" texture="tex-table" />
+    <!-- steel legs -->
+    <texture file="textures/martin_novak_wood_table.png" type="cube" name="tex-table-legs"/>
+    <material name="table_legs" reflectance="0.8" shininess="0.8" texrepeat="3 3" texture="tex-table-legs" />
+    
+
+
+    <material name="floorplane" reflectance="0.0" shininess="0.0" texrepeat="1 1" rgba="0 0 0 0"/>
+
+
+    <material name="walls_mat" reflectance="0.0" shininess="0.3" specular="0.8" texrepeat="3 3" texture="tex-wall" texuniform="true" />
+    <texture  name="textable" builtin="flat" height="512" width="512" rgb1="0.8 0.8 0.8" rgb2="0.8 0.8 0.8"/>
+    <material name="table_mat" texture="textable" />
+
+    <material name="Emmision" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Emmision.001" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Glass" specular="0.5" shininess="0.36" rgba="0.333000 0.342000 0.900000 1.000000"/>
+    <material name="Metalic" specular="0.5" shininess="0.376549591" rgba="0.440954 0.440954 0.440954 1.000000"/>
+    <material name="Metallic-Black" specular="0.5" shininess="0.7071281739999999" rgba="0.040012 0.040012 0.040012 1.000000"/>
+    <material name="Plastic" specular="0.5" shininess="0.159999985" rgba="0.061590 0.061590 0.061590 1.000000"/>
+    <material name="Wood-rattan" specular="0.5" shininess="0.25" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="bamboo" specular="0.5" shininess="0.25" rgba="0.800023 0.592326 0.256895 1.000000"/>
+    <material name="black" specular="0.5" shininess="0.5625" rgba="0.059607 0.059607 0.059607 1.000000"/>
+    <material name="bronze" specular="0.5" shininess="0.7776032709999999" rgba="0.800016 0.466535 0.330865 1.000000"/>
+    <material name="fabric_sofa" specular="0.5" shininess="0.5" rgba="0.260264 0.307131 0.292678 1.000000"/>
+    <texture type="2d" name="wood_floor" file="textures/oak_floor.png"/>
+    <material name="floor_tile" specular="0.5" shininess="0.25" texture="wood_floor"/>
+    <material name="glass" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="kitchen_Metal" specular="0.5" shininess="0.66200415" rgba="0.557574 0.557574 0.557574 1.000000"/>
+    <material name="oak_veneer" specular="0.5" shininess="0.5" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="plastic-black" specular="0.5" shininess="0.25" rgba="0.009475 0.009475 0.009475 1.000000"/>
+    <material name="tosca" specular="0.5" shininess="0.25" rgba="0.284908 0.398117 0.338393 1.000000"/>
+    <material name="wall_1" specular="0.5" shininess="0.039999996" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="wall_2" specular="0.5" shininess="0.039999996" rgba="0.603929 0.686655 0.644433 1.000000"/>
+    <material name="white" specular="0.5" shininess="0.7696074220000001" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <mesh name="scene5_0" file="meshes/lab6/scene5_0.obj"/>
+    <mesh name="scene5_1" file="meshes/lab6/scene5_1.obj"/>
+    <mesh name="scene5_2" file="meshes/lab6/scene5_2.obj"/>
+    <mesh name="scene5_3" file="meshes/lab6/scene5_3.obj"/>
+    <mesh name="scene5_4" file="meshes/lab6/scene5_4.obj"/>
+    <mesh name="scene5_5" file="meshes/lab6/scene5_5.obj"/>
+    <mesh name="scene5_6" file="meshes/lab6/scene5_6.obj"/>
+    <mesh name="scene5_7" file="meshes/lab6/scene5_7.obj"/>
+    <mesh name="scene5_8" file="meshes/lab6/scene5_8.obj"/>
+    <mesh name="scene5_9" file="meshes/lab6/scene5_9.obj"/>
+    <mesh name="scene5_10" file="meshes/lab6/scene5_10.obj"/>
+    <mesh name="scene5_11" file="meshes/lab6/scene5_11.obj"/>
+    <mesh name="scene5_12" file="meshes/lab6/scene5_12.obj"/>
+    <mesh name="scene5_13" file="meshes/lab6/scene5_13.obj"/>
+    <mesh name="scene5_14" file="meshes/lab6/scene5_14.obj"/>
+    <mesh name="scene5_15" file="meshes/lab6/scene5_15.obj"/>
+    <mesh name="scene5_16" file="meshes/lab6/scene5_16.obj"/>
+    <mesh name="scene5_17" file="meshes/lab6/scene5_17.obj"/>
+    <mesh name="scene5_18" file="meshes/lab6/scene5_18.obj"/>
+    <mesh name="scene5_19" file="meshes/lab6/scene5_19.obj"/>
+  </asset>
+  <worldbody>
+    <body name="scene5">
+      <geom mesh="scene5_0" material="Emmision.001" class="visual"/>
+      <geom mesh="scene5_1" material="Emmision" class="visual"/>
+      <geom mesh="scene5_2" material="plastic-black" class="visual"/>
+      <geom mesh="scene5_3" material="plastic-black" class="visual"/>
+      <geom mesh="scene5_4" material="Glass" class="visual"/>
+      <geom mesh="scene5_5" material="Plastic" class="visual"/>
+      <geom mesh="scene5_6" material="wall_2" class="visual"/>
+      <geom mesh="scene5_7" material="floor_tile" class="visual"/>
+      <geom mesh="scene5_8" material="wall_1" class="visual"/>
+      <geom mesh="scene5_9" material="fabric_sofa" class="visual"/>
+      <geom mesh="scene5_10" material="Wood-rattan" class="visual"/>
+      <geom mesh="scene5_11" material="bronze" class="visual"/>
+      <geom mesh="scene5_12" material="Metalic" class="visual"/>
+      <geom mesh="scene5_13" material="glass" class="visual"/>
+      <geom mesh="scene5_14" material="black" class="visual"/>
+      <geom mesh="scene5_15" material="oak_veneer" class="visual"/>
+      <geom mesh="scene5_16" material="Metallic-Black" class="visual"/>
+      <geom mesh="scene5_17" material="kitchen_Metal" class="visual"/>
+      <geom mesh="scene5_18" material="white" class="visual"/>
+      <geom mesh="scene5_19" material="tosca" class="visual"/>
+    </body>
+    <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false"/>
+    <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="7.5 7.5 .125" type="plane"/>
+    <body name="table" pos="0 0 0.4">
+      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" group="0" name="table_collision" friction="1 0.005 0.0001"/>
+      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" conaffinity="0" contype="0" group="1" name="table_visual" material="table_texture"/>
+      <site pos="0 0 0.4" name="table_top" size="0.001 0.001 0.001" rgba="0 0 0 0"/>
+      <!-- Legs (visual only) -->
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg1_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg2_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg3_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg4_visual" material="table_legs"/>
+    </body>
+
+    <geom pos="0.5 1.6 1.5" quat="0.7071 0.7071 0 0" size="4.5 2.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_left_visual" material="walls_mat"/>
+    <!-- <geom pos="0.5 -3 1.5" quat="0.7071 -0.7071 0 0" size="2.5 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_right_visual" material="walls_mat"/> -->
+
+    <light name="light1" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="1 1 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+    <light name="light2" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="-3. -3. 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+
+
+    <!-- front view -->
+    <camera mode="fixed" name="frontview" pos="1.0 0 1.45" quat="0.56 0.43 0.43 0.56"/>
+    <!-- bird view -->
+    <camera mode="fixed" name="birdview" pos="-0.2 0 3.0" quat="0.7071 0 0 0.7071"/>
+    <!-- agent view -->
+    <camera mode="fixed" name="agentview" pos="0.5 0 1.35" quat="0.653 0.271 0.271 0.653"/>
+
+
+    <!-- side view -->
+    <camera mode="fixed" name="sideview" pos="-0.05651774593317116 1.2761224129427358 -1.4879572214102434" quat="0.009905065491771751 0.006877963156909582 0.5912228352893879 0.806418094001364" />
+
+  </worldbody>
+</mujoco>

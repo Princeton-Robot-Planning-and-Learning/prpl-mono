@@ -41,6 +41,7 @@ from prbench.envs.dynamic3d.robots import (
     TidyBot3DRobotActionSpace,
     TidyBotRobotEnv,
 )
+from prbench.envs.dynamic3d.scene_loader import SceneLoader
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
 from prbench.envs.dynamic3d.utils import (
     compute_camera_euler,
@@ -76,6 +77,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         num_objects: int = 3,
         task_config_path: str | None = None,
         show_images: bool = False,
+        scene_bg: str | None = None,
+        scene_render_camera: str | None = "overview",
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
         super().__init__(config)
@@ -101,6 +104,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
 
+        # Override scene configuration if scene_bg is provided
+        if scene_bg is not None:
+            self._apply_scene_bg(scene_bg)
+
         # Set camera names from config
         self.camera_names = config.camera_names.copy()
         if "cameras" in self.task_config:
@@ -122,7 +129,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         )
 
         # This camera's render will be returned by default.
-        self._render_camera_name: str | None = "overview"
+        self._render_camera_name: str | None = scene_render_camera
 
         # Initialize empty object and fixture lists, and ground fixture.
         # These will be populated based on the task configuration
@@ -136,6 +143,46 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Store current state
         self._current_state: ObjectCentricState | None = None
+
+    def _apply_scene_bg(self, scene_bg: str) -> None:
+        """Apply scene background configuration to task_config.
+
+        Args:
+            scene_bg: Scene background identifier. Supports:
+                - "simple": Use default ground scene
+                - "mimiclabs-labN": Use MimicLabs labN scene (N=2-8)
+        """
+        if scene_bg == "simple":
+            # Use simple ground scene (default)
+            self.task_config["scene"] = {"type": "simple"}
+        elif scene_bg.startswith("mimiclabs-lab"):
+            # Extract lab number from scene_bg (e.g., "mimiclabs-lab2" -> 2)
+            # Split by "-lab" and take the last part
+            lab_str = scene_bg.split("-lab")[-1]
+            try:
+                lab_num = int(lab_str)
+            except ValueError as e:
+                raise ValueError(
+                    f"Could not parse lab number from {scene_bg}. "
+                    f"Expected format: 'mimiclabs-lab2' through 'mimiclabs-lab8'"
+                ) from e
+            if not 2 <= lab_num <= 8:
+                raise ValueError(
+                    f"MimicLabs lab number must be 2-8, got {lab_num} from {scene_bg}"
+                )
+            self.task_config["scene"] = {"type": "mimiclabs", "lab": lab_num}
+
+            # Update camera names to match MimicLabs scene cameras
+            # MimicLabs scenes define: frontview, birdview, agentview, sideview
+            # If current camera_names contains 'overview', replace with 'frontview'
+            # Replace overview with frontview (default camera in MimicLabs)
+            self.camera_names = ["frontview", "birdview", "agentview", "sideview"]
+
+        else:
+            raise ValueError(
+                f"Unknown scene_bg: {scene_bg}. "
+                f"Supported values: 'simple', 'mimiclabs-lab2' through 'mimiclabs-lab8'"
+            )
 
     def _vectorize_observation(self, obs: dict[str, Any]) -> NDArray[np.float32]:
         """Convert TidyBot observation dict to vector."""
@@ -221,16 +268,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Set model path to local models directory
         model_base_path = Path(__file__).parent / "models" / "stanford_tidybot"
-        model_file = "ground_scene.xml"
-        # Construct absolute path to model file
-        absolute_model_path = model_base_path / model_file
 
-        with open(absolute_model_path, "r", encoding="utf-8") as f:
-            xml_string = f.read()
+        # Load scene XML using SceneLoader
+        scene_config = self.task_config.get("scene", {"type": "simple"})
+        xml_string = SceneLoader.load_scene(scene_config, model_base_path)
 
         # Insert objects in scene
-        tree = ET.parse(str(absolute_model_path))
-        root = tree.getroot()
+        root = ET.fromstring(xml_string)
         # Get or create asset section for adding meshes/textures/materials
         asset_section = root.find("asset")
         if asset_section is None:
@@ -382,10 +426,34 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         # (e.g., RoboCasa, GeneratedBowl)
                         if hasattr(obj, "get_assets"):
                             obj_assets = obj.get_assets()
+                            # Get existing asset names to avoid duplicates
+                            # Track per asset type since MuJoCo allows same name
+                            # for different types
+                            existing_names: dict[str, set[str]] = {}
+                            for existing_asset in asset_section:
+                                asset_tag = existing_asset.tag
+                                asset_name = existing_asset.get("name")
+                                if asset_name:
+                                    if asset_tag not in existing_names:
+                                        existing_names[asset_tag] = set()
+                                    existing_names[asset_tag].add(asset_name)
+
                             # Add all mesh, texture, and material elements
-                            # to asset section
+                            # to asset section, skipping duplicates within same type
                             for asset_elem in obj_assets:
+                                asset_tag = asset_elem.tag
+                                asset_name = asset_elem.get("name")
+                                if (
+                                    asset_name
+                                    and asset_tag in existing_names
+                                    and asset_name in existing_names[asset_tag]
+                                ):
+                                    continue
                                 asset_section.append(asset_elem)
+                                if asset_name:
+                                    if asset_tag not in existing_names:
+                                        existing_names[asset_tag] = set()
+                                    existing_names[asset_tag].add(asset_name)
 
             # Setup cameras from task configuration
             self._setup_cameras(root)
