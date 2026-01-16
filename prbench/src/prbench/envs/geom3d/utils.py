@@ -1,8 +1,10 @@
 """Utilities."""
 
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pybullet as p
 from numpy.typing import NDArray
 from pybullet_helpers.geometry import Pose, SE2Pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
@@ -13,6 +15,52 @@ from shapely.geometry import Polygon
 
 from prbench.envs.geom3d.object_types import Geom3DCuboidType
 from prbench.envs.utils import RobotActionSpace
+
+# Path to the default realistic background PLY file
+DEFAULT_REALISTIC_BG_PATH = (
+    Path(__file__).parent / "assets" / "Stage_v3_sc1_staging.obj"
+)
+
+
+def load_realistic_background(
+    physics_client_id: int,
+    obj_path: str | Path,
+    position=(0, 0, 0),
+    orientation=(0, 0, 0, 1),
+    scale=(1, 1, 1),
+) -> int:
+    """Load a PLY file as a visual-only background in PyBullet.
+
+    Args:
+        physics_client_id: PyBullet physics client ID.
+        ply_path: Path to the PLY file.
+        position: Base position of the mesh (x, y, z).
+        orientation: Base orientation as quaternion (x, y, z, w).
+        scale: Mesh scale (sx, sy, sz).
+
+    Returns:
+        Body ID of the loaded background mesh.
+    """
+    visual_id = p.createVisualShape(
+        p.GEOM_MESH,
+        fileName=str(obj_path),
+        meshScale=scale,
+        physicsClientId=physics_client_id,
+    )
+
+    body_id = p.createMultiBody(
+        baseMass=0,
+        baseVisualShapeIndex=visual_id,
+        baseCollisionShapeIndex=-1,  # visual only
+        basePosition=position,
+        baseOrientation=orientation,
+        physicsClientId=physics_client_id,
+    )
+
+    # Disable collision
+    p.setCollisionFilterGroupMask(body_id, -1, 0, 0, physicsClientId=physics_client_id)
+
+    return body_id
 
 
 class Geom3DObjectCentricState(ObjectCentricState):
@@ -212,7 +260,7 @@ def is_on_top(
     R_B = Rotation.from_quat(quatB).as_matrix()
 
     def corners(
-        p: tuple[float, float, float], R: np.ndarray, h: np.ndarray
+        pos: tuple[float, float, float], R: np.ndarray, h: np.ndarray
     ) -> np.ndarray:
         local = np.array(
             [
@@ -222,7 +270,7 @@ def is_on_top(
                 for sz in [-1, 1]
             ]
         )
-        return (R @ local.T).T + p
+        return (R @ local.T).T + pos
 
     C_A = corners(posA, R_A, np.array(halfA))
     C_B = corners(posB, R_B, np.array(halfB))
@@ -260,7 +308,7 @@ def is_inside(
     R_B = Rotation.from_quat(quatB).as_matrix()
 
     def corners(
-        p: tuple[float, float, float], R: np.ndarray, h: np.ndarray
+        pos: tuple[float, float, float], R: np.ndarray, h: np.ndarray
     ) -> np.ndarray:
         local = np.array(
             [
@@ -270,7 +318,7 @@ def is_inside(
                 for sz in [-1, 1]
             ]
         )
-        return (R @ local.T).T + p
+        return (R @ local.T).T + pos
 
     C_A = corners(posA, R_A, np.array(halfA))
     C_B = corners(posB, R_B, np.array(halfB))
