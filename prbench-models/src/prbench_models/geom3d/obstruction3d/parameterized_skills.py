@@ -188,7 +188,7 @@ class GroundPickController(
                     self._sim.robot.arm,
                     [current_end_effector_pose, pre_retract_pose],
                     initial_joints=self._sim.robot.arm.get_joint_positions(),
-                    collision_ids={}, # type: ignore
+                    collision_ids={},  # type: ignore
                     seed=0,  # for determinism
                     joint_distance_fn=joint_distance_fn,
                     max_smoothing_iters_per_step=1,

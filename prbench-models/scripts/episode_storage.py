@@ -8,7 +8,8 @@ from pathlib import Path
 
 import cv2 as cv
 import numpy as np
-from constants import POLICY_CONTROL_FREQ
+
+from src.prbench_models.policy_constants import POLICY_CONTROL_FREQ
 
 
 def write_frames_to_mp4(frames: list[np.ndarray], mp4_path: Path) -> None:

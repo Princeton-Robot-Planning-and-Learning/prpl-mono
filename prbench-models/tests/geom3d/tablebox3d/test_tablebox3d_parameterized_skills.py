@@ -129,7 +129,7 @@ def test_pick_and_place_inside_box_controller():
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
 
-    obs, _ = env.reset(seed=123)
+    obs, _ = env.reset(seed=124)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
