@@ -316,7 +316,7 @@ def sample_collision_free_object_poses(
                 pose_box_dis = np.linalg.norm(
                     np.array(pose.position[:2]) - np.array(box_pose.position[:2])
                 )
-                if pose_table_dis - pose_box_dis < table_half_extents[1] + 0.1:
+                if pose_table_dis - pose_box_dis < table_half_extents[1]:
                     continue
             set_pose(obj_id, pose, physics_client_id)
 

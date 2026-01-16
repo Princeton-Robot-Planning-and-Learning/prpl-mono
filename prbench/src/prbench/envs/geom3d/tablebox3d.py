@@ -259,7 +259,6 @@ class ObjectCentricTableBox3DEnv(
             physics_client_id=self.physics_client_id,
             rng=self.np_random,
             other_collision_ids={self.robot.base.robot_id},
-            max_sampling_attempts=500_000,
         )
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
