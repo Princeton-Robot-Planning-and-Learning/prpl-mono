@@ -36,6 +36,8 @@ from prbench.envs.utils import PURPLE
 class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for TableBox3DEnv()."""
 
+    max_action_mag: float = 0.2
+
     # Table.
     table_pose: Pose = Pose((0.6, 0.0, 0.2))
     table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
@@ -55,7 +57,7 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
     # Box.
-    box_half_extents: tuple[float, float, float] = (0.1, 0.1, 0.1)
+    box_half_extents: tuple[float, float, float] = (0.1, 0.15, 0.1)
     box_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
     box_wall_thickness: float = 0.01
 
@@ -235,27 +237,23 @@ class ObjectCentricTableBox3DEnv(
         # Randomly sample collision-free positions for the cubes.
         # Also ensure that they are not in collision with the robot.
         # Samples the poses of the cubes
-        for _, box_id in self._boxes.items():
-            box_half_extents = (
-                self.config.box_half_extents[0],
-                self.config.box_half_extents[1],
-                self.config.box_half_extents[2],
-            )
-            # on the table
-            # box_pose = self.config.sample_block_on_table_pose(
-            #     box_half_extents, self.np_random
-            # )
-            # on the ground
-            box_pose = self.config.sample_block_on_ground(
-                box_half_extents, self.np_random
-            )
-            set_pose(box_id, box_pose, self.physics_client_id)
+        sample_collision_free_object_poses(
+            object_ids=set(self._boxes.values()),
+            table_pose=self.config.table_pose,
+            table_half_extents=self.config.table_half_extents,
+            lb=(self.config.x_lb, self.config.y_lb, self.config.box_half_extents[2]),
+            ub=(self.config.x_ub, self.config.y_ub, self.config.box_half_extents[2]),
+            physics_client_id=self.physics_client_id,
+            rng=self.np_random,
+            other_collision_ids={self.robot.base.robot_id},
+        )
 
         sample_collision_free_object_poses(
             use_box=True,
             box_pose=get_pose(self._boxes["box0"], self.physics_client_id),
             table_pose=self.config.table_pose,
             table_half_extents=self.config.table_half_extents,
+            box_half_extents=self.config.box_half_extents,
             object_ids=set(self._cubes.values()),
             lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2),
             ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2),
@@ -292,7 +290,9 @@ class ObjectCentricTableBox3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        collision_ids = {self.table_id}
+        collision_ids = (
+            {self.table_id} | set(self._cubes.values()) | set(self._boxes.values())
+        )
         return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:

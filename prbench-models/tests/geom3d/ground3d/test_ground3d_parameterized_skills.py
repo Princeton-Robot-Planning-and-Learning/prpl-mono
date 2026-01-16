@@ -17,7 +17,10 @@ prbench.register_all_environments()
 def test_pick_controller():
     """Test pick controller in Ground3D environment."""
 
-    env = prbench.make("prbench/Ground3D-o1-v0", render_mode="rgb_array", use_gui=False)
+    num_cubes = 3
+    env = prbench.make(
+        f"prbench/Ground3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False
+    )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Ground3D")
 
@@ -25,7 +28,7 @@ def test_pick_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricGround3DEnv(num_cubes=1)
+    sim = ObjectCentricGround3DEnv(num_cubes=num_cubes)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -57,7 +60,10 @@ def test_pick_controller():
 def test_pick_and_place_controller():
     """Test pick and place controller in Ground3D environment."""
 
-    env = prbench.make("prbench/Ground3D-o1-v0", render_mode="rgb_array", use_gui=False)
+    num_cubes = 3
+    env = prbench.make(
+        f"prbench/Ground3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False
+    )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Ground3D")
 
@@ -65,7 +71,7 @@ def test_pick_and_place_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricGround3DEnv(num_cubes=1)
+    sim = ObjectCentricGround3DEnv(num_cubes=num_cubes)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,

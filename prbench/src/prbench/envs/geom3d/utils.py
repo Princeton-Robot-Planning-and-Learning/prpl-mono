@@ -341,6 +341,7 @@ def sample_collision_free_object_poses(
     box_pose: Pose | None = None,
     table_pose: Pose | None = None,
     table_half_extents: tuple[float, float, float] | None = None,
+    box_half_extents: tuple[float, float, float] | None = None,
 ) -> None:
     """Randomly reset the poses of objects in-place while avoiding collisions.
 
@@ -357,14 +358,31 @@ def sample_collision_free_object_poses(
                     table_pose is not None
                     and box_pose is not None
                     and table_half_extents is not None
+                    and box_half_extents is not None
                 )
-                pose_table_dis = np.linalg.norm(
-                    np.array(pose.position[:2]) - np.array(table_pose.position[:2])
+                # Distance to closest edge of table (2D)
+                point_2d = pose.position[:2]
+                table_center_2d = table_pose.position[:2]
+                table_he_2d = table_half_extents[:2]
+
+                dx_table = max(
+                    abs(point_2d[0] - table_center_2d[0]) - table_he_2d[0], 0.0
                 )
-                pose_box_dis = np.linalg.norm(
-                    np.array(pose.position[:2]) - np.array(box_pose.position[:2])
+                dy_table = max(
+                    abs(point_2d[1] - table_center_2d[1]) - table_he_2d[1], 0.0
                 )
-                if pose_table_dis - pose_box_dis < table_half_extents[1] + 0.1:
+                dist_to_table_edge = np.sqrt(dx_table**2 + dy_table**2)
+
+                # Distance to closest edge of box (2D)
+                box_center_2d = box_pose.position[:2]
+                box_he_2d = box_half_extents[:2]
+
+                dx_box = max(abs(point_2d[0] - box_center_2d[0]) - box_he_2d[0], 0.0)
+                dy_box = max(abs(point_2d[1] - box_center_2d[1]) - box_he_2d[1], 0.0)
+                dist_to_box_edge = np.sqrt(dx_box**2 + dy_box**2)
+
+                # Require block to be closer to box edge than table edge
+                if dist_to_box_edge >= dist_to_table_edge + 0.05:
                     continue
             set_pose(obj_id, pose, physics_client_id)
 

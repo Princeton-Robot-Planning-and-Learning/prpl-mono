@@ -27,7 +27,7 @@ def test_pick_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=1)
+    sim = ObjectCentricTableBox3DEnv(num_cubes=1, use_gui=False)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -38,8 +38,7 @@ def test_pick_controller():
     object_parameters = (robot, target)
     controller = lifted_controller.ground(object_parameters)
 
-    rng = np.random.default_rng(123)
-    params = controller.sample_parameters(state, rng)
+    params = np.array([0.5, 0.0])
 
     controller.reset(state, params)
     for _ in range(500):
@@ -69,7 +68,7 @@ def test_pick_and_place_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=1)
+    sim = ObjectCentricTableBox3DEnv(num_cubes=1, use_gui=False)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -130,11 +129,11 @@ def test_pick_and_place_inside_box_controller():
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
 
-    obs, _ = env.reset(seed=123)
+    obs, _ = env.reset(seed=124)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes)
+    sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes, use_gui=False)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -167,8 +166,7 @@ def test_pick_and_place_inside_box_controller():
     object_parameters = (robot, target, target_box)
     controller = lifted_controller.ground(object_parameters)
 
-    rng = np.random.default_rng(123)
-    params = controller.sample_parameters(state, rng)
+    params = np.array([0.0, -0.06])
 
     controller.reset(state, params)
     for _ in range(500):
@@ -188,8 +186,7 @@ def test_pick_and_place_inside_box_controller():
     object_parameters = (robot, target)
     controller = lifted_controller.ground(object_parameters)
 
-    rng = np.random.default_rng(122)
-    params = controller.sample_parameters(state, rng)
+    params = np.array([0.5, 0.0])
 
     controller.reset(state, params)
     for _ in range(500):
@@ -210,8 +207,7 @@ def test_pick_and_place_inside_box_controller():
     object_parameters = (robot, target, target_box)
     controller = lifted_controller.ground(object_parameters)
 
-    rng = np.random.default_rng(123)
-    params = controller.sample_parameters(state, rng)
+    params = np.array([0.0, 0.06])
 
     controller.reset(state, params)
     for _ in range(500):
@@ -285,7 +281,7 @@ def test_pick_cube_and_place_on_table_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes)
+    sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes, use_gui=False)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,

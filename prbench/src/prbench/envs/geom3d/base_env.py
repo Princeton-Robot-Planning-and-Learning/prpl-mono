@@ -73,9 +73,9 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
         ]
     )
     initial_finger_state: float = 0.0
-    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.025)
+    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.035)
     end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    max_action_mag: float = 0.2
+    max_action_mag: float = 0.4
     check_base_collisions: bool = False
 
     # This is used to check whether a grasped object can be placed on a surface.
@@ -537,11 +537,13 @@ class ObjectCentricGeom3DRobotEnv(
                             self._inside_object_transform_list.append(
                                 multiply_poses(world_to_robot.invert(), obj_pose)
                             )
-                # Close the fingers until they are touching the object.
-                while not check_body_collisions(
-                    self._grasped_object_id,
-                    self.robot.arm.robot_id,
-                    self.physics_client_id,
+
+                while not (
+                    check_body_collisions(
+                        self._grasped_object_id,
+                        self.robot.arm.robot_id,
+                        self.physics_client_id,
+                    )
                 ):
                     # If the fingers are fully closed, stop.
                     current_finger_state = self._robot_arm.get_finger_state()
