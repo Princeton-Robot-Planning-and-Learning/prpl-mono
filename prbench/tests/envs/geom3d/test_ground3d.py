@@ -62,16 +62,38 @@ def test_motion_planning_in_ground3d_env(env):  # pylint: disable=redefined-oute
 
     # Create a simulator for planning.
     sim = ObjectCentricGround3DEnv(config=config)
+    sim.set_state(obs)
 
+    # For this unit test, make sure that the cubes are collision bodies.
+    collision_ids = set(sim._cubes.values())  # pylint: disable=protected-access
+
+    # Motion planning should fail when the target pose is in collision with a cube.
     target_object_pose = obs.get_object_pose("cube0")
     base_plan = run_single_arm_mobile_base_motion_planning(
         sim.robot,
         sim.robot.base.get_pose(),
         target_object_pose.to_se2(),
-        collision_bodies=set(),
+        collision_bodies=collision_ids,
         seed=123,
     )
-    assert base_plan is not None
+    assert base_plan is None  # should fail!
+
+    # Motion planning to a pose next to the cube should work.
+    target_object_pose_temp = obs.get_object_pose("cube0").to_se2()
+    se2_target_object_pose = SE2Pose(
+        target_object_pose_temp.x - 0.3,
+        target_object_pose_temp.y,
+        target_object_pose_temp.rot,
+    )
+    sim.set_state(obs)
+    base_plan = run_single_arm_mobile_base_motion_planning(
+        sim.robot,
+        sim.robot.base.get_pose(),
+        se2_target_object_pose,
+        collision_bodies=collision_ids,
+        seed=123,
+    )
+    assert base_plan is not None  # should succeed!
 
     env.action_space.seed(123)
     for target_base_pose in base_plan[1:]:
@@ -86,8 +108,6 @@ def test_motion_planning_in_ground3d_env(env):  # pylint: disable=redefined-oute
         obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
         if done:
             break
-    # else:
-    #     assert False, "Plan did not reach goal"
 
 
 def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
