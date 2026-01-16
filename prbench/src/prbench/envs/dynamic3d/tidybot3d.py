@@ -104,6 +104,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
 
+        # Override scene configuration if scene_bg is provided
+        if scene_bg is not None:
+            self._apply_scene_bg(scene_bg)
+
         # Set camera names from config
         self.camera_names = config.camera_names.copy()
         if "cameras" in self.task_config:
@@ -125,7 +129,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         )
 
         # This camera's render will be returned by default.
-        self._render_camera_name: str | None = "overview"
+        self._render_camera_name: str | None = scene_render_camera
 
         # Initialize empty object and fixture lists, and ground fixture.
         # These will be populated based on the task configuration

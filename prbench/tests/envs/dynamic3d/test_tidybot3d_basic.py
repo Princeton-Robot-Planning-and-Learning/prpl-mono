@@ -2,6 +2,7 @@
 step, and reset."""
 
 from pathlib import Path
+
 import numpy as np
 from relational_structs import ObjectCentricState
 

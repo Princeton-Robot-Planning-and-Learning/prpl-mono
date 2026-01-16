@@ -11,6 +11,7 @@ from prbench.envs.dynamic3d.tidybot3d import (
     TidyBot3DConfig,
 )
 
+
 def test_arm_converges_to_target_position():
     """Test that the arm moves toward a target joint position using PD control.
 
@@ -96,7 +97,9 @@ def test_gravity_compensation_is_applied():
         robot_env = env._robot_env  # pylint: disable=protected-access
 
         # Get gravity compensation
-        gravity_comp = robot_env._get_gravity_compensation() # pylint: disable=protected-access
+        gravity_comp = (
+            robot_env._get_gravity_compensation()  # pylint: disable=protected-access
+        )
 
         # Test 1: Gravity compensation should be non-zero (gravity exists)
         assert (
@@ -108,8 +111,12 @@ def test_gravity_compensation_is_applied():
         robot_env.qvel["arm"][:] = 0.0  # Set velocity to zero
         robot_env.sim.forward()
 
-        torques = robot_env._compute_arm_torques(current_pos) # pylint: disable=protected-access
-        expected_gravity_comp = robot_env._get_gravity_compensation() # pylint: disable=protected-access
+        torques = robot_env._compute_arm_torques(  # pylint: disable=protected-access
+            current_pos
+        )
+        expected_gravity_comp = (
+            robot_env._get_gravity_compensation()  # pylint: disable=protected-access
+        )
 
         # Torques should approximately equal gravity compensation
         # (small difference due to forward() call updating state)
@@ -123,7 +130,9 @@ def test_gravity_compensation_is_applied():
         original_comp = gravity_comp.copy()
         robot_env.qpos["arm"][2] += 0.5  # Rotate joint 3
         robot_env.sim.forward()
-        new_comp = robot_env._get_gravity_compensation() # pylint: disable=protected-access
+        new_comp = (
+            robot_env._get_gravity_compensation()  # pylint: disable=protected-access
+        )
 
         # At least some components should have changed
         comp_diff = np.abs(new_comp - original_comp)
