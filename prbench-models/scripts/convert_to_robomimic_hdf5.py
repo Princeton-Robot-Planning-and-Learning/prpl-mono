@@ -9,7 +9,7 @@ import numpy as np
 from episode_storage import EpisodeReader
 from scipy.spatial.transform import Rotation  # type: ignore
 
-from src.prbench_models.policy_constants import POLICY_IMAGE_HEIGHT, POLICY_IMAGE_WIDTH
+from prbench_models.policy_constants import POLICY_IMAGE_HEIGHT, POLICY_IMAGE_WIDTH
 
 
 def main(

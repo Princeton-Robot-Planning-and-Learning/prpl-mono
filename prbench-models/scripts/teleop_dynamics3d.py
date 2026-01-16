@@ -11,7 +11,7 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from prbench_models.teleop_utils import TeleopPolicy
-from src.prbench_models.policy_constants import POLICY_CONTROL_PERIOD
+from prbench_models.policy_constants import POLICY_CONTROL_PERIOD
 
 prbench.register_all_environments()
 

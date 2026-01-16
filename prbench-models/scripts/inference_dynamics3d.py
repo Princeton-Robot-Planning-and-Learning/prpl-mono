@@ -12,7 +12,7 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
-from src.prbench_models.policy_constants import (
+from prbench_models.policy_constants import (
     POLICY_CONTROL_PERIOD,
     POLICY_IMAGE_HEIGHT_VLA,
     POLICY_IMAGE_WIDTH_VLA,
