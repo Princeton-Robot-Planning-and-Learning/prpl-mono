@@ -17,7 +17,12 @@ prbench.register_all_environments()
 def test_pick_controller():
     """Test pick controller in Shelf3D environment."""
 
-    env = prbench.make("prbench/Shelf3D-o1-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True)
+    env = prbench.make(
+        "prbench/Shelf3D-o1-v0",
+        render_mode="rgb_array",
+        use_gui=False,
+        realistic_bg=True,
+    )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Shelf3D")
 
@@ -57,7 +62,12 @@ def test_pick_controller():
 def test_pick_and_place_controller():
     """Test pick and place controller in Shelf3D environment."""
 
-    env = prbench.make("prbench/Shelf3D-o1-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True)
+    env = prbench.make(
+        "prbench/Shelf3D-o1-v0",
+        render_mode="rgb_array",
+        use_gui=False,
+        realistic_bg=True,
+    )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Shelf3D")
 

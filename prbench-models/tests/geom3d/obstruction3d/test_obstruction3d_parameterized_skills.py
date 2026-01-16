@@ -18,7 +18,10 @@ def test_pick_controller():
     """Test pick controller in Obstruction3D environment."""
 
     env = prbench.make(
-        "prbench/Obstruction3D-o1-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True
+        "prbench/Obstruction3D-o1-v0",
+        render_mode="rgb_array",
+        use_gui=False,
+        realistic_bg=True,
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Obstruction3D")
@@ -60,7 +63,10 @@ def test_pick_place_controller():
     """Test pick and place controller in Obstruction3D environment."""
 
     env = prbench.make(
-        "prbench/Obstruction3D-o0-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True
+        "prbench/Obstruction3D-o0-v0",
+        render_mode="rgb_array",
+        use_gui=False,
+        realistic_bg=True,
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Obstruction3D")
