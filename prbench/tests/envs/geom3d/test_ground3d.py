@@ -64,12 +64,10 @@ def test_motion_planning_in_ground3d_env(env):  # pylint: disable=redefined-oute
     sim = ObjectCentricGround3DEnv(config=config)
     sim.set_state(obs)
 
-    # NOTE: in the ground environment, the cubes are not treated as obstacles, but for
-    # the sake of testing motion planning in this test, we treat them that way.
+    # For this unit test, make sure that the cubes are collision bodies.
     collision_ids = set(sim._cubes.values())  # pylint: disable=protected-access
 
-    # Motion planning onto the cube itself should be impossible because the cube
-    # on the floor should be in collision with the robot base.
+    # Motion planning should fail when the target pose is in collision with a cube.
     target_object_pose = obs.get_object_pose("cube0")
     base_plan = run_single_arm_mobile_base_motion_planning(
         sim.robot,
