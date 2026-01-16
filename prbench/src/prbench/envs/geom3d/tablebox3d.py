@@ -253,6 +253,7 @@ class ObjectCentricTableBox3DEnv(
             box_pose=get_pose(self._boxes["box0"], self.physics_client_id),
             table_pose=self.config.table_pose,
             table_half_extents=self.config.table_half_extents,
+            box_half_extents=self.config.box_half_extents,
             object_ids=set(self._cubes.values()),
             lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2),
             ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2),
