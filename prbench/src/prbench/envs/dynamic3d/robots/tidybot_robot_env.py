@@ -329,7 +329,8 @@ class TidyBotRobotEnv(RobotEnv):
             torque = Kp * (target_pos - current_pos) - Kd * current_vel + gravity_comp
 
         Or with velocity tracking (target_velocities provided):
-            torque = Kp * (target_pos - current_pos) + Kd * (target_vel - current_vel) + gravity_comp
+            torque = Kp * (target_pos - current_pos) +
+            Kd * (target_vel - current_vel) + gravity_comp
 
         Gravity compensation counteracts gravitational forces, allowing
         accurate position tracking with just PD control. When target velocities

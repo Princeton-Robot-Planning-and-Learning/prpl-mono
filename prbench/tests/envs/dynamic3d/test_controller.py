@@ -312,15 +312,19 @@ def test_velocity_tracking_mode():
         robot_env.sim.forward()
 
         # Compute torques without velocity target (damping mode)
-        torques_damping = robot_env._compute_arm_torques(  # pylint: disable=protected-access
-            initial_arm_pos, target_velocities=None
+        torques_damping = (
+            robot_env._compute_arm_torques(  # pylint: disable=protected-access
+                initial_arm_pos, target_velocities=None
+            )
         )
 
         # Compute torques with velocity target matching current velocity
         # (should reduce damping effect)
-        torques_tracking = robot_env._compute_arm_torques(  # pylint: disable=protected-access
-            initial_arm_pos,
-            target_velocities=np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]),
+        torques_tracking = (
+            robot_env._compute_arm_torques(  # pylint: disable=protected-access
+                initial_arm_pos,
+                target_velocities=np.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]),
+            )
         )
 
         # When current velocity matches target velocity, torques should be different
@@ -371,7 +375,6 @@ def test_velocity_tracking_for_dynamic_motion():
 
         # Get initial state
         initial_base_pos = np.array(robot_env.qpos["base"]).copy()
-        initial_arm_pos = np.array(robot_env.qpos["arm"]).copy()
 
         # Define a swing trajectory: move joint 1 with target velocity
         # This simulates the acceleration phase of a toss
@@ -439,7 +442,9 @@ def test_velocity_tracking_for_dynamic_motion():
         vel_tracking_mean = np.mean(velocities_over_time[-5:])
         pos_only_mean = np.mean(pos_only_velocities[-5:])
 
-        print(f"Velocity tracking mean: {vel_tracking_mean}, Position-only mean: {pos_only_mean}")
+        print(
+            f"Velocity tracking mean: {vel_tracking_mean}, Position-only mean: {pos_only_mean}"  # pylint: disable=line-too-long
+        )
         # Note: The difference might be subtle depending on gains, but velocity
         # tracking mode should help maintain velocity
         assert vel_tracking_mean >= pos_only_mean * 0.9, (
