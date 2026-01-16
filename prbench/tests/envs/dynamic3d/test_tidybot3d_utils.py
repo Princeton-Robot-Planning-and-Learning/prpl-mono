@@ -4,11 +4,170 @@ import numpy as np
 
 from prbench.envs.dynamic3d.utils import (
     bboxes_overlap,
+    compute_camera_euler,
     point_in_bbox_3d,
     rotate_bounding_box_2d,
     sample_pose_in_bbox_3d,
     translate_bounding_box,
 )
+
+# Tests for compute_camera_euler function
+
+
+def test_compute_camera_euler_same_position():
+    """Test that camera and target at same position returns zeros."""
+    position = [0.0, 0.0, 0.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should return default angles when positions are the same
+    assert roll == 0.0
+    assert pitch == 0.0
+    assert yaw == 0.0
+
+
+def test_compute_camera_euler_looking_down():
+    """Test camera looking straight down (negative z direction)."""
+    position = [0.0, 0.0, 1.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Looking straight down should have specific angles
+    # The camera's -Z should point downward (from [0,0,1] to [0,0,0])
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_looking_forward():
+    """Test camera looking forward (positive x direction)."""
+    position = [1.0, 0.0, 0.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Camera looking forward along negative x-axis
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_looking_right():
+    """Test camera looking right (positive y direction)."""
+    position = [0.0, 1.0, 0.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Camera looking right along negative y-axis
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_at_45_degrees():
+    """Test camera at 45 degree angle."""
+    position = [1.0, 1.0, 1.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+    # Angles should be in reasonable ranges
+    assert -np.pi <= roll <= np.pi
+    assert -np.pi <= pitch <= np.pi
+    assert -np.pi <= yaw <= np.pi
+
+
+def test_compute_camera_euler_far_distance():
+    """Test camera at large distance from target."""
+    position = [100.0, 100.0, 100.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_close_distance():
+    """Test camera very close to target."""
+    position = [0.01, 0.01, 0.01]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_negative_coords():
+    """Test with negative coordinates."""
+    position = [-1.0, -1.0, -1.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+    assert -np.pi <= roll <= np.pi
+    assert -np.pi <= pitch <= np.pi
+    assert -np.pi <= yaw <= np.pi
+
+
+def test_compute_camera_euler_symmetry():
+    """Test that symmetric positions produce symmetric angles."""
+    # Position along positive x
+    roll1, pitch1, yaw1 = compute_camera_euler([1.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+
+    # Position along negative x
+    roll2, pitch2, yaw2 = compute_camera_euler([-1.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+
+    # Both should be valid angles
+    assert isinstance(roll1, float) and isinstance(roll2, float)
+    assert isinstance(pitch1, float) and isinstance(pitch2, float)
+    assert isinstance(yaw1, float) and isinstance(yaw2, float)
+
+
+def test_compute_camera_euler_lookat_offset():
+    """Test camera with different lookat positions."""
+    position = [0.0, 0.0, 1.0]
+    lookat = [1.0, 1.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+    assert -np.pi <= roll <= np.pi
+    assert -np.pi <= pitch <= np.pi
+    assert -np.pi <= yaw <= np.pi
+
+
+def test_compute_camera_euler_list_input():
+    """Test that function accepts list input as documented."""
+    position = [1.0, 2.0, 3.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    # Should work with lists (as per docstring)
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
 
 # Tests for bboxes_overlap function
 

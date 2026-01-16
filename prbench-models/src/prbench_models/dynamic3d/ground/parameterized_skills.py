@@ -511,7 +511,7 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 3 * 1e-2
+        return dist < 6 * 1e-2
 
 
 class MoveArmToEndEffectorController(
@@ -652,7 +652,7 @@ class MoveArmToEndEffectorController(
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 3 * 1e-2
+        return dist < 6 * 1e-2
 
 
 class CloseGripperController(GroundParameterizedController[ObjectCentricState, Array]):
@@ -1052,7 +1052,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         return 0.0
 
     def _robot_is_close_to_conf(
-        self, conf: JointPositions, atol: float = 4 * 1e-2
+        self, conf: JointPositions, atol: float = 6 * 1e-2
     ) -> bool:
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None

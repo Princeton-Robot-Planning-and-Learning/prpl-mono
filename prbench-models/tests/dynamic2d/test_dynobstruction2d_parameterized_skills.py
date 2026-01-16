@@ -131,7 +131,7 @@ def test_place_target_controller():
         env = RecordVideo(
             env,
             "unit_test_videos",
-            name_prefix=f"DynObstruction2D-o{num_obstructions}-place-tgt",
+            name_prefix=f"DynObstruction2D-o{num_obstructions}-place-tgt-on-surface",
         )
 
     # Reset the environment and get the initial state.
@@ -164,34 +164,14 @@ def test_place_target_controller():
     else:
         assert False, "Pick controller did not terminate"
 
-    # Now move to target surface
-    move_controller = controllers["move_to_tgt"]
+    # Now move to target surface and place block
+    place_tgt_surface_controller = controllers["place_tgt_surface"]
     object_parameters_place = (robot, target_block, target_surface)
-    controller = move_controller.ground(object_parameters_place)
+    controller = place_tgt_surface_controller.ground(object_parameters_place)
     params = controller.sample_parameters(state, rng)
 
     # Ensure that the robot has no rotation
     controller.reset(state, (0.25))
-    for _ in range(500):
-        action = controller.step()
-        obs, _, _, _, _ = env.step(action)
-        next_state = env.observation_space.devectorize(obs)
-        controller.observe(next_state)
-        state = next_state
-
-        if controller.terminated():
-            break
-    else:
-        assert False, "Place controller did not terminate"
-
-    # Finally, place target
-    place_controller = controllers["place_tgt"]
-    object_parameters_place = (robot, target_block)
-    controller = place_controller.ground(object_parameters_place)
-    params = controller.sample_parameters(state, rng)
-
-    # Ensure that the robot has no rotation
-    controller.reset(state, (0.1, 0.6, 0.25))
     is_successful = False
     for _ in range(500):
         action = controller.step()
@@ -199,15 +179,14 @@ def test_place_target_controller():
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
         state = next_state
-
-        if controller.terminated():
+        if terminated or controller.terminated():
             is_successful = terminated
             break
     else:
         assert False, "Place controller did not terminate"
+    env.close()
 
     assert is_successful, "Task was not successfully completed"
-    env.close()
 
 
 def test_place_target_obstruction_controller():
@@ -255,8 +234,8 @@ def test_place_target_obstruction_controller():
         assert False, "Pick controller did not terminate"
 
     # Now move to desired location, pushing all obstructions along the way.
-    move_controller = controllers["push_tgt"]
-    object_parameters_push = (robot, target_block)
+    move_controller = controllers["move"]
+    object_parameters_push = [robot]
     controller = move_controller.ground(object_parameters_push)
     params = controller.sample_parameters(state, rng)
 

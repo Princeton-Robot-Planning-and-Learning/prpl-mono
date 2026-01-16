@@ -31,6 +31,7 @@ from relational_structs import (
     Type,
 )
 from relational_structs.utils import create_state_from_dict
+from scipy.spatial.transform import Rotation
 
 from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionSpace
 from prbench.envs.geom3d.object_types import (
@@ -81,8 +82,24 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # For rendering.
     render_dpi: int = 300
     render_fps: int = 20
-    render_image_width: int = 836
-    render_image_height: int = 450
+    render_image_width: int = 640
+    render_image_height: int = 360
+
+    # Base camera (mounted on robot base) - matches dynamics3d tidybot
+    # From tidybot.xml: pos="0.2525 0 0.335" euler="0 -0.7853981634 -1.5707963268"
+    base_camera_offset: tuple[float, float, float] = (0.2525, 0.0, 0.335)
+    base_camera_euler: tuple[float, float, float] = (0, -np.pi / 4, -np.pi / 2)
+    base_camera_fov: float = 52.23384539951277
+    base_camera_image_width: int = 640
+    base_camera_image_height: int = 360
+
+    # End-effector camera (mounted on wrist) - matches dynamics3d tidybot
+    # From tidybot.xml: pos="0 -0.05639 -0.058475" quat="0 0 0 1"
+    ee_camera_offset: tuple[float, float, float] = (0.0, 0.05639, -0.058475)
+    ee_camera_euler: tuple[float, float, float] = (np.pi, 0.0, 0.0)
+    ee_camera_fov: float = 41.83792730009236
+    ee_camera_image_width: int = 640
+    ee_camera_image_height: int = 360
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -243,6 +260,11 @@ class ObjectCentricGeom3DRobotEnv(
         self._grasped_object: str | None = None
         self._grasped_object_transform: Pose | None = None
 
+        # Track inside objects.
+        self._inside_object_list: list[str] = []
+        self._inside_object_id_list: list[int] = []
+        self._inside_object_transform_list: list[Pose] = []
+
     @property
     @abc.abstractmethod
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
@@ -368,6 +390,22 @@ class ObjectCentricGeom3DRobotEnv(
         self._grasped_object_transform = obs.grasped_object_transform
         self._set_object_states(obs)
 
+    def _is_inside_object(
+        self,
+        obj_pose: Pose,
+        grasped_object_pose: Pose,
+        half_extents: tuple[float, float, float],
+    ) -> bool:
+        """Check if an object is inside the grasped object."""
+        return (
+            obj_pose.position[0] > grasped_object_pose.position[0] - half_extents[0]
+            and obj_pose.position[0] < grasped_object_pose.position[0] + half_extents[0]
+            and obj_pose.position[1] > grasped_object_pose.position[1] - half_extents[1]
+            and obj_pose.position[1] < grasped_object_pose.position[1] + half_extents[1]
+            and obj_pose.position[2] > grasped_object_pose.position[2] - half_extents[2]
+            and obj_pose.position[2] < grasped_object_pose.position[2] + half_extents[2]
+        )
+
     def step(self, action: Array) -> tuple[_ObsType, float, bool, bool, dict]:
         # execute the base action
         base_action = action[:3]
@@ -442,6 +480,31 @@ class ObjectCentricGeom3DRobotEnv(
                 self._grasped_object_transform = multiply_poses(
                     world_to_robot.invert(), world_to_object
                 )
+                extent_threshold = (
+                    0.04  # this is used to check if the object is a box / container.
+                )
+                if (
+                    self._get_half_extents(self._grasped_object)[0] > extent_threshold
+                    and self._get_half_extents(self._grasped_object)[1]
+                    > extent_threshold
+                    and self._get_half_extents(self._grasped_object)[2]
+                    > extent_threshold
+                ):
+                    for obj in self._get_movable_object_names():
+                        if obj == self._grasped_object:
+                            continue
+                        obj_id = self._object_name_to_pybullet_id(obj)
+                        obj_pose = get_pose(obj_id, self.physics_client_id)
+                        if self._is_inside_object(
+                            obj_pose,
+                            world_to_object,
+                            self._get_half_extents(self._grasped_object),
+                        ):
+                            self._inside_object_list.append(obj)
+                            self._inside_object_id_list.append(obj_id)
+                            self._inside_object_transform_list.append(
+                                multiply_poses(world_to_robot.invert(), obj_pose)
+                            )
                 # Close the fingers until they are touching the object.
                 while not check_body_collisions(
                     self._grasped_object_id,
@@ -485,6 +548,9 @@ class ObjectCentricGeom3DRobotEnv(
             surface_supports = self._get_surfaces_supporting_object(
                 self._grasped_object_id
             )
+            self._inside_object_list = []
+            self._inside_object_id_list = []
+            self._inside_object_transform_list = []
             # Placement is successful.
             if surface_supports:
                 self._grasped_object = None
@@ -503,6 +569,86 @@ class ObjectCentricGeom3DRobotEnv(
             **self.config.get_camera_kwargs(),
         )
 
+    def render_base_camera(self) -> NDArray[np.uint8]:
+        """Render from the base-mounted camera.
+
+        The camera is attached to the robot base with the same pose as in
+        dynamics3d tidybot: pos=(0.2525, 0, 0.335), euler=(0, -45°, -90°).
+        """
+        # Get current base pose
+        base_pose = self.robot.get_base()
+
+        base_pose_se3 = base_pose.to_se3(0.0)
+        rot = Rotation.from_euler(
+            "zyx", self.config.base_camera_euler
+        )  # MuJoCo convention
+        camera_to_base_transform = Pose(
+            position=self.config.base_camera_offset,
+            orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)
+        )
+
+        camera_pose = multiply_poses(base_pose_se3, camera_to_base_transform)
+
+        # for debugging
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(base_pose_se3, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
+        return capture_image(
+            self.physics_client_id,
+            specify_position=True,
+            camera_position=camera_pose.position,
+            camera_orientation=camera_pose.orientation,
+            image_width=self.config.base_camera_image_width,
+            image_height=self.config.base_camera_image_height,
+            fov=self.config.base_camera_fov,
+        )
+
+    def render_ee_camera(self) -> NDArray[np.uint8]:
+        """Render from the end-effector mounted camera.
+
+        The camera is attached to the end-effector (wrist) with the same pose as
+        in dynamics3d tidybot: pos=(0, -0.05639, -0.058475), quat=(0, 0, 0, 1).
+        """
+        # Get current end-effector pose
+        ee_pose = self.robot.arm.get_end_effector_pose()
+
+        rot = Rotation.from_euler(
+            "zyx", self.config.ee_camera_euler
+        )  # MuJoCo convention
+        camera_to_ee_transform = Pose(
+            position=self.config.ee_camera_offset,
+            orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)
+        )
+
+        camera_pose = multiply_poses(ee_pose, camera_to_ee_transform)
+
+        # for debugging
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(ee_pose, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
+
+        return capture_image(
+            self.physics_client_id,
+            specify_position=True,
+            camera_position=camera_pose.position,
+            camera_orientation=camera_pose.orientation,
+            image_width=self.config.ee_camera_image_width,
+            image_height=self.config.ee_camera_image_height,
+            fov=self.config.ee_camera_fov,
+        )
+
+    def render_all_cameras(self) -> dict[str, NDArray[np.uint8]]:
+        """Render from all cameras and return as a dictionary.
+
+        Returns:
+            Dictionary with keys "overview", "base", "wrist" mapping to images.
+        """
+        return {
+            "overview": self.render(),
+            "base": self.render_base_camera(),
+            "wrist": self.render_ee_camera(),
+        }
+
     def _set_robot_and_held_object(
         self, base_pose: SE2Pose, joints: JointPositions, finger_state: float
     ) -> None:
@@ -516,6 +662,19 @@ class ObjectCentricGeom3DRobotEnv(
             self._grasped_object_transform,
             extend_joints_to_include_fingers(joints),
         )
+        if len(self._inside_object_list) > 0:
+            for obj_id, obj_transform in zip(
+                self._inside_object_id_list,
+                self._inside_object_transform_list,
+                strict=True,
+            ):
+                set_robot_joints_with_held_object(
+                    self._robot_arm,
+                    self.physics_client_id,
+                    obj_id,
+                    obj_transform,
+                    extend_joints_to_include_fingers(joints),
+                )
         # Now handle the fingers.
         self._robot_arm.set_finger_state(finger_state)
         # Update the end effector visualization.

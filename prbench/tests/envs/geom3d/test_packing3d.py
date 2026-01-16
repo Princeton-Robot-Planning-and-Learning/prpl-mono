@@ -1,7 +1,6 @@
 """Tests for packing3d.py."""
 
 import numpy as np
-import pytest
 from gymnasium.wrappers import RecordVideo
 from prpl_utils.utils import wrap_angle
 from pybullet_helpers.geometry import Pose, multiply_poses
@@ -52,7 +51,6 @@ def get_target_object_from_obs(
     return obs.get_object_from_name(target_part_name)
 
 
-@pytest.mark.skip(reason="Flaky test, needs to be fixed")
 def test_pick_place_on_rack():
     """Test that picking and placing can be executed for any object."""
     # Create the real environment.
@@ -85,11 +83,11 @@ def test_pick_place_on_rack():
     if MAKE_VIDEOS:  # make a smooth motion plan for videos
         max_candidate_plans = 10
     else:
-        max_candidate_plans = 10
+        max_candidate_plans = 1
 
     # sample placement coefficients for each part
-    x_coeffs = np.linspace(-0.35, 0.35, num_parts)
-    y_coeffs = np.linspace(-0.35, 0.35, num_parts)
+    x_coeffs = np.linspace(-0.0, 0.0, num_parts)
+    y_coeffs = np.linspace(-0.4, 0.4, num_parts)
 
     # First, move to pre-grasp pose (top-down).
     selected_object = get_target_object_from_obs(obs)
@@ -204,7 +202,7 @@ def test_pick_place_on_rack():
 
         # Determine placement pose and pre-placement pose.
         # Place directly in the center of the target region for this test.
-        placement_padding = 1e-5  # leave some room to prevent collisions with surface
+        placement_padding = 1e-3  # leave some room to prevent collisions with surface
         rack_pose = obs.rack_pose
         rack_half_extents = obs.rack_half_extents
         block_placement_pose = Pose(

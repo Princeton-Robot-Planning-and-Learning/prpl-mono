@@ -45,7 +45,8 @@ def test_base_table3d_env(env):  # pylint: disable=redefined-outer-name
     # import pybullet as p
 
     # while True:
-    #     p.getMouseEvents(env.unwrapped._object_centric_env.physics_client_id)
+    #     # p.getMouseEvents(env.unwrapped._object_centric_env.physics_client_id)
+    #     p.stepSimulation(env.unwrapped._object_centric_env.physics_client_id)
 
 
 def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name

@@ -289,6 +289,10 @@ def sample_collision_free_object_poses(
     rng: np.random.Generator,
     other_collision_ids: set[int],
     max_sampling_attempts: int = 100_000,
+    use_box: bool = False,
+    box_pose: Pose | None = None,
+    table_pose: Pose | None = None,
+    table_half_extents: tuple[float, float, float] | None = None,
 ) -> None:
     """Randomly reset the poses of objects in-place while avoiding collisions.
 
@@ -300,6 +304,20 @@ def sample_collision_free_object_poses(
         for _ in range(max_sampling_attempts):
             x, y, z = rng.uniform(lb, ub)
             pose = Pose((x, y, z))
+            if use_box:
+                assert (
+                    table_pose is not None
+                    and box_pose is not None
+                    and table_half_extents is not None
+                )
+                pose_table_dis = np.linalg.norm(
+                    np.array(pose.position[:2]) - np.array(table_pose.position[:2])
+                )
+                pose_box_dis = np.linalg.norm(
+                    np.array(pose.position[:2]) - np.array(box_pose.position[:2])
+                )
+                if pose_table_dis - pose_box_dis < table_half_extents[1] + 0.1:
+                    continue
             set_pose(obj_id, pose, physics_client_id)
 
             if not any(

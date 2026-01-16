@@ -1,0 +1,305 @@
+{
+    "robots": [
+        "tidybot"
+    ],
+    "fixtures": {
+        "table": {
+            "table_1": {
+                "shape": "rectangle",
+                "length": 0.8,
+                "width": 0.6,
+                "height": 0.4,
+                "thickness": 0.04,
+                "texture": "wood"
+            }
+        }
+    },
+    "regions": {
+        "ground_table_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        },
+        "table_1_object_init_region": {
+            "target": "table_1",
+            "ranges": [
+                [
+                    -0.2,
+                    -0.15,
+                    -0.05,
+                    0.15
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        },
+        "table_1_bowl_init_region": {
+            "target": "table_1",
+            "ranges": [
+                [
+                    0.1,
+                    -0.15,
+                    0.3,
+                    0.15
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        },
+        "yellow_bowl_1_left_region": {
+            "target": "yellow_bowl_1",
+            "ranges": [
+                [
+                    -0.15,
+                    -0.05,
+                    -0.05,
+                    0.05
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    360
+                ]
+            ],
+            "rgba": [
+                1,
+                1,
+                0,
+                0.3
+            ]
+        },
+        "yellow_bowl_1_right_region": {
+            "target": "yellow_bowl_1",
+            "ranges": [
+                [
+                    0.05,
+                    -0.05,
+                    0.15,
+                    0.05
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    360
+                ]
+            ],
+            "rgba": [
+                1,
+                1,
+                0,
+                0.3
+            ]
+        },
+        "yellow_bowl_1_front_region": {
+            "target": "yellow_bowl_1",
+            "ranges": [
+                [
+                    -0.05,
+                    -0.15,
+                    0.05,
+                    -0.05
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    360
+                ]
+            ],
+            "rgba": [
+                1,
+                1,
+                0,
+                0.3
+            ]
+        },
+        "yellow_bowl_1_back_region": {
+            "target": "yellow_bowl_1",
+            "ranges": [
+                [
+                    -0.05,
+                    0.05,
+                    0.05,
+                    0.15
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    360
+                ]
+            ],
+            "rgba": [
+                1,
+                1,
+                0,
+                0.3
+            ]
+        },
+        "yellow_bowl_1_front_left_region": {
+            "target": "yellow_bowl_1",
+            "ranges": [
+                [
+                    -0.15,
+                    -0.15,
+                    -0.05,
+                    -0.05
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    360
+                ]
+            ],
+            "rgba": [
+                1,
+                1,
+                0,
+                0.3
+            ]
+        },
+        "yellow_bowl_1_front_right_region": {
+            "target": "yellow_bowl_1",
+            "ranges": [
+                [
+                    0.05,
+                    -0.15,
+                    0.15,
+                    -0.05
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    360
+                ]
+            ],
+            "rgba": [
+                1,
+                1,
+                0,
+                0.3
+            ]
+        },
+        "yellow_bowl_1_back_left_region": {
+            "target": "yellow_bowl_1",
+            "ranges": [
+                [
+                    -0.15,
+                    0.05,
+                    -0.05,
+                    0.15
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    360
+                ]
+            ],
+            "rgba": [
+                1,
+                1,
+                0,
+                0.3
+            ]
+        },
+        "yellow_bowl_1_back_right_region": {
+            "target": "yellow_bowl_1",
+            "ranges": [
+                [
+                    0.05,
+                    0.05,
+                    0.15,
+                    0.15
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    360
+                ]
+            ],
+            "rgba": [
+                1,
+                1,
+                0,
+                0.3
+            ]
+        }
+    },
+    "objects": {
+        "robocasa_boxed_drink_0": {
+            "object_0": {}
+        },
+        "generated_bowl": {
+            "yellow_bowl_1": {
+                "rgba": [1.0, 1.0, 0.0, 1.0],
+                "outer_radius": 0.08,
+                "inner_radius": 0.07,
+                "height": 0.04
+            }
+        }
+    },
+    "cameras": {
+        "agentview_1": {
+            "position": [1, 1, 2],
+            "lookat": [0, 0, 0],
+            "fovy": 42,
+            "resolution": [640, 480]
+        }
+    },
+    "initial_state": [
+        [
+            "on",
+            "table_1",
+            "ground_table_init_region"
+        ],
+        [
+            "on",
+            "object_0",
+            "table_1_object_init_region"
+        ],
+        [
+            "on",
+            "yellow_bowl_1",
+            "table_1_bowl_init_region"
+        ]
+    ],
+    "goal_state": [
+        [
+            "or",
+            ["on", "object_0", "yellow_bowl_1_left_region"],
+            ["on", "object_0", "yellow_bowl_1_right_region"],
+            ["on", "object_0", "yellow_bowl_1_front_region"],
+            ["on", "object_0", "yellow_bowl_1_back_region"],
+            ["on", "object_0", "yellow_bowl_1_front_left_region"],
+            ["on", "object_0", "yellow_bowl_1_front_right_region"],
+            ["on", "object_0", "yellow_bowl_1_back_left_region"],
+            ["on", "object_0", "yellow_bowl_1_back_right_region"]
+        ]
+    ]
+}

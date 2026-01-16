@@ -17,10 +17,9 @@ from prbench.envs.geom2d.object_types import (
     Geom2DRobotEnvTypeFeatures,
     RectangleType,
 )
-from prbench.envs.geom2d.structs import MultiBody2D, ZOrder
+from prbench.envs.geom2d.structs import MultiBody2D, SE2Pose, ZOrder
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
-    SE2Pose,
     create_walls_from_world_boundaries,
     is_inside,
     is_on,
@@ -407,17 +406,17 @@ class Obstruction2DEnv(ConstantObjectPRBenchEnv):
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
-        num_obstructions = len(self._constant_objects) - 3
         # pylint: disable=line-too-long
-        if num_obstructions > 0:
-            obstruction_sentence = f"\nThe target surface may be initially obstructed. In this environment, there are always {num_obstructions} obstacle blocks.\n"
-        else:
-            obstruction_sentence = ""
+        return """A 2D environment where the goal is to place a target block onto a target surface. The block must be completely contained within the surface boundaries.
 
-        return f"""A 2D environment where the goal is to place a target block onto a target surface. The block must be completely contained within the surface boundaries.
-{obstruction_sentence}
+The target surface may be initially obstructed.
+
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 """
+
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of obstructions differs between environment variants. For example, Obstruction2D-o0 has no obstructions, while Obstruction2D-o4 has 4 obstructions."
 
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long

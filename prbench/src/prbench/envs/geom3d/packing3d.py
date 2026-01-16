@@ -143,16 +143,12 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
         triangle_type is encoded as:
         0 = equilateral
-        1 = isosceles
-        2 = right
+        1 = right
         """
-        triangle_type = rng.choice([0, 1, 2])
+        triangle_type = rng.choice([0, 1])
         if triangle_type == 0:  # equilateral
             side = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
             base = height = side
-        elif triangle_type == 1:  # isosceles
-            base = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
-            height = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
         else:  # right
             base = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
             height = rng.uniform(self.part_triangle_side_lb, self.part_triangle_side_ub)
@@ -186,7 +182,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
             # triangle base.
             side_a, side_b, _, triangle_type = self.get_object_triangle_features(name)
             vertices = get_triangle_vertices(
-                {0: "equilateral", 1: "isosceles", 2: "right"}[int(triangle_type)],
+                {0: "equilateral", 1: "right"}[int(triangle_type)],
                 (side_a, side_b),
             )
             centroid_x = sum(v[0] for v in vertices) / 3.0 + self.get(obj, "pose_x")
@@ -545,9 +541,7 @@ class ObjectCentricPacking3DEnv(
                 )
                 part_id = create_pybullet_triangle_with_peg(
                     self.config.part_rgba,
-                    triangle_type={0: "equilateral", 1: "isosceles", 2: "right"}[
-                        int(triangle_type)
-                    ],
+                    triangle_type={0: "equilateral", 1: "right"}[int(triangle_type)],
                     side_lengths=(side_a, side_b),
                     depth=depth,
                     physics_client_id=self.physics_client_id,
@@ -767,6 +761,10 @@ The robot is a Kinova Gen-3 with 7 degrees of freedom that can grasp and manipul
 
 The task requires planning to grasp and place each part into the rack while avoiding collisions and ensuring parts are supported by the rack (on the rack and not grasped) at the end.
 """
+
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of parts to pack differs between environment variants. For example, Packing3D-p1 has 1 part, while Packing3D-p3 has 3 parts."
 
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""

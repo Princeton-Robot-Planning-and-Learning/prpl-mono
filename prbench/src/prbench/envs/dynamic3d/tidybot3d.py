@@ -31,6 +31,7 @@ from prbench.envs.dynamic3d.objects import (
     get_fixture_class,
     get_object_class,
 )
+from prbench.envs.dynamic3d.objects.generated_objects import GeneratedSeesaw
 from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_positions,
 )
@@ -43,6 +44,7 @@ from prbench.envs.dynamic3d.robots import (
 from prbench.envs.dynamic3d.scene_loader import SceneLoader
 from prbench.envs.dynamic3d.tidybot_rewards import create_reward_calculator
 from prbench.envs.dynamic3d.utils import (
+    compute_camera_euler,
     convert_yaw_to_quaternion,
 )
 
@@ -53,7 +55,9 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
 
     control_frequency: int = 10
     horizon: int = 1000
-    camera_names: list[str] = field(default_factory=lambda: ["overview"])
+    camera_names: list[str] = field(
+        default_factory=lambda: ["overview", "base", "wrist"]
+    )
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
@@ -72,7 +76,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         scene_type: str = "ground",
         num_objects: int = 3,
         task_config_path: str | None = None,
-        render_images: bool = False,
         show_images: bool = False,
         scene_bg: str | None = None,
         scene_render_camera: str | None = "overview",
@@ -83,8 +86,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Store instance attributes from kwargs
         self.scene_type = scene_type
         self.num_objects = num_objects
-        self.render_images = render_images
-        self.camera_names = config.camera_names
         self.show_images = show_images
         self.seed = seed
         self.config = config
@@ -103,9 +104,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
 
-        # Override scene configuration if scene_bg is provided
-        if scene_bg is not None:
-            self._apply_scene_bg(scene_bg)
+        # Set camera names from config
+        self.camera_names = config.camera_names.copy()
+        if "cameras" in self.task_config:
+            self.camera_names.extend(list(self.task_config["cameras"].keys()))
 
         # Initialize robot environment
         robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
@@ -119,15 +121,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             camera_width=self.config.camera_width,
             camera_height=self.config.camera_height,
             seed=seed if seed is not None else self.seed,
-            render_images=self.render_images,
             show_viewer=self.config.show_viewer,
         )
 
-        self._render_camera_name: str | None = scene_render_camera
-
-        # Cannot show images if not rendering images
-        if show_images and not render_images:
-            raise ValueError("Cannot show images if render_images is False")
+        # This camera's render will be returned by default.
+        self._render_camera_name: str | None = "overview"
 
         # Initialize empty object and fixture lists, and ground fixture.
         # These will be populated based on the task configuration
@@ -189,6 +187,77 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             value = obs[key]
             obs_vector.extend(value.flatten())
         return np.array(obs_vector, dtype=np.float32)
+
+    def _setup_cameras(self, root: ET.Element) -> None:
+        """Setup cameras from task configuration.
+
+        Reads camera configurations from self.task_config["cameras"] and creates
+        corresponding camera XML elements in the scene.
+
+        Expected camera config kwargs:
+            position: [x, y, z] camera position (default: [0, 0, 1])
+            lookat: [x, y, z] point camera looks at (default: [0, 0, 0])
+            fovy: field of view angle in degrees (default: 45)
+            resolution: [width, height] in pixels (default: [640, 480])
+
+        Args:
+            root: Root element of the MuJoCo XML tree
+        """
+        if "cameras" not in self.task_config:
+            return
+
+        cameras_config = self.task_config["cameras"]
+        worldbody = root.find("worldbody")
+        if worldbody is None:
+            raise RuntimeError("No worldbody found in XML; cannot add cameras.")
+
+        for camera_name, camera_config in cameras_config.items():
+            position = camera_config.get("position", [0, 0, 1])
+            lookat = camera_config.get("lookat", [0, 0, 0])
+            fovy = camera_config.get("fovy", 45)
+            resolution = camera_config.get("resolution", [640, 480])
+
+            # Validate parameters
+            if not isinstance(position, (list, tuple)) or len(position) != 3:
+                raise ValueError(
+                    f"Camera '{camera_name}': position must be a 3-element list, "
+                    f"got {position}"
+                )
+            if not isinstance(lookat, (list, tuple)) or len(lookat) != 3:
+                raise ValueError(
+                    f"Camera '{camera_name}': lookat must be a 3-element list, "
+                    f"got {lookat}"
+                )
+            if not isinstance(fovy, (int, float)) or fovy <= 0:
+                raise ValueError(
+                    f"Camera '{camera_name}': fovy must be a positive number, "
+                    f"got {fovy}"
+                )
+            if not isinstance(resolution, (list, tuple)) or len(resolution) != 2:
+                raise ValueError(
+                    f"Camera '{camera_name}': resolution must be a 2-element list, "
+                    f"got {resolution}"
+                )
+            if not all(isinstance(r, int) and r > 0 for r in resolution):
+                raise ValueError(
+                    f"Camera '{camera_name}': resolution must contain positive "
+                    f"integers, got {resolution}"
+                )
+
+            # Cast to list[float] after validation
+            position_list: list[float] = list(position)  # type: ignore[arg-type]
+            lookat_list: list[float] = list(lookat)  # type: ignore[arg-type]
+
+            # Compute euler angles from position and lookat
+            euler = compute_camera_euler(position_list, lookat_list)
+
+            # Create camera element
+            camera_elem = ET.SubElement(worldbody, "camera")
+            camera_elem.set("name", camera_name)
+            camera_elem.set("pos", f"{position[0]} {position[1]} {position[2]}")
+            camera_elem.set("euler", f"{euler[0]} {euler[1]} {euler[2]}")
+            camera_elem.set("fovy", str(fovy))
+            camera_elem.set("resolution", f"{resolution[0]} {resolution[1]}")
 
     def _create_scene_xml(self) -> str:
         """Create the MuJoCo XML string for the current scene configuration."""
@@ -326,12 +395,24 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 objects = self.task_config.get("objects", {})
                 for object_type, object_configs in objects.items():
                     for object_name, object_config in object_configs.items():
+                        # Find regions for this object if specified
+                        regions_in_object = {}
+                        all_regions = self.task_config.get("regions", {})
+                        for region_name, region_config in all_regions.items():
+                            if region_config["target"] == object_name:
+                                regions_in_object[region_name] = region_config
+
+                        # Add regions to object config
+                        obj_options = object_config.copy() if object_config else {}
+                        obj_options["regions"] = regions_in_object
+
                         obj_cls = get_object_class(object_type)
                         obj = obj_cls(
                             name=object_name,
                             env=self._robot_env,
-                            options=object_config,
+                            options=obj_options,
                         )
+                        obj.visualize_regions()
                         body = obj.xml_element
                         worldbody.append(body)
                         self._objects.append(obj)
@@ -369,6 +450,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                                     if asset_tag not in existing_names:
                                         existing_names[asset_tag] = set()
                                     existing_names[asset_tag].add(asset_name)
+
+            # Setup cameras from task configuration
+            self._setup_cameras(root)
 
             # Get XML string from tree
             xml_string = ET.tostring(root, encoding="unicode")
@@ -690,11 +774,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Visualization loop for rendered image
         if self.show_images:
-            for camera_name in self._robot_env.camera_names:
-                self._visualize_image_in_window(
-                    raw_obs[f"{camera_name}_image"],
-                    f"TidyBot {camera_name} camera",
-                )
+            camera_images = self._robot_env.get_camera_images()
+            if camera_images is not None:
+                for camera_name in self._robot_env.camera_names:
+                    if camera_name in camera_images:
+                        self._visualize_image_in_window(
+                            camera_images[camera_name],
+                            f"TidyBot {camera_name} camera",
+                        )
 
         # Calculate reward and termination
         reward = self.reward(raw_obs)
@@ -719,11 +806,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Visualization loop for rendered image
         if self.show_images:
-            for camera_name in self._robot_env.camera_names:
-                self._visualize_image_in_window(
-                    raw_obs[f"{camera_name}_image"],
-                    f"TidyBot {camera_name} camera",
-                )
+            camera_images = self._robot_env.get_camera_images()
+            if camera_images is not None:
+                for camera_name in self._robot_env.camera_names:
+                    if camera_name in camera_images:
+                        self._visualize_image_in_window(
+                            camera_images[camera_name],
+                            f"TidyBot {camera_name} camera",
+                        )
 
         # Calculate reward and termination
         reward = self.reward(raw_obs)
@@ -735,7 +825,20 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     def _check_goals(self) -> bool:
         """Check if the goal has been achieved."""
         state = self._get_current_state()
+
+        # Get all goal predicates, and determine if they should
+        # be combined with "and" or "or"
         goal_predicates = self.task_config.get("goal_state", [])
+        if goal_predicates[0] == "or":
+            goal_conjunction = "or"
+            goal_predicates = goal_predicates[1:]
+        elif goal_predicates[0] == "and":
+            goal_conjunction = "and"
+            goal_predicates = goal_predicates[1:]
+        else:
+            goal_conjunction = "and"
+
+        # Evaluate each goal predicate
         successes = []
         for pred in goal_predicates:
             if pred[0] == "on":
@@ -762,16 +865,49 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         position, region_ranges
                     )
                 else:
-                    # Sample pose on a fixture (table, etc.)
-                    fixture = self._fixtures_dict[region_config["target"]]
-                    in_region = fixture.check_in_region(position, region_name)
+                    # Check first in fixtures, then in objects
+                    target = region_config["target"]
+                    entity: MujocoFixture | MujocoObject
+                    if target in self._fixtures_dict:
+                        entity = self._fixtures_dict[target]
+                    elif target in self._objects_dict:
+                        entity = self._objects_dict[target]
+                    else:
+                        raise ValueError(
+                            f"Target '{target}' not found in fixtures or objects"
+                        )
+                    in_region = entity.check_in_region(position, region_name)
 
                 successes.append(in_region)
+            elif pred[0] == "balanced":
+                # Check if a seesaw object is balanced (beam is horizontal)
+                # Format: ["balanced", "seesaw_name", tolerance_degrees]
+                obj_name = pred[1]
+                tolerance_degrees = float(pred[2]) if len(pred) > 2 else 5.0
+
+                # Get the seesaw object
+                if obj_name not in self._objects_dict:
+                    raise ValueError(f"Object '{obj_name}' not found for balance check")
+
+                seesaw_obj = self._objects_dict[obj_name]
+
+                if not isinstance(seesaw_obj, GeneratedSeesaw):
+                    raise ValueError(
+                        f"Object '{obj_name}' is not a GeneratedSeesaw, "
+                        f"got {type(seesaw_obj).__name__}"
+                    )
+
+                is_balanced = seesaw_obj.is_balanced(tolerance_degrees)
+                successes.append(is_balanced)
             else:
                 raise NotImplementedError(
                     f"Goal predicate {pred[0]} not implemented in _check_goals"
                 )
-        return all(successes)
+        if goal_conjunction == "and":
+            return all(successes)
+        if goal_conjunction == "or":
+            return any(successes)
+        raise ValueError(f"Unknown goal conjunction: {goal_conjunction}")
 
     def reward(self, obs: dict[str, Any]) -> float:
         """Calculate reward based on task completion."""
@@ -787,8 +923,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             assert self._robot_env is not None, "Robot environment not initialized"
             images = self._robot_env.get_camera_images()
             if images is not None:
-                if self._render_camera_name and self._render_camera_name in images:
-                    return images[self._render_camera_name]
+                image_keys = [k.split("_image")[0] for k in images.keys()]
+                if self._render_camera_name and self._render_camera_name in image_keys:
+                    return images[f"{self._render_camera_name}_image"]
                 # Otherwise, return the first available image.
                 for _, value in images.items():
                     return value
@@ -946,6 +1083,10 @@ The robot can control:
 - Gripper position (open/close)
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants."
+
     def _create_obs_markdown_description(self) -> str:
         """Create observation space description."""
         return """Observation includes:
@@ -1074,6 +1215,10 @@ The robot can control:
 - Arm orientation (quaternion)
 - Gripper position (open/close)
 """
+
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants."
 
     def _create_obs_markdown_description(self) -> str:
         """Create observation space description."""
