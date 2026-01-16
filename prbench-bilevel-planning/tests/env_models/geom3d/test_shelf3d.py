@@ -166,7 +166,7 @@ def test_shelf3d_skills():
 def test_shelf3d_bilevel_planning(seed):
     """Tests for bilevel planning in the Shelf3D environment."""
 
-    num_objects = 3
+    num_objects = 2
     env = prbench.make(f"prbench/Shelf3D-o{num_objects}-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:

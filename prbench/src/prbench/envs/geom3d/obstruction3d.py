@@ -361,9 +361,12 @@ class ObjectCentricObstruction3DEnv(
     def _get_collision_object_ids(self) -> set[int]:
         assert self._target_block_id is not None
         assert self._target_region_id is not None
-        return {self._target_block_id, self._target_region_id, self.table_id} | set(
-            self._obstruction_ids.values()
-        )
+        collision_ids = {
+            self._target_block_id,
+            self._target_region_id,
+            self.table_id,
+        } | set(self._obstruction_ids.values())
+        return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return {"target_block"} | set(self._obstruction_ids)
