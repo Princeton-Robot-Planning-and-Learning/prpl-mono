@@ -29,7 +29,7 @@ def test_realistic_bg_loads_without_error():
         # Take a few steps to make sure the environment works normally
         for _ in range(5):
             action = env.action_space.sample()
-            obs, reward, terminated, truncated, info = env.step(action)
+            obs, _, _, _, _ = env.step(action)
             assert isinstance(obs, np.ndarray)
 
         # Render to make sure the background is visible (no crash)

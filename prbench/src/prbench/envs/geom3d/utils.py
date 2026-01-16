@@ -260,7 +260,7 @@ def is_on_top(
     R_B = Rotation.from_quat(quatB).as_matrix()
 
     def corners(
-        p: tuple[float, float, float], R: np.ndarray, h: np.ndarray
+        pos: tuple[float, float, float], R: np.ndarray, h: np.ndarray
     ) -> np.ndarray:
         local = np.array(
             [
@@ -270,7 +270,7 @@ def is_on_top(
                 for sz in [-1, 1]
             ]
         )
-        return (R @ local.T).T + p
+        return (R @ local.T).T + pos
 
     C_A = corners(posA, R_A, np.array(halfA))
     C_B = corners(posB, R_B, np.array(halfB))
@@ -308,7 +308,7 @@ def is_inside(
     R_B = Rotation.from_quat(quatB).as_matrix()
 
     def corners(
-        p: tuple[float, float, float], R: np.ndarray, h: np.ndarray
+        pos: tuple[float, float, float], R: np.ndarray, h: np.ndarray
     ) -> np.ndarray:
         local = np.array(
             [
@@ -318,7 +318,7 @@ def is_inside(
                 for sz in [-1, 1]
             ]
         )
-        return (R @ local.T).T + p
+        return (R @ local.T).T + pos
 
     C_A = corners(posA, R_A, np.array(halfA))
     C_B = corners(posB, R_B, np.array(halfB))
