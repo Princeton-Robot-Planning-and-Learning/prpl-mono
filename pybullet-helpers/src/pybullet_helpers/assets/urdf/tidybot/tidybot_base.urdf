@@ -40,9 +40,9 @@
 
     <!-- Collision: base body -->
     <collision>
-      <origin xyz="0 0 0.22" rpy="0 0 0"/>  <!-- must not collide with arm base -->
+      <origin xyz="0 0 0.1825" rpy="0 0 0"/>  <!-- must not collide with arm base -->
       <geometry>
-        <box size="0.548 0.508 0.29"/>
+        <box size="0.548 0.508 0.365"/>  <!-- should extend to the floor at 0 -->
       </geometry>
     </collision>
 
