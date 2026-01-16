@@ -37,6 +37,8 @@ from prbench.envs.utils import PURPLE
 class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Shelf3DEnv()."""
 
+    max_action_mag: float = 0.2
+
     # Shelf.
     shelf_pose: Pose = Pose((0.0, 1.5, 0.0))
     shelf_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
@@ -155,7 +157,8 @@ class ObjectCentricShelf3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        return {self._shelf_id}
+        collision_ids = {self._shelf_id} | set(self._cubes.values())
+        return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys())

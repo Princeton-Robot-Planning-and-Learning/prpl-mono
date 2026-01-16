@@ -42,10 +42,12 @@ from prbench.envs.geom3d.object_types import (
     Geom3DRobotType,
 )
 from prbench.envs.geom3d.utils import (
+    DEFAULT_REALISTIC_BG_PATH,
     Geom3DObjectCentricState,
     Geom3DRobotActionSpace,
     extend_joints_to_include_fingers,
     get_robot_action_from_gui_input,
+    load_realistic_background,
     remove_fingers_from_extended_joints,
 )
 
@@ -57,6 +59,8 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # Robot.
     robot_name: str = "tidybot-kinova"
     robot_base_home_pose: SE2Pose = SE2Pose.identity()
+    robot_base_pose_lower_bound: SE2Pose = SE2Pose(-10.0, -10.0, -np.pi)
+    robot_base_pose_upper_bound: SE2Pose = SE2Pose(10.0, 10.0, -np.pi)
     robot_base_z: float = 0.0
     initial_joints: JointPositions = field(
         # This is a retract position.
@@ -71,9 +75,9 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
         ]
     )
     initial_finger_state: float = 0.0
-    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.025)
+    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.035)
     end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    max_action_mag: float = 0.2
+    max_action_mag: float = 0.4
     check_base_collisions: bool = False
 
     # This is used to check whether a grasped object can be placed on a surface.
@@ -101,6 +105,12 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     ee_camera_image_width: int = 640
     ee_camera_image_height: int = 360
 
+    # Realistic background settings.
+    realistic_bg: bool = False
+    realistic_bg_position: tuple[float, float, float] = (0.7, -1.5, 0.0)
+    realistic_bg_euler: tuple[float, float, float] = (np.pi / 2, 0, 0.0)
+    realistic_bg_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
         return {
@@ -110,8 +120,8 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
                 self.robot_base_z,
             ),
             "camera_yaw": 90,
-            "camera_distance": 1.5,
-            "camera_pitch": -20,
+            "camera_distance": 2.8,
+            "camera_pitch": -30,
         }
 
     def _sample_block_on_block_pose(
@@ -207,9 +217,19 @@ class ObjectCentricGeom3DRobotEnv(
 ):
     """Base class for Geom3D environments."""
 
-    def __init__(self, *args, use_gui: bool = False, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        use_gui: bool = False,
+        realistic_bg: bool | None = None,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.use_gui = use_gui
+        # Allow realistic_bg kwarg to override config value.
+        self._realistic_bg_enabled = (
+            realistic_bg if realistic_bg is not None else self.config.realistic_bg
+        )
 
         # Create the PyBullet client.
         if use_gui:
@@ -224,6 +244,8 @@ class ObjectCentricGeom3DRobotEnv(
             self.physics_client_id,
             base_z=self.config.robot_base_z,
             base_home_pose=self.config.robot_base_home_pose,
+            base_pose_lower_bound=self.config.robot_base_pose_lower_bound,
+            base_pose_upper_bound=self.config.robot_base_pose_upper_bound,
         )
         self.robot = robot
         self.robot.arm.set_joints(
@@ -264,6 +286,20 @@ class ObjectCentricGeom3DRobotEnv(
         self._inside_object_list: list[str] = []
         self._inside_object_id_list: list[int] = []
         self._inside_object_transform_list: list[Pose] = []
+
+        # Load realistic background if enabled.
+        self._realistic_bg_id: int | None = None
+        if self._realistic_bg_enabled:
+            rot = Rotation.from_euler(
+                "zyx", self.config.realistic_bg_euler
+            )  # MuJoCo convention
+            self._realistic_bg_id = load_realistic_background(
+                self.physics_client_id,
+                obj_path=DEFAULT_REALISTIC_BG_PATH,  # Use default background
+                position=self.config.realistic_bg_position,
+                orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),
+                scale=self.config.realistic_bg_scale,
+            )
 
     @property
     @abc.abstractmethod
@@ -505,11 +541,13 @@ class ObjectCentricGeom3DRobotEnv(
                             self._inside_object_transform_list.append(
                                 multiply_poses(world_to_robot.invert(), obj_pose)
                             )
-                # Close the fingers until they are touching the object.
-                while not check_body_collisions(
-                    self._grasped_object_id,
-                    self.robot.arm.robot_id,
-                    self.physics_client_id,
+
+                while not (
+                    check_body_collisions(
+                        self._grasped_object_id,
+                        self.robot.arm.robot_id,
+                        self.physics_client_id,
+                    )
                 ):
                     # If the fingers are fully closed, stop.
                     current_finger_state = self._robot_arm.get_finger_state()

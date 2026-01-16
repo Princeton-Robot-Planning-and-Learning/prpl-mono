@@ -188,6 +188,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         extend_joints_to_include_fingers(sim.config.initial_joints),
         collision_bodies=set(
             sim._get_collision_object_ids()  # pylint: disable=protected-access
+            - {sim._grasped_object_id}  # pylint: disable=protected-access
         ),
         seed=123,
         physics_client_id=sim.physics_client_id,

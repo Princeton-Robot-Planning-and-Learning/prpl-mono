@@ -6,9 +6,10 @@ from pathlib import Path
 import cv2 as cv
 import h5py  # type: ignore
 import numpy as np
-from constants import POLICY_IMAGE_HEIGHT, POLICY_IMAGE_WIDTH
 from episode_storage import EpisodeReader
 from scipy.spatial.transform import Rotation  # type: ignore
+
+from prbench_models.policy_constants import POLICY_IMAGE_HEIGHT, POLICY_IMAGE_WIDTH
 
 
 def main(
