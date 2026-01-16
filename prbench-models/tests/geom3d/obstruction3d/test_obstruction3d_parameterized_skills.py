@@ -50,8 +50,8 @@ def test_pick_controller():
         state = next_state
         if controller.terminated():
             break
-    # else:
-    #     assert False, "Controller did not terminate"
+    else:
+        assert False, "Controller did not terminate"
 
     env.close()
 
