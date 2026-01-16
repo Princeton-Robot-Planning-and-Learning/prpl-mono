@@ -17,12 +17,12 @@ from prbench.envs.geom3d.object_types import Geom3DCuboidType
 from prbench.envs.utils import RobotActionSpace
 
 # Path to the default realistic background PLY file
-DEFAULT_REALISTIC_BG_PATH = Path(__file__).parent / "assets" / "Stage_v3_sc1_staging.ply"
+DEFAULT_REALISTIC_BG_PATH = Path(__file__).parent / "assets" / "Stage_v3_sc1_staging.obj"
 
 
 def load_realistic_background(
     physics_client_id: int,
-    ply_path: str | Path,
+    obj_path: str | Path,
     position=(0, 0, 0),
     orientation=(0, 0, 0, 1),
     scale=(1, 1, 1),
@@ -41,7 +41,7 @@ def load_realistic_background(
     """
     visual_id = p.createVisualShape(
         p.GEOM_MESH,
-        fileName=str(ply_path),
+        fileName=str(obj_path),
         meshScale=scale,
         physicsClientId=physics_client_id,
     )

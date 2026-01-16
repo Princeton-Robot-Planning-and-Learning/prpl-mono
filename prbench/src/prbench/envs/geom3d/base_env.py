@@ -105,9 +105,9 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
 
     # Realistic background settings.
     realistic_bg: bool = False
-    realistic_bg_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
-    realistic_bg_orientation: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
-    realistic_bg_scale: tuple[float, float, float] = (10.0, 10.0, 10.0)
+    realistic_bg_position: tuple[float, float, float] = (0.7, -1.5, 0.0)
+    realistic_bg_euler: tuple[float, float, float] = (np.pi / 2, 0, 0.0)
+    realistic_bg_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -118,8 +118,8 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
                 self.robot_base_z,
             ),
             "camera_yaw": 90,
-            "camera_distance": 1.5,
-            "camera_pitch": -20,
+            "camera_distance": 2.8,
+            "camera_pitch": -30,
         }
 
     def _sample_block_on_block_pose(
@@ -286,11 +286,14 @@ class ObjectCentricGeom3DRobotEnv(
         # Load realistic background if enabled.
         self._realistic_bg_id: int | None = None
         if self._realistic_bg_enabled:
+            rot = Rotation.from_euler(
+                "zyx", self.config.realistic_bg_euler
+            )  # MuJoCo convention
             self._realistic_bg_id = load_realistic_background(
                 self.physics_client_id,
-                ply_path=DEFAULT_REALISTIC_BG_PATH,  # Use default background
+                obj_path=DEFAULT_REALISTIC_BG_PATH,  # Use default background
                 position=self.config.realistic_bg_position,
-                orientation=self.config.realistic_bg_orientation,
+                orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),
                 scale=self.config.realistic_bg_scale,
             )
 
