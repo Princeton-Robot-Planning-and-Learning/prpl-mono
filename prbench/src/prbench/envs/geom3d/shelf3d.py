@@ -77,7 +77,7 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     def get_cube_texture(self, idx: int) -> Path:
         """Get a texture to wrap a cube given the index."""
         asset_dir = Path(__file__).parent / "assets"
-        texture_filenames = [f"book{i}.jpg" for i in range(8)]
+        texture_filenames = [f"book{i}.jpg" for i in range(5)]
         texture_filename = texture_filenames[idx % len(texture_filenames)]
         return asset_dir / texture_filename
 
