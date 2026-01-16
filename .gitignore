@@ -6,7 +6,7 @@ uv.lock
 logs
 llm_cache.db
 vlm_cache
-unit_test_videos
+unit_test_videos*
 prbench-vlm-planning/outputs
 data/
 
@@ -184,3 +184,6 @@ base_motion_planning.mp4
 
 # datasets
 datasets
+
+# third party libraries
+third_party

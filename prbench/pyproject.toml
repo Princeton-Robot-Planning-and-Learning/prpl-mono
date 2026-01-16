@@ -33,6 +33,7 @@ geom2d = [
 tidybot = [
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
+   "gdown",
 ]
 geom3d = [
    "pybullet>=3.2.5",
@@ -51,6 +52,7 @@ develop = [
    "pytest-pylint>=0.18.0",
    "pytest>=7.2.2",
    "coverage",
+   "gdown",
    "scipy-stubs>=1.15.3.0",
    "types-shapely>=2.1.0"
 ]
@@ -91,6 +93,7 @@ module = [
     "mujoco.*",
     "cv2.*",
     "pybullet.*",
+    "gdown.*",
 ]
 ignore_missing_imports = true
 
