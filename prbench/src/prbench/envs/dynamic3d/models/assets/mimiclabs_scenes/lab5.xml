@@ -1,0 +1,337 @@
+<mujoco model="lab5">
+  <default>
+    <default class="visual">
+      <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+    </default>
+    <default class="collision">
+      <geom group="3" type="mesh"/>
+    </default>
+  </default>
+  <asset>
+    <texture builtin="gradient" height="256" rgb1=".9 .9 1." rgb2=".2 .3 .4" type="skybox" width="256"/>
+    <texture file="textures/brown_ceramic_tile.png" type="2d" name="texplane"/>
+    
+    <material name="floorplane" reflectance="0.0" shininess="0.0"
+	      specular="0.0" texrepeat="3 3" texture="texplane" texuniform="true"/>
+    <!-- ceramic table texture and material-->
+    <texture file="textures/tables/tartan.png" type="cube" name="tex-table"/>
+    <material name="table_texture" reflectance="0.0" shininess="0.0" specular="0.2" texrepeat="1 1" texture="tex-table" />
+    <!-- steel legs -->
+    <texture file="textures/martin_novak_wood_table.png" type="cube" name="tex-table-legs"/>
+    <material name="table_legs" reflectance="0.8" shininess="0.8" texrepeat="1 1" texture="tex-table-legs" />
+    <!-- plaster walls -->
+    <texture file="textures/robocasa_textures/wall8.png" type="2d" name="tex-wall"/>
+
+    <material name="walls_mat" reflectance="0.0" shininess="0.3" specular="0.8" texrepeat="3 3" texture="tex-wall" texuniform="true" />
+    <texture  name="textable" builtin="flat" height="512" width="512" rgb1="0.8 0.8 0.8" rgb2="0.8 0.8 0.8"/>
+    <material name="table_mat" texture="textable" />
+
+    <material name="Cake" specular="0.5" shininess="0.002500001" rgba="0.212231 0.036889 0.000304 1.000000"/>
+    <texture type="2d" name="Rug_Texture_2" file="textures/lab5/Rug_Texture_2.png"/>
+    <material name="Carpet" texture="Rug_Texture_2" specular="1.0" shininess="0.25"/>
+    <material name="Chocolate" specular="0.5" shininess="0.45256201199999996" rgba="0.054480 0.006995 0.001518 1.000000"/>
+    <material name="FABRIC_1_FRONT_1333.003" specular="1.0" shininess="0.287632416" rgba="0.600000 0.600000 0.400000 1.000000"/>
+    <material name="Faucet" specular="0.5" shininess="0.64" rgba="0.381326 0.346704 0.309469 1.000000"/>
+    <material name="Glass" specular="0.5" shininess="0.36" rgba="0.333000 0.342000 0.900000 1.000000"/>
+    <material name="Material.004" specular="0.5" shininess="0.81" rgba="0.417885 0.212231 0.138432 1.000000"/>
+    <texture type="2d" name="2Untitled-1" file="textures/lab5/2Untitled-1.png"/>
+    <material name="PAPER_4" texture="2Untitled-1" specular="0.5" shininess="0.25"/>
+    <material name="Soil" specular="0.0" shininess="0.27801651" rgba="0.026900 0.007406 0.002297 1.000000"/>
+    <material name="WATER2_" specular="0.5" shininess="1.0" rgba="1.000000 0.044446 0.175343 1.000000"/>
+    <material name="WATER_1" specular="0.5" shininess="1.0" rgba="0.800000 0.410039 0.016817 1.000000"/>
+    <texture type="2d" name="Concrete023_1K_Color" file="textures/lab5/Concrete023_1K_Color.png"/>
+    <material name="Wall" texture="Concrete023_1K_Color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="PDM forest background 12" file="textures/lab5/PDM forest background 12.png"/>
+    <material name="back" texture="PDM forest background 12" specular="0.5" shininess="0.7225"/>
+    <texture type="2d" name="100YearsOfFashion_Supercover_Diffuse_TextureByAviato" file="textures/lab5/100YearsOfFashion_Supercover_Diffuse_TextureByAviato.png"/>
+    <material name="book1" texture="100YearsOfFashion_Supercover_Diffuse_TextureByAviato" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 03" file="textures/lab5/Book stack set 08-RAB-Book 03.png"/>
+    <material name="book10" texture="Book stack set 08-RAB-Book 03" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 036" file="textures/lab5/Book stack set 08-RAB-Book 036.png"/>
+    <material name="book11" texture="Book stack set 08-RAB-Book 036" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 057" file="textures/lab5/Book stack set 08-RAB-Book 057.png"/>
+    <material name="book12" texture="Book stack set 08-RAB-Book 057" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 071" file="textures/lab5/Book stack set 08-RAB-Book 071.png"/>
+    <material name="book13" texture="Book stack set 08-RAB-Book 071" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 072" file="textures/lab5/Book stack set 08-RAB-Book 072.png"/>
+    <material name="book14" texture="Book stack set 08-RAB-Book 072" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 073" file="textures/lab5/Book stack set 08-RAB-Book 073.png"/>
+    <material name="book15" texture="Book stack set 08-RAB-Book 073" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 077" file="textures/lab5/Book stack set 08-RAB-Book 077.png"/>
+    <material name="book16" texture="Book stack set 08-RAB-Book 077" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 085" file="textures/lab5/Book stack set 08-RAB-Book 085.png"/>
+    <material name="book17" texture="Book stack set 08-RAB-Book 085" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 089" file="textures/lab5/Book stack set 08-RAB-Book 089.png"/>
+    <material name="book18" texture="Book stack set 08-RAB-Book 089" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="children book 04" file="textures/lab5/children book 04.png"/>
+    <material name="book19" texture="children book 04" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="children book 10" file="textures/lab5/children book 10.png"/>
+    <material name="book20" texture="children book 10" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="children book 09" file="textures/lab5/children book 09.png"/>
+    <material name="book21" texture="children book 09" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="children book 07" file="textures/lab5/children book 07.png"/>
+    <material name="book22" texture="children book 07" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="children book 12" file="textures/lab5/children book 12.png"/>
+    <material name="book23" texture="children book 12" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="children book 17" file="textures/lab5/children book 17.png"/>
+    <material name="book24" texture="children book 17" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Books cover_-78" file="textures/lab5/Books cover_-78.png"/>
+    <material name="book25" texture="Books cover_-78" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="book_4_15kem" file="textures/lab5/book_4_15kem.png"/>
+    <material name="book26" texture="book_4_15kem" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="book_4_13kem" file="textures/lab5/book_4_13kem.png"/>
+    <material name="book27" texture="book_4_13kem" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="book_4_5kem" file="textures/lab5/book_4_5kem.png"/>
+    <material name="book28" texture="book_4_5kem" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-Book 02" file="textures/lab5/Book stack set 08-Book 02.png"/>
+    <material name="book3" texture="Book stack set 08-Book 02" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-Book 04" file="textures/lab5/Book stack set 08-Book 04.png"/>
+    <material name="book5" texture="Book stack set 08-Book 04" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-Book 05" file="textures/lab5/Book stack set 08-Book 05.png"/>
+    <material name="book6" texture="Book stack set 08-Book 05" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-Book 011" file="textures/lab5/Book stack set 08-Book 011.png"/>
+    <material name="book7" texture="Book stack set 08-Book 011" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-Book 012" file="textures/lab5/Book stack set 08-Book 012.png"/>
+    <material name="book8" texture="Book stack set 08-Book 012" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-Book 014" file="textures/lab5/Book stack set 08-Book 014.png"/>
+    <material name="book9" texture="Book stack set 08-Book 014" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-RAB-Book 048" file="textures/lab5/Book stack set 08-RAB-Book 048.png"/>
+    <material name="book_2" texture="Book stack set 08-RAB-Book 048" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Book stack set 08-Book 03" file="textures/lab5/Book stack set 08-Book 03.png"/>
+    <material name="book_4" texture="Book stack set 08-Book 03" specular="0.5" shininess="0.25"/>
+    <material name="cabinet" specular="0.5" shininess="0.25" rgba="0.132868 0.144129 0.171441 1.000000"/>
+    <material name="cluomn" specular="0.5" shininess="0.25" rgba="0.090252 0.090252 0.090252 1.000000"/>
+    <texture type="2d" name="zigzag2" file="textures/lab5/zigzag2.png"/>
+    <material name="dosh_" texture="zigzag2" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="wood_1_0642 _diffuse" file="textures/lab5/wood_1_0642 _diffuse.png"/>
+    <material name="floor_" texture="wood_1_0642 _diffuse" specular="0.5" shininess="0.25"/>
+    <material name="flower_pot" specular="0.113636" shininess="0.071921478" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="glass" specular="0.5" shininess="1.0" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="glass-1" specular="0.5" shininess="1.0" rgba="0.033167 0.033167 0.033167 1.000000"/>
+    <material name="jar_" specular="0.5" shininess="0.25" rgba="0.228021 0.367584 0.401620 1.000000"/>
+    <texture type="2d" name="Material_2" file="textures/lab5/Material_2.png"/>
+    <material name="leaf006" texture="Material_2" specular="0.5" shininess="0.0625"/>
+    <texture type="2d" name="Material_3" file="textures/lab5/Material_3.png"/>
+    <material name="leaf_.006" texture="Material_3" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="Material000" file="textures/lab5/Material000.png"/>
+    <material name="leaf_Mat.008" texture="Material000" specular="0.5" shininess="0.25"/>
+    <material name="lighte_" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="lighte_.001" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="Metal036_2K-JPG_Color" file="textures/lab5/Metal036_2K-JPG_Color.png"/>
+    <material name="metal_" texture="Metal036_2K-JPG_Color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="Plastic012A_2K_Color" file="textures/lab5/Plastic012A_2K_Color.png"/>
+    <material name="metal_black_" texture="Plastic012A_2K_Color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="Material" file="textures/lab5/Material.png"/>
+    <material name="pampas006" texture="Material" specular="0.0" shininess="0.25"/>
+    <texture type="2d" name="1_paper1_BaseColor" file="textures/lab5/1_paper1_BaseColor.png"/>
+    <material name="paper1" texture="1_paper1_BaseColor" specular="0.086364" shininess="0.25"/>
+    <texture type="2d" name="0Untitled-1" file="textures/lab5/0Untitled-1.png"/>
+    <material name="paper2" texture="0Untitled-1" specular="0.25" shininess="0.25"/>
+    <texture type="2d" name="1Untitled-1" file="textures/lab5/1Untitled-1.png"/>
+    <material name="paper3" texture="1Untitled-1" specular="0.181818" shininess="0.25"/>
+    <texture type="2d" name="cgaxis_models_53_01_08" file="textures/lab5/cgaxis_models_53_01_08.png"/>
+    <material name="paper_book_" texture="cgaxis_models_53_01_08" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="c460-canvas-2" file="textures/lab5/c460-canvas-2.png"/>
+    <material name="picture" texture="c460-canvas-2" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="Coco_Republic_Terrace_Desk_Chair_Leather_fabric 1" file="textures/lab5/Coco_Republic_Terrace_Desk_Chair_Leather_fabric 1.png"/>
+    <material name="pillow" texture="Coco_Republic_Terrace_Desk_Chair_Leather_fabric 1" specular="0.75" shininess="0.25"/>
+    <texture type="2d" name="Concrete036_1K_Color" file="textures/lab5/Concrete036_1K_Color.png"/>
+    <material name="roof_" texture="Concrete036_1K_Color" specular="0.5" shininess="0.5"/>
+    <material name="steel_body" specular="0.5" shininess="0.5" rgba="0.056625 0.056625 0.056625 1.000000"/>
+    <material name="still" specular="0.5" shininess="0.8182023930000001" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="Caesar-tiles-set26-ACC1_7502_V1_2k" file="textures/lab5/Caesar-tiles-set26-ACC1_7502_V1_2k.png"/>
+    <material name="stone_" texture="Caesar-tiles-set26-ACC1_7502_V1_2k" specular="0.5" shininess="0.25"/>
+    <material name="wiski5" specular="0.5" shininess="0.669421509" rgba="0.473532 0.198069 0.076185 1.000000"/>
+    <material name="wiski_1" specular="0.5" shininess="0.669421509" rgba="0.068762 0.068762 0.068762 1.000000"/>
+    <material name="wiski_2" specular="0.5" shininess="0.471095062" rgba="0.262305 0.096148 0.048100 1.000000"/>
+    <material name="wiski_3" specular="0.5" shininess="0.535557861" rgba="0.060305 0.009125 0.025315 1.000000"/>
+    <material name="wiski_4" specular="0.5" shininess="0.535557861" rgba="0.099087 0.004762 0.005763 1.000000"/>
+    <texture type="2d" name="129_Walnut fine wood texture-seamless" file="textures/lab5/129_Walnut fine wood texture-seamless.png"/>
+    <material name="wood_2" texture="129_Walnut fine wood texture-seamless" specular="0.277273" shininess="0.25"/>
+    <texture type="2d" name="105_walnut dark fine wood texture-seamless" file="textures/lab5/105_walnut dark fine wood texture-seamless.png"/>
+    <material name="wood_wall" texture="105_walnut dark fine wood texture-seamless" specular="0.3" shininess="0.09"/>
+    <mesh name="scene4_0" file="meshes/lab5/scene4_0.obj"/>
+    <mesh name="scene4_1" file="meshes/lab5/scene4_1.obj"/>
+    <mesh name="scene4_2" file="meshes/lab5/scene4_2.obj"/>
+    <mesh name="scene4_3" file="meshes/lab5/scene4_3.obj"/>
+    <mesh name="scene4_4" file="meshes/lab5/scene4_4.obj"/>
+    <mesh name="scene4_5" file="meshes/lab5/scene4_5.obj"/>
+    <mesh name="scene4_6" file="meshes/lab5/scene4_6.obj"/>
+    <mesh name="scene4_7" file="meshes/lab5/scene4_7.obj"/>
+    <mesh name="scene4_8" file="meshes/lab5/scene4_8.obj"/>
+    <mesh name="scene4_9" file="meshes/lab5/scene4_9.obj"/>
+    <mesh name="scene4_10" file="meshes/lab5/scene4_10.obj"/>
+    <mesh name="scene4_11" file="meshes/lab5/scene4_11.obj"/>
+    <mesh name="scene4_12" file="meshes/lab5/scene4_12.obj"/>
+    <mesh name="scene4_13" file="meshes/lab5/scene4_13.obj"/>
+    <mesh name="scene4_14" file="meshes/lab5/scene4_14.obj"/>
+    <mesh name="scene4_15" file="meshes/lab5/scene4_15.obj"/>
+    <mesh name="scene4_16" file="meshes/lab5/scene4_16.obj"/>
+    <mesh name="scene4_17" file="meshes/lab5/scene4_17.obj"/>
+    <mesh name="scene4_18" file="meshes/lab5/scene4_18.obj"/>
+    <mesh name="scene4_19" file="meshes/lab5/scene4_19.obj"/>
+    <mesh name="scene4_20" file="meshes/lab5/scene4_20.obj"/>
+    <mesh name="scene4_21" file="meshes/lab5/scene4_21.obj"/>
+    <mesh name="scene4_22" file="meshes/lab5/scene4_22.obj"/>
+    <mesh name="scene4_23" file="meshes/lab5/scene4_23.obj"/>
+    <mesh name="scene4_24" file="meshes/lab5/scene4_24.obj"/>
+    <mesh name="scene4_25" file="meshes/lab5/scene4_25.obj"/>
+    <mesh name="scene4_26" file="meshes/lab5/scene4_26.obj"/>
+    <mesh name="scene4_27" file="meshes/lab5/scene4_27.obj"/>
+    <mesh name="scene4_28" file="meshes/lab5/scene4_28.obj"/>
+    <mesh name="scene4_29" file="meshes/lab5/scene4_29.obj"/>
+    <mesh name="scene4_30" file="meshes/lab5/scene4_30.obj"/>
+    <mesh name="scene4_31" file="meshes/lab5/scene4_31.obj"/>
+    <mesh name="scene4_32" file="meshes/lab5/scene4_32.obj"/>
+    <mesh name="scene4_33" file="meshes/lab5/scene4_33.obj"/>
+    <mesh name="scene4_34" file="meshes/lab5/scene4_34.obj"/>
+    <mesh name="scene4_35" file="meshes/lab5/scene4_35.obj"/>
+    <mesh name="scene4_36" file="meshes/lab5/scene4_36.obj"/>
+    <mesh name="scene4_37" file="meshes/lab5/scene4_37.obj"/>
+    <mesh name="scene4_38" file="meshes/lab5/scene4_38.obj"/>
+    <mesh name="scene4_39" file="meshes/lab5/scene4_39.obj"/>
+    <mesh name="scene4_40" file="meshes/lab5/scene4_40.obj"/>
+    <mesh name="scene4_41" file="meshes/lab5/scene4_41.obj"/>
+    <mesh name="scene4_42" file="meshes/lab5/scene4_42.obj"/>
+    <mesh name="scene4_43" file="meshes/lab5/scene4_43.obj"/>
+    <mesh name="scene4_44" file="meshes/lab5/scene4_44.obj"/>
+    <mesh name="scene4_45" file="meshes/lab5/scene4_45.obj"/>
+    <!-- <mesh name="scene4_46" file="meshes/lab5/scene4_46.obj"/> -->
+    <mesh name="scene4_47" file="meshes/lab5/scene4_47.obj"/>
+    <mesh name="scene4_48" file="meshes/lab5/scene4_48.obj"/>
+    <mesh name="scene4_49" file="meshes/lab5/scene4_49.obj"/>
+    <mesh name="scene4_50" file="meshes/lab5/scene4_50.obj"/>
+    <mesh name="scene4_51" file="meshes/lab5/scene4_51.obj"/>
+    <mesh name="scene4_52" file="meshes/lab5/scene4_52.obj"/>
+    <mesh name="scene4_53" file="meshes/lab5/scene4_53.obj"/>
+    <mesh name="scene4_54" file="meshes/lab5/scene4_54.obj"/>
+    <mesh name="scene4_55" file="meshes/lab5/scene4_55.obj"/>
+    <mesh name="scene4_56" file="meshes/lab5/scene4_56.obj"/>
+    <mesh name="scene4_57" file="meshes/lab5/scene4_57.obj"/>
+    <mesh name="scene4_58" file="meshes/lab5/scene4_58.obj"/>
+    <mesh name="scene4_59" file="meshes/lab5/scene4_59.obj"/>
+    <mesh name="scene4_60" file="meshes/lab5/scene4_60.obj"/>
+    <mesh name="scene4_61" file="meshes/lab5/scene4_61.obj"/>
+    <mesh name="scene4_62" file="meshes/lab5/scene4_62.obj"/>
+    <mesh name="scene4_63" file="meshes/lab5/scene4_63.obj"/>
+    <mesh name="scene4_64" file="meshes/lab5/scene4_64.obj"/>
+    <mesh name="scene4_65" file="meshes/lab5/scene4_65.obj"/>
+    <mesh name="scene4_66" file="meshes/lab5/scene4_66.obj"/>
+    <!-- <mesh name="scene4_67" file="meshes/lab5/scene4_67.obj"/> -->
+    <!-- <mesh name="scene4_68" file="meshes/lab5/scene4_68.obj"/> -->
+    <mesh name="scene4_69" file="meshes/lab5/scene4_69.obj"/>
+    <mesh name="scene4_70" file="meshes/lab5/scene4_70.obj"/>
+    <mesh name="scene4_71" file="meshes/lab5/scene4_71.obj"/>
+    <!-- <mesh name="scene4_72" file="meshes/lab5/scene4_72.obj"/> -->
+  </asset>
+  <worldbody>
+    <body name="scene4">
+      <!-- <geom mesh="scene4_0" material="book28" class="visual"/>
+      <geom mesh="scene4_1" material="book24" class="visual"/>
+      <geom mesh="scene4_2" material="book23" class="visual"/>
+      <geom mesh="scene4_3" material="book22" class="visual"/>
+      <geom mesh="scene4_4" material="book19" class="visual"/>
+      <geom mesh="scene4_5" material="book14" class="visual"/>
+      <geom mesh="scene4_6" material="book13" class="visual"/>
+      <geom mesh="scene4_7" material="book12" class="visual"/>
+      <geom mesh="scene4_8" material="book11" class="visual"/>
+      <geom mesh="scene4_9" material="book9" class="visual"/>
+      <geom mesh="scene4_10" material="book7" class="visual"/>
+      <geom mesh="scene4_11" material="book_4" class="visual"/>
+      <geom mesh="scene4_12" material="book3" class="visual"/>
+      <geom mesh="scene4_13" material="book1" class="visual"/>
+      <geom mesh="scene4_14" material="book10" class="visual"/>
+      <geom mesh="scene4_15" material="book6" class="visual"/>
+      <geom mesh="scene4_16" material="book8" class="visual"/>
+      <geom mesh="scene4_17" material="book18" class="visual"/>
+      <geom mesh="scene4_18" material="book17" class="visual"/>
+      <geom mesh="scene4_19" material="book16" class="visual"/>
+      <geom mesh="scene4_20" material="book21" class="visual"/>
+      <geom mesh="scene4_21" material="book20" class="visual"/>
+      <geom mesh="scene4_22" material="book25" class="visual"/>
+      <geom mesh="scene4_23" material="book15" class="visual"/>
+      <geom mesh="scene4_24" material="book5" class="visual"/>
+      <geom mesh="scene4_25" material="book_2" class="visual"/>
+      <geom mesh="scene4_26" material="book26" class="visual"/>
+      <geom mesh="scene4_27" material="book27" class="visual"/> -->
+      <geom mesh="scene4_28" material="paper_book_" class="visual"/>
+      <geom mesh="scene4_29" material="jar_" class="visual"/>
+      <geom mesh="scene4_30" material="still" class="visual"/>
+      <geom mesh="scene4_31" material="Material.004" class="visual"/>
+      <geom mesh="scene4_32" material="wiski_3" class="visual"/>
+      <geom mesh="scene4_33" material="WATER2_" class="visual"/>
+      <geom mesh="scene4_34" material="PAPER_4" class="visual"/>
+      <geom mesh="scene4_35" material="wiski5" class="visual"/>
+      <geom mesh="scene4_36" material="WATER_1" class="visual"/>
+      <geom mesh="scene4_37" material="paper3" class="visual"/>
+      <geom mesh="scene4_38" material="wiski_4" class="visual"/>
+      <geom mesh="scene4_39" material="paper2" class="visual"/>
+      <geom mesh="scene4_40" material="paper1" class="visual"/>
+      <geom mesh="scene4_41" material="wiski_2" class="visual"/>
+      <geom mesh="scene4_42" material="glass-1" class="visual"/>
+      <geom mesh="scene4_43" material="wiski_1" class="visual"/>
+      <geom mesh="scene4_44" material="glass" class="visual"/>
+      <geom mesh="scene4_45" material="lighte_" class="visual"/>
+      <!-- <geom mesh="scene4_46" material="stone_" class="visual"/> -->
+      <geom mesh="scene4_47" material="cabinet" class="visual"/>
+      <geom mesh="scene4_48" material="steel_body" class="visual"/>
+      <geom mesh="scene4_49" material="wood_2" class="visual"/>
+      <geom mesh="scene4_50" material="wood_wall" class="visual"/>
+      <geom mesh="scene4_51" material="Cake" class="visual"/>
+      <geom mesh="scene4_52" material="Chocolate" class="visual"/>
+      <geom mesh="scene4_53" material="dosh_" class="visual"/>
+      <!-- <geom mesh="scene4_54" material="picture" class="visual"/>
+      <geom mesh="scene4_55" material="Soil" class="visual"/>
+      <geom mesh="scene4_56" material="flower_pot" class="visual"/>
+      <geom mesh="scene4_57" material="pampas006" class="visual"/>
+      <geom mesh="scene4_58" material="leaf_.006" class="visual"/>
+      <geom mesh="scene4_59" material="leaf006" class="visual"/>
+      <geom mesh="scene4_60" material="leaf_Mat.008" class="visual"/> -->
+      <geom mesh="scene4_61" material="FABRIC_1_FRONT_1333.003" class="visual"/>
+      <geom mesh="scene4_62" material="pillow" class="visual"/>
+      <geom mesh="scene4_63" material="Carpet" class="visual"/>
+      <geom mesh="scene4_64" material="metal_" class="visual"/>
+      <geom mesh="scene4_65" material="Glass" class="visual"/>
+      <geom mesh="scene4_66" material="Wall" class="visual"/>
+      <!-- <geom mesh="scene4_67" material="Wall" class="visual"/> -->
+      <!-- <geom mesh="scene4_68" material="floor_" class="visual"/> -->
+      <geom mesh="scene4_69" material="back" class="visual"/>
+      <geom mesh="scene4_70" material="Faucet" class="visual"/>
+      <geom mesh="scene4_71" material="metal_black_" class="visual"/>
+      <!-- <geom mesh="scene4_72" material="roof_" class="visual"/> -->
+    </body>
+    <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false"/>
+    <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="10 10 .125" type="plane"/>
+    
+
+    <geom pos="0.5 8.5 1.5" quat="0.7071 0.7071 0 0" size="10.5 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_left_visual" material="walls_mat"/>
+    <geom pos="0.5 -2.2 1.5" quat="0.7071 -0.7071 0 0" size="10.5 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_right_visual" material="walls_mat"/>
+    <geom pos="-6.15 0 1.5" quat="0.5 0.5 0.5 0.5" size="10 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_rear_visual" material="walls_mat"/>
+    <geom pos="2 0 1.5" quat="0.5 0.5 -0.5 -0.5" size="10 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_front_visual" material="walls_mat"/>
+ 
+    <body name="table" pos="0 0 0.4">
+      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" group="0" name="table_collision" friction="1 0.005 0.0001"/>
+      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" conaffinity="0" contype="0" group="1" name="table_visual" material="table_texture"/>
+      <site pos="0 0 0.4" name="table_top" size="0.001 0.001 0.001" rgba="0 0 0 0"/>
+      <!-- Legs (visual only) -->
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg1_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg2_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg3_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg4_visual" material="table_legs"/>
+    </body>
+
+    <light name="light1" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="1 1 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+    <light name="light2" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="-3. -3. 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+
+    <!-- front view -->
+    <camera mode="fixed" name="frontview" pos="1.0 0 1.45" quat="0.56 0.43 0.43 0.56"/>
+    <!-- bird view -->
+    <camera mode="fixed" name="birdview" pos="-0.2 0 3.0" quat="0.7071 0 0 0.7071"/>
+    <!-- agent view -->
+    <camera mode="fixed" name="agentview" pos="0.5 0 1.35" quat="0.653 0.271 0.271 0.653"/>
+
+    <!-- side view -->
+    <camera mode="fixed" name="sideview" pos="-0.05651774593317116 1.2761224129427358 -1.4879572214102434" quat="0.009905065491771751 0.006877963156909582 0.5912228352893879 0.806418094001364" />
+    
+  </worldbody>
+</mujoco>

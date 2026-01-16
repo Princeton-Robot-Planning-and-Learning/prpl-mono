@@ -1,11 +1,28 @@
 """Basic tests for the TidyBot3D environment observation and action space validity,
 step, and reset."""
 
+from pathlib import Path
+
 import numpy as np
 from relational_structs import ObjectCentricState
 
 from prbench.envs.dynamic3d.object_types import MujocoObjectTypeFeatures
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+
+# Path to mimiclabs scenes for skip condition
+# Test file is at: prbench/tests/envs/dynamic3d/test_tidybot3d_basic.py
+# Need to go up to prbench root, then to
+# src/prbench/envs/dynamic3d/models/assets/mimiclabs_scenes
+MIMICLABS_SCENES_DIR = (
+    Path(__file__).parent.parent.parent.parent
+    / "src"
+    / "prbench"
+    / "envs"
+    / "dynamic3d"
+    / "models"
+    / "assets"
+    / "mimiclabs_scenes"
+)
 
 
 def test_tidybot3d_observation_space():
