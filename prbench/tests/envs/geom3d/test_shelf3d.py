@@ -29,7 +29,12 @@ from tests.conftest import MAKE_VIDEOS
 @pytest.fixture(scope="module")
 def env():
     """Create a shared environment for all tests in this module."""
-    environment = Shelf3DEnv(num_cubes=2, use_gui=False, render_mode="rgb_array")
+    environment = Shelf3DEnv(
+        num_cubes=2,
+        use_gui=True,
+        render_mode="rgb_array",
+        realistic_bg=True,
+    )
     if MAKE_VIDEOS:
         environment = RecordVideo(environment, "unit_test_videos")
     yield environment
