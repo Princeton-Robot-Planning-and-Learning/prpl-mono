@@ -17,7 +17,9 @@ from prbench.envs.geom3d.object_types import Geom3DCuboidType
 from prbench.envs.utils import RobotActionSpace
 
 # Path to the default realistic background PLY file
-DEFAULT_REALISTIC_BG_PATH = Path(__file__).parent / "assets" / "Stage_v3_sc1_staging.obj"
+DEFAULT_REALISTIC_BG_PATH = (
+    Path(__file__).parent / "assets" / "Stage_v3_sc1_staging.obj"
+)
 
 
 def load_realistic_background(
