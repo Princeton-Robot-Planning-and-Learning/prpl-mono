@@ -17,7 +17,7 @@ prbench.register_all_environments()
 def test_move_to_target_controller():
     """Test move-to-target controller in Motion3D environment."""
 
-    env = prbench.make("prbench/Motion3D-v0", render_mode="rgb_array", use_gui=False)
+    env = prbench.make("prbench/Motion3D-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True)
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Motion3D")
 

@@ -18,7 +18,7 @@ def test_move_base_to_target_controller():
     """Test move-base-to-target controller in BaseMotion3D environment."""
 
     env = prbench.make(
-        "prbench/BaseMotion3D-v0", render_mode="rgb_array", use_gui=False
+        "prbench/BaseMotion3D-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="BaseMotion3D")

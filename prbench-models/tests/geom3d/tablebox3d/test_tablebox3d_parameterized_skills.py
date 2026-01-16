@@ -18,7 +18,7 @@ def test_pick_controller():
     """Test pick controller in TableBox3D environment."""
 
     env = prbench.make(
-        "prbench/TableBox3D-o1-v0", render_mode="rgb_array", use_gui=False
+        "prbench/TableBox3D-o1-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
@@ -59,7 +59,7 @@ def test_pick_and_place_controller():
     """Test pick and place controller in TableBox3D environment."""
 
     env = prbench.make(
-        "prbench/TableBox3D-o1-v0", render_mode="rgb_array", use_gui=False
+        "prbench/TableBox3D-o1-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
@@ -124,7 +124,7 @@ def test_pick_and_place_inside_box_controller():
 
     num_cubes = 2
     env = prbench.make(
-        f"prbench/TableBox3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False
+        f"prbench/TableBox3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
@@ -272,7 +272,7 @@ def test_pick_cube_and_place_on_table_controller():
 
     num_cubes = 2
     env = prbench.make(
-        f"prbench/TableBox3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False
+        f"prbench/TableBox3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")

@@ -19,7 +19,7 @@ def test_pick_controller():
 
     num_cubes = 3
     env = prbench.make(
-        f"prbench/Ground3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False
+        f"prbench/Ground3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Ground3D")
@@ -62,7 +62,7 @@ def test_pick_and_place_controller():
 
     num_cubes = 3
     env = prbench.make(
-        f"prbench/Ground3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False
+        f"prbench/Ground3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False, realistic_bg=True
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Ground3D")
