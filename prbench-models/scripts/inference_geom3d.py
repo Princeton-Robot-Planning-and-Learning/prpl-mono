@@ -7,19 +7,19 @@ import cv2 as cv
 import numpy as np
 import prbench
 import zmq
-from constants import (
-    POLICY_CONTROL_PERIOD,
-    POLICY_IMAGE_HEIGHT,
-    POLICY_IMAGE_WIDTH,
-    POLICY_SERVER_HOST,
-    POLICY_SERVER_PORT,
-)
 from episode_storage import EpisodeWriter
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from prbench_models.teleop_utils import _visualize_image_in_window
+from prbench_models.policy_constants import (
+    POLICY_CONTROL_PERIOD,
+    POLICY_IMAGE_HEIGHT,
+    POLICY_IMAGE_WIDTH,
+    POLICY_SERVER_HOST,
+    POLICY_SERVER_PORT,
+)
 
 prbench.register_all_environments()
 
