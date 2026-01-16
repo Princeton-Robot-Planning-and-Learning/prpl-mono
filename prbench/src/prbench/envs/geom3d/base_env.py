@@ -42,10 +42,12 @@ from prbench.envs.geom3d.object_types import (
     Geom3DRobotType,
 )
 from prbench.envs.geom3d.utils import (
+    DEFAULT_REALISTIC_BG_PATH,
     Geom3DObjectCentricState,
     Geom3DRobotActionSpace,
     extend_joints_to_include_fingers,
     get_robot_action_from_gui_input,
+    load_realistic_background,
     remove_fingers_from_extended_joints,
 )
 
@@ -100,6 +102,12 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     ee_camera_fov: float = 41.83792730009236
     ee_camera_image_width: int = 640
     ee_camera_image_height: int = 360
+
+    # Realistic background settings.
+    realistic_bg: bool = False
+    realistic_bg_position: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    realistic_bg_orientation: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 1.0)
+    realistic_bg_scale: tuple[float, float, float] = (10.0, 10.0, 10.0)
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -207,9 +215,19 @@ class ObjectCentricGeom3DRobotEnv(
 ):
     """Base class for Geom3D environments."""
 
-    def __init__(self, *args, use_gui: bool = False, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        use_gui: bool = False,
+        realistic_bg: bool | None = None,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.use_gui = use_gui
+        # Allow realistic_bg kwarg to override config value.
+        self._realistic_bg_enabled = (
+            realistic_bg if realistic_bg is not None else self.config.realistic_bg
+        )
 
         # Create the PyBullet client.
         if use_gui:
@@ -264,6 +282,17 @@ class ObjectCentricGeom3DRobotEnv(
         self._inside_object_list: list[str] = []
         self._inside_object_id_list: list[int] = []
         self._inside_object_transform_list: list[Pose] = []
+
+        # Load realistic background if enabled.
+        self._realistic_bg_id: int | None = None
+        if self._realistic_bg_enabled:
+            self._realistic_bg_id = load_realistic_background(
+                self.physics_client_id,
+                ply_path=DEFAULT_REALISTIC_BG_PATH,  # Use default background
+                position=self.config.realistic_bg_position,
+                orientation=self.config.realistic_bg_orientation,
+                scale=self.config.realistic_bg_scale,
+            )
 
     @property
     @abc.abstractmethod
