@@ -41,7 +41,7 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     max_action_mag: float = 0.2
 
     # Shelf.
-    shelf_pose: Pose = Pose((2.0, 2.4, 0.0))
+    shelf_pose: Pose = Pose((2.0, 2.4, 0.02))
     shelf_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
     shelf_width: float = 0.60198
     shelf_depth: float = 0.254

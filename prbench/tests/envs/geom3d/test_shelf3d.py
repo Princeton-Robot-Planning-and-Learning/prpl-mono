@@ -273,7 +273,7 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
         config.shelf_spacing
         + config.shelf_height / 2
         + config.block_half_extents[0]
-        + 0.015
+        + 0.035
     )
     pre_place_x = place_x
     pre_place_y = place_y - 0.1
