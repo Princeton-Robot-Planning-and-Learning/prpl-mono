@@ -59,7 +59,6 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Blocks.
     block_half_extents: tuple[float, float, float] = (0.05, 0.025, 0.025)
-    # block_half_extents: tuple[float, float, float] = (0.015, 0.05, 0.075)
     block_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
 
     # Gripper.
