@@ -68,9 +68,26 @@
   </asset>
   <worldbody>
     <body name="scene" pos="0 0 0"><body name="scene5">
+      <geom mesh="scene5_0" material="Emmision.001" class="visual"/>
+      <geom mesh="scene5_1" material="Emmision" class="visual"/>
+      <geom mesh="scene5_2" material="plastic-black" class="visual"/>
+      <geom mesh="scene5_3" material="plastic-black" class="visual"/>
+      <geom mesh="scene5_4" material="Glass" class="visual"/>
+      <geom mesh="scene5_5" material="Plastic" class="visual"/>
       <geom mesh="scene5_6" material="wall_2" class="visual" />
       <geom mesh="scene5_7" material="floor_tile" class="visual" />
       <geom mesh="scene5_8" material="wall_1" class="visual" />
+      <geom mesh="scene5_9" material="fabric_sofa" class="visual"/>
+      <geom mesh="scene5_10" material="Wood-rattan" class="visual"/>
+      <geom mesh="scene5_11" material="bronze" class="visual"/>
+      <geom mesh="scene5_12" material="Metalic" class="visual"/>
+      <geom mesh="scene5_13" material="glass" class="visual"/>
+      <geom mesh="scene5_14" material="black" class="visual"/>
+      <geom mesh="scene5_15" material="oak_veneer" class="visual"/>
+      <geom mesh="scene5_16" material="Metallic-Black" class="visual"/>
+      <geom mesh="scene5_17" material="kitchen_Metal" class="visual"/>
+      <geom mesh="scene5_18" material="white" class="visual"/>
+      <geom mesh="scene5_19" material="tosca" class="visual"/>
     </body>
     <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false" />
     <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="7.5 7.5 .125" type="plane" />
