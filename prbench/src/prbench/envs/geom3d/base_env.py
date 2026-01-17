@@ -31,6 +31,7 @@ from relational_structs import (
     Type,
 )
 from relational_structs.utils import create_state_from_dict
+from scipy.spatial.transform import Rotation
 
 from prbench.core import ObjectCentricPRBenchEnv, PRBenchEnvConfig, RobotActionSpace
 from prbench.envs.geom3d.object_types import (
@@ -41,10 +42,12 @@ from prbench.envs.geom3d.object_types import (
     Geom3DRobotType,
 )
 from prbench.envs.geom3d.utils import (
+    DEFAULT_REALISTIC_BG_PATH,
     Geom3DObjectCentricState,
     Geom3DRobotActionSpace,
     extend_joints_to_include_fingers,
     get_robot_action_from_gui_input,
+    load_realistic_background,
     remove_fingers_from_extended_joints,
 )
 
@@ -56,6 +59,8 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # Robot.
     robot_name: str = "tidybot-kinova"
     robot_base_home_pose: SE2Pose = SE2Pose.identity()
+    robot_base_pose_lower_bound: SE2Pose = SE2Pose(-10.0, -10.0, -np.pi)
+    robot_base_pose_upper_bound: SE2Pose = SE2Pose(10.0, 10.0, -np.pi)
     robot_base_z: float = 0.0
     initial_joints: JointPositions = field(
         # This is a retract position.
@@ -70,9 +75,9 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
         ]
     )
     initial_finger_state: float = 0.0
-    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.025)
+    end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.035)
     end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    max_action_mag: float = 0.2
+    max_action_mag: float = 0.4
     check_base_collisions: bool = False
 
     # This is used to check whether a grasped object can be placed on a surface.
@@ -81,8 +86,30 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # For rendering.
     render_dpi: int = 300
     render_fps: int = 20
-    render_image_width: int = 836
-    render_image_height: int = 450
+    render_image_width: int = 640
+    render_image_height: int = 360
+
+    # Base camera (mounted on robot base) - matches dynamics3d tidybot
+    # From tidybot.xml: pos="0.2525 0 0.335" euler="0 -0.7853981634 -1.5707963268"
+    base_camera_offset: tuple[float, float, float] = (0.2525, 0.0, 0.335)
+    base_camera_euler: tuple[float, float, float] = (0, -np.pi / 4, -np.pi / 2)
+    base_camera_fov: float = 52.23384539951277
+    base_camera_image_width: int = 640
+    base_camera_image_height: int = 360
+
+    # End-effector camera (mounted on wrist) - matches dynamics3d tidybot
+    # From tidybot.xml: pos="0 -0.05639 -0.058475" quat="0 0 0 1"
+    ee_camera_offset: tuple[float, float, float] = (0.0, 0.05639, -0.058475)
+    ee_camera_euler: tuple[float, float, float] = (np.pi, 0.0, 0.0)
+    ee_camera_fov: float = 41.83792730009236
+    ee_camera_image_width: int = 640
+    ee_camera_image_height: int = 360
+
+    # Realistic background settings.
+    realistic_bg: bool = False
+    realistic_bg_position: tuple[float, float, float] = (0.7, -1.5, 0.0)
+    realistic_bg_euler: tuple[float, float, float] = (np.pi / 2, 0, 0.0)
+    realistic_bg_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -93,8 +120,8 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
                 self.robot_base_z,
             ),
             "camera_yaw": 90,
-            "camera_distance": 1.5,
-            "camera_pitch": -20,
+            "camera_distance": 2.8,
+            "camera_pitch": -30,
         }
 
     def _sample_block_on_block_pose(
@@ -190,9 +217,19 @@ class ObjectCentricGeom3DRobotEnv(
 ):
     """Base class for Geom3D environments."""
 
-    def __init__(self, *args, use_gui: bool = False, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        use_gui: bool = False,
+        realistic_bg: bool | None = None,
+        **kwargs,
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.use_gui = use_gui
+        # Allow realistic_bg kwarg to override config value.
+        self._realistic_bg_enabled = (
+            realistic_bg if realistic_bg is not None else self.config.realistic_bg
+        )
 
         # Create the PyBullet client.
         if use_gui:
@@ -207,6 +244,8 @@ class ObjectCentricGeom3DRobotEnv(
             self.physics_client_id,
             base_z=self.config.robot_base_z,
             base_home_pose=self.config.robot_base_home_pose,
+            base_pose_lower_bound=self.config.robot_base_pose_lower_bound,
+            base_pose_upper_bound=self.config.robot_base_pose_upper_bound,
         )
         self.robot = robot
         self.robot.arm.set_joints(
@@ -247,6 +286,20 @@ class ObjectCentricGeom3DRobotEnv(
         self._inside_object_list: list[str] = []
         self._inside_object_id_list: list[int] = []
         self._inside_object_transform_list: list[Pose] = []
+
+        # Load realistic background if enabled.
+        self._realistic_bg_id: int | None = None
+        if self._realistic_bg_enabled:
+            rot = Rotation.from_euler(
+                "zyx", self.config.realistic_bg_euler
+            )  # MuJoCo convention
+            self._realistic_bg_id = load_realistic_background(
+                self.physics_client_id,
+                obj_path=DEFAULT_REALISTIC_BG_PATH,  # Use default background
+                position=self.config.realistic_bg_position,
+                orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),
+                scale=self.config.realistic_bg_scale,
+            )
 
     @property
     @abc.abstractmethod
@@ -488,11 +541,13 @@ class ObjectCentricGeom3DRobotEnv(
                             self._inside_object_transform_list.append(
                                 multiply_poses(world_to_robot.invert(), obj_pose)
                             )
-                # Close the fingers until they are touching the object.
-                while not check_body_collisions(
-                    self._grasped_object_id,
-                    self.robot.arm.robot_id,
-                    self.physics_client_id,
+
+                while not (
+                    check_body_collisions(
+                        self._grasped_object_id,
+                        self.robot.arm.robot_id,
+                        self.physics_client_id,
+                    )
                 ):
                     # If the fingers are fully closed, stop.
                     current_finger_state = self._robot_arm.get_finger_state()
@@ -531,6 +586,9 @@ class ObjectCentricGeom3DRobotEnv(
             surface_supports = self._get_surfaces_supporting_object(
                 self._grasped_object_id
             )
+            self._inside_object_list = []
+            self._inside_object_id_list = []
+            self._inside_object_transform_list = []
             # Placement is successful.
             if surface_supports:
                 self._grasped_object = None
@@ -548,6 +606,86 @@ class ObjectCentricGeom3DRobotEnv(
             image_height=self.config.render_image_height,
             **self.config.get_camera_kwargs(),
         )
+
+    def render_base_camera(self) -> NDArray[np.uint8]:
+        """Render from the base-mounted camera.
+
+        The camera is attached to the robot base with the same pose as in
+        dynamics3d tidybot: pos=(0.2525, 0, 0.335), euler=(0, -45°, -90°).
+        """
+        # Get current base pose
+        base_pose = self.robot.get_base()
+
+        base_pose_se3 = base_pose.to_se3(0.0)
+        rot = Rotation.from_euler(
+            "zyx", self.config.base_camera_euler
+        )  # MuJoCo convention
+        camera_to_base_transform = Pose(
+            position=self.config.base_camera_offset,
+            orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)
+        )
+
+        camera_pose = multiply_poses(base_pose_se3, camera_to_base_transform)
+
+        # for debugging
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(base_pose_se3, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
+        return capture_image(
+            self.physics_client_id,
+            specify_position=True,
+            camera_position=camera_pose.position,
+            camera_orientation=camera_pose.orientation,
+            image_width=self.config.base_camera_image_width,
+            image_height=self.config.base_camera_image_height,
+            fov=self.config.base_camera_fov,
+        )
+
+    def render_ee_camera(self) -> NDArray[np.uint8]:
+        """Render from the end-effector mounted camera.
+
+        The camera is attached to the end-effector (wrist) with the same pose as
+        in dynamics3d tidybot: pos=(0, -0.05639, -0.058475), quat=(0, 0, 0, 1).
+        """
+        # Get current end-effector pose
+        ee_pose = self.robot.arm.get_end_effector_pose()
+
+        rot = Rotation.from_euler(
+            "zyx", self.config.ee_camera_euler
+        )  # MuJoCo convention
+        camera_to_ee_transform = Pose(
+            position=self.config.ee_camera_offset,
+            orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)
+        )
+
+        camera_pose = multiply_poses(ee_pose, camera_to_ee_transform)
+
+        # for debugging
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(ee_pose, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
+
+        return capture_image(
+            self.physics_client_id,
+            specify_position=True,
+            camera_position=camera_pose.position,
+            camera_orientation=camera_pose.orientation,
+            image_width=self.config.ee_camera_image_width,
+            image_height=self.config.ee_camera_image_height,
+            fov=self.config.ee_camera_fov,
+        )
+
+    def render_all_cameras(self) -> dict[str, NDArray[np.uint8]]:
+        """Render from all cameras and return as a dictionary.
+
+        Returns:
+            Dictionary with keys "overview", "base", "wrist" mapping to images.
+        """
+        return {
+            "overview": self.render(),
+            "base": self.render_base_camera(),
+            "wrist": self.render_ee_camera(),
+        }
 
     def _set_robot_and_held_object(
         self, base_pose: SE2Pose, joints: JointPositions, finger_state: float

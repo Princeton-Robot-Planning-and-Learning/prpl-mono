@@ -1,0 +1,404 @@
+<mujoco model="lab4">
+  <default>
+    <default class="visual">
+      <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+    </default>
+    <default class="collision">
+      <geom group="3" type="mesh"/>
+    </default>
+  </default>
+  <asset>
+    <texture builtin="gradient" height="256" rgb1=".9 .9 1." rgb2=".2 .3 .4" type="skybox" width="256"/>
+    <texture file="textures/tile_grigia_caldera_porcelain_floor.png" type="2d" name="texplane"/>
+    
+    <material name="floorplane" reflectance="0.0" shininess="0.0"
+	      specular="0.0" texrepeat="3 3" texture="texplane" texuniform="true" rgba="0.800000 0.800000 0.800000 0.000000"/>
+    <!-- ceramic table texture and material-->
+    <texture file="textures/tables/dark_wood.png" type="cube" name="tex-table"/>
+    <material name="table_texture" reflectance="0.0" shininess="0.0" specular="0.2" texrepeat="1 1" texture="tex-table" />
+    <!-- steel legs -->
+    <texture file="textures/martin_novak_wood_table.png" type="cube" name="tex-table-legs"/>
+    <material name="table_legs" reflectance="0.8" shininess="0.8" texrepeat="1 1" texture="tex-table-legs" />
+    <!-- plaster walls -->
+    <texture file="textures/smooth_light_gray_plaster.png" type="2d" name="tex-wall"/>
+
+    <material name="walls_mat" reflectance="0.0" shininess="0.3" specular="0.8" texrepeat="3 3" texture="tex-wall" texuniform="true" />
+    <texture  name="textable" builtin="flat" height="512" width="512" rgb1="0.8 0.8 0.8" rgb2="0.8 0.8 0.8"/>
+    <material name="table_mat" texture="textable" />
+
+    
+    <texture type="2d" name="Madeira_4334563" file="textures/lab4/Madeira_4334563.png"/>
+    <material name="1_Madeira_ref" texture="Madeira_4334563" specular="0.5" shininess="0.25"/>
+    <material name="1_bh6601_1_face_vidro_transparente" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="1_bh6601_1_face_vidro_transparente.001" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="1_bh6601_1_face_vidro_transparente.003" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Acrilico.001" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="ALAMONT TAUPE PORCELAIN TILE_BaseColor" file="textures/lab4/ALAMONT TAUPE PORCELAIN TILE_BaseColor.png"/>
+    <material name="Alamont_taupe_porcelain_tile" texture="ALAMONT TAUPE PORCELAIN TILE_BaseColor" specular="0.5" shininess="0.25"/>
+    <material name="Base_planta_342352.002" specular="1.0" shininess="0.0" rgba="0.288539 0.111908 0.035378 1.000000"/>
+    <material name="Black_Plastic" specular="0.5" shininess="0.25" rgba="0.011087 0.011087 0.011087 1.000000"/>
+    <texture type="2d" name="Capa Livro_234235_02_BaseColor" file="textures/lab4/Capa Livro_234235_02_BaseColor.png"/>
+    <material name="Book_2.002" texture="Capa Livro_234235_02_BaseColor" specular="0.267" shininess="0.705600098"/>
+    <texture type="2d" name="Capa Livro_234235_03_BaseColor" file="textures/lab4/Capa Livro_234235_03_BaseColor.png"/>
+    <material name="Book_3.001" texture="Capa Livro_234235_03_BaseColor" specular="0.267" shininess="0.705600098"/>
+    <material name="Borracha_345" specular="0.5" shininess="0.042610054" rgba="0.022084 0.022084 0.022084 1.000000"/>
+    <material name="Borracha_preta" specular="0.5" shininess="0.0" rgba="0.000000 0.000000 0.000000 1.000000"/>
+    <material name="Cinza_plastico" specular="0.5" shininess="0.6742067869999999" rgba="0.078368 0.078368 0.078368 1.000000"/>
+    <material name="Costela_de_adao.001" specular="0.5" shininess="0.36" rgba="0.560499 0.645555 0.505432 1.000000"/>
+    <texture type="2d" name="Costela_de_adao_232423_BaseColor" file="textures/lab4/Costela_de_adao_232423_BaseColor.png"/>
+    <material name="Costela_de_adao_talo.001" texture="Costela_de_adao_232423_BaseColor" specular="0.5" shininess="0.382148773"/>
+    <material name="Giboia_plant" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Giboia_plant.001" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Grid_Metal.001" specular="1.0" shininess="0.5448251340000001" rgba="0.078416 0.078416 0.078416 1.0"/>
+    <material name="INTERNO" specular="0.5" shininess="0.0" rgba="0.216517 0.216517 0.216517 1.000000"/>
+    <texture type="2d" name="Jarro324234_Base_color" file="textures/lab4/Jarro324234_Base_color.png"/>
+    <material name="Jarro34235" texture="Jarro324234_Base_color" specular="0.5" shininess="0.5"/>
+    <material name="METAL" specular="0.5" shininess="1.0" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="METAL_DOURADO" specular="0.5" shininess="0.545429688" rgba="0.800000 0.493864 0.186553 1.000000"/>
+    <material name="Material.001" specular="0.5" shininess="0.25" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="Metal545346_Base_color" file="textures/lab4/Metal545346_Base_color.png"/>
+    <material name="Material.002" texture="Metal545346_Base_color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="ExitDoor323_Base_color" file="textures/lab4/ExitDoor323_Base_color.png"/>
+    <material name="Material.003" texture="ExitDoor323_Base_color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="Metal545346_Base_color000" file="textures/lab4/Metal545346_Base_color000.png"/>
+    <material name="Material.004" texture="Metal545346_Base_color000" specular="0.5" shininess="0.5"/>
+    <material name="Material.005" specular="0.5" shininess="0.25" rgba="0.092853 0.092853 0.092853 1.000000"/>
+    <material name="Material.007" specular="0.5" shininess="0.767633179" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Material.009" specular="0.5" shininess="0.25" rgba="0.000000 0.000000 0.000000 1.000000"/>
+    <material name="Material.010" specular="0.5" shininess="0.25" rgba="0.800000 0.020132 0.006386 1.000000"/>
+    <material name="Material.012" specular="0.5" shininess="0.27828045700000004" rgba="0.512160 0.512160 0.512160 1.000000"/>
+    <material name="Material.013" specular="0.5" shininess="0.25" rgba="0.010273 0.010273 0.010273 1.000000"/>
+    <material name="Material.014" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Material.015" specular="0.5" shininess="0.25" rgba="0.057051 0.057051 0.057051 1.000000"/>
+    <material name="Material.016" specular="0.5" shininess="0.5" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Material.017" specular="0.5" shininess="0.25" rgba="0.000000 0.000000 0.000000 1.000000"/>
+    <material name="Material_#1114.002" specular="1.0" shininess="0.2" rgba="0.500000 0.500000 0.500000 1.000000"/>
+    <material name="Metal.003" specular="1.0" shininess="1.0" rgba="0.559601 0.559601 0.559601 1.000000"/>
+    <material name="Metal3534" specular="1.0" shininess="0.7239456790000001" rgba="0.562962 0.562962 0.562962 1.000000"/>
+    <material name="Metal_01" specular="0.5" shininess="0.8585977779999999" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Metal_01.001" specular="0.5" shininess="0.467153412" rgba="0.644469 0.644469 0.644469 1.000000"/>
+    <material name="Metal_01.002" specular="0.5" shininess="0.467153412" rgba="0.644469 0.644469 0.644469 1.000000"/>
+    <material name="Metal_02.001" specular="0.600917" shininess="0.20623265100000002" rgba="0.433649 0.433649 0.433649 1.000000"/>
+    <material name="Metal_02.002" specular="0.600917" shininess="0.20623265100000002" rgba="0.433649 0.433649 0.433649 1.000000"/>
+    <material name="Metal_Arranhado_Fosco_001.003" specular="0.5" shininess="0.26851239" rgba="0.635460 0.615238 0.630369 1.000000"/>
+    <material name="Metal_Branco" specular="0.5" shininess="0.442408081" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="Metal_Preto_fosco_345" specular="0.5" shininess="0.25" rgba="0.005332 0.005332 0.005332 1.000000"/>
+    <material name="Metal_Reflexivo_345" specular="0.5" shininess="0.783793518" rgba="0.448741 0.448741 0.448741 1.000000"/>
+    <material name="Metal_movel" specular="0.5" shininess="0.39214035" rgba="0.157297 0.157297 0.157297 1.000000"/>
+    <material name="Metal_preto234235" specular="0.5" shininess="0.25" rgba="0.007221 0.007221 0.007221 1.000000"/>
+    <material name="Metal_preto_meio_fosco2325" specular="0.5" shininess="0.629765991" rgba="0.032440 0.032440 0.032440 1.000000"/>
+    <material name="Mud_and_grass" specular="0.5" shininess="0.5" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="bh_P04_Base_color" file="textures/lab4/bh_P04_Base_color.png"/>
+    <material name="P04" texture="bh_P04_Base_color" specular="0.5" shininess="0.5"/>
+    <material name="PRETO" specular="0.5" shininess="0.0" rgba="0.002897 0.002897 0.002897 1.000000"/>
+    <texture type="2d" name="PlantaBase__3425226" file="textures/lab4/PlantaBase__3425226.png"/>
+    <material name="Planta_2526.002" texture="PlantaBase__3425226" specular="1.0" shininess="0.2"/>
+    <material name="Plastico_Preto" specular="0.3499999999999999" shininess="0.789542114" rgba="0.009545 0.010837 0.012608 1.000000"/>
+    <material name="Plastico_preto" specular="0.5" shininess="0.08351570900000001" rgba="0.000000 0.000000 0.000000 1.000000"/>
+    <material name="Plastico_preto_345" specular="0.5" shininess="0.350159912" rgba="0.019544 0.019544 0.019544 1.000000"/>
+    <texture type="2d" name="Etiqueta F3d" file="textures/lab4/Etiqueta F3d.png"/>
+    <material name="QR234235" texture="Etiqueta F3d" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="TV23423_Base_color" file="textures/lab4/TV23423_Base_color.png"/>
+    <material name="Screen_OFF" texture="TV23423_Base_color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="TV SCREEN_213242_BaseColor_ (1)" file="textures/lab4/TV SCREEN_213242_BaseColor_ (1).png"/>
+    <material name="Screen_ON_Romance" texture="TV SCREEN_213242_BaseColor_ (1)" specular="0.5" shininess="0.816558777"/>
+    <texture type="2d" name="TV SCREEN_213242_BaseColor_ (3)" file="textures/lab4/TV SCREEN_213242_BaseColor_ (3).png"/>
+    <material name="Screen_ON_Viking" texture="TV SCREEN_213242_BaseColor_ (3)" specular="0.5" shininess="0.816558777"/>
+    <texture type="2d" name="TV SCREEN_213242_BaseColor_ (4)" file="textures/lab4/TV SCREEN_213242_BaseColor_ (4).png"/>
+    <material name="Screen_ON_history" texture="TV SCREEN_213242_BaseColor_ (4)" specular="0.5" shininess="0.816558777"/>
+    <texture type="2d" name="TV SCREEN_213242_BaseColor_ (5)" file="textures/lab4/TV SCREEN_213242_BaseColor_ (5).png"/>
+    <material name="Screen_ON_travel" texture="TV SCREEN_213242_BaseColor_ (5)" specular="0.5" shininess="0.816558777"/>
+    <texture type="2d" name="TV SCREEN_213242_BaseColor_ (2)" file="textures/lab4/TV SCREEN_213242_BaseColor_ (2).png"/>
+    <material name="Screen_ON_war" texture="TV SCREEN_213242_BaseColor_ (2)" specular="0.5" shininess="0.816558777"/>
+    <texture type="2d" name="TV23423_Base_color" file="textures/lab4/TV23423_Base_color.png"/>
+    <material name="TV23423" texture="TV23423_Base_color" specular="0.5" shininess="0.5"/>
+    <texture type="2d" name="terraJarro__3425226" file="textures/lab4/terraJarro__3425226.png"/>
+    <material name="Terra_vaso.002" texture="terraJarro__3425226" specular="1.0" shininess="0.2"/>
+    <texture type="2d" name="Terracota01__BaseColor" file="textures/lab4/Terracota01__BaseColor.png"/>
+    <material name="Terracota_01" texture="Terracota01__BaseColor" specular="0.5" shininess="0.5"/>
+    <material name="Vaso.001" specular="1.0" shininess="0.717770935" rgba="0.411987 0.084465 0.017434 1.000000"/>
+    <material name="Vaso.002" specular="1.0" shininess="0.717770935" rgba="0.411987 0.084465 0.017434 1.000000"/>
+    <material name="Vermelho3425" specular="0.5" shininess="0.25" rgba="0.682771 0.008221 0.000000 1.000000"/>
+    <material name="WATER" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="bh0303_Madeira" specular="0.5" shininess="0.25" rgba="0.000000 0.000000 0.000000 1.000000"/>
+    <texture type="2d" name="bh0507_Rig_bianco_32x60_Diffuse" file="textures/lab4/bh0507_Rig_bianco_32x60_Diffuse.png"/>
+    <material name="bh0507_Rig_bianco_32x60" texture="bh0507_Rig_bianco_32x60_Diffuse" specular="0.5" shininess="0.804554565"/>
+    <texture type="2d" name="bh0606_Madeira_Diffuse" file="textures/lab4/bh0606_Madeira_Diffuse.png"/>
+    <material name="bh0606_Madeira.002" texture="bh0606_Madeira_Diffuse" specular="0.5" shininess="0.25"/>
+    <material name="bh0707_Tecido_em_veludo.001" specular="0.5" shininess="0.0" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="bh0791_Madeira" specular="0.5" shininess="0.25" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="bh0791_Madeira.002" specular="0.5" shininess="0.25" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="bh0791_Madeira_porta" specular="0.5" shininess="0.25" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <texture type="2d" name="bh2020_Madeita_Itapua_Diffuse" file="textures/lab4/bh2020_Madeita_Itapua_Diffuse.png"/>
+    <material name="bh2020_Madeira_Itapua" texture="bh2020_Madeita_Itapua_Diffuse" specular="0.5" shininess="0.25"/>
+    <material name="bh2255_Metal_escovado_blend_marcas" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="bh2255_Metal_escovado_simples" specular="0.718182" shininess="0.7616528929999999" rgba="0.540169 0.540169 0.540169 1.000000"/>
+    <material name="bh2255_Metal_escovado_simples.001" specular="0.718182" shininess="0.7616528929999999" rgba="0.540169 0.540169 0.540169 1.000000"/>
+    <texture type="2d" name="bh5597_Granito_itaunas_DIffuse" file="textures/lab4/bh5597_Granito_itaunas_DIffuse.png"/>
+    <material name="bh5597_Granito_itaunas" texture="bh5597_Granito_itaunas_DIffuse" specular="0.5" shininess="0.82975531"/>
+    <texture type="2d" name="bh7589_Pedra_e_terra_01_DIFFUSE" file="textures/lab4/bh7589_Pedra_e_terra_01_DIFFUSE.png"/>
+    <material name="bh7589_Pedra_e_terra_01" texture="bh7589_Pedra_e_terra_01_DIFFUSE" specular="0.5" shininess="0.577599976"/>
+    <material name="bh7722_Metal_Arranhado" specular="0.5" shininess="0.5" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="bh7722_Metal_Arranhado_preto" specular="0.5" shininess="0.5" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="borracha_preta" specular="0.5" shininess="0.0" rgba="0.006554 0.006554 0.006554 1.000000"/>
+    <material name="cable" specular="0.5" shininess="0.033722316999999995" rgba="0.010273 0.000180 0.000000 1.000000"/>
+    <material name="cinza_clarinho" specular="0.5" shininess="0.25" rgba="0.522754 0.573876 0.562388 1.000000"/>
+    <material name="espelho" specular="0.5" shininess="1.0" rgba="0.476221 0.391148 0.357213 1.000000"/>
+    <material name="esquadria_branca" specular="0.5" shininess="0.823143738" rgba="0.376255 0.376255 0.376255 1.000000"/>
+    <texture type="2d" name="Etiqueta MODELOS USA345346346" file="textures/lab4/Etiqueta MODELOS USA345346346.png"/>
+    <material name="etiqueta3423425" texture="Etiqueta MODELOS USA345346346" specular="0.5" shininess="0.25"/>
+    <texture type="2d" name="fogo_Diffuse_242352" file="textures/lab4/fogo_Diffuse_242352.png"/>
+    <material name="fire.002" texture="fogo_Diffuse_242352" specular="1.0" shininess="0.2"/>
+    <material name="glass.002" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="laca" specular="0.5" shininess="0.25" rgba="0.860173 0.837589 0.825290 1.000000"/>
+    <material name="laca_preta" specular="0.5" shininess="0.747335999" rgba="0.126398 0.039694 0.015118 1.000000"/>
+    <texture type="2d" name="LATERAL_LIVRO_2342351" file="textures/lab4/LATERAL_LIVRO_2342351.png"/>
+    <material name="livro_lateral.002" texture="LATERAL_LIVRO_2342351" specular="0.25" shininess="0.25"/>
+    <material name="metal4235" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="plastic_black" specular="0.5" shininess="0.011299525" rgba="0.015995 0.015995 0.015995 1.000000"/>
+    <material name="plastico_preto" specular="0.5" shininess="0.25" rgba="0.051411 0.051411 0.051411 1.000000"/>
+    <material name="preto_brilho" specular="0.5" shininess="1.0" rgba="0.004776 0.004776 0.004776 1.000000"/>
+    <material name="preto_fosco.002" specular="1.0" shininess="0.2" rgba="0.000000 0.000000 0.000000 1.000000"/>
+    <material name="qr.001" specular="0.5" shininess="0.629765991" rgba="0.032440 0.032440 0.032440 1.000000"/>
+    <texture type="2d" name="Coifa_32424235_BaseColor" file="textures/lab4/Coifa_32424235_BaseColor.png"/>
+    <material name="qr_coifa" texture="Coifa_32424235_BaseColor" specular="0.5" shininess="0.25"/>
+    <material name="rubben" specular="0.5" shininess="0.0" rgba="0.013968 0.013968 0.013968 1.000000"/>
+    <material name="talo" specular="0.5" shininess="0.25" rgba="0.032414 0.067797 0.003929 1.000000"/>
+    <material name="talo.001" specular="0.5" shininess="0.25" rgba="0.032414 0.067797 0.003929 1.000000"/>
+    <material name="vela.003" specular="1.0" shininess="0.2" rgba="1.000000 1.000000 1.000000 1.000000"/>
+    <material name="vidro_345" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="vidrooreflect" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <material name="visor24235" specular="0.5" shininess="0.36" rgba="0.800000 0.800000 0.800000 1.000000"/>
+    <mesh name="kitchen3_0" file="meshes/lab4/kitchen3_0.obj"/>
+    <mesh name="kitchen3_1" file="meshes/lab4/kitchen3_1.obj"/>
+    <mesh name="kitchen3_2" file="meshes/lab4/kitchen3_2.obj"/>
+    <mesh name="kitchen3_3" file="meshes/lab4/kitchen3_3.obj"/>
+    <mesh name="kitchen3_4" file="meshes/lab4/kitchen3_4.obj"/>
+    <mesh name="kitchen3_5" file="meshes/lab4/kitchen3_5.obj"/>
+    <mesh name="kitchen3_6" file="meshes/lab4/kitchen3_6.obj"/>
+    <mesh name="kitchen3_7" file="meshes/lab4/kitchen3_7.obj"/>
+    <mesh name="kitchen3_8" file="meshes/lab4/kitchen3_8.obj"/>
+    <mesh name="kitchen3_9" file="meshes/lab4/kitchen3_9.obj"/>
+    <mesh name="kitchen3_10" file="meshes/lab4/kitchen3_10.obj"/>
+    <mesh name="kitchen3_11" file="meshes/lab4/kitchen3_11.obj"/>
+    <mesh name="kitchen3_12" file="meshes/lab4/kitchen3_12.obj"/>
+    <mesh name="kitchen3_13" file="meshes/lab4/kitchen3_13.obj"/>
+    <mesh name="kitchen3_14" file="meshes/lab4/kitchen3_14.obj"/>
+    <mesh name="kitchen3_15" file="meshes/lab4/kitchen3_15.obj"/>
+    <mesh name="kitchen3_16" file="meshes/lab4/kitchen3_16.obj"/>
+    <mesh name="kitchen3_17" file="meshes/lab4/kitchen3_17.obj"/>
+    <mesh name="kitchen3_18" file="meshes/lab4/kitchen3_18.obj"/>
+    <mesh name="kitchen3_19" file="meshes/lab4/kitchen3_19.obj"/>
+    <mesh name="kitchen3_20" file="meshes/lab4/kitchen3_20.obj"/>
+    <mesh name="kitchen3_21" file="meshes/lab4/kitchen3_21.obj"/>
+    <mesh name="kitchen3_22" file="meshes/lab4/kitchen3_22.obj"/>
+    <mesh name="kitchen3_23" file="meshes/lab4/kitchen3_23.obj"/>
+    <mesh name="kitchen3_24" file="meshes/lab4/kitchen3_24.obj"/>
+    <mesh name="kitchen3_25" file="meshes/lab4/kitchen3_25.obj"/>
+    <mesh name="kitchen3_26" file="meshes/lab4/kitchen3_26.obj"/>
+    <mesh name="kitchen3_27" file="meshes/lab4/kitchen3_27.obj"/>
+    <mesh name="kitchen3_28" file="meshes/lab4/kitchen3_28.obj"/>
+    <mesh name="kitchen3_29" file="meshes/lab4/kitchen3_29.obj"/>
+    <mesh name="kitchen3_30" file="meshes/lab4/kitchen3_30.obj"/>
+    <mesh name="kitchen3_31" file="meshes/lab4/kitchen3_31.obj"/>
+    <mesh name="kitchen3_32" file="meshes/lab4/kitchen3_32.obj"/>
+    <mesh name="kitchen3_33" file="meshes/lab4/kitchen3_33.obj"/>
+    <mesh name="kitchen3_34" file="meshes/lab4/kitchen3_34.obj"/>
+    <mesh name="kitchen3_35" file="meshes/lab4/kitchen3_35.obj"/>
+    <mesh name="kitchen3_36" file="meshes/lab4/kitchen3_36.obj"/>
+    <mesh name="kitchen3_37" file="meshes/lab4/kitchen3_37.obj"/>
+    <mesh name="kitchen3_38" file="meshes/lab4/kitchen3_38.obj"/>
+    <mesh name="kitchen3_39" file="meshes/lab4/kitchen3_39.obj"/>
+    <mesh name="kitchen3_40" file="meshes/lab4/kitchen3_40.obj"/>
+    <mesh name="kitchen3_41" file="meshes/lab4/kitchen3_41.obj"/>
+    <mesh name="kitchen3_42" file="meshes/lab4/kitchen3_42.obj"/>
+    <mesh name="kitchen3_43" file="meshes/lab4/kitchen3_43.obj"/>
+    <mesh name="kitchen3_44" file="meshes/lab4/kitchen3_44.obj"/>
+    <mesh name="kitchen3_45" file="meshes/lab4/kitchen3_45.obj"/>
+    <mesh name="kitchen3_46" file="meshes/lab4/kitchen3_46.obj"/>
+    <mesh name="kitchen3_47" file="meshes/lab4/kitchen3_47.obj"/>
+    <mesh name="kitchen3_48" file="meshes/lab4/kitchen3_48.obj"/>
+    <mesh name="kitchen3_49" file="meshes/lab4/kitchen3_49.obj"/>
+    <mesh name="kitchen3_50" file="meshes/lab4/kitchen3_50.obj"/>
+    <mesh name="kitchen3_51" file="meshes/lab4/kitchen3_51.obj"/>
+    <mesh name="kitchen3_52" file="meshes/lab4/kitchen3_52.obj"/>
+    <mesh name="kitchen3_53" file="meshes/lab4/kitchen3_53.obj"/>
+    <mesh name="kitchen3_54" file="meshes/lab4/kitchen3_54.obj"/>
+    <mesh name="kitchen3_55" file="meshes/lab4/kitchen3_55.obj"/>
+    <mesh name="kitchen3_56" file="meshes/lab4/kitchen3_56.obj"/>
+    <mesh name="kitchen3_57" file="meshes/lab4/kitchen3_57.obj"/>
+    <mesh name="kitchen3_58" file="meshes/lab4/kitchen3_58.obj"/>
+    <mesh name="kitchen3_59" file="meshes/lab4/kitchen3_59.obj"/>
+    <mesh name="kitchen3_60" file="meshes/lab4/kitchen3_60.obj"/>
+    <mesh name="kitchen3_61" file="meshes/lab4/kitchen3_61.obj"/>
+    <mesh name="kitchen3_62" file="meshes/lab4/kitchen3_62.obj"/>
+    <mesh name="kitchen3_63" file="meshes/lab4/kitchen3_63.obj"/>
+    <mesh name="kitchen3_64" file="meshes/lab4/kitchen3_64.obj"/>
+    <mesh name="kitchen3_65" file="meshes/lab4/kitchen3_65.obj"/>
+    <mesh name="kitchen3_66" file="meshes/lab4/kitchen3_66.obj"/>
+    <mesh name="kitchen3_67" file="meshes/lab4/kitchen3_67.obj"/>
+    <mesh name="kitchen3_68" file="meshes/lab4/kitchen3_68.obj"/>
+    <mesh name="kitchen3_69" file="meshes/lab4/kitchen3_69.obj"/>
+    <mesh name="kitchen3_70" file="meshes/lab4/kitchen3_70.obj"/>
+    <mesh name="kitchen3_71" file="meshes/lab4/kitchen3_71.obj"/>
+    <mesh name="kitchen3_72" file="meshes/lab4/kitchen3_72.obj"/>
+    <mesh name="kitchen3_73" file="meshes/lab4/kitchen3_73.obj"/>
+    <mesh name="kitchen3_74" file="meshes/lab4/kitchen3_74.obj"/>
+    <mesh name="kitchen3_75" file="meshes/lab4/kitchen3_75.obj"/>
+    <mesh name="kitchen3_76" file="meshes/lab4/kitchen3_76.obj"/>
+    <mesh name="kitchen3_77" file="meshes/lab4/kitchen3_77.obj"/>
+    <mesh name="kitchen3_78" file="meshes/lab4/kitchen3_78.obj"/>
+    <mesh name="kitchen3_79" file="meshes/lab4/kitchen3_79.obj"/>
+    <mesh name="kitchen3_80" file="meshes/lab4/kitchen3_80.obj"/>
+    <mesh name="kitchen3_81" file="meshes/lab4/kitchen3_81.obj"/>
+    <mesh name="kitchen3_82" file="meshes/lab4/kitchen3_82.obj"/>
+    <mesh name="kitchen3_83" file="meshes/lab4/kitchen3_83.obj"/>
+    <mesh name="kitchen3_84" file="meshes/lab4/kitchen3_84.obj"/>
+    <mesh name="kitchen3_85" file="meshes/lab4/kitchen3_85.obj"/>
+    <mesh name="kitchen3_86" file="meshes/lab4/kitchen3_86.obj"/>
+    <mesh name="kitchen3_87" file="meshes/lab4/kitchen3_87.obj"/>
+    <mesh name="kitchen3_88" file="meshes/lab4/kitchen3_88.obj"/>
+    <mesh name="kitchen3_89" file="meshes/lab4/kitchen3_89.obj"/>
+    <mesh name="kitchen3_90" file="meshes/lab4/kitchen3_90.obj"/>
+    <mesh name="kitchen3_91" file="meshes/lab4/kitchen3_91.obj"/>
+    <mesh name="kitchen3_92" file="meshes/lab4/kitchen3_92.obj"/>
+    <mesh name="kitchen3_93" file="meshes/lab4/kitchen3_93.obj"/>
+    <mesh name="kitchen3_94" file="meshes/lab4/kitchen3_94.obj"/>
+    <mesh name="kitchen3_95" file="meshes/lab4/kitchen3_95.obj"/>
+    <mesh name="kitchen3_96" file="meshes/lab4/kitchen3_96.obj"/>
+    <mesh name="kitchen3_97" file="meshes/lab4/kitchen3_97.obj"/>
+
+  </asset>
+  <worldbody>
+    
+    <geom mesh="kitchen3_0" material="plastic_black" class="visual"/>
+    <geom mesh="kitchen3_1" material="Cinza_plastico" class="visual"/>
+    <geom mesh="kitchen3_2" material="bh2255_Metal_escovado_simples.001" class="visual"/>
+    <geom mesh="kitchen3_3" material="Vermelho3425" class="visual"/>
+    <geom mesh="kitchen3_4" material="Plastico_preto" class="visual"/>
+    <geom mesh="kitchen3_5" material="Borracha_preta" class="visual"/>
+    <geom mesh="kitchen3_6" material="esquadria_branca" class="visual"/>
+    <geom mesh="kitchen3_7" material="1_bh6601_1_face_vidro_transparente.003" class="visual"/>
+    <geom mesh="kitchen3_8" material="Material.005" class="visual"/>
+    <geom mesh="kitchen3_9" material="Metal_02.002" class="visual"/>
+    <geom mesh="kitchen3_10" material="Metal_01.002" class="visual"/>
+    <geom mesh="kitchen3_11" material="bh0791_Madeira_porta" class="visual"/>
+    <geom mesh="kitchen3_12" material="Material.002" class="visual"/>
+    <geom mesh="kitchen3_13" material="1_bh6601_1_face_vidro_transparente" class="visual"/>
+    <geom mesh="kitchen3_14" material="PRETO" class="visual"/>
+    <geom mesh="kitchen3_15" material="Material.003" class="visual"/>
+    <geom mesh="kitchen3_16" material="Metal_Branco" class="visual"/>
+    <geom mesh="kitchen3_17" material="Metal_01" class="visual"/>
+    <geom mesh="kitchen3_18" material="Alamont_taupe_porcelain_tile" class="visual"/>
+    <geom mesh="kitchen3_19" material="Material.001" class="visual"/>
+    <geom mesh="kitchen3_20" material="Material.017" class="visual"/>
+    <geom mesh="kitchen3_21" material="espelho" class="visual"/>
+    <geom mesh="kitchen3_22" material="laca" class="visual"/>
+    <geom mesh="kitchen3_23" material="Material.016" class="visual"/>
+    <geom mesh="kitchen3_24" material="bh7589_Pedra_e_terra_01" class="visual"/>
+    <geom mesh="kitchen3_25" material="Giboia_plant.001" class="visual"/>
+    <geom mesh="kitchen3_26" material="rubben" class="visual"/>
+    <geom mesh="kitchen3_27" material="QR234235" class="visual"/>
+    <geom mesh="kitchen3_28" material="bh2020_Madeira_Itapua" class="visual"/>
+    <geom mesh="kitchen3_29" material="talo.001" class="visual"/>
+    <geom mesh="kitchen3_30" material="Terracota_01" class="visual"/>
+    <geom mesh="kitchen3_31" material="Costela_de_adao_talo.001" class="visual"/>
+    <geom mesh="kitchen3_32" material="Costela_de_adao.001" class="visual"/>
+    <geom mesh="kitchen3_33" material="bh7722_Metal_Arranhado_preto" class="visual"/>
+    <geom mesh="kitchen3_34" material="Giboia_plant" class="visual"/>
+    <geom mesh="kitchen3_35" material="talo" class="visual"/>
+    <geom mesh="kitchen3_36" material="Jarro34235" class="visual"/>
+    <geom mesh="kitchen3_37" material="Mud_and_grass" class="visual"/>
+    <geom mesh="kitchen3_38" material="METAL" class="visual"/>
+    <geom mesh="kitchen3_39" material="Acrilico.001" class="visual"/>
+    <geom mesh="kitchen3_40" material="etiqueta3423425" class="visual"/>
+    <geom mesh="kitchen3_41" material="Black_Plastic" class="visual"/>
+    <geom mesh="kitchen3_42" material="METAL_DOURADO" class="visual"/>
+    <geom mesh="kitchen3_43" material="bh0707_Tecido_em_veludo.001" class="visual"/>
+    <geom mesh="kitchen3_44" material="TV23423" class="visual"/>
+    <geom mesh="kitchen3_45" material="Screen_OFF" class="visual"/>
+    <geom mesh="kitchen3_46" material="Metal_preto234235" class="visual"/>
+    <geom mesh="kitchen3_47" material="borracha_preta" class="visual"/>
+    <geom mesh="kitchen3_48" material="P04" class="visual"/>
+    <geom mesh="kitchen3_49" material="bh0791_Madeira.002" class="visual"/>
+    <geom mesh="kitchen3_50" material="bh0606_Madeira.002" class="visual"/>
+    <geom mesh="kitchen3_51" material="Vaso.001" class="visual"/>
+    <geom mesh="kitchen3_52" material="Base_planta_342352.002" class="visual"/>
+    <geom mesh="kitchen3_53" material="Vaso.002" class="visual"/>
+    <geom mesh="kitchen3_54" material="Terra_vaso.002" class="visual"/>
+    <geom mesh="kitchen3_55" material="Planta_2526.002" class="visual"/>
+    <geom mesh="kitchen3_56" material="Metal.003" class="visual"/>
+    <geom mesh="kitchen3_57" material="fire.002" class="visual"/>
+    <geom mesh="kitchen3_58" material="preto_fosco.002" class="visual"/>
+    <geom mesh="kitchen3_59" material="vela.003" class="visual"/>
+    <geom mesh="kitchen3_60" material="Material_#1114.002" class="visual"/>
+    <geom mesh="kitchen3_61" material="Book_3.001" class="visual"/>
+    <geom mesh="kitchen3_62" material="livro_lateral.002" class="visual"/>
+    <geom mesh="kitchen3_63" material="Book_2.002" class="visual"/>
+    <geom mesh="kitchen3_64" material="glass.002" class="visual"/>
+    <geom mesh="kitchen3_65" material="laca_preta" class="visual"/>
+    <geom mesh="kitchen3_66" material="Metal_movel" class="visual"/>
+    <geom mesh="kitchen3_67" material="vidrooreflect" class="visual"/>
+    <geom mesh="kitchen3_68" material="Metal_Arranhado_Fosco_001.003" class="visual"/>
+    <geom mesh="kitchen3_69" material="Material.014" class="visual"/>
+    <geom mesh="kitchen3_70" material="Grid_Metal.001" class="visual"/>
+    <geom mesh="kitchen3_71" material="qr_coifa" class="visual"/>
+    <geom mesh="kitchen3_72" material="INTERNO" class="visual"/>
+    <geom mesh="kitchen3_73" material="bh7722_Metal_Arranhado" class="visual"/>
+    <geom mesh="kitchen3_74" material="qr.001" class="visual"/>
+    <geom mesh="kitchen3_75" material="Metal_preto_meio_fosco2325" class="visual"/>
+    <geom mesh="kitchen3_76" material="bh2255_Metal_escovado_simples" class="visual"/>
+    <geom mesh="kitchen3_77" material="Material.013" class="visual"/>
+    <geom mesh="kitchen3_78" material="vidro_345" class="visual"/>
+    <geom mesh="kitchen3_79" material="visor24235" class="visual"/>
+    <geom mesh="kitchen3_80" material="bh2255_Metal_escovado_blend_marcas" class="visual"/>
+    <geom mesh="kitchen3_81" material="1_bh6601_1_face_vidro_transparente.001" class="visual"/>
+    <geom mesh="kitchen3_82" material="preto_brilho" class="visual"/>
+    <geom mesh="kitchen3_83" material="metal4235" class="visual"/>
+    <geom mesh="kitchen3_84" material="Metal_Reflexivo_345" class="visual"/>
+    <geom mesh="kitchen3_85" material="Metal_Preto_fosco_345" class="visual"/>
+    <geom mesh="kitchen3_86" material="Material.012" class="visual"/>
+    <geom mesh="kitchen3_87" material="Borracha_345" class="visual"/>
+    <geom mesh="kitchen3_88" material="Plastico_preto_345" class="visual"/>
+    <geom mesh="kitchen3_89" material="Material.010" class="visual"/>
+    <geom mesh="kitchen3_90" material="Plastico_Preto" class="visual"/>
+    <geom mesh="kitchen3_91" material="cable" class="visual"/>
+    <geom mesh="kitchen3_92" material="plastico_preto" class="visual"/>
+    <geom mesh="kitchen3_93" material="Material.009" class="visual"/>
+    <geom mesh="kitchen3_94" material="Metal3534" class="visual"/>
+    <geom mesh="kitchen3_95" material="bh5597_Granito_itaunas" class="visual"/>
+    <geom mesh="kitchen3_96" material="bh0791_Madeira" class="visual"/>
+    <geom mesh="kitchen3_97" material="bh0507_Rig_bianco_32x60" class="visual"/>
+
+    <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false"/>
+    <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="5 5 .125" type="plane"/>
+
+    <geom pos="1.75 0 1.5" quat="0.5 0.5 -0.5 -0.5" size="3 10 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_front_visual" material="Metal3534"/>
+
+ 
+    <body name="table" pos="0 0 0.4">
+      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" group="0" name="table_collision" friction="1 0.005 0.0001"/>
+      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" conaffinity="0" contype="0" group="1" name="table_visual" material="table_texture"/>
+      <site pos="0 0 0.4" name="table_top" size="0.001 0.001 0.001" rgba="0 0 0 0"/>
+      <!-- Legs (visual only) -->
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg1_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg2_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg3_visual" material="table_legs"/>
+      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg4_visual" material="table_legs"/>
+    </body>
+
+    <light name="light1" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="1 1 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+    <light name="light2" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="-3. -3. 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+
+    <!-- front view -->
+    <camera mode="fixed" name="frontview" pos="1.0 0 1.45" quat="0.56 0.43 0.43 0.56"/>
+    <!-- bird view -->
+    <camera mode="fixed" name="birdview" pos="-0.2 0 3.0" quat="0.7071 0 0 0.7071"/>
+    <!-- agent view -->
+    <camera mode="fixed" name="agentview" pos="0.5 0 1.35" quat="0.653 0.271 0.271 0.653"/>
+
+    <!-- side view -->
+    <camera mode="fixed" name="sideview" pos="-0.05651774593317116 1.2761224129427358 -1.4879572214102434" quat="0.009905065491771751 0.006877963156909582 0.5912228352893879 0.806418094001364" />
+
+  </worldbody>
+</mujoco>

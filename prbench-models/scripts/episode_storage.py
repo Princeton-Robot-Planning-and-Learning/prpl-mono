@@ -8,7 +8,8 @@ from pathlib import Path
 
 import cv2 as cv
 import numpy as np
-from constants import POLICY_CONTROL_FREQ
+
+from prbench_models.policy_constants import POLICY_CONTROL_FREQ
 
 
 def write_frames_to_mp4(frames: list[np.ndarray], mp4_path: Path) -> None:
@@ -64,7 +65,7 @@ class EpisodeWriter:
         self,
         obs: dict[str, np.ndarray],
         action: dict[str, np.ndarray],
-        target_object_key: str,
+        target_object_key: str = "cube1",
     ):
         """Step the EpisodeWriter."""
         self.timestamps.append(time.time())

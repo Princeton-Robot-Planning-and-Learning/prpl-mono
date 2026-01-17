@@ -1,0 +1,235 @@
+<!-- Author: Jimmy Wu -->
+<!-- Date: October 2024 -->
+<!-- Adapted from https://github.com/immersive-web/webxr-samples/blob/main/immersive-ar-session.html -->
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
+    <style>
+      body {
+        background-color: #F0F0F0;
+        font: 1rem/1.4 -apple-system, BlinkMacSystemFont,
+          Segoe UI, Roboto, Oxygen,
+          Ubuntu, Cantarell, Fira Sans,
+          Droid Sans, Helvetica Neue, sans-serif;
+      }
+
+      header {
+        padding: 0.5em;
+        background-color: rgba(255, 255, 255, 0.90);
+      }
+
+      #info {
+        font-size: 1.25em;
+        background-color: rgba(240, 240, 240, 0.5);
+      }
+
+      canvas {
+        position: absolute;
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+        touch-action: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="overlay">
+      <header></header>
+      <p><span id="info"></span></p>
+    </div>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script type="text/javascript">
+      // Random device ID
+      const deviceId = Math.random().toString(36).substring(2, 15);
+
+      // Round-trip time (RTT) statistics
+      class RTTStats {
+        constructor(bufferSize) {
+          this.bufferSize = bufferSize;
+          this.bufferIndex = 0;
+          this.rttArray = new Array(bufferSize).fill(0); // Initialize the circular buffer
+        }
+
+        calculate(rtt) {
+          this.rttArray[this.bufferIndex] = rtt;
+          this.bufferIndex = (this.bufferIndex + 1) % this.bufferSize;
+          const minRtt = Math.min(...this.rttArray);
+          const avgRtt = this.rttArray.reduce((acc, cur) => acc + cur, 0) / this.bufferSize;
+          const maxRtt = Math.max(...this.rttArray);
+          const stdDevRtt = Math.sqrt(this.rttArray.map((x) => (x - avgRtt) ** 2).reduce((acc, cur) => acc + cur, 0) / this.bufferSize);
+          return `${minRtt.toFixed(3)}/${avgRtt.toFixed(3)}/${maxRtt.toFixed(3)}/${stdDevRtt.toFixed(3)} ms`;
+        }
+      }
+      const rttStats = new RTTStats(100);
+
+      // Socket to communicate with server
+      const socket = io();
+
+      // Calculate RTT from server response
+      socket.on('echo', (timestamp) => {
+        const rtt = Date.now() - timestamp;
+        document.getElementById('info').innerText = rttStats.calculate(rtt);
+      });
+    </script>
+    <script type="module">
+      import { WebXRButton } from '/static/js/webxr-button.js';
+
+      // XR globals
+      let xrButton = null;
+      let xrRefSpace = null;
+
+      // WebGL scene globals
+      let gl = null;
+
+      function initXR() {
+        xrButton = new WebXRButton({
+          onRequestSession,
+          onPrepareEndSession,
+          onEndSession,
+          textEnterXRTitle: 'Start episode',
+          textXRNotFoundTitle: 'AR NOT FOUND',
+          textPrepareExitXRTitle: 'End episode',
+          textExitXRTitle: 'Reset env',
+        });
+        document.querySelector('header').appendChild(xrButton.domElement);
+
+        if (navigator.xr) {
+          navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+            xrButton.enabled = supported;
+          });
+        }
+      }
+
+      function onRequestSession() {
+        return navigator.xr.requestSession('immersive-ar', {
+          optionalFeatures: ['dom-overlay'],
+          domOverlay: { root: document.getElementById('overlay') },
+        }).then((session) => {
+          xrButton.setSession(session);
+          session.isImmersive = true;
+          onSessionStarted(session);
+        });
+      }
+
+      function onSessionStarted(session) {
+        session.addEventListener('end', onSessionEnded);
+        const canvas = document.createElement('canvas');
+        gl = canvas.getContext('webgl', {
+          xrCompatible: true,
+        });
+        addCanvasListeners(gl.canvas);
+        session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
+        session.requestReferenceSpace('local').then((refSpace) => {
+          xrRefSpace = refSpace;
+          session.requestAnimationFrame(onXRFrame);
+        });
+
+        // Let the server know user has started the episode
+        const data = { timestamp: Date.now(), state_update: 'episode_started' };
+        socket.send(data);
+      }
+
+      function onPrepareEndSession() {
+        // Let the server know user has ended the episode
+        const data = { timestamp: Date.now(), state_update: 'episode_ended' };
+        socket.send(data);
+      }
+
+      function onEndSession(session) {
+        session.end();
+
+        // Let the server know user is ready for env reset
+        const data = { timestamp: Date.now(), state_update: 'reset_env' };
+        socket.send(data);
+      }
+
+      function onSessionEnded(event) {
+        xrButton.setSession(null);
+        gl = null;
+      }
+
+      // Touch event handling
+      let touchId; let touchStartY; let touchDeltaY; let teleopMode;
+      function addCanvasListeners(canvas) {
+        function handleTouch(touch) {
+          touchDeltaY = (touchStartY - touch.clientY) / (0.2 * window.innerHeight);
+          touchDeltaY = Math.min(1, Math.max(-1, touchDeltaY));
+        }
+
+        canvas.addEventListener('touchstart', (event) => {
+          if (touchId === undefined) {
+            const touch = event.changedTouches[0];
+            touchId = touch.identifier;
+            touchStartY = touch.clientY;
+            teleopMode = touch.clientX < 0.9 * window.innerWidth ? 'arm' : 'base';
+            handleTouch(touch);
+          }
+        });
+
+        canvas.addEventListener('touchmove', (event) => {
+          for (const touch of event.changedTouches) {
+            if (touchId === touch.identifier) {
+              handleTouch(touch);
+            }
+          }
+        });
+
+        function updateTouchIds(event) {
+          for (const touch of event.changedTouches) {
+            if (touchId === touch.identifier) {
+              touchId = undefined;
+            }
+          }
+        }
+        canvas.addEventListener('touchend', updateTouchIds);
+        canvas.addEventListener('touchcancel', updateTouchIds);
+      }
+
+      function onXRFrame(t, frame) {
+        frame.session.requestAnimationFrame(onXRFrame);
+
+        // Visualize status of touch control
+        const r = (touchId !== undefined && teleopMode === 'base') ? 0.25 : 0;
+        const b = (touchId !== undefined && teleopMode === 'arm')
+          ? (Math.abs(touchDeltaY) === 1 ? 1 : 0.25 + 0.25 * touchDeltaY)
+          : 0;
+        gl.clearColor(r, 0, b, 0.5);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        // Send data to server
+        const data = { timestamp: Date.now(), device_id: deviceId };
+        if (touchId !== undefined) {
+          const pose = frame.getViewerPose(xrRefSpace);
+          if (pose) {
+            data.teleop_mode = teleopMode;
+            data.position = {
+              x: pose.transform.inverse.position.x,
+              y: pose.transform.inverse.position.y,
+              z: pose.transform.inverse.position.z,
+            };
+            data.orientation = {
+              x: pose.transform.inverse.orientation.x,
+              y: pose.transform.inverse.orientation.y,
+              z: pose.transform.inverse.orientation.z,
+              w: pose.transform.inverse.orientation.w,
+            };
+          }
+          if (teleopMode === 'arm') {
+            data.gripper_delta = touchDeltaY;
+          }
+        }
+        socket.send(data);
+      }
+
+      initXR();
+    </script>
+  </body>
+</html>

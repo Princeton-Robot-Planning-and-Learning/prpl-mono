@@ -61,7 +61,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricTable3DEnv(num_cubes=2, config=config)
+    sim = ObjectCentricTable3DEnv(num_cubes=2, config=config, use_gui=False)
     sim.set_state(obs)
 
     if MAKE_VIDEOS:
@@ -181,8 +181,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
             current_end_effector_pose.position[1],
             obs.get_cuboid_pose("table").position[2]
             + config.table_half_extents[2] / 2
-            + obs.get_cuboid_half_extents("cube1")[2]
-            + 0.01,
+            + obs.get_cuboid_half_extents("cube1")[2],
         ),
         current_end_effector_pose.orientation,
     )

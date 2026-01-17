@@ -16,10 +16,9 @@ from prbench.envs.geom2d.object_types import (
     Geom2DRobotEnvTypeFeatures,
     RectangleType,
 )
-from prbench.envs.geom2d.structs import ZOrder
+from prbench.envs.geom2d.structs import SE2Pose, ZOrder
 from prbench.envs.geom2d.utils import (
     CRVRobotActionSpace,
-    SE2Pose,
     create_walls_from_world_boundaries,
     is_inside,
 )
@@ -180,6 +179,12 @@ class ObjectCentricClutteredRetrieval2DEnv(
             target_region = state.get_objects(TargetRegionType)[0]
             full_state = state.copy()
             full_state.data.update(self.initial_constant_state.data)
+            # Check that target_region doesn't collide with robot or static objects.
+            if state_2d_has_collision(
+                full_state, {target_region}, {robot} | static_objects, {}
+            ):
+                continue
+            # Check that target_block doesn't collide with obstacles.
             if not state_2d_has_collision(
                 full_state, {target_block}, {robot, target_region} | static_objects, {}
             ):
@@ -337,7 +342,7 @@ class ObjectCentricClutteredRetrieval2DEnv(
         return create_state_from_dict(init_state_dict, Geom2DRobotEnvTypeFeatures)
 
     def _get_reward_and_done(self) -> tuple[float, bool]:
-        # Terminate when the target object is suctioned.
+        # Terminate when the target block is inside the target region.
         assert self._current_state is not None
         target_object = self._current_state.get_objects(TargetBlockType)[0]
         target_region = self._current_state.get_objects(TargetRegionType)[0]
@@ -368,20 +373,20 @@ class ClutteredRetrieval2DEnv(ConstantObjectPRBenchEnv):
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
-        num_obstructions = len(self._constant_objects) - 2
         # pylint: disable=line-too-long
-        if num_obstructions > 0:
-            obstruction_sentence = f"\nThe target block may be initially obstructed. In this environment, there are always {num_obstructions} obstacle blocks.\n"
-        else:
-            obstruction_sentence = ""
+        return """A 2D environment where the goal is to retrieve a target block and place it inside a target region.
 
-        return f"""A 2D environment where the goal is to "pick up" (suction) a target block.
-{obstruction_sentence}
+The target block may be initially obstructed.
+
 The robot has a movable circular base and a retractable arm with a rectangular vacuum end effector. Objects can be grasped and ungrasped when the end effector makes contact.
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of obstructions differs between environment variants. For example, ClutteredRetrieval2D-o5 has 5 obstructions."
+
     def _create_reward_markdown_description(self) -> str:
-        return "A penalty of -1.0 is given at every time step until termination, which occurs when the target block is held.\n"  # pylint: disable=line-too-long
+        return "A penalty of -1.0 is given at every time step until termination, which occurs when the target block is inside the target region.\n"  # pylint: disable=line-too-long
 
     def _create_references_markdown_description(self) -> str:
         return 'Similar environments have been considered by many others, especially in the task and motion planning literature, e.g., "Combined Task and Motion Planning Through an Extensible Planner-Independent Interface Layer" (Srivastava et al., ICRA 2014).\n'  # pylint: disable=line-too-long

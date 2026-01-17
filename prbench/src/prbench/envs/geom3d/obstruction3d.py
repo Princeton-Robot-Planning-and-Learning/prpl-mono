@@ -361,9 +361,12 @@ class ObjectCentricObstruction3DEnv(
     def _get_collision_object_ids(self) -> set[int]:
         assert self._target_block_id is not None
         assert self._target_region_id is not None
-        return {self._target_block_id, self._target_region_id, self.table_id} | set(
-            self._obstruction_ids.values()
-        )
+        collision_ids = {
+            self._target_block_id,
+            self._target_region_id,
+            self.table_id,
+        } | set(self._obstruction_ids.values())
+        return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return {"target_block"} | set(self._obstruction_ids)
@@ -440,6 +443,10 @@ Obstructions have random dimensions between {config.obstruction_half_extents_lb}
 
 The task requires planning to grasp and move obstructions out of the way, then place the target block on the target region.
 """
+
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of obstructions differs between environment variants. For example, Obstruction3D-o0 has no obstructions, while Obstruction3D-o4 has 4 obstructions."
 
     def _create_observation_space_markdown_description(self) -> str:
         """Create observation space description."""

@@ -35,9 +35,9 @@ class Table3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Table3DEnv()."""
 
     # Table.
-    table_pose: Pose = Pose((0.6, 0.0, 0.25))
+    table_pose: Pose = Pose((0.6, 0.0, 0.2))
     table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
-    table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.25)
+    table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.2)
 
     # World bounds.
     x_lb: float = -1
@@ -200,7 +200,8 @@ class ObjectCentricTable3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        return {self.table_id}
+        collision_ids = {self.table_id} | set(self._cubes.values())
+        return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys())
@@ -264,6 +265,10 @@ class Table3DEnv(ConstantObjectPRBenchEnv):
 - **robot**: The pose of the robot.
 - **cubes**: The poses of the cubes.
 """
+
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of cubes differs between environment variants. For example, Table3D-o1 has 1 cube, while Table3D-o3 has 3 cubes."
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""

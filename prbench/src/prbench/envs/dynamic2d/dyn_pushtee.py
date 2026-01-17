@@ -495,7 +495,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         return observation, reward, terminated, truncated, info
 
     def _get_reward_and_done(self) -> tuple[float, bool]:
-        """Calculate reward and termination based on coverage."""
+        """Calculate reward and termination based on position/angle thresholds."""
         assert self._current_state is not None
         assert self._tblock is not None
         assert self._goal_tblock is not None
@@ -554,57 +554,27 @@ class DynPushTEnv(ConstantObjectPRBenchEnv):
         # pylint: disable=line-too-long
         return """A 2D physics-based environment where the goal is to push a T-shaped block to match a goal pose using a simple dot robot (kinematic circle) with PyMunk physics simulation.
 
-**Observation Space**: The observation is a fixed-size vector containing the state of all objects:
-- **Robot**: position (x,y), velocities (vx,vy)
-- **T-Block**: position (x,y), orientation (θ), velocities (vx,vy,ω), dimensions (width, length_horizontal, length_vertical) (dynamic physics object)
-
-Each object includes physics properties like mass, moment of inertia, and color information for rendering.
-
-**Task**: Push the T-shaped block so that it covers at least 95% of the goal pose (position and orientation).
+The T-shaped block must be positioned within small position and orientation thresholds of the goal.
 """
+
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "This environment has only one variant."
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        return """The reward is based on the coverage of the T-block with respect to the goal pose, computed using Shapely geometric intersection.
+        return """A penalty of -1.0 is given at every time step until the T-block is aligned with the goal pose within specified thresholds.
 
-**Reward Formula**: reward = clip(coverage / success_threshold, 0, 1)
+**Termination Condition**: The episode terminates when all of the following conditions are met:
+- Position error in X: |x - x_goal| < 0.03
+- Position error in Y: |y - y_goal| < 0.03
+- Orientation error: |θ - θ_goal| < 8 degrees
 
-where coverage = intersection_area / goal_area
-
-**Termination Condition**: The episode terminates when the T-block achieves at least 95% coverage of the goal pose.
-
-**Physics Integration**: Since this environment uses PyMunk physics simulation, objects have realistic dynamics including:
-- No gravity (planar pushing task)
-- Friction between surfaces
-- Collision response and momentum transfer
-- Realistic pushing dynamics
+These thresholds ensure the T-block is precisely aligned with the goal pose.
 """
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
         # pylint: disable=line-too-long
-        return """This is a physics-based version of the PushT environment, commonly used in robot manipulation and imitation learning research.
-
-**Original PushT Environment**:
-- Introduced in the Diffusion Policy paper
-- Features a simple kinematic agent pushing a T-shaped block
-- Goal is to match a target pose with 95% coverage
-- Uses PyMunk 2D physics engine
-
-**Key Features**:
-- **PyMunk Physics Engine**: Provides realistic 2D rigid body dynamics
-- **Dynamic T-shaped Block**: Has mass, inertia, and responds to forces
-- **Kinematic Dot Robot**: Simple circle that moves to target positions via PD control
-- **Coverage-based Reward**: Uses geometric intersection for precise goal checking
-- **No Gravity**: Planar manipulation task without gravitational effects
-
-**Research Applications**:
-- Robot manipulation learning
-- Imitation learning and behavior cloning
-- Diffusion policy training and evaluation
-- Planar pushing strategy development
-- Physics-based motion planning validation
-
-This environment is widely used for evaluating manipulation policies, particularly in the context of diffusion-based and transformer-based imitation learning approaches.
-"""
+        return """This implementation is based on the Push-T environment introduced in the Diffusion Policy paper (Chi et al., 2023)."""
