@@ -540,7 +540,7 @@ class GeneratedSeesaw(MujocoObject):
         Returns:
             Tuple of (width, depth, height) for the bounding box
         """
-        # Seesaw dimensions: beam_length x beam_width x (pivot_height + 
+        # Seesaw dimensions: beam_length x beam_width x (pivot_height +
         # clearance + beam_thickness)
         total_height = self.pivot_height + self.beam_clearance + self.beam_thickness
         return (self.beam_length, self.beam_width, total_height)
