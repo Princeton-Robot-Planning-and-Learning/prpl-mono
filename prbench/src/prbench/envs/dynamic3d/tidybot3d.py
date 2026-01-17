@@ -77,7 +77,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         num_objects: int = 3,
         task_config_path: str | None = None,
         show_images: bool = False,
-        scene_bg: str | None = None,
+        scene_bg: bool | str | None = None,
         scene_render_camera: str | None = "overview",
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
@@ -105,9 +105,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             self.task_config = json.load(f)
 
         # Apply scene configuration based on scene_bg parameter
-        # Default to "simple" if not specified
-        self._scene_bg = scene_bg if scene_bg is not None else "simple"
-        self._apply_scene_bg(self._scene_bg)
+        # scene_bg can be:
+        #   - True: Use the mimiclabs scene defined in task config
+        #   - False/None: Use "simple" scene
+        #   - str: Use the explicit scene name (for backwards compatibility)
+        self._scene_bg = scene_bg
+        self._apply_scene_bg(scene_bg)
 
         # Set camera names from config
         self.camera_names = config.camera_names.copy()
@@ -152,7 +155,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Store current state
         self._current_state: ObjectCentricState | None = None
 
-    def _apply_scene_bg(self, scene_bg: str) -> None:
+    def _apply_scene_bg(self, scene_bg: bool | str | None) -> None:
         """Apply scene background configuration based on scene_bg parameter.
 
         Looks up the scene configuration (including position) from the task JSON's
@@ -160,42 +163,59 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         the scene loader.
 
         Args:
-            scene_bg: Scene background identifier. Supports:
+            scene_bg: Scene background setting. Supports:
+                - True: Use the mimiclabs scene defined in task config
+                - False/None: Use "simple" scene
                 - "simple": Use default ground scene
                 - "mimiclabs-labN": Use MimicLabs labN scene (N=2-8)
         """
-        # Get scene configs from task JSON (new format: dict of scene_name -> config)
+        # Get scene configs from task JSON (format: dict of scene_name -> config)
         scene_configs = self.task_config.get("scene", {})
 
+        # Convert bool/None to scene name
+        if scene_bg is None or scene_bg is False:
+            scene_bg_name = "simple"
+        elif scene_bg is True:
+            # Find the mimiclabs scene in task config
+            mimiclabs_scenes = [k for k in scene_configs if k.startswith("mimiclabs-")]
+            if not mimiclabs_scenes:
+                raise ValueError(
+                    "scene_bg=True but no mimiclabs scene found in task config. "
+                    f"Available scenes: {list(scene_configs.keys())}"
+                )
+            scene_bg_name = mimiclabs_scenes[0]  # Use the first (and only) mimiclabs
+        else:
+            scene_bg_name = scene_bg  # It's already a string
+
         # Look up the scene config for the requested scene_bg
-        if scene_bg not in scene_configs:
+        if scene_bg_name not in scene_configs:
             raise ValueError(
-                f"Scene '{scene_bg}' not found in task config. "
+                f"Scene '{scene_bg_name}' not found in task config. "
                 f"Available scenes: {list(scene_configs.keys())}"
             )
 
-        scene_config = scene_configs[scene_bg]
+        scene_config = scene_configs[scene_bg_name]
         position = scene_config.get("position", [0, 0, 0])
 
         # Build the active scene config
-        if scene_bg == "simple":
+        if scene_bg_name == "simple":
             self.task_config["_active_scene"] = {
                 "type": "simple",
                 "position": position,
             }
-        elif scene_bg.startswith("mimiclabs-lab"):
-            # Extract lab number from scene_bg (e.g., "mimiclabs-lab2" -> 2)
-            lab_str = scene_bg.split("-lab")[-1]
+        elif scene_bg_name.startswith("mimiclabs-lab"):
+            # Extract lab number from scene_bg_name (e.g., "mimiclabs-lab2" -> 2)
+            lab_str = scene_bg_name.split("-lab")[-1]
             try:
                 lab_num = int(lab_str)
             except ValueError as e:
                 raise ValueError(
-                    f"Could not parse lab number from {scene_bg}. "
+                    f"Could not parse lab number from {scene_bg_name}. "
                     f"Expected format: 'mimiclabs-lab2' through 'mimiclabs-lab8'"
                 ) from e
             if not 2 <= lab_num <= 8:
                 raise ValueError(
-                    f"MimicLabs lab number must be 2-8, got {lab_num} from {scene_bg}"
+                    f"MimicLabs lab number must be 2-8, got {lab_num} from {scene_bg_name}"
                 )
             self.task_config["_active_scene"] = {
                 "type": "mimiclabs",
@@ -204,7 +224,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             }
         else:
             raise ValueError(
-                f"Unknown scene_bg: {scene_bg}. "
+                f"Unknown scene_bg: {scene_bg_name}. "
                 f"Supported values: 'simple', 'mimiclabs-lab2' through 'mimiclabs-lab8'"
             )
 

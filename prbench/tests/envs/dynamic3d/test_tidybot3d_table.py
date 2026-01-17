@@ -153,17 +153,18 @@ def test_tidybot3d_table_mimiclabs_scene_position():
     """Test that MimicLabs scene position offset is applied correctly.
 
     This test verifies that:
-    1. The environment loads correctly with a MimicLabs background
+    1. The environment loads correctly with scene_bg=True (uses default mimiclabs)
     2. The scene position offset from task JSON is applied to the scene body
     3. Task objects (tables, cubes) are NOT affected by the scene position
     """
     prbench.register_all_environments()
 
-    # Create environment with MimicLabs background
+    # Create environment with MimicLabs background using scene_bg=True
+    # This should automatically use the mimiclabs scene defined in task config
     env = prbench.make(
         "prbench/TidyBot3D-table-o3-v0",
         render_mode="rgb_array",
-        scene_bg="mimiclabs-lab2",
+        scene_bg=True,  # Use default mimiclabs scene (lab2 for table tasks)
     )
 
     # Reset and get observation
@@ -200,29 +201,28 @@ def test_tidybot3d_table_mimiclabs_scene_position():
     reason="MimicLabs scenes not downloaded. "
     "Run: python scripts/download_mimiclabs_assets.py",
 )
-@pytest.mark.parametrize("lab_num", [2])  # lab4 excluded due to mesh issue
-def test_tidybot3d_table_mimiclabs_all_labs(lab_num):
-    """Test that all MimicLabs lab scenes load correctly with table scene."""
+def test_tidybot3d_table_mimiclabs_with_video():
+    """Test that MimicLabs scene loads correctly with table scene and video."""
     prbench.register_all_environments()
 
     env = prbench.make(
         "prbench/TidyBot3D-table-o3-v0",
         render_mode="rgb_array",
-        scene_bg=f"mimiclabs-lab{lab_num}",
+        scene_bg=True,  # Use default mimiclabs scene
     )
 
     obs, _ = env.reset(seed=123)
     assert env.observation_space.contains(obs)
 
     if MAKE_VIDEOS:
-        env = RecordVideo(env, f"unit_test_videos_lab{lab_num}_table_o3")
+        env = RecordVideo(env, "unit_test_videos_table_o3_mimiclabs")
 
     # Verify scene configuration
     unwrapped_env = env.unwrapped
     oc_env = unwrapped_env._object_centric_env  # pylint: disable=protected-access
     active_scene = oc_env.task_config.get("_active_scene", {})
     assert active_scene.get("type") == "mimiclabs"
-    assert active_scene.get("lab") == lab_num
+    assert active_scene.get("lab") == 2  # table tasks use lab2
 
     # Extract the positions of the target and robot.
     obs, _ = env.reset(seed=123)

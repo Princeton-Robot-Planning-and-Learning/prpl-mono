@@ -72,23 +72,22 @@ def test_straight_base_motion():
     reason="MimicLabs scenes not downloaded. "
     "Run: python scripts/download_mimiclabs_assets.py",
 )
-@pytest.mark.parametrize("lab_num", [2])
 @pytest.mark.parametrize(
     "view", ["overview", "agentview_1", "agentview_2", "base", "wrist"]
 )
-def test_straight_base_motion_mimiclabs(lab_num, view):
-    """Test base motion with MimicLabs background scenes (lab2-lab8)."""
+def test_straight_base_motion_mimiclabs(view):
+    """Test base motion with MimicLabs background scene (uses lab5 for base_motion)."""
 
     prbench.register_all_environments()
     env = prbench.make(
         "prbench/TidyBot3D-base_motion-o1-v0",
         render_mode="rgb_array",
-        scene_bg=f"mimiclabs-lab{lab_num}",
+        scene_bg=True,  # Use default mimiclabs scene (lab5 for base_motion)
         scene_render_camera=f"{view}",
     )
 
     if MAKE_VIDEOS:
-        env = RecordVideo(env, f"unit_test_videos_lab{lab_num}_view_{view}")
+        env = RecordVideo(env, f"unit_test_videos_base_motion_view_{view}")
 
     # Extract the positions of the target and robot.
     obs, _ = env.reset(seed=123)
@@ -119,6 +118,6 @@ def test_straight_base_motion_mimiclabs(lab_num, view):
         if done:  # success
             break
     else:
-        assert False, f"Failed to reach target with mimiclabs-lab{lab_num} background"
+        assert False, "Failed to reach target with mimiclabs background"
 
     env.close()
