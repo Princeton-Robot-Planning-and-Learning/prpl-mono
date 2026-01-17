@@ -165,7 +165,12 @@ class MimicLabsSceneLoader:
 
     @staticmethod
     def _apply_position_offset(tree: ET.Element, position: list[float]) -> None:
-        """Apply position offset to scene elements.
+        """Apply position offset to scene by updating the scene body position.
+
+        MimicLabs XMLs have all scene elements wrapped in a <body name="scene">
+        element. This method updates that body's position to offset the entire
+        scene while keeping task-specific objects (fixtures, robots) at their
+        original positions.
 
         Args:
             tree: Root XML element
@@ -178,46 +183,16 @@ class MimicLabsSceneLoader:
         if worldbody is None:
             return
 
-        # Offset cameras by adjusting their pos attribute
-        for camera in worldbody.findall("camera"):
-            cam_pos = camera.get("pos", "0 0 0")
-            cam_pos_list = [float(x) for x in cam_pos.split()]
-            new_pos = [
-                cam_pos_list[0] + position[0],
-                cam_pos_list[1] + position[1],
-                cam_pos_list[2] + position[2],
-            ]
-            camera.set("pos", f"{new_pos[0]} {new_pos[1]} {new_pos[2]}")
-
-        # Offset lights by adjusting their pos attribute
-        for light in worldbody.findall("light"):
-            light_pos = light.get("pos", "0 0 0")
-            light_pos_list = [float(x) for x in light_pos.split()]
-            new_pos = [
-                light_pos_list[0] + position[0],
-                light_pos_list[1] + position[1],
-                light_pos_list[2] + position[2],
-            ]
-            light.set("pos", f"{new_pos[0]} {new_pos[1]} {new_pos[2]}")
-
-        # Offset geoms by adjusting their pos attribute
-        for geom in worldbody.findall("geom"):
-            geom_pos = geom.get("pos", "0 0 0")
-            geom_pos_list = [float(x) for x in geom_pos.split()]
-            new_pos = [
-                geom_pos_list[0] + position[0],
-                geom_pos_list[1] + position[1],
-                geom_pos_list[2] + position[2],
-            ]
-            geom.set("pos", f"{new_pos[0]} {new_pos[1]} {new_pos[2]}")
-
-        # Offset bodies by adjusting their pos attribute
+        # Find the scene body and update its position
         for body in worldbody.findall("body"):
-            body_pos = body.get("pos", "0 0 0")
-            body_pos_list = [float(x) for x in body_pos.split()]
-            new_pos = [
-                body_pos_list[0] + position[0],
-                body_pos_list[1] + position[1],
-                body_pos_list[2] + position[2],
-            ]
-            body.set("pos", f"{new_pos[0]} {new_pos[1]} {new_pos[2]}")
+            if body.get("name") == "scene":
+                body.set("pos", f"{position[0]} {position[1]} {position[2]}")
+                return
+
+        # If no scene body found, log a warning (shouldn't happen with proper XMLs)
+        import logging
+
+        logging.warning(
+            "No <body name='scene'> found in MimicLabs XML. "
+            "Position offset will not be applied."
+        )
