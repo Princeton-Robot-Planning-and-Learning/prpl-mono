@@ -324,7 +324,7 @@ class GroundPlaceController(BasePlaceController):
                     self._sim.config.shelf_spacing * 2
                     + self._sim.config.shelf_height / 2 * 2
                     + self._sim.config.block_half_extents[0]
-                    + 0.015,
+                    + 0.035,
                 ),
                 (-np.pi / 2, np.pi, 0),
             )
