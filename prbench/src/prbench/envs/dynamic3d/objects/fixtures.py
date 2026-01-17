@@ -842,7 +842,8 @@ class Cupboard(MujocoFixture):
         drawer_body = ET.Element("body")
         drawer_body.set("name", f"{self.name}_drawer_{drawer_index}")
 
-        # x_min and x_max are the unadjusted compartment bounds (representing actual panel/partition extents)
+        # x_min and x_max are the unadjusted compartment bounds
+        # (representing actual panel/partition extents)
         # Drawer compartment dimensions
         drawer_length = x_max - x_min
         drawer_half_length = drawer_length / 2
@@ -887,7 +888,8 @@ class Cupboard(MujocoFixture):
         drawer_half_depth = cupboard_half_depth - depth_margin / 2
 
         # Drawer position: centered in inset compartment, at shelf surface
-        # Adjust y position so front face is flush with shelf edge at cupboard_half_depth - depth_margin/2
+        # Adjust y position so front face is flush with shelf edge
+        # at cupboard_half_depth - depth_margin/2
         drawer_y = depth_margin / 2
         drawer_z = shelf_z + shelf_half_thickness + self.drawer_wall_thickness
         drawer_body.set("pos", f"{drawer_center_x} {drawer_y} {drawer_z}")
