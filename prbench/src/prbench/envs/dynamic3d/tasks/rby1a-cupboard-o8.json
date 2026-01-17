@@ -3,7 +3,62 @@
         "rby1a"
     ],
     "scene": {
-        "type": "simple"
+        "simple": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab2": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab3": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab4": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab5": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab6": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab7": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab8": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        }
     },
     "fixtures": {
         "cupboard": {
@@ -144,10 +199,21 @@
     },
     "cameras": {
         "agentview_1": {
-            "position": [1, 1, 2],
-            "lookat": [0, 0, 0],
+            "position": [
+                1,
+                1,
+                2
+            ],
+            "lookat": [
+                0,
+                0,
+                0
+            ],
             "fovy": 42,
-            "resolution": [640, 480]
+            "resolution": [
+                640,
+                480
+            ]
         }
     },
     "initial_state": [

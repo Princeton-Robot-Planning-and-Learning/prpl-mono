@@ -3,7 +3,62 @@
         "tidybot"
     ],
     "scene": {
-        "type": "simple"
+        "simple": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab2": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab3": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab4": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab5": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab6": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab7": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab8": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        }
     },
     "fixtures": {
         "table": {
@@ -260,7 +315,12 @@
         },
         "generated_bowl": {
             "yellow_bowl_1": {
-                "rgba": [1.0, 1.0, 0.0, 1.0],
+                "rgba": [
+                    1.0,
+                    1.0,
+                    0.0,
+                    1.0
+                ],
                 "outer_radius": 0.08,
                 "inner_radius": 0.07,
                 "height": 0.04
@@ -269,10 +329,21 @@
     },
     "cameras": {
         "agentview_1": {
-            "position": [1, 1, 2],
-            "lookat": [0, 0, 0],
+            "position": [
+                1,
+                1,
+                2
+            ],
+            "lookat": [
+                0,
+                0,
+                0
+            ],
             "fovy": 42,
-            "resolution": [640, 480]
+            "resolution": [
+                640,
+                480
+            ]
         }
     },
     "initial_state": [
@@ -295,14 +366,46 @@
     "goal_state": [
         [
             "or",
-            ["on", "object_0", "yellow_bowl_1_left_region"],
-            ["on", "object_0", "yellow_bowl_1_right_region"],
-            ["on", "object_0", "yellow_bowl_1_front_region"],
-            ["on", "object_0", "yellow_bowl_1_back_region"],
-            ["on", "object_0", "yellow_bowl_1_front_left_region"],
-            ["on", "object_0", "yellow_bowl_1_front_right_region"],
-            ["on", "object_0", "yellow_bowl_1_back_left_region"],
-            ["on", "object_0", "yellow_bowl_1_back_right_region"]
+            [
+                "on",
+                "object_0",
+                "yellow_bowl_1_left_region"
+            ],
+            [
+                "on",
+                "object_0",
+                "yellow_bowl_1_right_region"
+            ],
+            [
+                "on",
+                "object_0",
+                "yellow_bowl_1_front_region"
+            ],
+            [
+                "on",
+                "object_0",
+                "yellow_bowl_1_back_region"
+            ],
+            [
+                "on",
+                "object_0",
+                "yellow_bowl_1_front_left_region"
+            ],
+            [
+                "on",
+                "object_0",
+                "yellow_bowl_1_front_right_region"
+            ],
+            [
+                "on",
+                "object_0",
+                "yellow_bowl_1_back_left_region"
+            ],
+            [
+                "on",
+                "object_0",
+                "yellow_bowl_1_back_right_region"
+            ]
         ]
     ]
 }
