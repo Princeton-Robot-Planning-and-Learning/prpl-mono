@@ -369,17 +369,13 @@ class GeneratedSeesaw(MujocoObject):
         self.hinge_frictionloss: float = float(
             self.options.get("hinge_frictionloss", 0.02)
         )
-        self.hinge_stiffness: float = float(
-            self.options.get("hinge_stiffness", 1.0)
-        )
+        self.hinge_stiffness: float = float(self.options.get("hinge_stiffness", 1.0))
         hinge_range = self.options.get("hinge_range", [-0.8, 0.8])
         if hinge_range is None:
             self.hinge_range: tuple[float, float] | None = None
         else:
             if len(hinge_range) != 2:
-                raise ValueError(
-                    "hinge_range must be a 2-element sequence [min, max]"
-                )
+                raise ValueError("hinge_range must be a 2-element sequence [min, max]")
             self.hinge_range = (float(hinge_range[0]), float(hinge_range[1]))
 
         # Generate mesh for pivot and save to temporary OBJ file
