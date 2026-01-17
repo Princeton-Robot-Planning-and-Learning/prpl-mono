@@ -300,7 +300,8 @@ class GeneratedSeesaw(MujocoObject):
                 - beam_length: Length of the beam (default: 0.4m)
                 - beam_width: Width of the beam (default: 0.06m)
                 - beam_thickness: Thickness of the beam (default: 0.01m)
-                - beam_clearance: Gap between pivot apex and beam center (default: 0.002m)
+                - beam_clearance: Gap between pivot apex and beam center (
+                    default: 0.002m)
                 - pivot_height: Height of the pivot/fulcrum (default: 0.04m)
                 - pivot_width: Width of the pivot base (default: 0.04m)
                 - beam_rgba: Color of the beam (default: "0.6 0.4 0.2 1")
@@ -512,7 +513,7 @@ class GeneratedSeesaw(MujocoObject):
         }
         if self.hinge_range is not None:
             joint_kwargs["range"] = f"{self.hinge_range[0]} {self.hinge_range[1]}"
-        ET.SubElement(beam_body, "joint", **joint_kwargs)
+        ET.SubElement(beam_body, "joint", joint_kwargs)
 
         # Add beam geom (box shape)
         # Beam is centered at the hinge point
