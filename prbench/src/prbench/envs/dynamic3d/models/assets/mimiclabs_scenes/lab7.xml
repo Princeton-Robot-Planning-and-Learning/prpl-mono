@@ -137,51 +137,12 @@
   </asset>
   <worldbody>
     <body name="scene" pos="0 0 0"><body name="scene8">
-      <geom mesh="scene8_0" material="pillow" class="visual" />
-      <geom mesh="scene8_1" material="fabric" class="visual" />
-      <geom mesh="scene8_2" material="pillow.001" class="visual" />
-      <geom mesh="scene8_3" material="SOFA_1" class="visual" />
-      <geom mesh="scene8_4" material="sofa_" class="visual" />
-      <geom mesh="scene8_5" material="MDF_Nogal_Terracota_-_Arauco" class="visual" />
-      <geom mesh="scene8_6" material="floor_" class="visual" />
-      <geom mesh="scene8_7" material="tv_steel" class="visual" />
-      <geom mesh="scene8_8" material="factor" class="visual" />
-      <geom mesh="scene8_9" material="black_gaz_" class="visual" />
-      <geom mesh="scene8_10" material="metal_" class="visual" />
-      <geom mesh="scene8_11" material="GAZ_B_-1_" class="visual" />
-      <geom mesh="scene8_12" material="gaz_NOTE_" class="visual" />
-      <geom mesh="scene8_13" material="gaz" class="visual" />
-      <geom mesh="scene8_14" material="cluomn" class="visual" />
-      <geom mesh="scene8_15" material="Faucet" class="visual" />
-      <geom mesh="scene8_16" material="0-Chrome" class="visual" />
-      <geom mesh="scene8_17" material="0-steel" class="visual" />
-      <geom mesh="scene8_18" material="0-glass" class="visual" />
-      <geom mesh="scene8_19" material="0-oven_lcd" class="visual" />
-      <geom mesh="scene8_20" material="0-Oven-label" class="visual" />
-      <geom mesh="scene8_21" material="0-Black-Metal" class="visual" />
-      <geom mesh="scene8_22" material="0-black-glossy" class="visual" />
-      
       <geom mesh="scene8_24" material="wall_big" class="visual" />
       <geom mesh="scene8_25" material="DECORE2" class="visual" />
       <geom mesh="scene8_26" material="DECOR1" class="visual" />
-      <geom mesh="scene8_27" material="Beige_Zigzag_Red" class="visual" />
-      <geom mesh="scene8_28" material="book16" class="visual" />
-      <geom mesh="scene8_29" material="book17" class="visual" />
-      <geom mesh="scene8_30" material="paper_book_.002" class="visual" />
-      <geom mesh="scene8_31" material="metal_black_" class="visual" />
-      <geom mesh="scene8_32" material="wood_table" class="visual" />
-      
-      
-      <geom mesh="scene8_35" material="book46" class="visual" />
-      <geom mesh="scene8_36" material="paper_book_.001" class="visual" />
       <geom mesh="scene8_37" material="decor2" class="visual" />
       <geom mesh="scene8_38" material="lighte_" class="visual" />
       
-      <geom mesh="scene8_40" material="wire" class="visual" />
-      <geom mesh="scene8_41" material="Window_profile" class="visual" />
-      <geom mesh="scene8_42" material="tv-2" class="visual" />
-      <geom mesh="scene8_43" material="tv_steel" class="visual" />
-      <geom mesh="scene8_44" material="tv-1" class="visual" />
       <geom mesh="scene8_45" material="PICTURE" class="visual" />
       <geom mesh="scene8_46" material="decor_wood_" class="visual" />
       <geom mesh="scene8_47" material="wall" class="visual" />

@@ -120,35 +120,9 @@
   </asset>
   <worldbody>
     <body name="scene" pos="0 0 0"><geom mesh="scene2_0" material="curtain.002" class="visual" />
-    <geom mesh="scene2_1" material="SOFA_.001" class="visual" />
-    <geom mesh="scene2_2" material="fabric" class="visual" />
-    <geom mesh="scene2_3" material="book_" class="visual" />
-    <geom mesh="scene2_4" material="book_1" class="visual" />
-    <geom mesh="scene2_5" material="page_book_" class="visual" />
-    <geom mesh="scene2_6" material="chair_" class="visual" />
-    <geom mesh="scene2_7" material="color_sofa_" class="visual" />
-    <geom mesh="scene2_8" material="cushion_2" class="visual" />
-    <geom mesh="scene2_9" material="cushion_3" class="visual" />
-    <geom mesh="scene2_10" material="cushion_4" class="visual" />
-    <geom mesh="scene2_11" material="jug" class="visual" />
-    <geom mesh="scene2_12" material="SOFA_" class="visual" />
-    <geom mesh="scene2_13" material="color_" class="visual" />
-    <geom mesh="scene2_14" material="Bar_around_the_sofa" class="visual" />
-    <geom mesh="scene2_15" material="cushion_1" class="visual" />
     <geom mesh="scene2_16" material="Carpet" class="visual" />
     <geom mesh="scene2_17" material="light_bulb" class="visual" />
     <geom mesh="scene2_18" material="Bronze" class="visual" />
-    <geom mesh="scene2_19" material="Handle_material" class="visual" />
-    <geom mesh="scene2_20" material="Glass" class="visual" />
-    <geom mesh="scene2_21" material="Plastic" class="visual" />
-    <geom mesh="scene2_22" material="PVC" class="visual" />
-    <geom mesh="scene2_23" material="gold_" class="visual" />
-    <geom mesh="scene2_24" material="chandelier" class="visual" />
-    <geom mesh="scene2_25" material="metal_" class="visual" />
-    <geom mesh="scene2_26" material="Chandelier_stone" class="visual" />
-    <geom mesh="scene2_27" material="roof_timber" class="visual" />
-    <geom mesh="scene2_28" material="desk_leg" class="visual" />
-    <geom mesh="scene2_29" material="desk" class="visual" />
     <geom mesh="scene2_30" material="picture_" class="visual" />
     <geom mesh="scene2_31" material="floor_" class="visual" />
     <geom mesh="scene2_32" material="ROOF_" class="visual" />

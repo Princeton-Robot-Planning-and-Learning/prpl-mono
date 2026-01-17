@@ -220,44 +220,13 @@
   <worldbody>
     <body name="scene" pos="0 0 0"><body name="scene4">
       
-      <geom mesh="scene4_28" material="paper_book_" class="visual" />
-      <geom mesh="scene4_29" material="jar_" class="visual" />
-      <geom mesh="scene4_30" material="still" class="visual" />
-      <geom mesh="scene4_31" material="Material.004" class="visual" />
-      <geom mesh="scene4_32" material="wiski_3" class="visual" />
-      <geom mesh="scene4_33" material="WATER2_" class="visual" />
-      <geom mesh="scene4_34" material="PAPER_4" class="visual" />
-      <geom mesh="scene4_35" material="wiski5" class="visual" />
-      <geom mesh="scene4_36" material="WATER_1" class="visual" />
-      <geom mesh="scene4_37" material="paper3" class="visual" />
-      <geom mesh="scene4_38" material="wiski_4" class="visual" />
-      <geom mesh="scene4_39" material="paper2" class="visual" />
-      <geom mesh="scene4_40" material="paper1" class="visual" />
-      <geom mesh="scene4_41" material="wiski_2" class="visual" />
-      <geom mesh="scene4_42" material="glass-1" class="visual" />
-      <geom mesh="scene4_43" material="wiski_1" class="visual" />
-      <geom mesh="scene4_44" material="glass" class="visual" />
       <geom mesh="scene4_45" material="lighte_" class="visual" />
       
       <geom mesh="scene4_47" material="cabinet" class="visual" />
-      <geom mesh="scene4_48" material="steel_body" class="visual" />
-      <geom mesh="scene4_49" material="wood_2" class="visual" />
       <geom mesh="scene4_50" material="wood_wall" class="visual" />
-      <geom mesh="scene4_51" material="Cake" class="visual" />
-      <geom mesh="scene4_52" material="Chocolate" class="visual" />
-      <geom mesh="scene4_53" material="dosh_" class="visual" />
-      
-      <geom mesh="scene4_61" material="FABRIC_1_FRONT_1333.003" class="visual" />
-      <geom mesh="scene4_62" material="pillow" class="visual" />
       <geom mesh="scene4_63" material="Carpet" class="visual" />
       <geom mesh="scene4_64" material="metal_" class="visual" />
-      <geom mesh="scene4_65" material="Glass" class="visual" />
       <geom mesh="scene4_66" material="Wall" class="visual" />
-      
-      
-      <geom mesh="scene4_69" material="back" class="visual" />
-      <geom mesh="scene4_70" material="Faucet" class="visual" />
-      <geom mesh="scene4_71" material="metal_black_" class="visual" />
       
     </body>
     <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false" />

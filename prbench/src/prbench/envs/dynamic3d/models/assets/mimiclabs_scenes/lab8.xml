@@ -199,68 +199,14 @@
       <geom mesh="scene13_0" material="Material_4_Mat" class="visual" />
       <geom mesh="scene13_1" material="Material_3_Mat" class="visual" />
       <geom mesh="scene13_2" material="Material_2_Mat" class="visual" />
-      <geom mesh="scene13_3" material="Material.006" class="visual" />
-      <geom mesh="scene13_4" material="glaas_put_" class="visual" />
-      <geom mesh="scene13_5" material="leather.003" class="visual" />
-      <geom mesh="scene13_6" material="leather.002" class="visual" />
-      <geom mesh="scene13_7" material="leather.004" class="visual" />
-      <geom mesh="scene13_8" material="wood_tabel_.002" class="visual" />
-      <geom mesh="scene13_9" material="plant_3_Copy_Mat.003" class="visual" />
-      <geom mesh="scene13_10" material="plant_3_Mat.008" class="visual" />
-      <geom mesh="scene13_11" material="plant_2_Mat.009" class="visual" />
-      <geom mesh="scene13_12" material="GLASS-011.003" class="visual" />
-      <geom mesh="scene13_13" material="book1.001" class="visual" />
-      <geom mesh="scene13_14" material="book2" class="visual" />
-      <geom mesh="scene13_15" material="book3" class="visual" />
-      <geom mesh="scene13_16" material="book4" class="visual" />
-      <geom mesh="scene13_17" material="book5" class="visual" />
-      <geom mesh="scene13_18" material="book6" class="visual" />
-      <geom mesh="scene13_19" material="book7" class="visual" />
-      <geom mesh="scene13_20" material="paper_book_.001" class="visual" />
-      <geom mesh="scene13_21" material="book16" class="visual" />
-      <geom mesh="scene13_22" material="book17" class="visual" />
-      <geom mesh="scene13_23" material="book18" class="visual" />
-      <geom mesh="scene13_24" material="book19" class="visual" />
-      <geom mesh="scene13_25" material="book20" class="visual" />
-      <geom mesh="scene13_26" material="book21" class="visual" />
-      <geom mesh="scene13_27" material="paper_book_" class="visual" />
-      <geom mesh="scene13_28" material="Stylised_wood_2" class="visual" />
-      
-      
-      
-      <geom mesh="scene13_32" material="lighte3_" class="visual" />
-      <geom mesh="scene13_33" material="wood_1_" class="visual" />
-      <geom mesh="scene13_34" material="tv_" class="visual" />
-      <geom mesh="scene13_35" material="lighte_1_" class="visual" />
-      <geom mesh="scene13_36" material="Computer" class="visual" />
-      <geom mesh="scene13_37" material="glass_2" class="visual" />
-      <geom mesh="scene13_38" material="glass3" class="visual" />
-      <geom mesh="scene13_39" material="wood_2" class="visual" />
-      <geom mesh="scene13_40" material="BLACK" class="visual" />
       <geom mesh="scene13_41" material="decore-2_.001" class="visual" />
       <geom mesh="scene13_42" material="0000" class="visual" />
       <geom mesh="scene13_43" material="000555" class="visual" />
-      <geom mesh="scene13_44" material="Material.001" class="visual" />
-      <geom mesh="scene13_45" material="metal_blach_chair_" class="visual" />
-      
-      <geom mesh="scene13_47" material="Refrigerator.001" class="visual" />
-      
-      <geom mesh="scene13_49" material="factor" class="visual" />
-      <geom mesh="scene13_50" material="Plaster" class="visual" />
-      <geom mesh="scene13_51" material="stone_" class="visual" />
-      <geom mesh="scene13_52" material="cabinet_" class="visual" />
       <geom mesh="scene13_53" material="African_stone_wall" class="visual" />
       <geom mesh="scene13_54" material="wood_3" class="visual" />
       <geom mesh="scene13_55" material="floor_" class="visual" />
-      <geom mesh="scene13_56" material="Handle_material" class="visual" />
-      <geom mesh="scene13_57" material="Door_material" class="visual" />
-      <geom mesh="scene13_58" material="stone1_" class="visual" />
-      <geom mesh="scene13_59" material="profile" class="visual" />
       <geom mesh="scene13_60" material="wall1" class="visual" />
       <geom mesh="scene13_61" material="Wall" class="visual" />
-      <geom mesh="scene13_62" material="cushion.003" class="visual" />
-      <geom mesh="scene13_63" material="wood_5" class="visual" />
-      <geom mesh="scene13_64" material="sofa" class="visual" />
     </body>
     <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false" />
     <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="5 5 .125" type="plane" />
