@@ -242,19 +242,24 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
 
         images: dict[str, NDArray[np.uint8]] = {}
         for camera_name in self.camera_names:
-            rendered_image = self.sim.render(
-                width=self.camera_width,
-                height=self.camera_height,
-                camera_name=camera_name,
-                depth=False,
-                mode="offscreen",
-            )
-            # Handle both single image and tuple return types
-            if isinstance(rendered_image, tuple):
-                images[f"{camera_name}_image"] = rendered_image[0]
-            else:
-                images[f"{camera_name}_image"] = rendered_image
+            images[f"{camera_name}_image"] = self._get_camera_image(camera_name)
         return images
+    
+    def _get_camera_image(self, camera_name: str) -> NDArray[np.uint8]:
+        """Get image from a specific camera in simulation."""
+        assert self.sim is not None, "Simulation must be initialized."
+
+        rendered_image = self.sim.render(
+            width=self.camera_width,
+            height=self.camera_height,
+            camera_name=camera_name,
+            depth=False,
+            mode="offscreen",
+        )
+        # Handle both single image and tuple return types
+        if isinstance(rendered_image, tuple):
+            return rendered_image[0]
+        return rendered_image
 
     def _close_sim(self) -> None:
         """Destroys the current MjSim instance.

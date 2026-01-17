@@ -12,7 +12,7 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from prbench_models.policy_constants import POLICY_CONTROL_PERIOD
-from prbench_models.teleop_utils import TeleopPolicy, _visualize_image_in_window
+from prbench_models.teleop_utils import TeleopPolicy, QuestPolicy, QuestImageViewer, _visualize_image_in_window
 
 prbench.register_all_environments()
 
@@ -24,6 +24,7 @@ def run_teleop(
     num_episodes: int = 1,
     max_steps: int = 1000,
     env_name: str = "Shelf3D-o2-v0",
+    teleop_type: str = "quest",
     enable_web_server: bool = True,
     port: int = 5000,
     show_images: bool = False,
@@ -52,7 +53,14 @@ def run_teleop(
     ik_solver = TidybotIKSolver(ee_offset=0.12)
 
     # Create teleop policy
-    policy = TeleopPolicy(enable_web_server=enable_web_server, port=port)
+    if teleop_type == "webxr":
+        policy = TeleopPolicy(enable_web_server=enable_web_server, port=port)
+    elif teleop_type == "quest":
+        policy = QuestPolicy(debug=True)
+    else:
+        raise ValueError(f"Unknown teleop_type: {teleop_type}")
+
+    image_viewer = QuestImageViewer("Teleop Images")
 
     try:
         for episode_idx in range(num_episodes):
@@ -98,6 +106,14 @@ def run_teleop(
                     _visualize_image_in_window(all_images["overview"], "overview")
                     _visualize_image_in_window(all_images["base"], "base")
                     _visualize_image_in_window(all_images["wrist"], "wrist")
+
+                image_viewer.show_image(
+                    env.unwrapped._object_centric_env.render_teleop_camera(
+                        base_camera_offset=(2.0, 0.0, 1.5),
+                        base_camera_euler=(0, np.pi / 3, np.pi / 2)
+                    )
+                )
+
                 obs_dict: dict[str, Any] = {
                     "base_pose": np.array(
                         [
@@ -213,6 +229,12 @@ def main() -> None:
         "--env-name", type=str, default="Shelf3D-o2-v0", help="Name of the environment"
     )
     parser.add_argument(
+        "--teleop-type",
+        type=str,
+        default="quest",
+        help="Type of teleoperation interface (webxr or quest)",
+    )
+    parser.add_argument(
         "--no-web-server",
         dest="enable_web_server",
         action="store_false",
@@ -235,6 +257,7 @@ def main() -> None:
         num_episodes=args.num_episodes,
         max_steps=args.max_steps,
         env_name=args.env_name,
+        teleop_type=args.teleop_type,
         enable_web_server=args.enable_web_server,
         port=args.port,
         show_images=args.show_images,

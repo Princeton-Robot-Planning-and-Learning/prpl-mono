@@ -674,6 +674,43 @@ class ObjectCentricGeom3DRobotEnv(
             image_height=self.config.ee_camera_image_height,
             fov=self.config.ee_camera_fov,
         )
+    
+    def render_teleop_camera(
+            self, 
+            base_camera_offset: tuple[float, float, float],
+            base_camera_euler: tuple[float, float, float],
+        ) -> NDArray[np.uint8]:
+        """Render from the teleoperation camera view.
+
+        This view is controlled by the user when using GUI teleoperation.
+        """
+        # Get current base pose
+        base_pose = self.robot.get_base()
+
+        base_pose_se3 = base_pose.to_se3(0.0)
+        rot = Rotation.from_euler(
+            "zyx", base_camera_euler
+        )  # MuJoCo convention
+        camera_to_base_transform = Pose(
+            position=base_camera_offset,
+            orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)
+        )
+
+        camera_pose = multiply_poses(base_pose_se3, camera_to_base_transform)
+
+        # for debugging
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(base_pose_se3, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
+        return capture_image(
+            self.physics_client_id,
+            specify_position=True,
+            camera_position=camera_pose.position,
+            camera_orientation=camera_pose.orientation,
+            image_width=self.config.base_camera_image_width,
+            image_height=self.config.base_camera_image_height,
+            fov=self.config.base_camera_fov,
+        )
 
     def render_all_cameras(self) -> dict[str, NDArray[np.uint8]]:
         """Render from all cameras and return as a dictionary.
