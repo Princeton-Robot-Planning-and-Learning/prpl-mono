@@ -164,9 +164,7 @@ class MimicLabsSceneLoader:
         return ET.tostring(tree, encoding="unicode")
 
     @staticmethod
-    def _apply_position_offset(
-        tree: ET.Element, position: list[float]
-    ) -> None:
+    def _apply_position_offset(tree: ET.Element, position: list[float]) -> None:
         """Apply position offset to scene elements.
 
         Args:
