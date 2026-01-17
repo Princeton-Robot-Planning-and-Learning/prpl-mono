@@ -7,9 +7,11 @@ There may be other obstructing objects in the environment.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from typing import Type as TypingType
 
+import pybullet as p
 from pybullet_helpers.geometry import Pose, get_pose, set_pose
 from pybullet_helpers.utils import create_pybullet_block, create_pybullet_shelf
 from relational_structs import Object, ObjectCentricState
@@ -30,7 +32,6 @@ from prbench.envs.geom3d.utils import (
     Geom3DObjectCentricState,
     sample_collision_free_object_poses,
 )
-from prbench.envs.utils import PURPLE
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,7 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     max_action_mag: float = 0.2
 
     # Shelf.
-    shelf_pose: Pose = Pose((0.0, 1.5, 0.0))
+    shelf_pose: Pose = Pose((2.0, 2.4, 0.02))
     shelf_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
     shelf_width: float = 0.60198
     shelf_depth: float = 0.254
@@ -48,6 +49,7 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     shelf_spacing: float = 0.254
     shelf_support_width: float = 0.0127
     shelf_num_layers: int = 4
+    shelf_texture: Path = Path(__file__).parent / "assets" / "dark-wood-texture.png"
 
     # World bounds.
     x_lb: float = -1
@@ -57,7 +59,7 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Blocks.
     block_half_extents: tuple[float, float, float] = (0.05, 0.025, 0.025)
-    block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
+    block_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
 
     # Gripper.
     gripper_open_threshold: float = 0.01
@@ -66,10 +68,17 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         """Get kwargs to pass to PyBullet camera."""
         return {
             "camera_target": (0, 0, 0),
-            "camera_yaw": 90,
+            "camera_yaw": 0,
             "camera_distance": 2.0,
             "camera_pitch": -20,
         }
+
+    def get_cube_texture(self, idx: int) -> Path:
+        """Get a texture to wrap a cube given the index."""
+        asset_dir = Path(__file__).parent / "assets"
+        texture_filenames = [f"book{i}.jpg" for i in range(5)]
+        texture_filename = texture_filenames[idx % len(texture_filenames)]
+        return asset_dir / texture_filename
 
 
 class Shelf3DObjectCentricState(Geom3DObjectCentricState):
@@ -108,6 +117,15 @@ class ObjectCentricShelf3DEnv(
                 physics_client_id=self.physics_client_id,
             )
             self._cubes[f"cube{idx}"] = cube_id
+            cube_texture_id = p.loadTexture(
+                str(self.config.get_cube_texture(idx)), self.physics_client_id
+            )
+            p.changeVisualShape(
+                cube_id,
+                -1,
+                textureUniqueId=cube_texture_id,
+                physicsClientId=self.physics_client_id,
+            )
 
         # Create shelf.
         self._shelf_id, self._shelf_surface_ids = create_pybullet_shelf(
@@ -121,6 +139,29 @@ class ObjectCentricShelf3DEnv(
             physics_client_id=self.physics_client_id,
         )
         set_pose(self._shelf_id, self.config.shelf_pose, self.physics_client_id)
+
+        # NOTE: use this for repositioning the shelf visually (with GUI on).
+        # from pybullet_helpers.gui import interactively_visualize_pose
+        # interactively_visualize_pose(
+        #     self.config.shelf_pose,
+        #     self.physics_client_id,
+        #     min_position=-10,
+        #     max_position=10,
+        #     object_id=self._shelf_id,
+        # )
+
+        shelf_texture_id = p.loadTexture(
+            str(self.config.shelf_texture), self.physics_client_id
+        )
+        for shelf_link_id in range(
+            p.getNumJoints(self._shelf_id, physicsClientId=self.physics_client_id)
+        ):
+            p.changeVisualShape(
+                self._shelf_id,
+                shelf_link_id,
+                textureUniqueId=shelf_texture_id,
+                physicsClientId=self.physics_client_id,
+            )
 
     @property
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
