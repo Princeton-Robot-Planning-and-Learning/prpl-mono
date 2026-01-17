@@ -255,13 +255,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             # Compute euler angles from position and lookat
             euler = compute_camera_euler(position_list, lookat_list)
 
-            # Create camera element
-            camera_elem = ET.SubElement(worldbody, "camera")
-            camera_elem.set("name", camera_name)
-            camera_elem.set("pos", f"{position[0]} {position[1]} {position[2]}")
-            camera_elem.set("euler", f"{euler[0]} {euler[1]} {euler[2]}")
-            camera_elem.set("fovy", str(fovy))
-            camera_elem.set("resolution", f"{resolution[0]} {resolution[1]}")
+        # Create camera element
+        camera_elem = ET.SubElement(worldbody, "camera")
+        camera_elem.set("name", camera_name)
+        camera_elem.set("pos", f"{position[0]} {position[1]} {position[2]}")
+        camera_elem.set("euler", f"{euler[0]} {euler[1]} {euler[2]}")
+        camera_elem.set("fovy", str(fovy))
+        camera_elem.set("resolution", f"{resolution[0]} {resolution[1]}")
 
     def _create_scene_xml(self) -> str:
         """Create the MuJoCo XML string for the current scene configuration."""
