@@ -214,9 +214,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     f"Expected format: 'mimiclabs-lab2' through 'mimiclabs-lab8'"
                 ) from e
             if not 2 <= lab_num <= 8:
-                raise ValueError(
-                    f"MimicLabs lab number must be 2-8, got {lab_num} from {scene_bg_name}"
-                )
+                raise ValueError(f"MimicLabs lab number must be 2-8, got {lab_num}")
             self.task_config["_active_scene"] = {
                 "type": "mimiclabs",
                 "lab": lab_num,

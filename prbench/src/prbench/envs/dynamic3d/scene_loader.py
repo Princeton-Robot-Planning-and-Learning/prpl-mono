@@ -1,5 +1,6 @@
 """Scene loader utilities for loading different types of MuJoCo scene XMLs."""
 
+import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
@@ -190,8 +191,6 @@ class MimicLabsSceneLoader:
                 return
 
         # If no scene body found, log a warning (shouldn't happen with proper XMLs)
-        import logging
-
         logging.warning(
             "No <body name='scene'> found in MimicLabs XML. "
             "Position offset will not be applied."

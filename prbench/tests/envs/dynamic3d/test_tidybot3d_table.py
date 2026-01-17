@@ -2,10 +2,8 @@
 
 from pathlib import Path
 
-import numpy as np
 import pytest
 from gymnasium.wrappers import RecordVideo
-from relational_structs.spaces import ObjectCentricBoxSpace
 
 import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
@@ -168,7 +166,7 @@ def test_tidybot3d_table_mimiclabs_scene_position():
     )
 
     # Reset and get observation
-    obs, info = env.reset(seed=42)
+    obs, _ = env.reset(seed=42)
 
     # Verify observation is valid
     assert env.observation_space.contains(obs)
@@ -189,7 +187,7 @@ def test_tidybot3d_table_mimiclabs_scene_position():
 
     # Verify we can step in the environment
     action = env.action_space.sample()
-    obs2, reward, terminated, truncated, info = env.step(action)
+    obs2, reward, _, _, _ = env.step(action)
     assert env.observation_space.contains(obs2)
     assert isinstance(reward, float)
 
