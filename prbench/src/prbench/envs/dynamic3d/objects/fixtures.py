@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import xml.etree.ElementTree as ET
+from typing import Any, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -521,7 +522,9 @@ class Cupboard(MujocoFixture):
         )
 
         # Handle shelf_drawers - convert to list of lists of bools
-        shelf_drawers_raw = self.fixture_config.get("shelf_drawers", [])
+        shelf_drawers_raw: list[Any] = cast(
+            list[Any], self.fixture_config.get("shelf_drawers", [])
+        )
         self.shelf_drawers: list[list[bool]] = []
         if shelf_drawers_raw:
             for drawer_list in shelf_drawers_raw:  # type: ignore
@@ -792,10 +795,10 @@ class Cupboard(MujocoFixture):
 
         # Two perpendicular boxes at the ends (along y-axis)
         # Positioned 10% from each end, so total span is 80% of handle_length
-        x_offset = (
-            handle_length / 2 - handle_half_size
-        ) * 0.8  # 10% inset from each end
-        perp_half_depth = handle_depth / 2  # half length of perpendicular attachments
+        # 10% inset from each end
+        x_offset = (handle_length / 2 - handle_half_size) * 0.8
+        # half length of perpendicular attachments
+        perp_half_depth = handle_depth / 2
 
         for x_pos in [-x_offset, x_offset]:
             y_pos = perp_half_depth - handle_half_size
@@ -955,8 +958,8 @@ class Cupboard(MujocoFixture):
         # Position relative to drawer body center
         face_local_center_x = face_center_x - drawer_center_x
         face_local_center_y = drawer_half_depth + face_thickness_half
-
-        # Face geom height: covers drawer wall plus shelf thickness plus extends halfway into shelf above
+        # Face geom height: covers drawer wall plus shelf thickness plus extends
+        # halfway into shelf above
         face_height = wall_half_height + shelf_half_thickness + shelf_half_thickness / 2
         # Shift face position upward to extend into the shelf above
         face_z_pos = wall_pos_z - wall_half_t + shelf_half_thickness / 4
@@ -964,7 +967,10 @@ class Cupboard(MujocoFixture):
         face.set("name", f"{self.name}_drawer_{drawer_index}_face")
         face.set("type", "box")
         face.set("size", f"{face_half_length} {face_thickness_half} {face_height}")
-        face.set("pos", f"{face_local_center_x} {face_local_center_y} {face_z_pos}")
+        face.set(
+            "pos",
+            f"{face_local_center_x} {face_local_center_y} {face_z_pos}",
+        )
         face.set("rgba", "0.4 0.3 0.2 1")  # Slightly darker for visual distinction
 
         # Back geom (facing away, allows sliding)
@@ -983,7 +989,10 @@ class Cupboard(MujocoFixture):
         left.set("name", f"{self.name}_drawer_{drawer_index}_left")
         left.set("type", "box")
         left.set("size", f"{wall_half_t} {drawer_half_depth} {wall_half_height}")
-        left.set("pos", f"{-(drawer_half_length - 2*wall_half_t)} 0 {wall_pos_z}")
+        left.set(
+            "pos",
+            f"{-(drawer_half_length - 2*wall_half_t)} 0 {wall_pos_z}",
+        )
         left.set("rgba", "0.5 0.4 0.3 0.9")
 
         # Right geom (right side wall) - inset to avoid partition/panel collision
@@ -991,22 +1000,26 @@ class Cupboard(MujocoFixture):
         right.set("name", f"{self.name}_drawer_{drawer_index}_right")
         right.set("type", "box")
         right.set("size", f"{wall_half_t} {drawer_half_depth} {wall_half_height}")
-        right.set("pos", f"{drawer_half_length - 2*wall_half_t} 0 {wall_pos_z}")
+        right.set(
+            "pos",
+            f"{drawer_half_length - 2*wall_half_t} 0 {wall_pos_z}",
+        )
         right.set("rgba", "0.5 0.4 0.3 0.9")
 
         # Create handle body with 3 boxes (main + 2 perpendicular)
-        handle_length = (drawer_half_length - wall_half_t) * 0.4  # 40% of drawer width
-        handle_depth = face_thickness_half * 2  # total protrusion of handle body
+        # 40% of drawer width
+        handle_length = (drawer_half_length - wall_half_t) * 0.4
+        # total protrusion of handle body
+        handle_depth = face_thickness_half * 2
         handle_body = self._create_drawer_handle(handle_length, handle_depth)
 
         # Set handle body properties and position at center of face geom
-        # Face geom center is at (face_local_center_x, drawer_half_depth + face_thickness_half, face_z_pos)
         handle_body.set("name", f"{self.name}_drawer_{drawer_index}_handle")
         handle_body.set(
             "pos",
-            f"{face_local_center_x} {face_local_center_y + face_thickness_half} {face_z_pos}",
+            f"{face_local_center_x} {face_local_center_y + face_thickness_half} "
+            f"{face_z_pos}",
         )
-
         # Add handle body to drawer
         drawer_body.append(handle_body)
 
