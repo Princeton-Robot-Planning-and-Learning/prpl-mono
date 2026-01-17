@@ -19,6 +19,7 @@ MIMICLABS_SCENES_DIR = (
     / "models"
     / "assets"
     / "mimiclabs_scenes"
+    / "meshes"
 )
 
 
