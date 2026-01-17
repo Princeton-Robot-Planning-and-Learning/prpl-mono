@@ -2,6 +2,9 @@
     "robots": [
         "tidybot"
     ],
+    "scene": {
+        "type": "simple"
+    },
     "fixtures": {
         "table": {
             "table_1": {

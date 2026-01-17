@@ -2,6 +2,9 @@
     "robots": [
         "tidybot"
     ],
+    "scene": {
+        "type": "simple"
+    },
     "fixtures": {},
     "regions": {
         "ground_seesaw_region": {

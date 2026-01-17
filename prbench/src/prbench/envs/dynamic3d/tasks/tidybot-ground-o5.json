@@ -2,6 +2,9 @@
     "robots": [
         "tidybot"
     ],
+    "scene": {
+        "type": "simple"
+    },
     "fixtures": {},
     "regions": {
         "ground_1_object_init_region": {

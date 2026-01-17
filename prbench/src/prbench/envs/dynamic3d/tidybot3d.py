@@ -108,8 +108,19 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         if scene_bg is not None:
             self._apply_scene_bg(scene_bg)
 
+        # Ensure scene config exists (default to simple if not specified)
+        if "scene" not in self.task_config:
+            self.task_config["scene"] = {"type": "simple"}
+
         # Set camera names from config
         self.camera_names = config.camera_names.copy()
+
+        # Update camera names based on scene type
+        scene_config = self.task_config.get("scene", {})
+        if scene_config.get("type") == "mimiclabs":
+            # MimicLabs scenes define: frontview, birdview, agentview, sideview
+            self.camera_names = ["frontview", "birdview", "agentview", "sideview"]
+
         if "cameras" in self.task_config:
             self.camera_names.extend(list(self.task_config["cameras"].keys()))
 
@@ -147,6 +158,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     def _apply_scene_bg(self, scene_bg: str) -> None:
         """Apply scene background configuration to task_config.
 
+        This method overrides any scene configuration in the task JSON.
+        Camera names are updated centrally in __init__ based on the final
+        scene config.
+
         Args:
             scene_bg: Scene background identifier. Supports:
                 - "simple": Use default ground scene
@@ -171,13 +186,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     f"MimicLabs lab number must be 2-8, got {lab_num} from {scene_bg}"
                 )
             self.task_config["scene"] = {"type": "mimiclabs", "lab": lab_num}
-
-            # Update camera names to match MimicLabs scene cameras
-            # MimicLabs scenes define: frontview, birdview, agentview, sideview
-            # If current camera_names contains 'overview', replace with 'frontview'
-            # Replace overview with frontview (default camera in MimicLabs)
-            self.camera_names = ["frontview", "birdview", "agentview", "sideview"]
-
         else:
             raise ValueError(
                 f"Unknown scene_bg: {scene_bg}. "

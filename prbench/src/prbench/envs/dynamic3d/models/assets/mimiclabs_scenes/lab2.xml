@@ -4,12 +4,6 @@
     <texture file="textures/tile_grigia_caldera_porcelain_floor.png" type="2d" name="texplane"/>    
     <material name="floorplane" reflectance="0.0" shininess="0.0"
 	      specular="0.0" texrepeat="3 3" texture="texplane" texuniform="true"/>
-    <!-- ceramic table texture and material-->
-    <texture file="textures/seamless_wood_planks_floor.png" type="cube" name="tex-table"/>
-    <material name="table_texture" reflectance="0.0" shininess="0.0" specular="0.2" texrepeat="1 1" texture="tex-table" />
-    <!-- steel legs -->
-    <texture file="textures/seamless_wood_planks_floor.png" type="cube" name="tex-table-legs"/>
-    <material name="table_legs" reflectance="0.8" shininess="0.8" texrepeat="1 1" texture="tex-table-legs" />
     <!-- plaster walls -->
     <texture file="textures/smooth_light_gray_plaster.png" type="2d" name="tex-wall"/>
 
@@ -35,17 +29,6 @@
     <!-- Floor --> 
     <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="3 3 .125" type="plane"/>
 
-
-    <body name="table" pos="0 0 0.4">
-      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" group="0" name="table_collision" friction="1 0.005 0.0001"/>
-      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" conaffinity="0" contype="0" group="1" name="table_visual" material="table_texture"/>
-      <site pos="0 0 0.4" name="table_top" size="0.001 0.001 0.001" rgba="0 0 0 0"/>
-      <!-- Legs (visual only) -->
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg1_visual" material="table_legs"/>
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg2_visual" material="table_legs"/>
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg3_visual" material="table_legs"/>
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg4_visual" material="table_legs"/>
-    </body>
 
     <geom pos="-1.95 0.60 1.5" quat="0.7071068 0 0 -0.7071068" type="mesh" mesh="wall_decoration_vis" conaffinity="0" contype="0" group="1" name="wall_decoration" material="wall_decoration"/>
     <geom pos="-1.7 0.0 0" quat="0 0 0 1" type="mesh" mesh="living_room_vis" conaffinity="0" contype="0" group="1" name="living_room" material="living_room"/>

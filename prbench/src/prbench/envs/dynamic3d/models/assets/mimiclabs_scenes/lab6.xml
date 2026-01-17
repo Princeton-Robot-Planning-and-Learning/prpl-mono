@@ -14,12 +14,6 @@
     <!-- plaster walls -->
     <texture file="textures/robocasa_textures/wall1.png" type="2d" name="tex-wall"/>
     
-    <!-- ceramic table texture and material-->
-    <texture file="textures/tables/white_quartz_table.png" type="cube" name="tex-table"/>
-    <material name="table_texture" reflectance="0.0" shininess="0.0" specular="0.2" texrepeat="1 1" texture="tex-table" />
-    <!-- steel legs -->
-    <texture file="textures/martin_novak_wood_table.png" type="cube" name="tex-table-legs"/>
-    <material name="table_legs" reflectance="0.8" shininess="0.8" texrepeat="3 3" texture="tex-table-legs" />
     
 
 
@@ -97,16 +91,6 @@
     </body>
     <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false"/>
     <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="7.5 7.5 .125" type="plane"/>
-    <body name="table" pos="0 0 0.4">
-      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" group="0" name="table_collision" friction="1 0.005 0.0001"/>
-      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" conaffinity="0" contype="0" group="1" name="table_visual" material="table_texture"/>
-      <site pos="0 0 0.4" name="table_top" size="0.001 0.001 0.001" rgba="0 0 0 0"/>
-      <!-- Legs (visual only) -->
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg1_visual" material="table_legs"/>
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg2_visual" material="table_legs"/>
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg3_visual" material="table_legs"/>
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg4_visual" material="table_legs"/>
-    </body>
 
     <geom pos="0.5 1.6 1.5" quat="0.7071 0.7071 0 0" size="4.5 2.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_left_visual" material="walls_mat"/>
     <!-- <geom pos="0.5 -3 1.5" quat="0.7071 -0.7071 0 0" size="2.5 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_right_visual" material="walls_mat"/> -->
