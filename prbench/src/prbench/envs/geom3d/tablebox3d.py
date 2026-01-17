@@ -6,9 +6,11 @@ There may be other obstructing objects in the environment.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from typing import Type as TypingType
 
+import pybullet as p
 import numpy as np
 from pybullet_helpers.geometry import Pose, get_pose, set_pose
 from pybullet_helpers.utils import create_pybullet_block, create_pybullet_hollow_box
@@ -42,6 +44,7 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     table_pose: Pose = Pose((0.6, 0.0, 0.2))
     table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.2)
+    table_texture: Path = Path(__file__).parent / "assets" / "use_textures" / "light_wood_v3.png"
 
     # World bounds.
     x_lb: float = -1.5
@@ -223,6 +226,15 @@ class ObjectCentricTableBox3DEnv(
             self.config.table_rgba,
             half_extents=self.config.table_half_extents,
             physics_client_id=self.physics_client_id,
+        )
+        table_texture_id = p.loadTexture(
+            str(self.config.table_texture), self.physics_client_id
+        )
+        p.changeVisualShape(
+            self.table_id,
+            -1,
+            textureUniqueId=table_texture_id,
+            physicsClientId=self.physics_client_id,
         )
         set_pose(self.table_id, self.config.table_pose, self.physics_client_id)
 
