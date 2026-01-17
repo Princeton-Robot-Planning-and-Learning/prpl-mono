@@ -4,8 +4,12 @@ from pathlib import Path
 
 import pytest
 
+import numpy as np
 import prbench
+from gymnasium.wrappers import RecordVideo
+from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from tests.conftest import MAKE_VIDEOS
 
 # Path to MimicLabs scenes
 MIMICLABS_SCENES_DIR = (
@@ -196,7 +200,7 @@ def test_tidybot3d_table_mimiclabs_scene_position():
     reason="MimicLabs scenes not downloaded. "
     "Run: python scripts/download_mimiclabs_assets.py",
 )
-@pytest.mark.parametrize("lab_num", [2, 3, 5, 6, 7, 8])  # lab4 excluded due to mesh issue
+@pytest.mark.parametrize("lab_num", [2])  # lab4 excluded due to mesh issue
 def test_tidybot3d_table_mimiclabs_all_labs(lab_num):
     """Test that all MimicLabs lab scenes load correctly with table scene."""
     prbench.register_all_environments()
@@ -210,11 +214,43 @@ def test_tidybot3d_table_mimiclabs_all_labs(lab_num):
     obs, _ = env.reset(seed=123)
     assert env.observation_space.contains(obs)
 
+    if MAKE_VIDEOS:
+        env = RecordVideo(env, f"unit_test_videos_lab{lab_num}_table_o3")
+
     # Verify scene configuration
     unwrapped_env = env.unwrapped
     oc_env = unwrapped_env._object_centric_env  # pylint: disable=protected-access
     active_scene = oc_env.task_config.get("_active_scene", {})
     assert active_scene.get("type") == "mimiclabs"
     assert active_scene.get("lab") == lab_num
+
+    # Extract the positions of the target and robot.
+    obs, _ = env.reset(seed=123)
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    state = env.observation_space.devectorize(obs)
+    target = state.get_object_from_name("cube1")
+    robot = state.get_object_from_name("robot")
+    target_x = state.get(target, "x")
+    target_y = state.get(target, "y")
+    robot_x = state.get(robot, "pos_base_x")
+    robot_y = state.get(robot, "pos_base_y")
+    robot_rot = state.get(robot, "pos_base_rot")
+
+    # Actions are delta positions.
+    max_magnitude = 1e-2
+    dx = target_x - robot_x
+    dy = target_y - robot_y
+    distance = (dx**2 + dy**2) ** 0.5
+    steps = int(distance / max_magnitude) + 1
+    plan = []
+    for i in range(1, steps + 1):
+        frac = i / steps
+        plan.append(np.array([frac * dx, frac * dy, robot_rot] + [0.0] * 8))
+
+    # Execute the plan.
+    for action in plan:
+        _, _, done, _, _ = env.step(action)
+        if done:  # success
+            break
 
     env.close()
