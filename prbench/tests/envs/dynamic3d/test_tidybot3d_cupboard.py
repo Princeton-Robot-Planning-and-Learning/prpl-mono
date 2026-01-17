@@ -213,7 +213,9 @@ def test_tidybot3d_cupboard_mimiclabs_with_video():
 
     # Wrap with RecordVideo if making videos
     if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos_cupboard_o12_ConstrainedFitting_mimiclabs")
+        env = RecordVideo(
+            env, "unit_test_videos_cupboard_o12_ConstrainedFitting_mimiclabs"
+        )
 
     obs, _ = env.reset()
     # Take a few random steps to generate video frames

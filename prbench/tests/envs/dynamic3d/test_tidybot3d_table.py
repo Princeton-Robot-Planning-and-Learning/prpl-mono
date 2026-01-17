@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
-import pytest
-
 import numpy as np
-import prbench
+import pytest
 from gymnasium.wrappers import RecordVideo
 from relational_structs.spaces import ObjectCentricBoxSpace
+
+import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 from tests.conftest import MAKE_VIDEOS
 
@@ -227,7 +227,11 @@ def test_tidybot3d_table_mimiclabs_with_video():
     assert oc_env.num_objects == 20
 
     # Wrap with RecordVideo if making videos
-    env = RecordVideo(oc_env, "unit_test_videos_table_o20_SortClutteredBlocks_mimiclabs") if MAKE_VIDEOS else oc_env
+    env = (
+        RecordVideo(oc_env, "unit_test_videos_table_o20_SortClutteredBlocks_mimiclabs")
+        if MAKE_VIDEOS
+        else oc_env
+    )
 
     # Take a few random steps to generate video frames
     for _ in range(10):

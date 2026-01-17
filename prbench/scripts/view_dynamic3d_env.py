@@ -510,7 +510,9 @@ def main() -> None:
     try:
         if args.use_opencv:
             # OpenCV mode needs render_mode
-            env = prbench.make(args.env_id, render_mode="rgb_array", scene_bg=args.realistic_bg)
+            env = prbench.make(
+                args.env_id, render_mode="rgb_array", scene_bg=args.realistic_bg
+            )
         else:
             # MuJoCo viewer mode - no render_mode needed
             env = prbench.make(args.env_id, scene_bg=args.realistic_bg)
