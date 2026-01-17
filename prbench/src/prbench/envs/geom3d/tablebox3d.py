@@ -244,12 +244,13 @@ class ObjectCentricTableBox3DEnv(
             box_texture_id = p.loadTexture(
                 str(self.config.box_texture), self.physics_client_id
             )
-            p.changeVisualShape(
-                box_id,
-                -1,
-                textureUniqueId=box_texture_id,
-                physicsClientId=self.physics_client_id,
-            )
+            for box_link_id in range(p.getNumJoints(box_id, physicsClientId=self.physics_client_id)):
+                p.changeVisualShape(
+                    box_id,
+                    box_link_id,
+                    textureUniqueId=box_texture_id,
+                    physicsClientId=self.physics_client_id,
+                )
 
         # Create table.
         self.table_id = create_pybullet_block(
