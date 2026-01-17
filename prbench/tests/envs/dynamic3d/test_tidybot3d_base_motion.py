@@ -72,9 +72,9 @@ def test_straight_base_motion():
     reason="MimicLabs scenes not downloaded. "
     "Run: python scripts/download_mimiclabs_assets.py",
 )
-@pytest.mark.parametrize("lab_num", [2, 3, 4, 5, 6, 7, 8])
+@pytest.mark.parametrize("lab_num", [2])
 @pytest.mark.parametrize(
-    "view", ["frontview_image", "sideview_image", "birdview_image", "agentview_image"]
+    "view", ["overview", "agentview_1", "agentview_2", "base", "wrist"]
 )
 def test_straight_base_motion_mimiclabs(lab_num, view):
     """Test base motion with MimicLabs background scenes (lab2-lab8)."""

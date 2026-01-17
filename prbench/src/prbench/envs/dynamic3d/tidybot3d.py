@@ -294,7 +294,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         model_base_path = Path(__file__).parent / "models" / "stanford_tidybot"
 
         # Load scene XML using SceneLoader
-        scene_config = self.task_config.get("scene", {"type": "simple"})
+        # Use _active_scene which is set by _apply_scene_bg() based on scene_bg param
+        scene_config = self.task_config.get("_active_scene", {"type": "simple"})
         xml_string = SceneLoader.load_scene(scene_config, model_base_path)
 
         # Insert objects in scene
