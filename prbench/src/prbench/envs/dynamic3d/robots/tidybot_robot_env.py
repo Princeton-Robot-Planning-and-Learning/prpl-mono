@@ -318,17 +318,29 @@ class TidyBotRobotEnv(RobotEnv):
             self._arm_qvel_start : self._arm_qvel_end
         ].copy()
 
-    def _compute_arm_torques(self, target_positions: np.ndarray) -> np.ndarray:
+    def _compute_arm_torques(
+        self,
+        target_positions: np.ndarray,
+        target_velocities: np.ndarray | None = None,
+    ) -> np.ndarray:
         """Compute arm torques using PD control with gravity compensation.
 
-        Uses the formula:
-            torque = Kp * (target - current) - Kd * velocity + gravity_comp
+        Uses the formula (position-only mode, target_velocities=None):
+            torque = Kp * (target_pos - current_pos) - Kd * current_vel + gravity_comp
+
+        Or with velocity tracking (target_velocities provided):
+            torque = Kp * (target_pos - current_pos) +
+            Kd * (target_vel - current_vel) + gravity_comp
 
         Gravity compensation counteracts gravitational forces, allowing
-        accurate position tracking with just PD control.
+        accurate position tracking with just PD control. When target velocities
+        are provided, the controller tracks both position and velocity, which is
+        useful for dynamic manipulation tasks like tossing.
 
         Args:
             target_positions: Target joint positions for the 7 arm joints (radians).
+            target_velocities: Target joint velocities for the 7 arm joints (rad/s).
+                If None, uses damping mode (equivalent to target velocity of 0).
 
         Returns:
             Torques to apply to the arm joints (Nm), clipped to actuator limits.
@@ -336,9 +348,19 @@ class TidyBotRobotEnv(RobotEnv):
         current_positions = np.array(self.qpos["arm"])
         current_velocities = np.array(self.qvel["arm"])
 
-        # PD control: torque = Kp * position_error - Kd * velocity
+        # Position error term
         position_error = target_positions - current_positions
-        pd_torques = self.arm_kp * position_error - self.arm_kd * current_velocities
+
+        # Velocity term: damping mode vs tracking mode
+        if target_velocities is None:
+            # Damping mode: resist current velocity (equivalent to tracking vel=0)
+            velocity_term = -self.arm_kd * current_velocities
+        else:
+            # Velocity tracking mode: track desired velocity
+            velocity_error = target_velocities - current_velocities
+            velocity_term = self.arm_kd * velocity_error
+
+        pd_torques = self.arm_kp * position_error + velocity_term
 
         # Add gravity compensation (feedforward term)
         gravity_comp = self._get_gravity_compensation()
@@ -365,23 +387,47 @@ class TidyBotRobotEnv(RobotEnv):
         """Take a step in the environment.
 
         The action space is joint positions: base (3) + arm (7) + gripper (1).
+        Optionally, arm velocity targets can be provided for dynamic manipulation.
         - Base: Uses position control directly (MuJoCo position actuators)
-        - Arm: Converts target positions to torques using PD controller
+        - Arm: Converts target positions (and optionally velocities) to torques
         - Gripper: Uses tendon control with force range [0, 255]
 
         Args:
-            action: Action array with shape (11,):
-                - [0:3]: Base position targets (x, y, theta) or deltas
-                - [3:10]: Arm joint position targets (radians) or deltas
-                - [10]: Gripper command in [0, 1] (0=open, 1=closed)
+            action: Action array with shape (11,) or (18,):
+
+                Position-only mode (11,) - backward compatible:
+                    - [0:3]: Base position targets (x, y, theta) or deltas
+                    - [3:10]: Arm joint position targets (radians) or deltas
+                    - [10]: Gripper command in [0, 1] (0=open, 1=closed)
+
+                Position+Velocity mode (18,) - for dynamic manipulation:
+                    - [0:3]: Base position targets (x, y, theta) or deltas
+                    - [3:10]: Arm joint position targets (radians) or deltas
+                    - [10]: Gripper command in [0, 1] (0=open, 1=closed)
+                    - [11:18]: Arm joint velocity targets (rad/s)
 
         Returns:
             Tuple of (observation, reward, terminated, truncated, info).
         """
         action = action.copy()
 
-        # Map gripper action from [0, 1] to [0, 255].
-        gripper_action = action[-1] * 255.0
+        # Parse action based on length for backward compatibility
+        if len(action) == 11:
+            # Legacy position-only mode
+            target_velocities = None
+            gripper_action = action[10] * 255.0
+            position_action = action[:10]
+        elif len(action) == 18:
+            # Position+velocity mode for dynamic manipulation (e.g., tossing)
+            target_velocities = action[11:18]
+            gripper_action = action[10] * 255.0
+            position_action = action[:10]
+        else:
+            raise ValueError(
+                f"Action must have 11 (position-only) or 18 (position+velocity) "
+                f"elements, got {len(action)}"
+            )
+
         # Ctrl values > 127 apply closing force, < 127 apply opening force;
         # hence, 0 = fully open, 255 = fully closed, 127 = no force applied.
 
@@ -389,16 +435,16 @@ class TidyBotRobotEnv(RobotEnv):
         if self.act_delta:
             # Interpret action as delta, compute absolute targets
             curr_qpos = np.concatenate([self.qpos["base"], self.qpos["arm"]], -1)
-            target_positions = curr_qpos + action[:-1]
+            target_positions = curr_qpos + position_action
         else:
-            target_positions = action[:-1]
+            target_positions = position_action
 
         # Split into base and arm targets
         base_targets = target_positions[:3]
         arm_targets = target_positions[3:10]
 
-        # Compute arm torques using PD controller
-        arm_torques = self._compute_arm_torques(arm_targets)
+        # Compute arm torques using PD controller (with optional velocity tracking)
+        arm_torques = self._compute_arm_torques(arm_targets, target_velocities)
 
         # Build the control array:
         # - Base: position targets (position actuators)
