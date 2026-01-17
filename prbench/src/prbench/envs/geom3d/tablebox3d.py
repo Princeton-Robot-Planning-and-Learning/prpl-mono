@@ -57,12 +57,15 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Blocks.
     block_size: float = 0.05  # cubes (height = width = length)
-    block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
+    block_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
+    block_texture_1: Path = Path(__file__).parent / "assets" / "use_textures" / "blue-flower.png"
+    block_texture_2: Path = Path(__file__).parent / "assets" / "use_textures" / "yellow-plaster.png"
 
     # Box.
     box_half_extents: tuple[float, float, float] = (0.1, 0.15, 0.1)
-    box_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
+    box_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     box_wall_thickness: float = 0.01
+    box_texture: Path = Path(__file__).parent / "assets" / "use_textures" / "blue-flower.png"
 
     # Gripper.
     gripper_open_threshold: float = 0.01
@@ -142,6 +145,15 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
         return Pose((x, y, z))
 
+    def get_cube_texture(self, idx: int) -> Path:
+        """Get a texture to wrap a cube given the index."""
+        if idx == 0:
+            return self.block_texture_1
+        elif idx == 1:
+            return self.block_texture_2
+        else:
+            raise ValueError(f"Invalid index: {idx}")
+
 
 class TableBox3DObjectCentricState(Geom3DObjectCentricState):
     """A state in the TableBox3DEnv().
@@ -208,6 +220,15 @@ class ObjectCentricTableBox3DEnv(
                 physics_client_id=self.physics_client_id,
             )
             self._cubes[f"cube{idx}"] = cube_id
+            cube_texture_id = p.loadTexture(
+                str(self.config.get_cube_texture(idx)), self.physics_client_id
+            )
+            p.changeVisualShape(
+                cube_id,
+                -1,
+                textureUniqueId=cube_texture_id,
+                physicsClientId=self.physics_client_id,
+            )
 
         # Create the boxes, but their poses will be reset (with collision checking) in
         # the reset() method.
@@ -220,6 +241,15 @@ class ObjectCentricTableBox3DEnv(
                 physics_client_id=self.physics_client_id,
             )
             self._boxes[f"box{idx}"] = box_id
+            box_texture_id = p.loadTexture(
+                str(self.config.box_texture), self.physics_client_id
+            )
+            p.changeVisualShape(
+                box_id,
+                -1,
+                textureUniqueId=box_texture_id,
+                physicsClientId=self.physics_client_id,
+            )
 
         # Create table.
         self.table_id = create_pybullet_block(
