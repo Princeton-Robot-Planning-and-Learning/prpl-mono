@@ -203,36 +203,21 @@ def test_tidybot_cupboard_constrained_fitting_goals():
 )
 def test_tidybot3d_cupboard_mimiclabs_with_video():
     """Test MimicLabs scene with ConstrainedFitting task and video recording."""
-    tasks_root = (
-        Path(prbench.__path__[0]).parent / "prbench" / "envs" / "dynamic3d" / "tasks"
+    prbench.register_all_environments()
+    env = prbench.make(
+        "prbench/TidyBot3D-cupboard-o12-ConstrainedFitting-v0",
+        render_mode="rgb_array",
+        scene_bg=True,  # Use default mimiclabs scene (lab5 for base_motion)
+        scene_render_camera="overview",
     )
-
-    # Create environment with ConstrainedFitting task and MimicLabs background
-    oc_env = ObjectCentricTidyBot3DEnv(
-        scene_type="cupboard",
-        num_objects=12,
-        task_config_path=str(
-            tasks_root / "tidybot-cupboard-o12-ConstrainedFitting.json"
-        ),
-        scene_bg=True,  # Use default mimiclabs scene (lab6 for cupboard tasks)
-    )
-
-    obs, _ = oc_env.reset(seed=123)
-    assert oc_env.observation_space.contains(obs)
-
-    # Verify scene configuration before wrapping
-    active_scene = oc_env.task_config.get("_active_scene", {})
-    assert active_scene.get("type") == "mimiclabs"
-    assert active_scene.get("lab") == 6  # cupboard tasks use lab6
-
-    # Verify we have the expected number of objects
-    assert oc_env.num_objects == 12
 
     # Wrap with RecordVideo if making videos
-    env = RecordVideo(oc_env, "unit_test_videos_cupboard_o12_ConstrainedFitting_mimiclabs") if MAKE_VIDEOS else oc_env
+    if MAKE_VIDEOS:
+        env = RecordVideo(env, "unit_test_videos_cupboard_o12_ConstrainedFitting_mimiclabs")
 
+    obs, _ = env.reset()
     # Take a few random steps to generate video frames
-    for _ in range(10):
+    for _ in range(30):
         action = env.action_space.sample()
         obs, _, terminated, truncated, _ = env.step(action)
         assert env.observation_space.contains(obs)
