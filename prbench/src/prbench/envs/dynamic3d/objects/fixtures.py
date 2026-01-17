@@ -446,8 +446,13 @@ class Table(MujocoFixture):
 class Cupboard(MujocoFixture):
     """A cupboard fixture with multiple shelves."""
 
-    default_shelf_thickness: float = 0.02
+    default_panel_thickness: float = 0.01  # 1cm thick side and back panels
+    default_open_cupboard_leg_thickness: float = 0.03  # 3cm thick legs when open
+    default_shelf_thickness: float = 0.02  # 2cm thick shelves
     default_partition_thickness: float = 0.01  # 1cm thick partitions
+    default_drawer_wall_thickness: float = 0.003  # 3mm thick drawer walls
+    default_drawer_stiffness: float = 100.0  # Spring stiffness for drawer sliding
+    default_drawer_damping: float = 10.0  # Damping for smooth sliding
 
     def __init__(
         self,
@@ -501,11 +506,46 @@ class Cupboard(MujocoFixture):
         self.shelf_thickness: float = float(
             self.fixture_config.get("shelf_thickness", Cupboard.default_shelf_thickness)
         )
-        self.panel_thickness: float = 0.01  # Thickness of side and back panels
-        # Set leg thickness: thin when panels present, thicker when open
-        self.leg_thickness: float = (
-            self.panel_thickness if not self.side_and_back_open else 0.03
+        self.panel_thickness: float = float(
+            self.fixture_config.get("panel_thickness", Cupboard.default_panel_thickness)
         )
+        # Set leg thickness only when cupboard is open (has legs, not panels)
+        self.leg_thickness: float = (
+            float(
+                self.fixture_config.get(
+                    "leg_thickness", Cupboard.default_open_cupboard_leg_thickness
+                )
+            )
+            if self.side_and_back_open
+            else 0.0
+        )
+
+        # Handle shelf_drawers - convert to list of lists of bools
+        shelf_drawers_raw = self.fixture_config.get("shelf_drawers", [])
+        self.shelf_drawers: list[list[bool]] = []
+        if shelf_drawers_raw:
+            for drawer_list in shelf_drawers_raw:  # type: ignore
+                self.shelf_drawers.append(
+                    [bool(d) for d in drawer_list]  # type: ignore
+                )
+
+        # Drawer parameters
+        self.drawer_wall_thickness: float = float(
+            self.fixture_config.get(
+                "drawer_wall_thickness", Cupboard.default_drawer_wall_thickness
+            )
+        )
+        self.drawer_stiffness: float = float(
+            self.fixture_config.get(
+                "drawer_stiffness", Cupboard.default_drawer_stiffness
+            )
+        )
+        self.drawer_damping: float = float(
+            self.fixture_config.get("drawer_damping", Cupboard.default_drawer_damping)
+        )
+
+        # Max drawer slide distance (80% of shelf depth)
+        self.drawer_max_slide: float = self.cupboard_depth * 0.8
 
         # Calculate derived properties
         self.num_shelves: int = len(self.shelf_heights) + 1  # +1 for the top shelf
@@ -536,6 +576,22 @@ class Cupboard(MujocoFixture):
                         f"between -{self.cupboard_length/2} and "
                         f"{self.cupboard_length/2} "
                         f"(cupboard length is {self.cupboard_length})"
+                    )
+
+        # Validate shelf_drawers configuration if provided
+        if self.shelf_drawers:
+            if len(self.shelf_drawers) != len(self.shelf_heights):
+                raise ValueError(
+                    f"shelf_drawers must have {len(self.shelf_heights)} lists, "
+                    f"got {len(self.shelf_drawers)} (one list per shelf gap, "
+                    f"not including top shelf)"
+                )
+            for i, drawer_list in enumerate(self.shelf_drawers):
+                expected_len = len(self.shelf_partitions[i]) + 1
+                if len(drawer_list) != expected_len:
+                    raise ValueError(
+                        f"shelf_drawers[{i}] must have {expected_len} elements "
+                        f"(num_partitions + 1), got {len(drawer_list)}"
                     )
 
         # Precompute shelf z positions for efficiency
@@ -641,6 +697,321 @@ class Cupboard(MujocoFixture):
 
             self.region_bboxes[region_name] = region_bboxes
 
+    def _get_drawer_compartment_bounds(
+        self, shelf_index: int, compartment_index: int
+    ) -> tuple[float, float]:
+        """Get the x-bounds of a specific drawer compartment.
+
+        Args:
+            shelf_index: Index of the shelf (0-based)
+            compartment_index: Index of the compartment (0-based)
+
+        Returns:
+            Tuple of (x_min, x_max) in cupboard-relative coordinates
+        """
+        cupboard_half_length = self.cupboard_length / 2
+        partitions = self.shelf_partitions[shelf_index]
+
+        # Sort partitions for consistent ordering
+        sorted_partitions = sorted(partitions)
+
+        # Account for side panel thickness when panels are present
+        side_panel_extent = 0.0
+        if not self.side_and_back_open:
+            side_panel_extent = self.panel_thickness
+        else:
+            side_panel_extent = self.leg_thickness
+
+        # Partition half-thickness for computing compartment edges
+        partition_half_thickness = Cupboard.default_partition_thickness / 2
+
+        if compartment_index == 0:
+            # Leftmost compartment: start after left side panel
+            x_min = -cupboard_half_length + side_panel_extent
+            if sorted_partitions:
+                # End at the left edge of the first partition
+                x_max = sorted_partitions[0] - partition_half_thickness
+            else:
+                x_max = cupboard_half_length - side_panel_extent
+        elif compartment_index == len(sorted_partitions):
+            # Rightmost compartment: start at right edge of last partition, end before right side panel
+            x_min = sorted_partitions[-1] + partition_half_thickness
+            x_max = cupboard_half_length - side_panel_extent
+        else:
+            # Middle compartment: bounded by two partitions
+            x_min = sorted_partitions[compartment_index - 1] + partition_half_thickness
+            x_max = sorted_partitions[compartment_index] - partition_half_thickness
+
+        return x_min, x_max
+
+    def _create_drawer_handle(
+        self, handle_length: float, handle_depth: float
+    ) -> ET.Element:
+        """Create a handle body for a drawer.
+
+        The handle consists of 3 box geoms:
+        - One main box along the x-axis
+        - Two smaller boxes attached perpendicularly (along y-axis) at the ends,
+          positioned to span 80% of the handle length
+
+        The origin is at the center of the main box in x, and the perpendicular
+        boxes end at y=0 (extending from y=-handle_depth to y=0).
+
+        Example handle layout (top view):
+                        (x=0 ➡️, y=0 ⬇️) <-- Origin at center of main box
+                               ^
+                               |
+                               |
+                               .
+                ||                           ||  <-- Perpendicular attachments
+                ||                           ||
+                ||                           ||
+        =============================================== <-- Main horizontal handle
+        |<-------------- handle_length -------------->|
+
+        Args:
+            handle_length: Length of the main handle box (x-direction)
+            handle_depth: Depth of the perpendicular boxes (y-direction)
+
+        Returns:
+            ET.Element representing the handle body
+        """
+        handle_body = ET.Element("body")
+
+        handle_size = 0.006  # 6mm wide boxes for the handle
+        handle_half_size = handle_size / 2
+
+        # Main horizontal box (along x-axis)
+        main_box = ET.SubElement(handle_body, "geom")
+        main_box.set("type", "box")
+        main_box.set(
+            "size", f"{handle_length / 2} {handle_half_size} {handle_half_size}"
+        )
+        main_box.set("pos", f"0 {handle_depth - handle_half_size} 0")
+        main_box.set("rgba", "0.3 0.3 0.3 1")
+
+        # Two perpendicular boxes at the ends (along y-axis)
+        # Positioned 10% from each end, so total span is 80% of handle_length
+        x_offset = (
+            handle_length / 2 - handle_half_size
+        ) * 0.8  # 10% inset from each end
+        perp_half_depth = handle_depth / 2  # half length of perpendicular attachments
+
+        for x_pos in [-x_offset, x_offset]:
+            y_pos = perp_half_depth - handle_half_size
+            perp_box = ET.SubElement(handle_body, "geom")
+            perp_box.set("type", "box")
+            perp_box.set("size", f"{handle_half_size} {y_pos} {handle_half_size}")
+            perp_box.set("pos", f"{x_pos} {y_pos} 0")
+            perp_box.set("rgba", "0.3 0.3 0.3 1")
+
+        return handle_body
+
+    def _create_drawer_body(
+        self,
+        drawer_index: str,
+        shelf_z: float,
+        shelf_half_thickness: float,
+        shelf_height: float,
+        x_min: float,
+        x_max: float,
+        cupboard_half_depth: float,
+        compartment_index: int = 0,
+        num_compartments: int = 1,
+    ) -> ET.Element:
+        """Create a drawer body with 5 geoms (front, back, left, right, bottom).
+
+        Args:
+            drawer_index: Unique identifier for the drawer (e.g., "shelf1_comp0")
+            shelf_z: Z position of the shelf surface
+            shelf_half_thickness: Half thickness of the shelf
+            shelf_height: Height available for the drawer
+            x_min: Minimum x coordinate of the drawer compartment
+            x_max: Maximum x coordinate of the drawer compartment
+            cupboard_half_depth: Half depth of the cupboard
+            compartment_index: Index of this compartment (0-based)
+            num_compartments: Total number of compartments on this shelf
+
+        Returns:
+            ET.Element representing the drawer body
+        """
+        # Create drawer body
+        drawer_body = ET.Element("body")
+        drawer_body.set("name", f"{self.name}_drawer_{drawer_index}")
+
+        # x_min and x_max are the unadjusted compartment bounds (representing actual panel/partition extents)
+        # Drawer compartment dimensions
+        drawer_length = x_max - x_min
+        drawer_half_length = drawer_length / 2
+
+        # Adjust for side panel width (when panels present) or leg thickness (when open)
+        # This insets the drawable space from the compartment boundaries
+        # Use multiple of wall thickness for clearance
+        adjust_half_t = 4 * self.drawer_wall_thickness
+
+        x_min_adjusted = x_min + adjust_half_t
+        x_max_adjusted = x_max - adjust_half_t
+
+        # Create drawer walls using thin geoms
+        wall_t = self.drawer_wall_thickness
+        wall_half_t = wall_t / 2
+
+        # Compute clearances for left and right sides
+        # Using adjusted bounds (already inset by structural thickness)
+        # So we only need wall thickness clearance from the adjusted boundaries
+        left_clearance = wall_t
+        right_clearance = wall_t
+
+        # Adjust drawer center if left and right clearances are asymmetric
+        drawer_center_shift = (left_clearance - right_clearance) / 2
+        drawer_center_x = (x_min_adjusted + x_max_adjusted) / 2 + drawer_center_shift
+
+        drawer_length_adjusted = x_max_adjusted - x_min_adjusted
+        drawer_length_adjusted = (
+            drawer_length_adjusted - left_clearance - right_clearance
+        )
+        drawer_half_length = drawer_length_adjusted / 2
+
+        # Determine edge thickness based on cupboard configuration
+        # When open: edges have legs; when closed: edges have panels
+        edge_thickness = (
+            self.leg_thickness if self.side_and_back_open else self.panel_thickness
+        )
+
+        # Depth margin: inset from back panel/leg to keep drawer inside
+        # Use panel thickness for closed cupboard, leg thickness for open
+        depth_margin = edge_thickness
+        drawer_half_depth = cupboard_half_depth - depth_margin / 2
+
+        # Drawer position: centered in inset compartment, at shelf surface
+        # Adjust y position so front face is flush with shelf edge at cupboard_half_depth - depth_margin/2
+        drawer_y = depth_margin / 2
+        drawer_z = shelf_z + shelf_half_thickness + self.drawer_wall_thickness
+        drawer_body.set("pos", f"{drawer_center_x} {drawer_y} {drawer_z}")
+
+        # Create sliding joint inside the drawer body
+        joint = ET.SubElement(drawer_body, "joint")
+        joint.set("name", f"{self.name}_drawer_{drawer_index}_joint")
+        joint.set("type", "slide")
+        joint.set("axis", "0 1 0")  # Slide along Y axis (in/out)
+        joint.set("range", f"0 {self.drawer_max_slide}")
+        joint.set("damping", str(self.drawer_damping))
+
+        # Vertical clearance: reduce wall height to avoid collision with shelf above
+        vertical_clearance = 4 * wall_t
+        wall_height = shelf_height - vertical_clearance
+        wall_half_height = wall_height / 2
+        wall_pos_z = wall_half_t + wall_half_height  # Position above the bottom geom
+
+        # Bottom geom (closes bottom of drawer) - align flush with side walls
+        bottom = ET.SubElement(drawer_body, "geom")
+        bottom.set("name", f"{self.name}_drawer_{drawer_index}_bottom")
+        bottom.set("type", "box")
+        bottom.set(
+            "size",
+            f"{drawer_half_length - wall_half_t} {drawer_half_depth} {wall_half_t}",
+        )
+        bottom.set("pos", f"0 0 {wall_half_t/2}")
+        bottom.set("rgba", "0.6 0.5 0.4 0.8")
+
+        # Front geom (facing out towards user)
+        front = ET.SubElement(drawer_body, "geom")
+        front.set("name", f"{self.name}_drawer_{drawer_index}_front")
+        front.set("type", "box")
+        front.set(
+            "size",
+            f"{drawer_half_length - wall_half_t} {wall_half_t} {wall_half_height}",
+        )
+        front.set("pos", f"0 {drawer_half_depth - wall_half_t} {wall_pos_z}")
+        front.set("rgba", "0.5 0.4 0.3 0.9")
+
+        # Drawer face geom (spans full width accounting for partitions)
+        partition_thickness = Cupboard.default_partition_thickness
+
+        # Determine face left and right bounds
+        # At side panels/legs (edges): extend by the appropriate edge thickness
+        # At partitions (middle): extend by half partition thickness
+        if compartment_index == 0:
+            # Left side is at the edge, extend by edge thickness into it
+            face_left = x_min - edge_thickness
+        else:
+            # Left side is at a partition, extend half partition thickness into it
+            face_left = x_min - partition_thickness / 2
+
+        if compartment_index == num_compartments - 1:
+            # Right side is at the edge, extend by edge thickness into it
+            face_right = x_max + edge_thickness
+        else:
+            # Right side is at a partition, extend half partition thickness into it
+            face_right = x_max + partition_thickness / 2
+
+        # Calculate face dimensions
+        face_length = face_right - face_left
+        face_half_length = face_length / 2
+        face_center_x = (face_left + face_right) / 2
+
+        face_thickness_half = self.shelf_thickness / 2
+
+        # Position relative to drawer body center
+        face_local_center_x = face_center_x - drawer_center_x
+        face_local_center_y = drawer_half_depth + face_thickness_half
+
+        # Face geom height: covers drawer wall plus shelf thickness plus extends halfway into shelf above
+        face_height = wall_half_height + shelf_half_thickness + shelf_half_thickness / 2
+        # Shift face position upward to extend into the shelf above
+        face_z_pos = wall_pos_z - wall_half_t + shelf_half_thickness / 4
+        face = ET.SubElement(drawer_body, "geom")
+        face.set("name", f"{self.name}_drawer_{drawer_index}_face")
+        face.set("type", "box")
+        face.set("size", f"{face_half_length} {face_thickness_half} {face_height}")
+        face.set("pos", f"{face_local_center_x} {face_local_center_y} {face_z_pos}")
+        face.set("rgba", "0.4 0.3 0.2 1")  # Slightly darker for visual distinction
+
+        # Back geom (facing away, allows sliding)
+        back = ET.SubElement(drawer_body, "geom")
+        back.set("name", f"{self.name}_drawer_{drawer_index}_back")
+        back.set("type", "box")
+        back.set(
+            "size",
+            f"{drawer_half_length - wall_half_t} {wall_half_t} {wall_half_height}",
+        )
+        back.set("pos", f"0 {-(drawer_half_depth - wall_half_t)} {wall_pos_z}")
+        back.set("rgba", "0.5 0.4 0.3 0.9")
+
+        # Left geom (left side wall) - inset to avoid partition/panel collision
+        left = ET.SubElement(drawer_body, "geom")
+        left.set("name", f"{self.name}_drawer_{drawer_index}_left")
+        left.set("type", "box")
+        left.set("size", f"{wall_half_t} {drawer_half_depth} {wall_half_height}")
+        left.set("pos", f"{-(drawer_half_length - 2*wall_half_t)} 0 {wall_pos_z}")
+        left.set("rgba", "0.5 0.4 0.3 0.9")
+
+        # Right geom (right side wall) - inset to avoid partition/panel collision
+        right = ET.SubElement(drawer_body, "geom")
+        right.set("name", f"{self.name}_drawer_{drawer_index}_right")
+        right.set("type", "box")
+        right.set("size", f"{wall_half_t} {drawer_half_depth} {wall_half_height}")
+        right.set("pos", f"{drawer_half_length - 2*wall_half_t} 0 {wall_pos_z}")
+        right.set("rgba", "0.5 0.4 0.3 0.9")
+
+        # Create handle body with 3 boxes (main + 2 perpendicular)
+        handle_length = (drawer_half_length - wall_half_t) * 0.4  # 40% of drawer width
+        handle_depth = face_thickness_half * 2  # total protrusion of handle body
+        handle_body = self._create_drawer_handle(handle_length, handle_depth)
+
+        # Set handle body properties and position at center of face geom
+        # Face geom center is at (face_local_center_x, drawer_half_depth + face_thickness_half, face_z_pos)
+        handle_body.set("name", f"{self.name}_drawer_{drawer_index}_handle")
+        handle_body.set(
+            "pos",
+            f"{face_local_center_x} {face_local_center_y + face_thickness_half} {face_z_pos}",
+        )
+
+        # Add handle body to drawer
+        drawer_body.append(handle_body)
+
+        return drawer_body
+
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this cupboard.
 
@@ -673,26 +1044,27 @@ class Cupboard(MujocoFixture):
         leg_x_offset = cupboard_half_length - self.leg_thickness / 2
         leg_y_offset = cupboard_half_depth - self.leg_thickness / 2
 
-        # Create vertical legs at four corners
-        leg_positions = [
-            (f"{leg_x_offset} {leg_y_offset}", f"{self.name}_leg1"),
-            (f"{-leg_x_offset} {leg_y_offset}", f"{self.name}_leg2"),
-            (f"{leg_x_offset} {-leg_y_offset}", f"{self.name}_leg3"),
-            (f"{-leg_x_offset} {-leg_y_offset}", f"{self.name}_leg4"),
-        ]
+        # Create vertical legs at four corners (only when cupboard is open)
+        if self.side_and_back_open:
+            leg_positions = [
+                (f"{leg_x_offset} {leg_y_offset}", f"{self.name}_leg1"),
+                (f"{-leg_x_offset} {leg_y_offset}", f"{self.name}_leg2"),
+                (f"{leg_x_offset} {-leg_y_offset}", f"{self.name}_leg3"),
+                (f"{-leg_x_offset} {-leg_y_offset}", f"{self.name}_leg4"),
+            ]
 
-        for pos, name in leg_positions:
-            leg = ET.SubElement(cupboard_body, "geom")
-            leg.set("name", name)
-            leg.set("type", "box")
-            leg.set(
-                "size",
-                f"{self.leg_thickness/2} {self.leg_thickness/2} {leg_half_height}",
-            )
-            leg.set(
-                "pos", f"{pos.split()[0]} {pos.split()[1]} {leg_half_height}"
-            )  # Position leg center at half its height
-            leg.set("rgba", "0.6 0.4 0.2 1")  # Brown color for legs
+            for pos, name in leg_positions:
+                leg = ET.SubElement(cupboard_body, "geom")
+                leg.set("name", name)
+                leg.set("type", "box")
+                leg.set(
+                    "size",
+                    f"{self.leg_thickness/2} {self.leg_thickness/2} {leg_half_height}",
+                )
+                leg.set(
+                    "pos", f"{pos.split()[0]} {pos.split()[1]} {leg_half_height}"
+                )  # Position leg center at half its height
+                leg.set("rgba", "0.6 0.4 0.2 1")  # Brown color for legs
 
         # Calculate cumulative shelf positions
         current_z = shelf_half_thickness
@@ -743,6 +1115,35 @@ class Cupboard(MujocoFixture):
                     partition.set(
                         "rgba", "0.7 0.5 0.3 1"
                     )  # Slightly different color for partitions
+
+                # Create drawers for this shelf if configured
+                if self.shelf_drawers and i < len(self.shelf_drawers):
+                    drawer_list = self.shelf_drawers[i]
+                    num_compartments = len(drawer_list)
+
+                    for comp_idx in range(num_compartments):
+                        if drawer_list[comp_idx]:
+                            # Create drawer for this compartment
+                            x_min, x_max = self._get_drawer_compartment_bounds(
+                                i, comp_idx
+                            )
+                            drawer_index = f"s{i+1}c{comp_idx}"
+
+                            # Create drawer body (includes joint inside)
+                            drawer_body = self._create_drawer_body(
+                                drawer_index,
+                                shelf_z,
+                                shelf_half_thickness,
+                                shelf_height,
+                                x_min,
+                                x_max,
+                                cupboard_half_depth,
+                                compartment_index=comp_idx,
+                                num_compartments=num_compartments,
+                            )
+
+                            # Add drawer body to cupboard
+                            cupboard_body.append(drawer_body)
 
         # Create side and back panels if not open
         if not self.side_and_back_open:
