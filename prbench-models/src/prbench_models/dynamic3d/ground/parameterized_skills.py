@@ -514,6 +514,126 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         return dist < 6 * 1e-2
 
 
+class TossController(GroundParameterizedController[ObjectCentricState, Array]):
+    """Controller for motion planning the arm to reach a target conf.
+
+    The object parameters are:
+        robot: The robot itself.
+
+    The continuous parameters are:
+        joint1_target: float
+        joint2_target: float
+        ...
+        joint7_target: float
+
+    The controller uses motion planning in pybullet.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_state: ObjectCentricState | None = None
+        self._current_params: np.ndarray | None = None
+        self._current_arm_joint_plan: list[JointPositions] | None = None
+        self._pybullet_sim: PyBulletSim | None = None
+        self._largest_velocity: np.ndarray = np.zeros(7)
+        self._gripper_release_step: int = 15
+        self._step_idx: int = 0
+
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        # We can later implement sampling if it's helpful, but usually the user would
+        # want to specify the target arm conf themselves.
+        raise NotImplementedError
+
+    def reset(self, x: ObjectCentricState, params: Any) -> None:
+        # Initialize the PyBullet interface if this is the first time ever.
+        if self._pybullet_sim is None:
+            self._pybullet_sim = PyBulletSim(x)
+        # Update the current state and parameters.
+        self._last_state = x
+        assert isinstance(params, np.ndarray)
+        self._current_params = params.copy()
+        target_joints = self._current_params.tolist() + ([0.0] * 6)
+        # Reset PyBullet given the current state.
+        self._pybullet_sim.set_state(x)
+        # Run motion planning.
+        plan = run_motion_planning(
+            self._pybullet_sim.robot,
+            self._pybullet_sim.get_robot_joints(),
+            target_joints,
+            collision_bodies=self._pybullet_sim.get_collision_bodies(),
+            seed=0,  # use a constant seed to make this effectively deterministic
+            physics_client_id=self._pybullet_sim.physics_client_id,
+        )
+        assert plan is not None, "Motion planning failed"
+        self._current_arm_joint_plan = plan
+
+    def terminated(self) -> bool:
+        assert self._current_arm_joint_plan is not None
+        return self._robot_is_close_to_conf(self._current_arm_joint_plan[-1])
+
+    def step(self) -> Array:
+        assert self._current_arm_joint_plan is not None
+        while len(self._current_arm_joint_plan) > 1:
+            peek_conf = self._current_arm_joint_plan[0]
+            # Close enough, pop and continue.
+            if self._robot_is_close_to_conf(peek_conf):
+                self._current_arm_joint_plan.pop(0)
+            # Not close enough, stop popping.
+            break
+        robot_conf = self._get_current_robot_arm_conf()
+        gripper_pose = self._get_current_robot_gripper_pose()
+        next_conf = self._current_arm_joint_plan[0]
+        action = np.zeros(18, dtype=np.float32)
+        action[3:10] = np.subtract(next_conf, robot_conf)[:7]
+        if len(self._current_arm_joint_plan) < self._gripper_release_step:
+            action[10] = 0.0
+            action[11:18] = self._largest_velocity
+        else:
+            action[10] = gripper_pose
+            action[11:18] = 0.8 * action[3:10] * self._step_idx
+            self._largest_velocity = action[11:18].copy()
+
+        self._step_idx += 1
+        return action
+
+    def observe(self, x: ObjectCentricState) -> None:
+        self._last_state = x
+
+    def _get_current_robot_arm_conf(self) -> JointPositions:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        return [
+            x.get(robot_obj, "pos_arm_joint1"),
+            x.get(robot_obj, "pos_arm_joint2"),
+            x.get(robot_obj, "pos_arm_joint3"),
+            x.get(robot_obj, "pos_arm_joint4"),
+            x.get(robot_obj, "pos_arm_joint5"),
+            x.get(robot_obj, "pos_arm_joint6"),
+            x.get(robot_obj, "pos_arm_joint7"),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ]
+
+    def _get_current_robot_gripper_pose(self) -> float:
+        x = self._last_state
+        assert x is not None
+        robot_obj = x.get_object_from_name("robot")
+        if x.get(robot_obj, "pos_gripper") > 0.2:
+            return GRASP_CLOSE_THRESHOLD
+        return 0.0
+
+    def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
+        current_conf = self._get_current_robot_arm_conf()
+        assert self._pybullet_sim is not None
+        dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
+        return dist < 6 * 1e-2
+
+
 class MoveArmToEndEffectorController(
     GroundParameterizedController[ObjectCentricState, Array]
 ):
@@ -1432,6 +1552,14 @@ def create_lifted_controllers(
         )
     )
 
+    # Toss controller.
+    robot = Variable("?robot", MujocoTidyBotRobotObjectType)
+
+    LiftedTossController: LiftedParameterizedController = LiftedParameterizedController(
+        [robot],
+        TossController,
+    )
+
     # Move arm to end effector controller.
     robot = Variable("?robot", MujocoTidyBotRobotObjectType)
 
@@ -1502,6 +1630,7 @@ def create_lifted_controllers(
         "move_to_target": LiftedMoveToTargetController,
         "move_to_target_from_other_target": LiftedMoveToTargetFromOtherTargetController,
         "move_arm_to_conf": LiftedMoveArmToConfController,
+        "toss": LiftedTossController,
         "move_arm_to_end_effector": LiftedMoveArmToEndEffectorController,
         "close_gripper": LiftedCloseGripperController,
         "open_gripper": LiftedOpenGripperController,
