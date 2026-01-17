@@ -9,9 +9,9 @@
             "ranges": [
                 [
                     -0.05,
-                    -0.05,
+                    0.3,
                     0.05,
-                    0.05
+                    0.5
                 ]
             ],
             "yaw_ranges": [
@@ -25,10 +25,10 @@
             "target": "ground",
             "ranges": [
                 [
-                    0.2,
-                    -0.2,
-                    0.35,
-                    0.2
+                    -0.3,
+                    0.5,
+                    0.3,
+                    1.0
                 ]
             ],
             "yaw_ranges": [
@@ -105,7 +105,7 @@
             "resolution": [640, 480]
         }
     },
-    "init_state": [
+    "initial_state": [
         [
             "on",
             "seesaw_1",
