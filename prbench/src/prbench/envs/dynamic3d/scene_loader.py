@@ -69,10 +69,13 @@ class MimicLabsSceneLoader:
             scene_config: Scene configuration with keys:
                 - lab: lab number (2-8), or
                 - xml_path: relative path to scene XML
+                - position: (optional) [x, y, z] position offset for the scene
 
         Returns:
             XML string with absolute paths for assets
         """
+        # Get position offset (default to [0, 0, 0])
+        position = scene_config.get("position", [0, 0, 0])
         # Resolve mimiclabs assets directory
         # Path(__file__) is at: prbench/src/prbench/envs/dynamic3d/scene_loader.py
         # MimicLabs scenes are stored in models/assets/mimiclabs_scenes/
@@ -155,4 +158,68 @@ class MimicLabsSceneLoader:
             for asset_elem in assets_to_remove:
                 asset_section.remove(asset_elem)
 
+        # Apply position offset to the scene
+        MimicLabsSceneLoader._apply_position_offset(tree, position)
+
         return ET.tostring(tree, encoding="unicode")
+
+    @staticmethod
+    def _apply_position_offset(
+        tree: ET.Element, position: list[float]
+    ) -> None:
+        """Apply position offset to scene elements.
+
+        Args:
+            tree: Root XML element
+            position: [x, y, z] position offset
+        """
+        if position == [0, 0, 0]:
+            return  # No offset needed
+
+        worldbody = tree.find("worldbody")
+        if worldbody is None:
+            return
+
+        # Offset cameras by adjusting their pos attribute
+        for camera in worldbody.findall("camera"):
+            cam_pos = camera.get("pos", "0 0 0")
+            cam_pos_list = [float(x) for x in cam_pos.split()]
+            new_pos = [
+                cam_pos_list[0] + position[0],
+                cam_pos_list[1] + position[1],
+                cam_pos_list[2] + position[2],
+            ]
+            camera.set("pos", f"{new_pos[0]} {new_pos[1]} {new_pos[2]}")
+
+        # Offset lights by adjusting their pos attribute
+        for light in worldbody.findall("light"):
+            light_pos = light.get("pos", "0 0 0")
+            light_pos_list = [float(x) for x in light_pos.split()]
+            new_pos = [
+                light_pos_list[0] + position[0],
+                light_pos_list[1] + position[1],
+                light_pos_list[2] + position[2],
+            ]
+            light.set("pos", f"{new_pos[0]} {new_pos[1]} {new_pos[2]}")
+
+        # Offset geoms by adjusting their pos attribute
+        for geom in worldbody.findall("geom"):
+            geom_pos = geom.get("pos", "0 0 0")
+            geom_pos_list = [float(x) for x in geom_pos.split()]
+            new_pos = [
+                geom_pos_list[0] + position[0],
+                geom_pos_list[1] + position[1],
+                geom_pos_list[2] + position[2],
+            ]
+            geom.set("pos", f"{new_pos[0]} {new_pos[1]} {new_pos[2]}")
+
+        # Offset bodies by adjusting their pos attribute
+        for body in worldbody.findall("body"):
+            body_pos = body.get("pos", "0 0 0")
+            body_pos_list = [float(x) for x in body_pos.split()]
+            new_pos = [
+                body_pos_list[0] + position[0],
+                body_pos_list[1] + position[1],
+                body_pos_list[2] + position[2],
+            ]
+            body.set("pos", f"{new_pos[0]} {new_pos[1]} {new_pos[2]}")
