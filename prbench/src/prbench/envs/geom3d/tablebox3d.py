@@ -156,7 +156,7 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         """Get a texture to wrap a cube given the index."""
         if idx == 0:
             return self.block_texture_1
-        elif idx == 1:
+        if idx == 1:
             return self.block_texture_2
         raise ValueError(f"Invalid index: {idx}")
 
