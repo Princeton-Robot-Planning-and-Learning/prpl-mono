@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 from typing import Type as TypingType
 
-import pybullet as p
 import numpy as np
+import pybullet as p
 from pybullet_helpers.geometry import Pose, get_pose, set_pose
 from pybullet_helpers.utils import create_pybullet_block, create_pybullet_hollow_box
 from relational_structs import Object, ObjectCentricState
@@ -31,7 +31,6 @@ from prbench.envs.geom3d.utils import (
     Geom3DObjectCentricState,
     sample_collision_free_object_poses,
 )
-from prbench.envs.utils import PURPLE
 
 
 @dataclass(frozen=True)
@@ -42,9 +41,11 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Table.
     table_pose: Pose = Pose((0.6, 0.0, 0.2))
-    table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
+    table_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.2)
-    table_texture: Path = Path(__file__).parent / "assets" / "use_textures" / "light_wood_v3.png"
+    table_texture: Path = (
+        Path(__file__).parent / "assets" / "use_textures" / "light_wood_v3.png"
+    )
 
     # World bounds.
     x_lb: float = -1.5
@@ -58,14 +59,20 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     # Blocks.
     block_size: float = 0.05  # cubes (height = width = length)
     block_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
-    block_texture_1: Path = Path(__file__).parent / "assets" / "use_textures" / "blue-flower.png"
-    block_texture_2: Path = Path(__file__).parent / "assets" / "use_textures" / "yellow-plaster.png"
+    block_texture_1: Path = (
+        Path(__file__).parent / "assets" / "use_textures" / "yellow-grid.png"
+    )
+    block_texture_2: Path = (
+        Path(__file__).parent / "assets" / "use_textures" / "metal.png"
+    )
 
     # Box.
     box_half_extents: tuple[float, float, float] = (0.1, 0.15, 0.1)
     box_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     box_wall_thickness: float = 0.01
-    box_texture: Path = Path(__file__).parent / "assets" / "use_textures" / "blue-flower.png"
+    box_texture: Path = (
+        Path(__file__).parent / "assets" / "use_textures" / "blue-flower.png"
+    )
 
     # Gripper.
     gripper_open_threshold: float = 0.01
@@ -151,8 +158,7 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             return self.block_texture_1
         elif idx == 1:
             return self.block_texture_2
-        else:
-            raise ValueError(f"Invalid index: {idx}")
+        raise ValueError(f"Invalid index: {idx}")
 
 
 class TableBox3DObjectCentricState(Geom3DObjectCentricState):
@@ -244,7 +250,9 @@ class ObjectCentricTableBox3DEnv(
             box_texture_id = p.loadTexture(
                 str(self.config.box_texture), self.physics_client_id
             )
-            for box_link_id in range(p.getNumJoints(box_id, physicsClientId=self.physics_client_id)):
+            for box_link_id in range(
+                p.getNumJoints(box_id, physicsClientId=self.physics_client_id)
+            ):
                 p.changeVisualShape(
                     box_id,
                     box_link_id,

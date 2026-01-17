@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from typing import Type as TypingType
 
@@ -38,8 +39,11 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Table.
     table_pose: Pose = Pose((0.3, 0.0, -0.175))
-    table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
+    table_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.25)
+    table_texture: Path = (
+        Path(__file__).parent / "assets" / "use_textures" / "light_wood_v3.png"
+    )
 
     # Target region.
     target_region_half_extents_lb: tuple[float, float, float] = (0.02, 0.02, 0.005)
@@ -150,6 +154,15 @@ class ObjectCentricObstruction3DEnv(
             self.config.table_rgba,
             half_extents=self.config.table_half_extents,
             physics_client_id=self.physics_client_id,
+        )
+        table_texture_id = p.loadTexture(
+            str(self.config.table_texture), self.physics_client_id
+        )
+        p.changeVisualShape(
+            self.table_id,
+            -1,
+            textureUniqueId=table_texture_id,
+            physicsClientId=self.physics_client_id,
         )
         set_pose(self.table_id, self.config.table_pose, self.physics_client_id)
 
