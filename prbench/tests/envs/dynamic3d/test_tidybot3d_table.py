@@ -202,55 +202,39 @@ def test_tidybot3d_table_mimiclabs_scene_position():
     "Run: python scripts/download_mimiclabs_assets.py",
 )
 def test_tidybot3d_table_mimiclabs_with_video():
-    """Test that MimicLabs scene loads correctly with table scene and video."""
-    prbench.register_all_environments()
-
-    env = prbench.make(
-        "prbench/TidyBot3D-table-o3-v0",
-        render_mode="rgb_array",
-        scene_bg=True,  # Use default mimiclabs scene
+    """Test MimicLabs scene with SortClutteredBlocks task and video recording."""
+    tasks_root = (
+        Path(prbench.__path__[0]).parent / "prbench" / "envs" / "dynamic3d" / "tasks"
     )
 
-    obs, _ = env.reset(seed=123)
-    assert env.observation_space.contains(obs)
+    # Create environment with SortClutteredBlocks task and MimicLabs background
+    oc_env = ObjectCentricTidyBot3DEnv(
+        scene_type="table",
+        num_objects=20,
+        task_config_path=str(tasks_root / "tidybot-table-o20-SortClutteredBlocks.json"),
+        scene_bg=True,  # Use default mimiclabs scene (lab2 for table tasks)
+    )
 
-    if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos_table_o3_mimiclabs")
+    obs, _ = oc_env.reset(seed=123)
+    assert oc_env.observation_space.contains(obs)
 
-    # Verify scene configuration
-    unwrapped_env = env.unwrapped
-    oc_env = unwrapped_env._object_centric_env  # pylint: disable=protected-access
+    # Verify scene configuration before wrapping
     active_scene = oc_env.task_config.get("_active_scene", {})
     assert active_scene.get("type") == "mimiclabs"
     assert active_scene.get("lab") == 2  # table tasks use lab2
 
-    # Extract the positions of the target and robot.
-    obs, _ = env.reset(seed=123)
-    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
-    state = env.observation_space.devectorize(obs)
-    target = state.get_object_from_name("cube1")
-    robot = state.get_object_from_name("robot")
-    target_x = state.get(target, "x")
-    target_y = state.get(target, "y")
-    robot_x = state.get(robot, "pos_base_x")
-    robot_y = state.get(robot, "pos_base_y")
-    robot_rot = state.get(robot, "pos_base_rot")
+    # Verify we have the expected number of objects
+    assert oc_env.num_objects == 20
 
-    # Actions are delta positions.
-    max_magnitude = 1e-2
-    dx = target_x - robot_x
-    dy = target_y - robot_y
-    distance = (dx**2 + dy**2) ** 0.5
-    steps = int(distance / max_magnitude) + 1
-    plan = []
-    for i in range(1, steps + 1):
-        frac = i / steps
-        plan.append(np.array([frac * dx, frac * dy, robot_rot] + [0.0] * 8))
+    # Wrap with RecordVideo if making videos
+    env = RecordVideo(oc_env, "unit_test_videos_table_o20_SortClutteredBlocks_mimiclabs") if MAKE_VIDEOS else oc_env
 
-    # Execute the plan.
-    for action in plan:
-        _, _, done, _, _ = env.step(action)
-        if done:  # success
-            break
+    # Take a few random steps to generate video frames
+    for _ in range(10):
+        action = env.action_space.sample()
+        obs, _, terminated, truncated, _ = env.step(action)
+        assert env.observation_space.contains(obs)
+        if terminated or truncated:
+            obs, _ = env.reset(seed=456)
 
     env.close()

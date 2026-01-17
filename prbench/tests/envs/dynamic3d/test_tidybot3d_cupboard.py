@@ -2,8 +2,24 @@
 
 from pathlib import Path
 
+import pytest
+from gymnasium.wrappers import RecordVideo
+
 import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from tests.conftest import MAKE_VIDEOS
+
+# Path to MimicLabs scenes
+MIMICLABS_SCENES_DIR = (
+    Path(__file__).parent.parent.parent.parent
+    / "src"
+    / "prbench"
+    / "envs"
+    / "dynamic3d"
+    / "models"
+    / "assets"
+    / "mimiclabs_scenes"
+)
 
 
 def test_tidybot3d_cupboard_observation_space():
@@ -176,5 +192,51 @@ def test_tidybot_cupboard_constrained_fitting_goals():
     assert (
         env._check_goals()  # pylint: disable=protected-access
     ), "Goals should be satisfied after placing objects in goal regions"
+
+    env.close()
+
+
+@pytest.mark.skipif(
+    not MIMICLABS_SCENES_DIR.exists(),
+    reason="MimicLabs scenes not downloaded. "
+    "Run: python scripts/download_mimiclabs_assets.py",
+)
+def test_tidybot3d_cupboard_mimiclabs_with_video():
+    """Test MimicLabs scene with ConstrainedFitting task and video recording."""
+    tasks_root = (
+        Path(prbench.__path__[0]).parent / "prbench" / "envs" / "dynamic3d" / "tasks"
+    )
+
+    # Create environment with ConstrainedFitting task and MimicLabs background
+    oc_env = ObjectCentricTidyBot3DEnv(
+        scene_type="cupboard",
+        num_objects=12,
+        task_config_path=str(
+            tasks_root / "tidybot-cupboard-o12-ConstrainedFitting.json"
+        ),
+        scene_bg=True,  # Use default mimiclabs scene (lab6 for cupboard tasks)
+    )
+
+    obs, _ = oc_env.reset(seed=123)
+    assert oc_env.observation_space.contains(obs)
+
+    # Verify scene configuration before wrapping
+    active_scene = oc_env.task_config.get("_active_scene", {})
+    assert active_scene.get("type") == "mimiclabs"
+    assert active_scene.get("lab") == 6  # cupboard tasks use lab6
+
+    # Verify we have the expected number of objects
+    assert oc_env.num_objects == 12
+
+    # Wrap with RecordVideo if making videos
+    env = RecordVideo(oc_env, "unit_test_videos_cupboard_o12_ConstrainedFitting_mimiclabs") if MAKE_VIDEOS else oc_env
+
+    # Take a few random steps to generate video frames
+    for _ in range(10):
+        action = env.action_space.sample()
+        obs, _, terminated, truncated, _ = env.step(action)
+        assert env.observation_space.contains(obs)
+        if terminated or truncated:
+            obs, _ = env.reset(seed=456)
 
     env.close()
