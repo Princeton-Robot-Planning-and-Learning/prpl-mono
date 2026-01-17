@@ -42,11 +42,12 @@
     "objects": {
         "generated_seesaw": {
             "seesaw_1": {
-                "beam_length": 0.4,
-                "beam_width": 0.06,
-                "beam_thickness": 0.008,
-                "pivot_height": 0.035,
-                "pivot_width": 0.03,
+                "beam_length": 0.36,
+                "beam_width": 0.07,
+                "beam_thickness": 0.01,
+                "beam_clearance": 0.0025,
+                "pivot_height": 0.04,
+                "pivot_width": 0.035,
                 "beam_rgba": [
                     0.6,
                     0.4,
@@ -59,9 +60,25 @@
                     0.3,
                     1
                 ],
-                "beam_mass": 0.08,
-                "pivot_mass": 0.15,
-                "damping": 0.005
+                "beam_mass": 0.1,
+                "pivot_mass": 0.18,
+                "damping": 0.02,
+                "hinge_frictionloss": 0.03,
+                "hinge_stiffness": 1.2,
+                "hinge_range": [
+                    -0.7,
+                    0.7
+                ],
+                "beam_friction": [
+                    1.8,
+                    0.025,
+                    0.002
+                ],
+                "pivot_friction": [
+                    1.5,
+                    0.025,
+                    0.002
+                ]
             }
         },
         "cube": {
