@@ -332,44 +332,74 @@ class GroundPlaceController(BasePlaceController):
         if self._current_plan is None:
             self._sim.set_state(self._current_state)
 
-            target_pose = self._current_state.get_object_pose(self.objects[2].name)
+            # Get the grasp transform to compute EE pose from desired object pose.
+            grasped_object_transform = (
+                self._sim._grasped_object_transform  # pylint: disable=protected-access
+            )
+            assert grasped_object_transform is not None
+
+            # Compute the desired object placement pose (where the held object
+            # should end up). The object should be placed upright.
+            target_surface_pose = self._current_state.get_object_pose(
+                self.objects[2].name
+            )
             if "box" in self.objects[1].name and "table" in self.objects[2].name:
-                self._target_place_pose_world = Pose.from_rpy(
+                # Place box on table: box center should be at table surface
+                # + box bottom thickness + half box height.
+                desired_object_z = (
+                    target_surface_pose.position[2]
+                    + self._sim.config.table_half_extents[2]
+                    + self._sim.config.box_wall_thickness
+                    + self._sim.config.box_half_extents[2]
+                )
+                desired_object_pose = Pose(
                     (
-                        target_pose.position[0] + self._current_params[0],
-                        target_pose.position[1] + self._current_params[1],
-                        target_pose.position[2]
-                        + self._sim.config.table_half_extents[2]
-                        + self._sim.config.box_wall_thickness
-                        + self._sim.config.box_half_extents[2]
-                        + 0.03,
+                        target_surface_pose.position[0] + self._current_params[0],
+                        target_surface_pose.position[1] + self._current_params[1],
+                        desired_object_z,
                     ),
-                    (np.pi, 0, np.pi / 2),
+                    (0, 0, 0, 1),  # Upright (identity quaternion, xyzw format)
                 )
             elif "cube" in self.objects[1].name and "table" in self.objects[2].name:
-                self._target_place_pose_world = Pose.from_rpy(
+                # Place cube on table: cube center at table surface + half cube size.
+                desired_object_z = (
+                    target_surface_pose.position[2]
+                    + self._sim.config.table_half_extents[2]
+                    + self._sim.config.block_size / 2
+                )
+                desired_object_pose = Pose(
                     (
-                        target_pose.position[0] + self._current_params[0],
-                        target_pose.position[1] + self._current_params[1],
-                        target_pose.position[2]
-                        + self._sim.config.table_half_extents[2]
-                        + self._sim.config.block_size / 2
-                        + 0.025,
+                        target_surface_pose.position[0] + self._current_params[0],
+                        target_surface_pose.position[1] + self._current_params[1],
+                        desired_object_z,
                     ),
-                    (np.pi, 0, np.pi / 2),
+                    (0, 0, 0, 1),  # Upright (identity quaternion, xyzw format)
                 )
             elif "cube" in self.objects[1].name and "box" in self.objects[2].name:
-                self._target_place_pose_world = Pose.from_rpy(
+                # Place cube inside box: cube center at box bottom + half cube size.
+                # The x,y are relative to the box position.
+                desired_object_z = (
+                    self._sim.config.box_wall_thickness
+                    + self._sim.config.block_size / 2
+                )
+                desired_object_pose = Pose(
                     (
-                        target_pose.position[0] + self._current_params[0],
-                        target_pose.position[1] + self._current_params[1],
-                        self._sim.config.box_wall_thickness
-                        + self._sim.config.block_size / 2,
+                        target_surface_pose.position[0] + self._current_params[0],
+                        target_surface_pose.position[1] + self._current_params[1],
+                        desired_object_z,
                     ),
-                    (np.pi, 0, np.pi / 2),
+                    (0, 0, 0, 1),  # Upright (identity quaternion, xyzw format)
                 )
             else:
                 raise ValueError("Invalid target object")
+
+            # Compute EE pose from desired object pose using the grasp transform.
+            # object_pose = ee_pose * grasped_object_transform
+            # => ee_pose = object_pose * grasped_object_transform.invert()
+            self._target_place_pose_world = multiply_poses(
+                desired_object_pose, grasped_object_transform.invert()
+            )
+
             distance = 0.65
             pre_place_height = 0.03
 
@@ -381,7 +411,7 @@ class GroundPlaceController(BasePlaceController):
                 ),
                 self._target_place_pose_world.orientation,
             )
-            target_pose_temp_se2 = target_pose.to_se2()
+            target_pose_temp_se2 = target_surface_pose.to_se2()
             self._target_place_pose_se2 = SE2Pose(
                 target_pose_temp_se2.x + self._current_params[0],
                 target_pose_temp_se2.y + self._current_params[1],
@@ -394,9 +424,6 @@ class GroundPlaceController(BasePlaceController):
             # Run base motion planning to the target pose.
             grasped_object_id = (
                 self._sim._grasped_object_id  # pylint: disable=protected-access
-            )
-            grasped_object_transform = (
-                self._sim._grasped_object_transform  # pylint: disable=protected-access
             )
             all_collision_ids = (
                 self._sim._get_collision_object_ids()  # pylint: disable=protected-access

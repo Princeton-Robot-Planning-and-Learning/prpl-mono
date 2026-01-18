@@ -316,27 +316,57 @@ class GroundPlaceController(BasePlaceController):
         if self._current_plan is None:
             self._sim.set_state(self._current_state)
 
-            target_pose = self._current_state.get_object_pose(self.objects[2].name)
+            # Get the grasp transform to compute EE pose from desired object pose.
+            grasped_object_id = (
+                self._sim._grasped_object_id  # pylint: disable=protected-access
+            )
+            grasped_object_transform = (
+                self._sim._grasped_object_transform  # pylint: disable=protected-access
+            )
+            assert grasped_object_transform is not None
+
+            # Compute the desired object placement pose.
+            target_surface_pose = self._current_state.get_object_pose(
+                self.objects[2].name
+            )
+            desired_object_z = (
+                (self._sim.config.shelf_spacing + self._sim.config.shelf_height) * 2
+                + self._sim.config.shelf_height / 2
+                + self._sim.config.block_half_extents[0]
+            )
+            desired_object_pose = Pose(
+                (
+                    target_surface_pose.position[0] + self._current_params[0],
+                    target_surface_pose.position[1] - 0.05 + self._current_params[1],
+                    desired_object_z,
+                ),
+                (0, 0, 0, 1),
+            )
+
+            # Compute EE Z from desired object pose using the grasp transform,
+            # but keep the hardcoded orientation for the shelf approach.
+            ee_pose_from_grasp = multiply_poses(
+                desired_object_pose, grasped_object_transform.invert()
+            )
             self._target_place_pose_world = Pose.from_rpy(
                 (
-                    target_pose.position[0] + self._current_params[0],
-                    target_pose.position[1] - 0.05 + self._current_params[1],
-                    self._sim.config.shelf_spacing * 2
-                    + self._sim.config.shelf_height / 2 * 2
-                    + self._sim.config.block_half_extents[0]
-                    + 0.035,
+                    target_surface_pose.position[0] + self._current_params[0],
+                    target_surface_pose.position[1] - 0.05 + self._current_params[1],
+                    ee_pose_from_grasp.position[2] + 1e-3,
                 ),
                 (-np.pi / 2, np.pi, 0),
             )
+
+            pre_place_height = 0.02
             self._pre_place_pose_world = Pose(
                 (
                     self._target_place_pose_world.position[0],
                     self._target_place_pose_world.position[1] - 0.1,
-                    self._target_place_pose_world.position[2] + 0.02,
+                    self._target_place_pose_world.position[2] + pre_place_height,
                 ),
                 self._target_place_pose_world.orientation,
             )
-            target_pose_temp_se2 = target_pose.to_se2()
+            target_pose_temp_se2 = target_surface_pose.to_se2()
             self._target_place_pose_se2 = SE2Pose(
                 target_pose_temp_se2.x + self._current_params[0],
                 target_pose_temp_se2.y + self._current_params[1],
@@ -344,13 +374,6 @@ class GroundPlaceController(BasePlaceController):
             )
             target_base_pose = get_target_robot_pose_from_parameters(
                 self._target_place_pose_se2, 0.8, np.pi / 2
-            )
-
-            grasped_object_id = (
-                self._sim._grasped_object_id  # pylint: disable=protected-access
-            )
-            grasped_object_transform = (
-                self._sim._grasped_object_transform  # pylint: disable=protected-access
             )
             all_collision_ids = (
                 self._sim._get_collision_object_ids()  # pylint: disable=protected-access
