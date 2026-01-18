@@ -21,7 +21,9 @@ from tests.conftest import MAKE_VIDEOS
 @pytest.fixture(scope="module")
 def env():
     """Create a shared environment for all tests in this module."""
-    environment = BaseMotion3DEnv(render_mode="rgb_array", use_gui=False)
+    environment = BaseMotion3DEnv(
+        render_mode="rgb_array", use_gui=False, realistic_bg=False
+    )
     if MAKE_VIDEOS:
         environment = RecordVideo(environment, "unit_test_videos")
     yield environment
@@ -59,7 +61,7 @@ def test_motion_planning_in_base_motion3d_env(
     obs = BaseMotion3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricBaseMotion3DEnv(config=config)
+    sim = ObjectCentricBaseMotion3DEnv(config=config, realistic_bg=False)
 
     base_plan = run_single_arm_mobile_base_motion_planning(
         sim.robot,

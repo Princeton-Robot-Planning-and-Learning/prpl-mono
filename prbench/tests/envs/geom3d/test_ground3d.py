@@ -24,7 +24,9 @@ from tests.conftest import MAKE_VIDEOS
 @pytest.fixture(scope="module")
 def env():
     """Create a shared environment for all tests in this module."""
-    environment = Ground3DEnv(num_cubes=2, render_mode="rgb_array", use_gui=False)
+    environment = Ground3DEnv(
+        num_cubes=2, render_mode="rgb_array", use_gui=False, realistic_bg=False
+    )
     if MAKE_VIDEOS:
         environment = RecordVideo(environment, "unit_test_videos")
     yield environment
@@ -61,7 +63,7 @@ def test_motion_planning_in_ground3d_env(env):  # pylint: disable=redefined-oute
     obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricGround3DEnv(config=config)
+    sim = ObjectCentricGround3DEnv(config=config, realistic_bg=False)
     sim.set_state(obs)
 
     # For this unit test, make sure that the cubes are collision bodies.
@@ -122,7 +124,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricGround3DEnv(num_cubes=2, config=config)
+    sim = ObjectCentricGround3DEnv(num_cubes=2, config=config, realistic_bg=False)
     sim.set_state(obs)
 
     if MAKE_VIDEOS:

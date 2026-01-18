@@ -27,7 +27,11 @@ from tests.conftest import MAKE_VIDEOS
 def env():
     """Create a shared environment for all tests in this module."""
     environment = TableBox3DEnv(
-        num_cubes=2, num_boxes=1, use_gui=False, render_mode="rgb_array"
+        num_cubes=2,
+        num_boxes=1,
+        use_gui=False,
+        render_mode="rgb_array",
+        realistic_bg=False,
     )
     if MAKE_VIDEOS:
         environment = RecordVideo(environment, "unit_test_videos")
@@ -78,7 +82,9 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricTableBox3DEnv(num_cubes=2, num_boxes=1, config=config)
+    sim = ObjectCentricTableBox3DEnv(
+        num_cubes=2, num_boxes=1, config=config, realistic_bg=False
+    )
     sim.set_state(obs)
 
     if MAKE_VIDEOS:
