@@ -170,12 +170,26 @@ class Geom3DRobotActionSpace(RobotActionSpace):
         super().__init__(low, high)
 
     def create_markdown_description(self) -> str:
-        """Create a human-readable markdown description of this space."""
-        return """An action space for a 7 DOF robot that can open and close its gripper.
+        """Create a markdown description with a table of action space entries."""
+        return """An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+Actions are bounded relative base position, rotation, and joint positions, and open / close.
 
-    The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
+| **Index** | **Description** |
+| --- | --- |
+| 0 | delta base x |
+| 1 | delta base y |
+| 2 | delta base rotation |
+| 3 | delta joint 1 |
+| 4 | delta joint 2 |
+| 5 | delta joint 3 |
+| 6 | delta joint 4 |
+| 7 | delta joint 5 |
+| 8 | delta joint 6 |
+| 9 | delta joint 7 |
+| 10 | gripper open/close |
+
+The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
 """
 
 
