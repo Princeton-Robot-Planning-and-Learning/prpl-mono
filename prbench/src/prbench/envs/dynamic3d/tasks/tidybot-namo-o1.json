@@ -1,0 +1,139 @@
+{
+    "robots": [
+        "tidybot"
+    ],
+    "scene": {
+        "simple": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab5": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        }
+    },
+    "fixtures": {},
+    "regions": {
+        "ground_goal_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.8,
+                    -0.2,
+                    1.2,
+                    0.2
+                ]
+            ],
+            "rgba": [
+                0,
+                1,
+                0,
+                0.3
+            ]
+        },
+        "ground_obstacle_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.45,
+                    -0.05,
+                    0.55,
+                    0.05
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        }
+    },
+    "objects": {
+        "cube": {
+            "obstacle_block": {
+                "size": 0.06,
+                "rgba": [
+                    0.7,
+                    0.3,
+                    0.1,
+                    1
+                ],
+                "mass": 2.0
+            }
+        }
+    },
+    "cameras": {
+        "agentview_1": {
+            "position": [
+                1,
+                1,
+                2
+            ],
+            "lookat": [
+                0.5,
+                0,
+                0
+            ],
+            "fovy": 45,
+            "resolution": [
+                640,
+                480
+            ]
+        },
+        "agentview_2": {
+            "position": [
+                1,
+                -1,
+                2
+            ],
+            "lookat": [
+                0.5,
+                0,
+                0
+            ],
+            "fovy": 45,
+            "resolution": [
+                640,
+                480
+            ]
+        },
+        "topdown": {
+            "position": [
+                0.5,
+                0,
+                2.5
+            ],
+            "lookat": [
+                0.5,
+                0,
+                0
+            ],
+            "fovy": 60,
+            "resolution": [
+                640,
+                480
+            ]
+        }
+    },
+    "initial_state": [
+        [
+            "on",
+            "obstacle_block",
+            "ground_obstacle_init_region"
+        ]
+    ],
+    "goal_state": [
+        [
+            "on",
+            "obstacle_block",
+            "ground_goal_region"
+        ]
+    ]
+}
