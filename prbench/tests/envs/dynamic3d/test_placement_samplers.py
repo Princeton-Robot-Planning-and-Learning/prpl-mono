@@ -303,10 +303,9 @@ def test_invalid_region_format():
             "yaw_ranges": None,
         }
     }
-    ground = MujocoGround(regions=regions)
 
     with pytest.raises((ValueError, IndexError)):
-        ground.sample_pose_in_region("test_region", np_random)
+        MujocoGround(regions=regions)
 
 
 def test_invalid_x_bounds():
