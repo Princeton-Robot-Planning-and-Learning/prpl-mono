@@ -16,7 +16,7 @@ This environment has only one variant.
 ![initial state GIF](assets/initial_state_gifs/BaseMotion3D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/BaseMotion3D/BaseMotion3D_1768757778.gif)
+![demo GIF](assets/demo_gifs/BaseMotion3D/BaseMotion3D_1768756176.gif)
 
 **Demo Stats**: Total Reward: -10.00, Success: Yes, Steps: 10
 
@@ -71,7 +71,7 @@ The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change
 
 
 ## Rewards
-The reward is a small negative reward (-0.01) per timestep.
+The reward is -1 per timestep to encourage reaching the goal quickly.
 
 ## References
-This is a very common kind of environment.
+This is a very common kind of environment. The background is adapted from the [Replica dataset](https://arxiv.org/abs/1906.05797) (Straub et al., 2019).

@@ -197,4 +197,5 @@ class BaseMotion3DEnv(ConstantObjectPRBenchEnv):
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
-        return """This is a very common kind of environment."""
+        # pylint: disable=line-too-long
+        return """This is a very common kind of environment. The background is adapted from the [Replica dataset](https://arxiv.org/abs/1906.05797) (Straub et al., 2019)."""
