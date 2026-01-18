@@ -200,7 +200,10 @@ def test_tidybot_cupboard_constrained_fitting_goals():
 
 
 def test_cupboard_region_site_creation_and_placement():
-    """Test Cupboard construction with regions: verify site creation, placement, and sizing."""
+    """Test Cupboard construction with regions.
+
+    Verify site creation, placement, and sizing.
+    """
     # Create cupboard fixture config with multiple shelves, partitions, and drawers
     cupboard_config = {
         "length": 0.6,
@@ -355,7 +358,10 @@ def test_cupboard_region_site_creation_and_placement():
             # Parent should be the main cupboard body
             assert (
                 parent_name == cupboard.name
-            ), f"Site {site_name} should be in cupboard body {cupboard.name}, but parent is {parent_name}"
+            ), (
+                f"Site {site_name} should be in cupboard body {cupboard.name}, "
+                f"but parent is {parent_name}"
+            )
 
         # Verify site position and size match the specified ranges
         region_range = regions_config[region_name]["ranges"][0]
@@ -394,7 +400,8 @@ def test_cupboard_region_site_creation_and_placement():
             f"expected {expected_size_y}, got {size_y}"
         )
 
-        # Position depends on whether site is in drawer (partition-relative) or cupboard (absolute)
+        # Position depends on whether site is in drawer (partition-relative)
+        # or cupboard (absolute)
         if should_have_drawer:
             # For drawer sites: position should be at the center of the region ranges
             # in the drawer's local frame (centered at the partition), with Z at the
@@ -409,7 +416,7 @@ def test_cupboard_region_site_creation_and_placement():
             )  # Center of drawer height (0 to shelf_height)
         else:
             # For cupboard sites: position is absolute (in cupboard frame)
-            # We need to know the partition center to verify, but since we only have ranges,
+            # We need to know the partition center to verify, but since we only
             # we just verify that the site spans the correct range width
             # Position verification is implicit in the size check and parent check
             expected_center_x = site_x  # Accept whatever position is set

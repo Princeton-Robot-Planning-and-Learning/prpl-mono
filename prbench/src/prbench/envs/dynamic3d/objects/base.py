@@ -765,7 +765,7 @@ class MujocoGround:
 
     def _create_regions(self) -> None:
         """Create Region objects with site elements for ground regions.
-        
+
         Sites are added directly to the worldbody if it was provided during init.
         """
         assert self.regions is not None, "Regions must be defined"
@@ -777,7 +777,7 @@ class MujocoGround:
                 x_start, y_start, x_end, y_end = region_range
 
                 # Create 3D bounding box on ground surface.
-                # Sites must not go below ground (z >= 0), so they span from z=0 to z=2*threshold
+                # Sites must not go below ground (z >= 0), span from z=0 to z=2*threshold
                 ground_placement_threshold = 0.01  # 1cm tolerance
                 bbox = [
                     x_start - ground_placement_threshold,
@@ -917,7 +917,7 @@ class MujocoGround:
 
     def visualize_regions(self) -> None:
         """Visualize the ground's regions.
-        
+
         This is now a no-op since sites are added directly to the worldbody during
         _create_regions().
         """

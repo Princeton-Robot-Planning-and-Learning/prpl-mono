@@ -9,15 +9,17 @@ from prbench.envs.dynamic3d.objects.base import MujocoGround
 
 
 def test_ground_region_site_creation_and_placement():
-    """Test ground construction with regions: verify site creation, placement, and sizing.
-    
+    """Test ground construction with regions.
+
+    Verify site creation, placement, and sizing.
+
     This test verifies that:
     1. All regions are created successfully
     2. Sites are created for each region
     3. Sites are positioned above ground (z > 0)
     4. Sites do NOT extend below ground (z_min >= 0)
     5. Sites span from ground surface to ground_placement_threshold * 2 above
-    6. Sites have correct dimensions matching the region bounds with ground placement threshold
+    6. Sites have correct dimensions matching region bounds with placement threshold
     7. All sites are added to the worldbody XML element
     """
     # Create ground fixture config with multiple regions
@@ -46,18 +48,18 @@ def test_ground_region_site_creation_and_placement():
 
     # Create a mock worldbody element to verify sites are added to it
     worldbody = ET.Element("worldbody")
-    
+
     # Create the ground fixture with worldbody
     ground = MujocoGround(regions=regions_config, worldbody=worldbody)
 
     # Verify that all regions were created
-    assert len(ground.region_objects) == 4, (
-        f"Expected 4 region groups, got {len(ground.region_objects)}"
-    )
+    assert (
+        len(ground.region_objects) == 4
+    ), f"Expected 4 region groups, got {len(ground.region_objects)}"
     for region_name in regions_config:
-        assert region_name in ground.region_objects, (
-            f"Region {region_name} not found in ground regions"
-        )
+        assert (
+            region_name in ground.region_objects
+        ), f"Region {region_name} not found in ground regions"
 
     # Test each region
     test_cases = [
@@ -98,35 +100,31 @@ def test_ground_region_site_creation_and_placement():
         # Check each region/sub-range
         for region_idx, region in enumerate(regions):
             # Verify site element exists
-            assert region.site_element is not None, (
-                f"Site element should exist for {region_name} region {region_idx}"
-            )
+            assert (
+                region.site_element is not None
+            ), f"Site element should exist for {region_name} region {region_idx}"
 
             site_name = region.site_element.get("name", "")
-            assert site_name != "", (
-                f"Site name should not be empty for {region_name} region {region_idx}"
-            )
+            assert (
+                site_name != ""
+            ), f"Site name should not be empty for {region_name} region {region_idx}"
 
             # Extract site position and size from XML
             site_pos_str = region.site_element.get("pos", "")
             site_size_str = region.site_element.get("size", "")
 
-            assert site_pos_str, (
-                f"Site {site_name} has no position"
-            )
-            assert site_size_str, (
-                f"Site {site_name} has no size"
-            )
+            assert site_pos_str, f"Site {site_name} has no position"
+            assert site_size_str, f"Site {site_name} has no size"
 
             site_pos = [float(x) for x in site_pos_str.split()]
             site_size = [float(x) for x in site_size_str.split()]
 
-            assert len(site_pos) == 3, (
-                f"Site position should have 3 components, got {len(site_pos)}"
-            )
-            assert len(site_size) == 3, (
-                f"Site size should have 3 components, got {len(site_size)}"
-            )
+            assert (
+                len(site_pos) == 3
+            ), f"Site position should have 3 components, got {len(site_pos)}"
+            assert (
+                len(site_size) == 3
+            ), f"Site size should have 3 components, got {len(site_size)}"
 
             site_x, site_y, site_z = site_pos
             size_x, size_y, size_z = site_size
@@ -160,31 +158,33 @@ def test_ground_region_site_creation_and_placement():
             # The site extends from z - size_z to z + size_z
             z_min = site_z - size_z
             z_max = site_z + size_z
-            
-            # Site should span from z=0 (ground surface) to z=0.02 (2*threshold above ground)
+
+            # Site should span from z=0 (surface) to z=0.02 (2*threshold above)
             # bbox z range is [0, 0.02]
             # z_center = (0 + 0.02) / 2 = 0.01
             # z_size = (0.02 - 0) / 2 = 0.01
             # So z_min = 0.01 - 0.01 = 0, z_max = 0.01 + 0.01 = 0.02
             expected_z_min = 0.0  # At ground surface
             expected_z_max = 2 * ground_placement_threshold  # Above ground
-            
+
             assert np.isclose(z_min, expected_z_min, atol=1e-6), (
-                f"Site {site_name} Z minimum mismatch for {region_name} region {region_idx}: "
+                f"Site {site_name} Z minimum mismatch for {region_name} "
+                f"region {region_idx}: "
                 f"expected {expected_z_min}, got {z_min}. Site must not go below ground."
             )
             assert np.isclose(z_max, expected_z_max, atol=1e-6), (
-                f"Site {site_name} Z maximum mismatch for {region_name} region {region_idx}: "
+                f"Site {site_name} Z maximum mismatch for {region_name} "
+                f"region {region_idx}: "
                 f"expected {expected_z_max}, got {z_max}"
             )
-            
+
             # Verify site doesn't go below ground
             assert z_min >= 0.0, (
                 f"Site {site_name} extends below ground (z_min={z_min}). "
                 f"Sites must not go below ground."
             )
 
-            # Verify site X-Y sizes match the range spans (with ground_placement_threshold added)
+            # Verify site X-Y sizes match range spans (with threshold added)
             expected_size_x = (x_end - x_start + 2 * ground_placement_threshold) / 2
             expected_size_y = (y_end - y_start + 2 * ground_placement_threshold) / 2
 
@@ -197,7 +197,7 @@ def test_ground_region_site_creation_and_placement():
                 f"expected {expected_size_y}, got {size_y}"
             )
 
-            # Verify site Z size is correct (should be half of 2*ground_placement_threshold)
+            # Verify site Z size is correct (half of 2*ground_placement_threshold)
             expected_size_z = ground_placement_threshold
             assert np.isclose(size_z, expected_size_z, atol=1e-6), (
                 f"Site Z size mismatch for {region_name} region {region_idx}: "
@@ -206,46 +206,37 @@ def test_ground_region_site_creation_and_placement():
 
             # Verify RGBA values
             rgba_str = region.site_element.get("rgba", "")
-            assert rgba_str, (
-                f"Site {site_name} has no RGBA value"
-            )
+            assert rgba_str, f"Site {site_name} has no RGBA value"
             rgba_values = [float(x) for x in rgba_str.split()]
             expected_rgba = regions_config[region_name]["rgba"]
-            assert len(rgba_values) == 4, (
-                f"RGBA should have 4 components, got {len(rgba_values)}"
-            )
+            assert (
+                len(rgba_values) == 4
+            ), f"RGBA should have 4 components, got {len(rgba_values)}"
             for i, (actual, expected) in enumerate(zip(rgba_values, expected_rgba)):
                 assert np.isclose(actual, expected, atol=1e-6), (
-                    f"RGBA component {i} mismatch for {region_name} region {region_idx}: "
+                    f"RGBA component {i} mismatch for {region_name} "
+                    f"region {region_idx}: "
                     f"expected {expected}, got {actual}"
                 )
 
     # Verify that all sites were added to the worldbody
     worldbody_sites = worldbody.findall("site")
     expected_site_count = sum(len(v["ranges"]) for v in regions_config.values())
-    
-    assert len(worldbody_sites) == expected_site_count, (
-        f"Expected {expected_site_count} sites in worldbody, found {len(worldbody_sites)}"
-    )
-    
+
+    assert (
+        len(worldbody_sites) == expected_site_count
+    ), f"Expected {expected_site_count} sites in worldbody, found {len(worldbody_sites)}"
+
     # Verify each site in worldbody has proper attributes
     for site in worldbody_sites:
         site_name = site.get("name", "")
-        assert site_name.startswith("ground_"), (
-            f"Site name should start with 'ground_', got {site_name}"
-        )
-        assert site.get("type") == "box", (
-            f"Site {site_name} should be of type 'box'"
-        )
-        assert site.get("pos"), (
-            f"Site {site_name} should have position"
-        )
-        assert site.get("size"), (
-            f"Site {site_name} should have size"
-        )
-        assert site.get("rgba"), (
-            f"Site {site_name} should have RGBA values"
-        )
+        assert site_name.startswith(
+            "ground_"
+        ), f"Site name should start with 'ground_', got {site_name}"
+        assert site.get("type") == "box", f"Site {site_name} should be of type 'box'"
+        assert site.get("pos"), f"Site {site_name} should have position"
+        assert site.get("size"), f"Site {site_name} should have size"
+        assert site.get("rgba"), f"Site {site_name} should have RGBA values"
 
 
 def test_ground_sample_pose_in_region():
@@ -270,9 +261,9 @@ def test_ground_sample_pose_in_region():
 
         # Verify Z is at ground level (ground_thickness / 2 above ground zero)
         expected_z = ground.ground_thickness / 2
-        assert np.isclose(z, expected_z, atol=1e-6), (
-            f"Z position {z} not at ground level {expected_z}"
-        )
+        assert np.isclose(
+            z, expected_z, atol=1e-6
+        ), f"Z position {z} not at ground level {expected_z}"
 
         # Verify yaw is in valid range
         assert 0.0 <= yaw <= 2 * np.pi, f"Yaw {yaw} outside valid range [0, 2π]"
@@ -293,15 +284,15 @@ def test_ground_check_in_region():
     # Note: region extends by ground_placement_threshold, so the actual region bounds are
     # [-0.01, -0.01] to [1.01, 1.01] in XY
     pos_inside = np.array([0.5, 0.5, 0.0], dtype=np.float32)
-    assert ground.check_in_region(pos_inside, "test_region"), (
-        "Position inside region should be detected"
-    )
+    assert ground.check_in_region(
+        pos_inside, "test_region"
+    ), "Position inside region should be detected"
 
     # Position outside region bounds
     pos_outside = np.array([2.0, 2.0, 0.0], dtype=np.float32)
-    assert not ground.check_in_region(pos_outside, "test_region"), (
-        "Position outside region should not be detected"
-    )
+    assert not ground.check_in_region(
+        pos_outside, "test_region"
+    ), "Position outside region should not be detected"
 
 
 def test_ground_region_invalid_region_name():

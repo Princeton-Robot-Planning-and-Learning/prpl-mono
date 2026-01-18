@@ -10,7 +10,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 from prbench.envs.dynamic3d import utils
-from prbench.envs.dynamic3d.objects.base import MujocoFixture, register_fixture
+from prbench.envs.dynamic3d.objects.base import (
+    MujocoFixture,
+    Region,
+    register_fixture,
+)
 
 
 @register_fixture
@@ -261,8 +265,6 @@ class Table(MujocoFixture):
                 site.set("group", "0")
 
                 # Create Region object
-                from prbench.envs.dynamic3d.objects.base import Region
-
                 site_name = f"{self.name}_{region_name}_region_{region_idx}"
                 region = Region(
                     name=site_name,
@@ -630,13 +632,12 @@ class Cupboard(MujocoFixture):
             - "shelf": shelf index (top shelf = num_shelves - 1)
             - "ranges": [[x_start, y_start, x_end, y_end]] relative to shelf center
 
-        For drawers: if "drawer" is True, site is attached to drawer body instead of cupboard.
+        For drawers: if "drawer" is True, site is attached to drawer body instead
+        of cupboard.
 
         Sites are positioned at the partition/compartment center.
         """
         assert self.regions is not None, "Regions must be defined"
-
-        from prbench.envs.dynamic3d.objects.base import Region
 
         for region_name, region_config in self.regions.items():
             # Get the shelf index for this region
@@ -671,8 +672,8 @@ class Cupboard(MujocoFixture):
                 # Region with partitions - must specify partition index
                 if "partition" not in region_config:
                     raise ValueError(
-                        f"Cupboard region '{region_name}' on shelf {shelf} has partitions "
-                        f"but does not specify 'partition' index"
+                        f"Cupboard region '{region_name}' on shelf {shelf} "
+                        f"has partitions but does not specify 'partition' index"
                     )
                 partition_idx = region_config["partition"]
                 partitions = self.shelf_partitions[shelf]
@@ -680,8 +681,9 @@ class Cupboard(MujocoFixture):
                 # Validate partition index
                 if partition_idx < 0 or partition_idx > len(partitions):
                     raise ValueError(
-                        f"Partition index {partition_idx} out of range for shelf {shelf} "
-                        f"with {len(partitions)} partitions in region '{region_name}'"
+                        f"Partition index {partition_idx} out of range for "
+                        f"shelf {shelf} with {len(partitions)} partitions "
+                        f"in '{region_name}'"
                     )
 
                 # Get the x bounds of this partition/compartment
@@ -691,8 +693,8 @@ class Cupboard(MujocoFixture):
                 # Non-partitioned shelf (top shelf) - entire shelf is one region
                 if "partition" in region_config:
                     raise ValueError(
-                        f"Cupboard region '{region_name}' on shelf {shelf} has no partitions "
-                        f"but specifies 'partition' index"
+                        f"Cupboard region '{region_name}' on shelf {shelf} "
+                        f"has no partitions but specifies 'partition' index"
                     )
                 cupboard_half_length = self.cupboard_length / 2
                 partition_center_x = 0.0  # Center of shelf
@@ -721,16 +723,19 @@ class Cupboard(MujocoFixture):
                         f"for region '{region_name}'"
                     )
 
-                # Determine if this compartment has a drawer (before coordinate conversion)
+                # Determine if this compartment has a drawer (before coordinate
+                # conversion)
                 compartment_has_drawer = False
                 if self.shelf_drawers and shelf < len(self.shelf_drawers):
                     shelf_drawers_list = self.shelf_drawers[shelf]
                     if has_partitions:
-                        # For partitioned shelves, check if this specific partition has a drawer
+                        # For partitioned shelves, check if this specific partition
+                        # has a drawer
                         if partition_idx < len(shelf_drawers_list):
                             compartment_has_drawer = shelf_drawers_list[partition_idx]
                     else:
-                        # For non-partitioned shelves, check if the single compartment has a drawer
+                        # For non-partitioned shelves, check if the single compartment
+                        # has a drawer
                         if shelf_drawers_list:
                             compartment_has_drawer = shelf_drawers_list[0]
 
@@ -797,8 +802,8 @@ class Cupboard(MujocoFixture):
                     self._region_site_bodies[site_name] = self.name
 
                 # Append site element to the appropriate body
-                # We'll do this after all regions are created to ensure drawer bodies exist
-                # Store the site for later appending
+                # We'll do this after all regions are created to ensure drawer bodies
+                # exist. Store the site for later appending
                 if not hasattr(self, "_pending_region_sites"):
                     self._pending_region_sites: list[tuple[str, ET.Element]] = []
                 self._pending_region_sites.append((site_name, site))
