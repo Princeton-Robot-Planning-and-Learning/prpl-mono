@@ -174,13 +174,6 @@ class Ground3DEnv(ConstantObjectPRBenchEnv):
             """A 3D environment where the goal is to pick up a cube from the ground."""
         )
 
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
-        return """Observations consist of:
-- **robot**: The pose of the robot.
-- **cubes**: The poses of the cubes.
-"""
-
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "The number of cubes differs between environment variants. For example, Ground3D-o1 has 1 cube, while Ground3D-o3 has 3 cubes."

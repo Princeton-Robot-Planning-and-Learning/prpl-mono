@@ -1,5 +1,5 @@
 {
   "total_reward": -10.0,
-  "terminated_successfully": true,
+  "terminated_successfully": false,
   "num_steps": 10
 }

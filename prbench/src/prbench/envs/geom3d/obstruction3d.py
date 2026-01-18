@@ -461,28 +461,6 @@ The task requires planning to grasp and move obstructions out of the way, then p
         # pylint: disable=line-too-long
         return "The number of obstructions differs between environment variants. For example, Obstruction3D-o0 has no obstructions, while Obstruction3D-o4 has 4 obstructions."
 
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
-        # pylint: disable=line-too-long
-        config = self._object_centric_env.config
-        assert isinstance(config, Obstruction3DEnvConfig)
-        return f"""Observations consist of:
-- **joint_positions**: Current joint positions of the {len(config.initial_joints)}-DOF robot arm (list of floats)
-- **grasped_object**: Name of currently grasped object, or None if not grasping anything (string or None)
-- **grasped_object_transform**: Relative transform of grasped object to gripper, or None if not grasping (transform or None)
-- **target_region**: State of the target region including:
-  - pose: 3D position and orientation (Pose object)
-  - geometry: Half-extents (width/2, height/2, depth/2) of the region (tuple of 3 floats)
-- **target_block**: State of the target block including:
-  - pose: 3D position and orientation (Pose object)
-  - geometry: Half-extents of the block (tuple of 3 floats)
-- **obstructions**: Dictionary of obstruction states, keyed by obstruction name (e.g., "obstruction0"), each containing:
-  - pose: 3D position and orientation (Pose object)
-  - geometry: Half-extents of the obstruction (tuple of 3 floats)
-
-The observation is returned as an Obstruction3DState dataclass with these fields.
-"""
-
     def _create_action_space_markdown_description(self) -> str:
         """Create action space description."""
         # pylint: disable=line-too-long
