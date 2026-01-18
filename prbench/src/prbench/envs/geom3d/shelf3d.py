@@ -210,8 +210,6 @@ class ObjectCentricShelf3DEnv(
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         if object_name.startswith("cube"):
             return self.config.block_half_extents
-        if object_name == "shelf":
-            raise NotImplementedError("TODO")
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_obs(self) -> Shelf3DObjectCentricState:
@@ -258,18 +256,18 @@ class Shelf3DEnv(ConstantObjectPRBenchEnv):
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
         # pylint: disable=line-too-long
-        return """A 3D environment where the goal is to pick up a cube from the ground and place it on a shelf."""
+        return """A 3D environment where the goal is to pick up objects from the ground and place them onto a shelf."""
 
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return "The number of cubes differs between environment variants. For example, Shelf3D-o1 has 1 cube, while Shelf3D-o10 has 10 cubes."
+        return "The number of objects differs between environment variants. For example, Shelf3D-o1 has 1 object, while Shelf3D-o10 has 10 objects."
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        return """The reward is a small negative reward (-0.01) per timestep to encourage exploration."""
+        return """The reward is a small negative reward (-1) per timestep until termination, which occurs when all objects are placed into the shelf."""
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
         # pylint: disable=line-too-long
-        return """This is a very common kind of environment."""
+        return """This is a very common kind of environment. The background is adapted from the [Replica dataset](https://arxiv.org/abs/1906.05797) (Straub et al., 2019)."""
