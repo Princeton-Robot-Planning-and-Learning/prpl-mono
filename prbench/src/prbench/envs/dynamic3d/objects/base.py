@@ -144,7 +144,7 @@ class Region:
 
         # Check if position is within the bounds
         site_rel_pos = check_pos - site_pos
-        return np.all(np.abs(site_rel_pos) <= half_sizes)
+        return bool(np.all(np.abs(site_rel_pos) <= half_sizes))
 
     def visualize_region(self) -> None:
         """Visualize this region (site already created, nothing to do)."""
