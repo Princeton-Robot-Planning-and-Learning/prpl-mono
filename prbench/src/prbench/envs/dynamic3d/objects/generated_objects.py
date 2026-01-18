@@ -646,3 +646,50 @@ class GeneratedSeesaw(MujocoObject):
         """
         angle_degrees = abs(self.get_beam_tilt_angle_degrees())
         return angle_degrees <= tolerance_degrees
+
+    def is_object_on_beam(
+        self,
+        object_position: NDArray[np.float32],
+        tolerance: float = 0.02,
+    ) -> bool:
+        """Check if an object is on the seesaw beam.
+
+        Args:
+            object_position: The object's position [x, y, z] in world coordinates.
+            tolerance: Extra tolerance for position checks (default 0.02m).
+
+        Returns:
+            True if the object is on the seesaw beam, False otherwise.
+
+        Raises:
+            ValueError: If environment is not set.
+        """
+        if self.env is None:
+            raise ValueError("Environment must be set to check object position")
+
+        # Get seesaw position
+        seesaw_pos, _ = self.env.get_joint_pos_quat(self.joint_name)
+
+        obj_x, obj_y, obj_z = object_position[0], object_position[1], object_position[2]
+
+        beam_half_length = self.beam_length / 2
+        beam_half_width = self.beam_width / 2
+        min_height = seesaw_pos[2] + self.pivot_height * 0.5
+
+        # Check X is within beam length
+        x_offset = obj_x - seesaw_pos[0]
+        if not (
+            -beam_half_length - tolerance < x_offset < beam_half_length + tolerance
+        ):
+            return False
+
+        # Check Y is within beam width
+        y_offset = abs(obj_y - seesaw_pos[1])
+        if not y_offset < beam_half_width + tolerance:
+            return False
+
+        # Check Z is above pivot (object is resting on beam)
+        if not obj_z > min_height:
+            return False
+
+        return True
