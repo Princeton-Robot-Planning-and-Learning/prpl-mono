@@ -126,9 +126,9 @@ class BasePlaceController(
             except InverseKinematicsError:
                 joint_plan = None
                 # Debugging
-                # import pybullet as p
-                # while True:
-                #     p.getMouseEvents(self._sim.physics_client_id)
+                import pybullet as p
+                while True:
+                    p.getMouseEvents(self._sim.physics_client_id)
 
             if joint_plan is None:
                 raise TrajectorySamplingFailure("Motion planning failed")
