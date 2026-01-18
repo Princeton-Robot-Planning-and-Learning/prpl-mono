@@ -2,8 +2,25 @@
 
 from pathlib import Path
 
+import pytest
+from gymnasium.wrappers import RecordVideo
+
 import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from tests.conftest import MAKE_VIDEOS
+
+# Path to MimicLabs scenes
+MIMICLABS_SCENES_DIR = (
+    Path(__file__).parent.parent.parent.parent
+    / "src"
+    / "prbench"
+    / "envs"
+    / "dynamic3d"
+    / "models"
+    / "assets"
+    / "mimiclabs_scenes"
+    / "meshes"
+)
 
 
 def test_tidybot3d_cupboard_observation_space():
@@ -176,5 +193,38 @@ def test_tidybot_cupboard_constrained_fitting_goals():
     assert (
         env._check_goals()  # pylint: disable=protected-access
     ), "Goals should be satisfied after placing objects in goal regions"
+
+    env.close()
+
+
+@pytest.mark.skipif(
+    not MIMICLABS_SCENES_DIR.exists(),
+    reason="MimicLabs scenes not downloaded. "
+    "Run: python scripts/download_mimiclabs_assets.py",
+)
+def test_tidybot3d_cupboard_mimiclabs_with_video():
+    """Test MimicLabs scene with ConstrainedFitting task and video recording."""
+    prbench.register_all_environments()
+    env = prbench.make(
+        "prbench/TidyBot3D-cupboard-o12-ConstrainedFitting-v0",
+        render_mode="rgb_array",
+        scene_bg=True,  # Use default mimiclabs scene (lab5 for base_motion)
+        scene_render_camera="overview",
+    )
+
+    # Wrap with RecordVideo if making videos
+    if MAKE_VIDEOS:
+        env = RecordVideo(
+            env, "unit_test_videos_cupboard_o12_ConstrainedFitting_mimiclabs"
+        )
+
+    obs, _ = env.reset()
+    # Take a few random steps to generate video frames
+    for _ in range(30):
+        action = env.action_space.sample()
+        obs, _, terminated, truncated, _ = env.step(action)
+        assert env.observation_space.contains(obs)
+        if terminated or truncated:
+            obs, _ = env.reset(seed=456)
 
     env.close()

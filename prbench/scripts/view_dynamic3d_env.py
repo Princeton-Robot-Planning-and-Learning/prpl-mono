@@ -450,6 +450,11 @@ def main() -> None:
         help="Don't take random actions, just show initial state",
     )
     parser.add_argument(
+        "--realistic-bg",
+        action="store_true",
+        help="Use realistic background images (if supported by env)",
+    )
+    parser.add_argument(
         "--use-opencv",
         action="store_true",
         help="Use OpenCV viewer instead of interactive MuJoCo viewer",
@@ -505,10 +510,12 @@ def main() -> None:
     try:
         if args.use_opencv:
             # OpenCV mode needs render_mode
-            env = prbench.make(args.env_id, render_mode="rgb_array")
+            env = prbench.make(
+                args.env_id, render_mode="rgb_array", scene_bg=args.realistic_bg
+            )
         else:
             # MuJoCo viewer mode - no render_mode needed
-            env = prbench.make(args.env_id)
+            env = prbench.make(args.env_id, scene_bg=args.realistic_bg)
     except Exception as e:
         print(f"Error creating environment: {e}")
         print("\nAvailable dynamic3D environments:")

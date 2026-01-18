@@ -2,6 +2,22 @@
     "robots": [
         "tidybot"
     ],
+    "scene": {
+        "simple": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab2": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        }
+    },
     "fixtures": {},
     "regions": {
         "ground_seesaw_region": {
@@ -99,10 +115,21 @@
     },
     "cameras": {
         "agentview_1": {
-            "position": [1, 1, 2],
-            "lookat": [0, 0, 0],
+            "position": [
+                1,
+                1,
+                2
+            ],
+            "lookat": [
+                0,
+                0,
+                0
+            ],
             "fovy": 42,
-            "resolution": [640, 480]
+            "resolution": [
+                640,
+                480
+            ]
         }
     },
     "init_state": [
