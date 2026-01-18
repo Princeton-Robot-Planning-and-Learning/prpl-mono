@@ -1,6 +1,6 @@
-# TableBox3D
+# Transport3D
 
-![random action GIF](assets/random_action_gifs/TableBox3D.gif)
+![random action GIF](assets/random_action_gifs/Transport3D.gif)
 
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
@@ -8,13 +8,13 @@
 A 3D environment where the goal is to pick up a box from the table.
 
 ## Available Variants
-The number of cubes differs between environment variants. For example, TableBox3D-o1 has 1 cube, while TableBox3D-o2 has 2 cubes.
+The number of cubes differs between environment variants. For example, Transport3D-o1 has 1 cube, while Transport3D-o2 has 2 cubes.
 
-- `prbench/TableBox3D-o1-v0` (o1)
-- `prbench/TableBox3D-o2-v0` (o2)
+- `prbench/Transport3D-o1-v0` (o1)
+- `prbench/Transport3D-o2-v0` (o2)
 
 ## Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/TableBox3D.gif)
+![initial state GIF](assets/initial_state_gifs/Transport3D.gif)
 
 ## Example Demonstration
 *(No demonstration GIFs available)*

@@ -1,4 +1,4 @@
-"""Parameterized skills for the TableBox3D environment."""
+"""Parameterized skills for the Transport3D environment."""
 
 from typing import Any, Sequence
 
@@ -11,10 +11,10 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
 from prbench.envs.geom3d.object_types import Geom3DCuboidType
-from prbench.envs.geom3d.tablebox3d import (
+from prbench.envs.geom3d.transport3d import (
     Geom3DRobotType,
-    ObjectCentricTableBox3DEnv,
-    TableBox3DObjectCentricState,
+    ObjectCentricTransport3DEnv,
+    Transport3DObjectCentricState,
 )
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
@@ -65,7 +65,7 @@ class GroundPickController(
     def __init__(
         self,
         objects: Sequence[Object],
-        sim: ObjectCentricTableBox3DEnv,
+        sim: ObjectCentricTransport3DEnv,
     ) -> None:
         super().__init__(objects)
         self._sim = sim
@@ -86,7 +86,7 @@ class GroundPickController(
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
-        assert isinstance(x, TableBox3DObjectCentricState)
+        assert isinstance(x, Transport3DObjectCentricState)
         distance = rng.uniform(*MOVE_TO_TARGET_DISTANCE_BOUNDS)  # type: ignore
         rot = rng.uniform(*MOVE_TO_TARGET_ROT_BOUNDS)
         return np.array([distance, rot])
@@ -102,7 +102,7 @@ class GroundPickController(
     def step(self) -> np.ndarray:
         assert self._current_state is not None
         assert self._current_params is not None
-        assert isinstance(self._current_state, TableBox3DObjectCentricState)
+        assert isinstance(self._current_state, Transport3DObjectCentricState)
 
         # Generate the motion plan if it doesn't exist yet.
         if self._current_plan is None:
@@ -304,7 +304,7 @@ class GroundPlaceController(BasePlaceController):
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
-        assert isinstance(x, TableBox3DObjectCentricState)
+        assert isinstance(x, Transport3DObjectCentricState)
         if "box" in self.objects[1].name:
             place_x_offset_bounds = PLACE_X_OFFSET_BOUNDS_BOX
             place_y_offset_bounds = PLACE_Y_OFFSET_BOUNDS_BOX
@@ -326,7 +326,7 @@ class GroundPlaceController(BasePlaceController):
     def step(self) -> np.ndarray:
         assert self._current_state is not None
         assert self._current_params is not None
-        assert isinstance(self._current_state, TableBox3DObjectCentricState)
+        assert isinstance(self._current_state, Transport3DObjectCentricState)
 
         # Generate the motion plan if it doesn't exist yet.
         if self._current_plan is None:
@@ -440,9 +440,9 @@ class GroundPlaceController(BasePlaceController):
 
 def create_lifted_controllers(
     action_space: Geom3DRobotActionSpace,
-    sim: ObjectCentricTableBox3DEnv,
+    sim: ObjectCentricTransport3DEnv,
 ) -> dict[str, LiftedParameterizedController]:
-    """Create lifted parameterized controllers for TableBox3D."""
+    """Create lifted parameterized controllers for Transport3D."""
 
     # Create partial controller classes that include the sim
     class PickController(GroundPickController):
