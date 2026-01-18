@@ -69,13 +69,12 @@ class Table(MujocoFixture):
                 f"Must be 'rectangle' or 'circle'"
             )
 
-        # Create region bounding boxes if regions are defined
-        self.region_bboxes: dict[str, list[list[float]]] = {}
-        if self.regions is not None:
-            self._create_region_bboxes()
-
         # Create the XML element
         self.xml_element = self._create_xml_element()
+
+        # Create regions after all attributes are initialized
+        if self.regions is not None:
+            self._create_regions()
 
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this table.
@@ -199,21 +198,21 @@ class Table(MujocoFixture):
 
         return table_body
 
-    def _create_region_bboxes(self) -> None:
-        """Create 3D bounding boxes for each region.
+    def _create_regions(self) -> None:
+        """Create Region objects with site elements for each region.
 
         Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted to 3D
         bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where the z dimension
         spans from the table surface to DEFAULT_REGION_HEIGHT above it.
 
-        The bounding boxes are stored in table-relative coordinates.
+        Sites are attached to the table body.
         """
         assert self.regions is not None, "Regions must be defined"
 
         for region_name, region_config in self.regions.items():
-            region_bboxes = []
+            region_list: list = []
 
-            for region_range in region_config["ranges"]:
+            for region_idx, region_range in enumerate(region_config["ranges"]):
                 if len(region_range) != 4:
                     raise ValueError(
                         f"Each region range must have exactly 4 values "
@@ -241,10 +240,38 @@ class Table(MujocoFixture):
                 z_min = self.table_height + self.DEFAULT_REGION_Z_OFFSET
                 z_max = z_min + self.DEFAULT_REGION_HEIGHT
 
-                bbox = [x_start, y_start, z_min, x_end, y_end, z_max]
-                region_bboxes.append(bbox)
+                # Calculate center and half-sizes for MuJoCo box site
+                region_center_x = (x_start + x_end) / 2
+                region_center_y = (y_start + y_end) / 2
+                region_center_z = (z_min + z_max) / 2
+                region_size_x = (x_end - x_start) / 2
+                region_size_y = (y_end - y_start) / 2
+                region_size_z = (z_max - z_min) / 2
 
-            self.region_bboxes[region_name] = region_bboxes
+                # Create site element for the region
+                site = ET.Element("site")
+                site.set("name", f"{self.name}_{region_name}_region_{region_idx}")
+                site.set("type", "box")
+                site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
+                site.set("pos", f"{region_center_x} {region_center_y} {region_center_z}")
+                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
+                site.set("rgba", " ".join(map(str, rgba_values)))
+                site.set("group", "0")
+
+                # Create Region object
+                from prbench.envs.dynamic3d.objects.base import Region
+                site_name = f"{self.name}_{region_name}_region_{region_idx}"
+                region = Region(
+                    name=site_name,
+                    rgba=rgba_values,
+                    site_element=site,
+                )
+                region_list.append(region)
+                
+                # Append site element to xml_element
+                self.xml_element.append(site)
+
+            self.region_objects[region_name] = region_list
 
     @staticmethod
     def get_bounding_box_from_config(
@@ -317,21 +344,22 @@ class Table(MujocoFixture):
             ValueError: If regions list is empty or if any region has invalid bounds
         """
         assert self.regions is not None, "Regions must be defined"
-        assert region_name in self.region_bboxes, f"Region '{region_name}' not found"
+        assert region_name in self.region_objects, f"Region '{region_name}' not found"
 
         region_config = self.regions[region_name]
-        region_bboxes = self.region_bboxes[region_name]
+        region_list = self.region_objects[region_name]
 
-        # Randomly select one of the region bounding boxes
-        selected_bbox_index = np_random.choice(len(region_bboxes))
-        selected_bbox = region_bboxes[selected_bbox_index]
+        # Randomly select one of the regions
+        selected_region_index = np_random.choice(len(region_list))
+        selected_region = region_list[selected_region_index]
+        selected_bbox = selected_region.bbox
 
         # Get yaw range for this region
         yaw_range = (0.0, 360.0)  # Default range
         if "yaw_ranges" in region_config:
             yaw_ranges = region_config["yaw_ranges"]
-            if yaw_ranges and len(yaw_ranges) > selected_bbox_index:
-                yaw_range = tuple(yaw_ranges[selected_bbox_index])
+            if yaw_ranges and len(yaw_ranges) > selected_region_index:
+                yaw_range = tuple(yaw_ranges[selected_region_index])
 
         # Sample pose from the 3D bounding box (in table-relative coordinates)
         x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
@@ -358,22 +386,15 @@ class Table(MujocoFixture):
         """
         # Validate region exists
         assert self.regions is not None, "Regions must be defined"
-        if region_name not in self.region_bboxes:
+        if region_name not in self.region_objects:
             raise ValueError(f"Region '{region_name}' not found")
 
-        # Convert world coordinates to table-relative coordinates
-        table_relative_pos = np.array(
-            [
-                position[0] - self.position[0],
-                position[1] - self.position[1],
-                position[2] - self.position[2],
-            ]
-        )
-
-        # Check if position is in any of the region's bounding boxes
-        region_bboxes = self.region_bboxes[region_name]
-        for bbox in region_bboxes:
-            if utils.point_in_bbox_3d(table_relative_pos, bbox):
+        # Check if position is in any of the region objects
+        # Pass fixture position as parent_pos to convert from world to local coordinates
+        region_list = self.region_objects[region_name]
+        fixture_pos = np.array(self.position, dtype=np.float32)
+        for region in region_list:
+            if region.check_in_region(position, fixture_pos, None, region.name):
                 return True
 
         return False
@@ -381,49 +402,15 @@ class Table(MujocoFixture):
     def visualize_regions(self) -> None:
         """Visualize the table's regions in the MuJoCo environment.
 
-        This method adds visual elements to the MuJoCo XML to represent the regions
-        defined for this table using the 3D bounding boxes.
+        This method is a no-op since regions are now added to the XML during
+        _create_regions().
         """
         if self.regions is None:
             return
 
-        for region_name, region_config in self.regions.items():
-            if "rgba" in region_config:
-                # Get the bounding boxes for this region
-                region_bboxes = self.region_bboxes.get(region_name, [])
-
-                for i_region, bbox in enumerate(region_bboxes):
-                    # bbox is [x_min, y_min, z_min, x_max, y_max, z_max]
-                    # in table-relative coords
-                    x_min, y_min, z_min, x_max, y_max, z_max = bbox
-
-                    # Calculate center and half-sizes for MuJoCo box geom
-                    region_center_x = (x_min + x_max) / 2
-                    region_center_y = (y_min + y_max) / 2
-                    region_center_z = (z_min + z_max) / 2
-
-                    region_size_x = (x_max - x_min) / 2
-                    region_size_y = (y_max - y_min) / 2
-                    region_size_z = (z_max - z_min) / 2
-
-                    # Create geom element for the region visualization
-                    region_geom = ET.SubElement(self.xml_element, "geom")
-                    region_geom.set(
-                        "name", f"{self.name}_{region_name}_region_{i_region}"
-                    )
-                    region_geom.set("type", "box")
-                    region_geom.set(
-                        "size",
-                        f"{region_size_x} {region_size_y} {region_size_z}",
-                    )
-                    region_geom.set(
-                        "pos",
-                        f"{region_center_x} {region_center_y} {region_center_z}",
-                    )
-                    region_geom.set("rgba", " ".join(map(str, region_config["rgba"])))
-                    # Disable collision for visual-only representation
-                    region_geom.set("contype", "0")
-                    region_geom.set("conaffinity", "0")
+        for region_name, region_list in self.region_objects.items():
+            for region in region_list:
+                region.visualize_region()
 
     def __str__(self) -> str:
         """String representation of the table."""
@@ -570,7 +557,7 @@ class Cupboard(MujocoFixture):
                 ):
                     raise ValueError(
                         f"Partition position {partition_pos} on shelf {i} must be "
-                        f"between -{self.cupboard_length/2} and "
+                        f"strictly between -{self.cupboard_length/2} and "
                         f"{self.cupboard_length/2} "
                         f"(cupboard length is {self.cupboard_length})"
                     )
@@ -594,13 +581,12 @@ class Cupboard(MujocoFixture):
         # Precompute shelf z positions for efficiency
         self._shelf_z_positions = self._compute_shelf_z_positions()
 
-        # Create region bounding boxes if regions are defined
-        self.region_bboxes: dict[str, list[list[float]]] = {}
-        if self.regions is not None:
-            self._create_region_bboxes()
-
         # Create the XML element
         self.xml_element = self._create_xml_element()
+
+        # Create regions after all attributes are initialized
+        if self.regions is not None:
+            self._create_regions()
 
     def _compute_shelf_z_positions(self) -> list[float]:
         """Compute the z position of each shelf surface.
@@ -626,23 +612,31 @@ class Cupboard(MujocoFixture):
 
         return shelf_z_positions
 
-    def _create_region_bboxes(self) -> None:
-        """Create 3D bounding boxes for each region.
+    def _create_regions(self) -> None:
+        """Create Region objects with site elements for each region.
 
-        Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted to 3D
-        bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where the z dimension
-        spans from the shelf surface to the height available on that shelf.
+        For shelves with partitions: region config must include:
+            - "shelf": shelf index
+            - "partition": partition index (0 for first partition, 1 for second, etc.)
+            - "ranges": [[x_start, y_start, x_end, y_end]] relative to partition center
 
-        The bounding boxes are stored in cupboard-relative coordinates.
+        For non-partitioned shelves (top shelf): region config must include:
+            - "shelf": shelf index (top shelf = num_shelves - 1)
+            - "ranges": [[x_start, y_start, x_end, y_end]] relative to shelf center
+
+        For drawers: if "drawer" is True, site is attached to drawer body instead of cupboard.
+
+        Sites are positioned at the partition/compartment center.
         """
         assert self.regions is not None, "Regions must be defined"
+
+        from prbench.envs.dynamic3d.objects.base import Region
 
         for region_name, region_config in self.regions.items():
             # Get the shelf index for this region
             if "shelf" not in region_config:
                 raise ValueError(
-                    f"Cupboard region '{region_name}' must specify "
-                    f"'shelf' for bbox creation"
+                    f"Cupboard region '{region_name}' must specify 'shelf'"
                 )
             shelf = region_config["shelf"]
 
@@ -653,6 +647,8 @@ class Cupboard(MujocoFixture):
                     f"{self.num_shelves} shelves in region '{region_name}'"
                 )
 
+            region_list: list = []
+
             # Determine the height available on this shelf
             if shelf < len(self.shelf_heights):
                 shelf_height = self.shelf_heights[shelf]
@@ -660,9 +656,45 @@ class Cupboard(MujocoFixture):
                 # For the top shelf, use the last shelf height as default
                 shelf_height = self.shelf_heights[-1] if self.shelf_heights else 0.2
 
-            region_bboxes = []
+            # Check if this shelf has partitions
+            has_partitions = shelf < len(self.shelf_partitions) and self.shelf_partitions[shelf]
 
-            for region_range in region_config["ranges"]:
+            # Check if this is a drawer region
+            is_drawer = region_config.get("drawer", False)
+
+            if has_partitions:
+                # Region with partitions - must specify partition index
+                if "partition" not in region_config:
+                    raise ValueError(
+                        f"Cupboard region '{region_name}' on shelf {shelf} has partitions "
+                        f"but does not specify 'partition' index"
+                    )
+                partition_idx = region_config["partition"]
+                partitions = self.shelf_partitions[shelf]
+
+                # Validate partition index
+                if partition_idx < 0 or partition_idx > len(partitions):
+                    raise ValueError(
+                        f"Partition index {partition_idx} out of range for shelf {shelf} "
+                        f"with {len(partitions)} partitions in region '{region_name}'"
+                    )
+
+                # Get the x bounds of this partition/compartment
+                x_min, x_max = self._get_drawer_compartment_bounds(shelf, partition_idx)
+                partition_center_x = (x_min + x_max) / 2
+            else:
+                # Non-partitioned shelf (top shelf) - entire shelf is one region
+                if "partition" in region_config:
+                    raise ValueError(
+                        f"Cupboard region '{region_name}' on shelf {shelf} has no partitions "
+                        f"but specifies 'partition' index"
+                    )
+                cupboard_half_length = self.cupboard_length / 2
+                partition_center_x = 0.0  # Center of shelf
+                x_min = -cupboard_half_length
+                x_max = cupboard_half_length
+
+            for region_idx, region_range in enumerate(region_config["ranges"]):
                 if len(region_range) != 4:
                     raise ValueError(
                         f"Each region range must have exactly 4 values "
@@ -672,7 +704,7 @@ class Cupboard(MujocoFixture):
 
                 x_start, y_start, x_end, y_end = region_range
 
-                # Validate bounds
+                # Validate bounds (ranges are relative to partition center)
                 if x_start >= x_end:
                     raise ValueError(
                         f"x_start ({x_start}) must be less than x_end ({x_end}) "
@@ -684,16 +716,125 @@ class Cupboard(MujocoFixture):
                         f"for region '{region_name}'"
                     )
 
-                # Create 3D bounding box:
-                # z_min is at the shelf surface, z_max is shelf_height above
-                z_min = self._shelf_z_positions[shelf]
-                z_max = z_min + shelf_height
+                # Determine if this compartment has a drawer (before coordinate conversion)
+                compartment_has_drawer = False
+                if self.shelf_drawers and shelf < len(self.shelf_drawers):
+                    shelf_drawers_list = self.shelf_drawers[shelf]
+                    if has_partitions:
+                        # For partitioned shelves, check if this specific partition has a drawer
+                        if partition_idx < len(shelf_drawers_list):
+                            compartment_has_drawer = shelf_drawers_list[partition_idx]
+                    else:
+                        # For non-partitioned shelves, check if the single compartment has a drawer
+                        if shelf_drawers_list:
+                            compartment_has_drawer = shelf_drawers_list[0]
 
-                bbox = [x_start, y_start, z_min, x_end, y_end, z_max]
-                region_bboxes.append(bbox)
+                # Calculate center and half-sizes for MuJoCo box site
+                if compartment_has_drawer:
+                    # For drawer sites: keep partition-relative coordinates
+                    # (drawer body has its own local frame centered at partition center)
+                    region_center_x = (x_start + x_end) / 2
+                    region_center_y = (y_start + y_end) / 2
+                    region_center_z = shelf_height / 2  # Center of drawer height
+                    region_size_x = (x_end - x_start) / 2
+                    region_size_y = (y_end - y_start) / 2
+                    region_size_z = shelf_height / 2
+                else:
+                    # For cupboard sites: convert partition-relative to world-relative
+                    region_center_x = (partition_center_x + x_start + partition_center_x + x_end) / 2
+                    region_center_y = (y_start + y_end) / 2
+                    z_min = self._shelf_z_positions[shelf]
+                    z_max = z_min + shelf_height
+                    region_center_z = (z_min + z_max) / 2
+                    region_size_x = (x_end - x_start) / 2
+                    region_size_y = (y_end - y_start) / 2
+                    region_size_z = (z_max - z_min) / 2
 
-            self.region_bboxes[region_name] = region_bboxes
+                # Create site element for the region
+                site = ET.Element("site")
+                site_name = f"{self.name}_{region_name}_region_{region_idx}"
+                site.set("name", site_name)
+                site.set("type", "box")
+                site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
+                site.set("pos", f"{region_center_x} {region_center_y} {region_center_z}")
+                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
+                site.set("rgba", " ".join(map(str, rgba_values)))
+                site.set("group", "0")
 
+                # Create Region object (derived from site_element)
+                region = Region(
+                    name=site_name,
+                    rgba=rgba_values,
+                    site_element=site,
+                )
+                region_list.append(region)
+
+                # Store which body this site should be attached to
+                if not hasattr(self, "_region_site_bodies"):
+                    self._region_site_bodies: dict[str, str] = {}
+                
+                if compartment_has_drawer:
+                    # Attach to drawer body
+                    # Use the same naming convention as in _create_xml_element()
+                    if has_partitions:
+                        drawer_index = f"s{shelf+1}c{partition_idx}"
+                    else:
+                        drawer_index = f"s{shelf+1}c0"
+                    self._region_site_bodies[site_name] = f"{self.name}_drawer_{drawer_index}"
+                else:
+                    # Attach to main cupboard body
+                    self._region_site_bodies[site_name] = self.name
+                
+                # Append site element to the appropriate body
+                # We'll do this after all regions are created to ensure drawer bodies exist
+                # Store the site for later appending
+                if not hasattr(self, "_pending_region_sites"):
+                    self._pending_region_sites: list[tuple[str, ET.Element]] = []
+                self._pending_region_sites.append((site_name, site))
+
+            self.region_objects[region_name] = region_list
+        
+        # Now append all pending sites to their target bodies
+        self._append_region_sites_to_bodies()
+
+    def _append_region_sites_to_bodies(self) -> None:
+        """Append pending region sites to their target bodies in the XML.
+        
+        This is called after _create_regions() to ensure all drawer bodies
+        have been created in the XML.
+        """
+        if not hasattr(self, "_pending_region_sites"):
+            return
+        
+        # Build a map of body names to body elements
+        body_map: dict[str, ET.Element] = {self.name: self.xml_element}
+        
+        # Recursively find all drawer bodies
+        def find_bodies(parent_elem: ET.Element) -> None:
+            for child in parent_elem:
+                if child.tag == "body":
+                    body_name = child.get("name", "")
+                    if body_name:
+                        body_map[body_name] = child
+        
+        find_bodies(self.xml_element)
+        
+        # Append each site to its target body
+        for site_name, site_element in self._pending_region_sites:
+            if hasattr(self, "_region_site_bodies") and site_name in self._region_site_bodies:
+                body_name = self._region_site_bodies[site_name]
+                if body_name in body_map:
+                    body_map[body_name].append(site_element)
+                else:
+                    # Fallback to main cupboard body if target not found
+                    self.xml_element.append(site_element)
+            else:
+                # Default: attach to main cupboard body
+                self.xml_element.append(site_element)
+        
+        # Clear pending sites
+        self._pending_region_sites = []
+    
     def _get_drawer_compartment_bounds(
         self, shelf_index: int, compartment_index: int
     ) -> tuple[float, float]:
@@ -1276,21 +1417,22 @@ class Cupboard(MujocoFixture):
             ValueError: If regions list is empty or if any region has invalid bounds
         """
         assert self.regions is not None, "Regions must be defined"
-        assert region_name in self.region_bboxes, f"Region '{region_name}' not found"
+        assert region_name in self.region_objects, f"Region '{region_name}' not found"
 
         region_config = self.regions[region_name]
-        region_bboxes = self.region_bboxes[region_name]
+        region_list = self.region_objects[region_name]
 
-        # Randomly select one of the region bounding boxes
-        selected_bbox_index = np_random.choice(len(region_bboxes))
-        selected_bbox = region_bboxes[selected_bbox_index]
+        # Randomly select one of the regions
+        selected_region_index = np_random.choice(len(region_list))
+        selected_region = region_list[selected_region_index]
+        selected_bbox = selected_region.bbox
 
         # Get yaw range for this region
         yaw_range = (0.0, 360.0)  # Default range
         if "yaw_ranges" in region_config:
             yaw_ranges = region_config["yaw_ranges"]
-            if yaw_ranges and len(yaw_ranges) > selected_bbox_index:
-                yaw_range = tuple(yaw_ranges[selected_bbox_index])
+            if yaw_ranges and len(yaw_ranges) > selected_region_index:
+                yaw_range = tuple(yaw_ranges[selected_region_index])
 
         # Sample pose from the 3D bounding box (in cupboard-relative coordinates)
         x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
@@ -1318,22 +1460,15 @@ class Cupboard(MujocoFixture):
         """
         # Validate region exists
         assert self.regions is not None, "Regions must be defined"
-        if region_name not in self.region_bboxes:
+        if region_name not in self.region_objects:
             raise ValueError(f"Region '{region_name}' not found")
 
-        # Convert world coordinates to cupboard-relative coordinates
-        cupboard_relative_pos = np.array(
-            [
-                position[0] - self.position[0],
-                position[1] - self.position[1],
-                position[2] - self.position[2],
-            ]
-        )
-
-        # Check if position is in any of the region's bounding boxes
-        region_bboxes = self.region_bboxes[region_name]
-        for bbox in region_bboxes:
-            if utils.point_in_bbox_3d(cupboard_relative_pos, bbox):
+        # Check if position is in any of the region objects
+        # Pass fixture position as parent_pos to convert from world to local coordinates
+        region_list = self.region_objects[region_name]
+        fixture_pos = np.array(self.position, dtype=np.float32)
+        for region in region_list:
+            if region.check_in_region(position, fixture_pos, None, region.name):
                 return True
 
         return False
@@ -1341,50 +1476,15 @@ class Cupboard(MujocoFixture):
     def visualize_regions(self) -> None:
         """Visualize the cupboard's regions in the MuJoCo environment.
 
-        This method adds visual elements to the MuJoCo XML to represent the regions
-        defined for this cupboard using the 3D bounding boxes.
+        This method is a no-op since regions are now added to the XML during
+        _create_regions().
         """
         if self.regions is None:
             return
 
-        for region_name, region_config in self.regions.items():
-            if "rgba" in region_config:
-                # Get the bounding boxes for this region
-                region_bboxes = self.region_bboxes.get(region_name, [])
-
-                for i_region, bbox in enumerate(region_bboxes):
-                    # bbox is [x_min, y_min, z_min, x_max, y_max, z_max]
-                    # in cupboard-relative coords
-
-                    x_min, y_min, z_min, x_max, y_max, z_max = bbox
-
-                    # Calculate center and half-sizes for MuJoCo box geom
-                    region_center_x = (x_min + x_max) / 2
-                    region_center_y = (y_min + y_max) / 2
-                    region_center_z = (z_min + z_max) / 2
-
-                    region_size_x = (x_max - x_min) / 2
-                    region_size_y = (y_max - y_min) / 2
-                    region_size_z = (z_max - z_min) / 2
-
-                    # Create geom element for the region visualization
-                    region_geom = ET.SubElement(self.xml_element, "geom")
-                    region_geom.set(
-                        "name", f"{self.name}_{region_name}_region_{i_region}"
-                    )
-                    region_geom.set("type", "box")
-                    region_geom.set(
-                        "size",
-                        f"{region_size_x} {region_size_y} {region_size_z}",
-                    )
-                    region_geom.set(
-                        "pos",
-                        f"{region_center_x} {region_center_y} {region_center_z}",
-                    )
-                    region_geom.set("rgba", " ".join(map(str, region_config["rgba"])))
-                    # Disable collision for visual-only representation
-                    region_geom.set("contype", "0")
-                    region_geom.set("conaffinity", "0")
+        for region_name, region_list in self.region_objects.items():
+            for region in region_list:
+                region.visualize_region()
 
     def __str__(self) -> str:
         """String representation of the cupboard."""
