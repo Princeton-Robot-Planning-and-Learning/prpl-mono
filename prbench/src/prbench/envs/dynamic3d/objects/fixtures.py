@@ -253,13 +253,16 @@ class Table(MujocoFixture):
                 site.set("name", f"{self.name}_{region_name}_region_{region_idx}")
                 site.set("type", "box")
                 site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
-                site.set("pos", f"{region_center_x} {region_center_y} {region_center_z}")
+                site.set(
+                    "pos", f"{region_center_x} {region_center_y} {region_center_z}"
+                )
                 rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
                 site.set("rgba", " ".join(map(str, rgba_values)))
                 site.set("group", "0")
 
                 # Create Region object
                 from prbench.envs.dynamic3d.objects.base import Region
+
                 site_name = f"{self.name}_{region_name}_region_{region_idx}"
                 region = Region(
                     name=site_name,
@@ -267,7 +270,7 @@ class Table(MujocoFixture):
                     site_element=site,
                 )
                 region_list.append(region)
-                
+
                 # Append site element to xml_element
                 self.xml_element.append(site)
 
@@ -657,7 +660,9 @@ class Cupboard(MujocoFixture):
                 shelf_height = self.shelf_heights[-1] if self.shelf_heights else 0.2
 
             # Check if this shelf has partitions
-            has_partitions = shelf < len(self.shelf_partitions) and self.shelf_partitions[shelf]
+            has_partitions = (
+                shelf < len(self.shelf_partitions) and self.shelf_partitions[shelf]
+            )
 
             # Check if this is a drawer region
             is_drawer = region_config.get("drawer", False)
@@ -741,7 +746,9 @@ class Cupboard(MujocoFixture):
                     region_size_z = shelf_height / 2
                 else:
                     # For cupboard sites: convert partition-relative to world-relative
-                    region_center_x = (partition_center_x + x_start + partition_center_x + x_end) / 2
+                    region_center_x = (
+                        partition_center_x + x_start + partition_center_x + x_end
+                    ) / 2
                     region_center_y = (y_start + y_end) / 2
                     z_min = self._shelf_z_positions[shelf]
                     z_max = z_min + shelf_height
@@ -756,7 +763,9 @@ class Cupboard(MujocoFixture):
                 site.set("name", site_name)
                 site.set("type", "box")
                 site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
-                site.set("pos", f"{region_center_x} {region_center_y} {region_center_z}")
+                site.set(
+                    "pos", f"{region_center_x} {region_center_y} {region_center_z}"
+                )
                 rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
                 site.set("rgba", " ".join(map(str, rgba_values)))
                 site.set("group", "0")
@@ -772,7 +781,7 @@ class Cupboard(MujocoFixture):
                 # Store which body this site should be attached to
                 if not hasattr(self, "_region_site_bodies"):
                     self._region_site_bodies: dict[str, str] = {}
-                
+
                 if compartment_has_drawer:
                     # Attach to drawer body
                     # Use the same naming convention as in _create_xml_element()
@@ -780,11 +789,13 @@ class Cupboard(MujocoFixture):
                         drawer_index = f"s{shelf+1}c{partition_idx}"
                     else:
                         drawer_index = f"s{shelf+1}c0"
-                    self._region_site_bodies[site_name] = f"{self.name}_drawer_{drawer_index}"
+                    self._region_site_bodies[site_name] = (
+                        f"{self.name}_drawer_{drawer_index}"
+                    )
                 else:
                     # Attach to main cupboard body
                     self._region_site_bodies[site_name] = self.name
-                
+
                 # Append site element to the appropriate body
                 # We'll do this after all regions are created to ensure drawer bodies exist
                 # Store the site for later appending
@@ -793,22 +804,22 @@ class Cupboard(MujocoFixture):
                 self._pending_region_sites.append((site_name, site))
 
             self.region_objects[region_name] = region_list
-        
+
         # Now append all pending sites to their target bodies
         self._append_region_sites_to_bodies()
 
     def _append_region_sites_to_bodies(self) -> None:
         """Append pending region sites to their target bodies in the XML.
-        
-        This is called after _create_regions() to ensure all drawer bodies
-        have been created in the XML.
+
+        This is called after _create_regions() to ensure all drawer bodies have been
+        created in the XML.
         """
         if not hasattr(self, "_pending_region_sites"):
             return
-        
+
         # Build a map of body names to body elements
         body_map: dict[str, ET.Element] = {self.name: self.xml_element}
-        
+
         # Recursively find all drawer bodies
         def find_bodies(parent_elem: ET.Element) -> None:
             for child in parent_elem:
@@ -816,12 +827,15 @@ class Cupboard(MujocoFixture):
                     body_name = child.get("name", "")
                     if body_name:
                         body_map[body_name] = child
-        
+
         find_bodies(self.xml_element)
-        
+
         # Append each site to its target body
         for site_name, site_element in self._pending_region_sites:
-            if hasattr(self, "_region_site_bodies") and site_name in self._region_site_bodies:
+            if (
+                hasattr(self, "_region_site_bodies")
+                and site_name in self._region_site_bodies
+            ):
                 body_name = self._region_site_bodies[site_name]
                 if body_name in body_map:
                     body_map[body_name].append(site_element)
@@ -831,10 +845,10 @@ class Cupboard(MujocoFixture):
             else:
                 # Default: attach to main cupboard body
                 self.xml_element.append(site_element)
-        
+
         # Clear pending sites
         self._pending_region_sites = []
-    
+
     def _get_drawer_compartment_bounds(
         self, shelf_index: int, compartment_index: int
     ) -> tuple[float, float]:

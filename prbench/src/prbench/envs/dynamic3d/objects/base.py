@@ -24,9 +24,10 @@ ObjectT = TypeVar("ObjectT", bound="MujocoObject")
 
 class Region:
     """Represents a region in MuJoCo with site-based bounding box.
-    
+
     The bounding box is always derived from the site element's pos and size attributes,
-    ensuring consistency between the region's geometric definition and its XML representation.
+    ensuring consistency between the region's geometric definition and its XML
+    representation.
     """
 
     def __init__(
@@ -49,20 +50,22 @@ class Region:
     @property
     def bbox(self) -> list[float]:
         """Compute bounding box from site element.
-        
+
         Returns:
             Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
         """
         if self.site_element is None:
-            raise ValueError(f"Cannot compute bbox for region '{self.name}' without site_element")
-        
+            raise ValueError(
+                f"Cannot compute bbox for region '{self.name}' without site_element"
+            )
+
         # Get position and size from site element
         pos_str = self.site_element.get("pos", "0 0 0")
         size_str = self.site_element.get("size", "0 0 0")
-        
+
         pos = [float(v) for v in pos_str.split()]
         size = [float(v) for v in size_str.split()]
-        
+
         # For box sites, size is half-extents
         x_min = pos[0] - size[0]
         y_min = pos[1] - size[1]
@@ -70,7 +73,7 @@ class Region:
         x_max = pos[0] + size[0]
         y_max = pos[1] + size[1]
         z_max = pos[2] + size[2]
-        
+
         return [x_min, y_min, z_min, x_max, y_max, z_max]
 
     def check_in_region(
@@ -94,7 +97,12 @@ class Region:
             True if position is within the region, False otherwise
         """
         # Get the site position: use sim if available, otherwise use XML
-        if sim is not None and site_name is not None and hasattr(sim, 'sim') and sim.sim is not None:
+        if (
+            sim is not None
+            and site_name is not None
+            and hasattr(sim, "sim")
+            and sim.sim is not None
+        ):
             try:
                 site_pos = sim.sim.data.get_site_xpos(site_name)
             except ValueError:
@@ -142,6 +150,7 @@ class Region:
         """Visualize this region (site already created, nothing to do)."""
         # Visualization is handled at creation time via site element
         pass
+
 
 REGISTERED_FIXTURES: dict[str, type[MujocoFixture]] = {}
 REGISTERED_OBJECTS: dict[str, type[MujocoObject]] = {}
@@ -314,7 +323,9 @@ class MujocoObject:
                 site.set("name", f"{self.name}_{region_name}_region_{region_idx}")
                 site.set("type", "box")
                 site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
-                site.set("pos", f"{region_center_x} {region_center_y} {region_center_z}")
+                site.set(
+                    "pos", f"{region_center_x} {region_center_y} {region_center_z}"
+                )
                 rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
                 site.set("rgba", " ".join(map(str, rgba_values)))
                 site.set("group", "0")
@@ -327,9 +338,9 @@ class MujocoObject:
                     site_element=site,
                 )
                 region_list.append(region)
-                
+
                 # Append site element to xml_element if it exists
-                if hasattr(self, 'xml_element') and self.xml_element is not None:
+                if hasattr(self, "xml_element") and self.xml_element is not None:
                     self.xml_element.append(site)
 
             self.region_objects[region_name] = region_list
@@ -774,7 +785,7 @@ class MujocoGround:
                     rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
                     site.set("rgba", " ".join(map(str, rgba_values)))
                     site.set("group", "1")
-                    
+
                     site_name = f"{self.name}_{region_name}_region_{region_idx}"
                     region = Region(
                         name=site_name,
@@ -782,10 +793,10 @@ class MujocoGround:
                         site_element=site,
                     )
                     region_list.append(region)
-                    
+
                     # Append site element to xml_element
                     self.xml_element.append(site)
-                    
+
                     self.region_objects[region_name] = region_list
                     continue
 
@@ -814,7 +825,9 @@ class MujocoGround:
                 site.set("name", f"{self.name}_{region_name}_region_{region_idx}")
                 site.set("type", "box")
                 site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
-                site.set("pos", f"{region_center_x} {region_center_y} {region_center_z}")
+                site.set(
+                    "pos", f"{region_center_x} {region_center_y} {region_center_z}"
+                )
                 rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
                 site.set("rgba", " ".join(map(str, rgba_values)))
                 site.set("group", "1")
@@ -827,7 +840,7 @@ class MujocoGround:
                     site_element=site,
                 )
                 region_list.append(region)
-                
+
                 # Append site element to xml_element
                 self.xml_element.append(site)
 

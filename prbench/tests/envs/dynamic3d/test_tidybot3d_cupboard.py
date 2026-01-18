@@ -1,15 +1,15 @@
 """Tests for the TidyBot3D cupboard scene: observation/action spaces, reset, and step."""
 
-from pathlib import Path
 import xml.etree.ElementTree as ET
-import numpy as np
+from pathlib import Path
 
+import numpy as np
 import pytest
 from gymnasium.wrappers import RecordVideo
 
 import prbench
-from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 from prbench.envs.dynamic3d.objects.fixtures import Cupboard
+from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 from tests.conftest import MAKE_VIDEOS
 
 # Path to MimicLabs scenes
@@ -325,7 +325,9 @@ def test_cupboard_region_site_creation_and_placement():
 
         # Get the region object
         regions = cupboard.region_objects[region_name]
-        assert len(regions) == 1, f"Expected 1 region for {region_name}, got {len(regions)}"
+        assert (
+            len(regions) == 1
+        ), f"Expected 1 region for {region_name}, got {len(regions)}"
 
         region = regions[0]
 
@@ -363,23 +365,27 @@ def test_cupboard_region_site_creation_and_placement():
         # Extract site position and size from XML
         site_pos_str = region.site_element.get("pos", "")
         site_size_str = region.site_element.get("size", "")
-        
+
         assert site_pos_str, f"Site {site_name} has no position"
         assert site_size_str, f"Site {site_name} has no size"
-        
+
         site_pos = [float(x) for x in site_pos_str.split()]
         site_size = [float(x) for x in site_size_str.split()]
-        
-        assert len(site_pos) == 3, f"Site position should have 3 components, got {len(site_pos)}"
-        assert len(site_size) == 3, f"Site size should have 3 components, got {len(site_size)}"
-        
+
+        assert (
+            len(site_pos) == 3
+        ), f"Site position should have 3 components, got {len(site_pos)}"
+        assert (
+            len(site_size) == 3
+        ), f"Site size should have 3 components, got {len(site_size)}"
+
         site_x, site_y, site_z = site_pos
         size_x, size_y, size_z = site_size
-        
+
         # Size should always be half the range span (MuJoCo convention)
         expected_size_x = (x_end - x_start) / 2
         expected_size_y = (y_end - y_start) / 2
-        
+
         assert np.isclose(size_x, expected_size_x, atol=1e-6), (
             f"Site X size mismatch for {region_name}: "
             f"expected {expected_size_x}, got {size_x}"
@@ -388,7 +394,7 @@ def test_cupboard_region_site_creation_and_placement():
             f"Site Y size mismatch for {region_name}: "
             f"expected {expected_size_y}, got {size_y}"
         )
-        
+
         # Position depends on whether site is in drawer (partition-relative) or cupboard (absolute)
         if should_have_drawer:
             # For drawer sites: position should be at the center of the region ranges
@@ -399,7 +405,9 @@ def test_cupboard_region_site_creation_and_placement():
             # Get the shelf height to compute Z center
             shelf_idx = regions_config[region_name]["shelf"]
             shelf_height = cupboard_config["shelf_heights"][shelf_idx]
-            expected_center_z = shelf_height / 2  # Center of drawer height (0 to shelf_height)
+            expected_center_z = (
+                shelf_height / 2
+            )  # Center of drawer height (0 to shelf_height)
         else:
             # For cupboard sites: position is absolute (in cupboard frame)
             # We need to know the partition center to verify, but since we only have ranges,
@@ -408,7 +416,7 @@ def test_cupboard_region_site_creation_and_placement():
             expected_center_x = site_x  # Accept whatever position is set
             expected_center_y = site_y
             expected_center_z = site_z
-        
+
         assert np.isclose(site_x, expected_center_x, atol=1e-6), (
             f"Site X position mismatch for {region_name}: "
             f"expected {expected_center_x}, got {site_x}"
