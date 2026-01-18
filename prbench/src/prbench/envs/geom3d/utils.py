@@ -171,6 +171,7 @@ class Geom3DRobotActionSpace(RobotActionSpace):
 
     def create_markdown_description(self) -> str:
         """Create a markdown description with a table of action space entries."""
+        # pylint: disable=line-too-long
         return """An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
 Actions are bounded relative base position, rotation, and joint positions, and open / close.
