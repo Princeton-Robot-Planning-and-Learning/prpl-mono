@@ -94,7 +94,7 @@ class ObjectCentricBaseMotion3DEnv(
         return {}
 
     def _reset_objects(self) -> None:
-        # Reset the target. Sample and check that the robot has not already reachd it.
+        # Reset the target. Sample and check that the robot has not already reached it.
         target_pose: SE2Pose | None = None
         lb = self.config.target_lower_bound
         ub = self.config.target_upper_bound
@@ -191,7 +191,9 @@ class BaseMotion3DEnv(ConstantObjectPRBenchEnv):
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        return """The reward is a small negative reward (-0.01) per timestep."""
+        return (
+            """The reward is -1 per timestep to encourage reaching the goal quickly."""
+        )
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
