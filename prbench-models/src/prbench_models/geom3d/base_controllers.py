@@ -170,6 +170,14 @@ class BasePlaceController(
                 max_distance=self._sim.config.max_action_mag / 2,
             )
 
+            for state in joint_plan:
+                self._sim._set_robot_and_held_object(self._sim.robot.get_base(), state[:7], finger_state=self._sim.robot.arm.get_finger_state())
+                import time
+                time.sleep(0.01)
+            import pybullet as p
+            while True:
+                p.getMouseEvents(self._sim.physics_client_id)
+
             # Store the plan (excluding the first state which is the current state).
             self._current_arm_joint_plan = joint_plan[1:]
         # Pop the next target joint positions from the plan.

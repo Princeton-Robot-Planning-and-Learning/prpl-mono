@@ -477,6 +477,7 @@ class ObjectCentricGeom3DRobotEnv(
         # Check for collisions.
         if self._robot_or_held_object_collision_exists():
             # Revert!
+            import ipdb; ipdb.set_trace()
             self._set_robot_and_held_object(
                 current_base_pose, current_joints, current_finger_state
             )
@@ -575,6 +576,7 @@ class ObjectCentricGeom3DRobotEnv(
                     # Revert!
                     self._grasped_object = None
                     self._grasped_object_transform = None
+                    import ipdb; ipdb.set_trace()
                     self._set_robot_and_held_object(
                         current_base_pose, current_joints, current_finger_state
                     )
