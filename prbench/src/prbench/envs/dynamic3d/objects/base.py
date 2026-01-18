@@ -149,7 +149,6 @@ class Region:
     def visualize_region(self) -> None:
         """Visualize this region (site already created, nothing to do)."""
         # Visualization is handled at creation time via site element
-        pass
 
 
 REGISTERED_FIXTURES: dict[str, type[MujocoFixture]] = {}
@@ -571,7 +570,7 @@ class MujocoObject:
         if self.regions is None:
             return
 
-        for region_name, region_list in self.region_objects.items():
+        for region_list in self.region_objects.values():
             for region in region_list:
                 region.visualize_region()
 
@@ -732,7 +731,7 @@ class MujocoFixture(abc.ABC):
         if self.regions is None:
             return
 
-        for region_name, region_list in self.region_objects.items():
+        for region_list in self.region_objects.values():
             for region in region_list:
                 region.visualize_region()
                 if region.site_element is not None:
@@ -946,7 +945,7 @@ class MujocoGround:
         if self.regions is None:
             return
 
-        for region_name, region_list in self.region_objects.items():
+        for region_list in self.region_objects.values():
             for region in region_list:
                 region.visualize_region()
 

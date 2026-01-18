@@ -411,7 +411,7 @@ class Table(MujocoFixture):
         if self.regions is None:
             return
 
-        for region_name, region_list in self.region_objects.items():
+        for region_list in self.region_objects.values():
             for region in region_list:
                 region.visualize_region()
 
@@ -587,6 +587,9 @@ class Cupboard(MujocoFixture):
         # Create the XML element
         self.xml_element = self._create_xml_element()
 
+        # Initialize pending region sites list (populated by _create_regions)
+        self._pending_region_sites: list[tuple[str, ET.Element]] = []
+
         # Create regions after all attributes are initialized
         if self.regions is not None:
             self._create_regions()
@@ -663,9 +666,6 @@ class Cupboard(MujocoFixture):
             has_partitions = (
                 shelf < len(self.shelf_partitions) and self.shelf_partitions[shelf]
             )
-
-            # Check if this is a drawer region
-            is_drawer = region_config.get("drawer", False)
 
             if has_partitions:
                 # Region with partitions - must specify partition index
@@ -1496,7 +1496,7 @@ class Cupboard(MujocoFixture):
         if self.regions is None:
             return
 
-        for region_name, region_list in self.region_objects.items():
+        for region_list in self.region_objects.values():
             for region in region_list:
                 region.visualize_region()
 

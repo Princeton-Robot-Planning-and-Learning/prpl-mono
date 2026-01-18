@@ -1,6 +1,5 @@
 """Tests for the TidyBot3D cupboard scene: observation/action spaces, reset, and step."""
 
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import numpy as np
@@ -380,7 +379,7 @@ def test_cupboard_region_site_creation_and_placement():
         ), f"Site size should have 3 components, got {len(site_size)}"
 
         site_x, site_y, site_z = site_pos
-        size_x, size_y, size_z = site_size
+        size_x, size_y, _ = site_size
 
         # Size should always be half the range span (MuJoCo convention)
         expected_size_x = (x_end - x_start) / 2
