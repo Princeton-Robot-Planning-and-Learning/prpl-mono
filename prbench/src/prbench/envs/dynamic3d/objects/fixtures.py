@@ -737,7 +737,8 @@ class Cupboard(MujocoFixture):
             else:
                 x_max = cupboard_half_length - side_panel_extent
         elif compartment_index == len(sorted_partitions):
-            # Rightmost compartment: start at right edge of last partition, end before right side panel
+            # Rightmost compartment: start at right edge of last partition,
+            # end before right side panel
             x_min = sorted_partitions[-1] + partition_half_thickness
             x_max = cupboard_half_length - side_panel_extent
         else:
