@@ -5,7 +5,7 @@
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Description
-Environment where only base motion planning is needed to reach a goal.
+A very simple environment where only base motion planning is needed to reach a goal.
 
 ## Available Variants
 This environment has only one variant.
@@ -49,15 +49,29 @@ The entries of an array in this Box space correspond to the following object fea
 
 
 ## Action Space
-An action space for a 7 DOF robot that can open and close its gripper.
+An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+Actions are bounded relative base position, rotation, and joint positions, and open / close.
 
-    The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
+| **Index** | **Description** |
+| --- | --- |
+| 0 | delta base x |
+| 1 | delta base y |
+| 2 | delta base rotation |
+| 3 | delta joint 1 |
+| 4 | delta joint 2 |
+| 5 | delta joint 3 |
+| 6 | delta joint 4 |
+| 7 | delta joint 5 |
+| 8 | delta joint 6 |
+| 9 | delta joint 7 |
+| 10 | gripper open/close |
+
+The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
 
 
 ## Rewards
-The reward is a small negative reward (-0.01) per timestep to encourage exploration.
+The reward is -1 per timestep to encourage reaching the goal quickly.
 
 ## References
-This is a very common kind of environment.
+This is a very common kind of environment. The background is adapted from the [Replica dataset](https://arxiv.org/abs/1906.05797) (Straub et al., 2019).

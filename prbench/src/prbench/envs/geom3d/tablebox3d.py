@@ -439,14 +439,6 @@ class TableBox3DEnv(ConstantObjectPRBenchEnv):
         # pylint: disable=line-too-long
         return "The number of cubes differs between environment variants. For example, TableBox3D-o1 has 1 cube, while TableBox3D-o2 has 2 cubes."
 
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
-        return """Observations consist of:
-- **robot**: The pose of the robot.
-- **cubes**: The poses of the cubes.
-- **boxes**: The poses of the boxes.
-"""
-
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long

@@ -33,10 +33,11 @@ class BaseMotion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     check_base_collisions: bool = True
 
     # Target.
-    target_radius: float = 0.01
+    target_radius: float = 0.05
+    target_z: float = 0.2
     target_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    target_lower_bound: SE2Pose = SE2Pose(-1, -1, -np.pi)
-    target_upper_bound: SE2Pose = SE2Pose(1, 1, np.pi)
+    target_lower_bound: SE2Pose = SE2Pose(-2, -2, -np.pi)
+    target_upper_bound: SE2Pose = SE2Pose(2, 2, np.pi)
 
 
 class BaseMotion3DObjectCentricState(Geom3DObjectCentricState):
@@ -93,7 +94,7 @@ class ObjectCentricBaseMotion3DEnv(
         return {}
 
     def _reset_objects(self) -> None:
-        # Reset the target. Sample and check that the robot has not already reachd it.
+        # Reset the target. Sample and check that the robot has not already reached it.
         target_pose: SE2Pose | None = None
         lb = self.config.target_lower_bound
         ub = self.config.target_upper_bound
@@ -108,7 +109,7 @@ class ObjectCentricBaseMotion3DEnv(
                 break
         else:
             raise RuntimeError("Failed to find reachable target position")
-        target_se3_pose = target_pose.to_se3(0.0)
+        target_se3_pose = target_pose.to_se3(self.config.target_z)
         set_pose(self.target_id, target_se3_pose, self.physics_client_id)
 
     def _set_object_states(self, obs: BaseMotion3DObjectCentricState) -> None:
@@ -181,29 +182,20 @@ class BaseMotion3DEnv(ConstantObjectPRBenchEnv):
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
         # pylint: disable=line-too-long
-        return (
-            """Environment where only base motion planning is needed to reach a goal."""
-        )
+        return """A very simple environment where only base motion planning is needed to reach a goal."""
 
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "This environment has only one variant."
 
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
-        # pylint: disable=line-too-long
-        return """Observations consist of:
-- **base_pose**: The pose of the base.
-- **joint_positions**: The joint positions of the robot arm.
-- **finger_state**: The state of the fingers.
-- **target**: The pose of the target.
-"""
-
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        return """The reward is a small negative reward (-0.01) per timestep to encourage exploration."""
+        return (
+            """The reward is -1 per timestep to encourage reaching the goal quickly."""
+        )
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
-        return """This is a very common kind of environment."""
+        # pylint: disable=line-too-long
+        return """This is a very common kind of environment. The background is adapted from the [Replica dataset](https://arxiv.org/abs/1906.05797) (Straub et al., 2019)."""

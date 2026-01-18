@@ -184,18 +184,6 @@ Only targets that are reachable via inverse kinematics are sampled.
         # pylint: disable=line-too-long
         return "This environment has only one variant."
 
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
-        # pylint: disable=line-too-long
-        config = self._object_centric_env.config
-        assert isinstance(config, Motion3DEnvConfig)
-        return f"""Observations consist of:
-- **joint_positions**: Current joint positions of the {len(config.initial_joints)}-DOF robot arm (list of floats)
-- **target**: 3D position (x, y, z) of the target sphere to reach (tuple of 3 floats)
-
-The observation is returned as a Motion3DState dataclass with these two fields.
-"""
-
     def _create_action_space_markdown_description(self) -> str:
         """Create action space description."""
         # pylint: disable=line-too-long
