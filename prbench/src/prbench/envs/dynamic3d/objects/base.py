@@ -744,17 +744,19 @@ class MujocoGround:
     def __init__(
         self,
         regions: dict | None = None,
+        worldbody: ET.Element | None = None,
     ) -> None:
         """Initialize a Ground object.
 
         Args:
             regions: Dictionary of regions defined on the ground plane
+            worldbody: The MuJoCo worldbody XML element to add sites to
         """
         self.name = "ground"
         self.regions = regions
+        self.worldbody = worldbody
         self.position = np.array([0.0, 0.0, 0.0])  # Ground at origin
         self.ground_thickness = 0.01  # Default ground thickness
-        self.xml_element = ET.Element("body", name=self.name)  # Empty body element
 
         # Create regions if defined
         self.region_objects: dict[str, list[Region]] = {}
@@ -762,52 +764,28 @@ class MujocoGround:
             self._create_regions()
 
     def _create_regions(self) -> None:
-        """Create Region objects with site elements for ground regions."""
+        """Create Region objects with site elements for ground regions.
+        
+        Sites are added directly to the worldbody if it was provided during init.
+        """
         assert self.regions is not None, "Regions must be defined"
 
         for region_name, region_config in self.regions.items():
             region_list: list[Region] = []
 
             for region_idx, region_range in enumerate(region_config["ranges"]):
-                # Skip validation here - it's done in sample_pose_in_region
-                try:
-                    x_start, y_start, x_end, y_end = region_range
-                except (ValueError, TypeError):
-                    # Store the invalid range and let sample_pose_in_region validate it
-                    # Create a placeholder bbox for invalid ranges
-                    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
-                    site = ET.Element("site")
-                    site.set("name", f"{self.name}_{region_name}_region_{region_idx}")
-                    site.set("type", "box")
-                    site.set("size", "0.5 0.5 0.5")
-                    site.set("pos", "0 0 0")
-                    rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
-                    site.set("rgba", " ".join(map(str, rgba_values)))
-                    site.set("group", "1")
+                x_start, y_start, x_end, y_end = region_range
 
-                    site_name = f"{self.name}_{region_name}_region_{region_idx}"
-                    region = Region(
-                        name=site_name,
-                        rgba=rgba_values,
-                        site_element=site,
-                    )
-                    region_list.append(region)
-
-                    # Append site element to xml_element
-                    self.xml_element.append(site)
-
-                    self.region_objects[region_name] = region_list
-                    continue
-
-                # Create 3D bounding box on ground surface
+                # Create 3D bounding box on ground surface.
+                # Sites must not go below ground (z >= 0), so they span from z=0 to z=2*threshold
                 ground_placement_threshold = 0.01  # 1cm tolerance
                 bbox = [
                     x_start - ground_placement_threshold,
                     y_start - ground_placement_threshold,
-                    -ground_placement_threshold,
+                    0,  # z_min at ground surface (z >= 0)
                     x_end + ground_placement_threshold,
                     y_end + ground_placement_threshold,
-                    ground_placement_threshold,
+                    2 * ground_placement_threshold,  # z_max extends above ground
                 ]
 
                 # Calculate center and half-sizes for MuJoCo box site
@@ -829,7 +807,7 @@ class MujocoGround:
                 )
                 rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
                 site.set("rgba", " ".join(map(str, rgba_values)))
-                site.set("group", "1")
+                site.set("group", "0")
 
                 # Create Region object
                 site_name = f"{self.name}_{region_name}_region_{region_idx}"
@@ -840,8 +818,9 @@ class MujocoGround:
                 )
                 region_list.append(region)
 
-                # Append site element to xml_element
-                self.xml_element.append(site)
+                # Add site element to worldbody if provided
+                if self.worldbody is not None:
+                    self.worldbody.append(site)
 
             self.region_objects[region_name] = region_list
 
@@ -937,17 +916,11 @@ class MujocoGround:
         return False
 
     def visualize_regions(self) -> None:
-        """Visualize the ground's regions in the MuJoCo environment.
-
-        This method is a no-op since regions are now added to the XML during
+        """Visualize the ground's regions.
+        
+        This is now a no-op since sites are added directly to the worldbody during
         _create_regions().
         """
-        if self.regions is None:
-            return
-
-        for region_list in self.region_objects.values():
-            for region in region_list:
-                region.visualize_region()
 
     def __str__(self) -> str:
         """String representation of the ground."""
