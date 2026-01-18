@@ -21,6 +21,7 @@ from pybullet_helpers.motion_planning import (
     run_motion_planning,
     smoothly_follow_end_effector_path,
 )
+from pybullet_helpers.inverse_kinematics import InverseKinematicsError
 from relational_structs import (
     Object,
     ObjectCentricState,
@@ -110,21 +111,24 @@ class BasePlaceController(
 
             joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
             # Run motion planning to the target joint positions.
-            joint_plan = smoothly_follow_end_effector_path(
-                self._sim.robot.arm,
-                [self._pre_place_pose_world, self._target_place_pose_world],
-                initial_joints=self._sim.robot.arm.get_joint_positions(),
-                collision_ids=set(),
-                seed=0,  # for determinism
-                joint_distance_fn=joint_distance_fn,
-                max_smoothing_iters_per_step=1,
-                held_object=grasped_object_id,
-                base_link_to_held_obj=grasped_object_transform,
-            )
-            # for debugging
-            # import pybullet as p
-            # while True:
-            #     p.getMouseEvents(self._sim.physics_client_id)
+            try:
+                joint_plan = smoothly_follow_end_effector_path(
+                    self._sim.robot.arm,
+                    [self._pre_place_pose_world, self._target_place_pose_world],
+                    initial_joints=self._sim.robot.arm.get_joint_positions(),
+                    collision_ids=collision_ids,
+                    seed=0,  # for determinism
+                    joint_distance_fn=joint_distance_fn,
+                    max_smoothing_iters_per_step=1,
+                    held_object=grasped_object_id,
+                    base_link_to_held_obj=grasped_object_transform,
+                )
+            except InverseKinematicsError:
+                joint_plan = None
+                # Debugging
+                # import pybullet as p
+                # while True:
+                #     p.getMouseEvents(self._sim.physics_client_id)
 
             if joint_plan is None:
                 raise TrajectorySamplingFailure("Motion planning failed")
