@@ -1,4 +1,4 @@
-"""Tests for tablebox3d.py."""
+"""Tests for transport3d.py."""
 
 import numpy as np
 import prbench
@@ -12,11 +12,11 @@ from prbench_bilevel_planning.env_models import create_bilevel_planning_models
 prbench.register_all_environments()
 
 
-def test_tablebox3d_observation_to_state():
-    """Tests for observation_to_state() in the TableBox3D environment."""
-    env = prbench.make("prbench/TableBox3D-o1-v0")
+def test_transport3d_observation_to_state():
+    """Tests for observation_to_state() in the Transport3D environment."""
+    env = prbench.make("prbench/Transport3D-o1-v0")
     env_models = create_bilevel_planning_models(
-        "tablebox3d", env.observation_space, env.action_space
+        "transport3d", env.observation_space, env.action_space
     )
     observation_to_state = env_models.observation_to_state
     obs, _ = env.reset(seed=123)
@@ -27,12 +27,12 @@ def test_tablebox3d_observation_to_state():
     env.close()
 
 
-def test_tablebox3d_transition_fn():
-    """Tests for transition_fn() in the TableBox3D environment."""
-    env = prbench.make("prbench/TableBox3D-o1-v0")
+def test_transport3d_transition_fn():
+    """Tests for transition_fn() in the Transport3D environment."""
+    env = prbench.make("prbench/Transport3D-o1-v0")
     env.action_space.seed(123)
     env_models = create_bilevel_planning_models(
-        "tablebox3d", env.observation_space, env.action_space
+        "transport3d", env.observation_space, env.action_space
     )
     transition_fn = env_models.transition_fn
     obs, _ = env.reset(seed=123)
@@ -48,11 +48,11 @@ def test_tablebox3d_transition_fn():
     env.close()
 
 
-def test_tablebox3d_goal_deriver():
-    """Tests for goal_deriver() in the TableBox3D environment."""
-    env = prbench.make("prbench/TableBox3D-o1-v0")
+def test_transport3d_goal_deriver():
+    """Tests for goal_deriver() in the Transport3D environment."""
+    env = prbench.make("prbench/Transport3D-o1-v0")
     env_models = create_bilevel_planning_models(
-        "tablebox3d", env.observation_space, env.action_space
+        "transport3d", env.observation_space, env.action_space
     )
     goal_deriver = env_models.goal_deriver
     obs, _ = env.reset(seed=123)
@@ -62,11 +62,11 @@ def test_tablebox3d_goal_deriver():
     env.close()
 
 
-def test_tablebox3d_state_abstractor():
-    """Tests for state_abstractor() in the TableBox3D environment."""
-    env = prbench.make("prbench/TableBox3D-o1-v0")
+def test_transport3d_state_abstractor():
+    """Tests for state_abstractor() in the Transport3D environment."""
+    env = prbench.make("prbench/Transport3D-o1-v0")
     env_models = create_bilevel_planning_models(
-        "tablebox3d", env.observation_space, env.action_space
+        "transport3d", env.observation_space, env.action_space
     )
     state_abstractor = env_models.state_abstractor
     pred_name_to_pred = {p.name: p for p in env_models.predicates}
@@ -117,11 +117,11 @@ def _skill_test_helper(ground_skill, env_models, env, obs, params=None):
     return obs
 
 
-def test_tablebox3d_skills():
-    """Tests for skills in the TableBox3D environment."""
-    env = prbench.make("prbench/TableBox3D-o1-v0")
+def test_transport3d_skills():
+    """Tests for skills in the Transport3D environment."""
+    env = prbench.make("prbench/Transport3D-o1-v0")
     env_models = create_bilevel_planning_models(
-        "tablebox3d", env.observation_space, env.action_space
+        "transport3d", env.observation_space, env.action_space
     )
 
     skill_name_to_skill = {s.operator.name: s for s in env_models.skills}
@@ -167,19 +167,21 @@ def test_tablebox3d_skills():
 
 
 @pytest.mark.parametrize("seed", [123])
-def test_tablebox3d_bilevel_planning(seed):
-    """Tests for bilevel planning in the TableBox3D environment."""
+def test_transport3d_bilevel_planning(seed):
+    """Tests for bilevel planning in the Transport3D environment."""
 
     num_objects = 1
-    env = prbench.make(f"prbench/TableBox3D-o{num_objects}-v0", render_mode="rgb_array")
+    env = prbench.make(
+        f"prbench/Transport3D-o{num_objects}-v0", render_mode="rgb_array"
+    )
 
     if MAKE_VIDEOS:
         env = RecordVideo(
-            env, "unit_test_videos", name_prefix=f"TableBox3D-bilevel-{seed}"
+            env, "unit_test_videos", name_prefix=f"Transport3D-bilevel-{seed}"
         )
 
     env_models = create_bilevel_planning_models(
-        "tablebox3d",
+        "transport3d",
         env.observation_space,
         env.action_space,
         num_objects=num_objects,

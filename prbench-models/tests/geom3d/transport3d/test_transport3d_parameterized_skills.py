@@ -1,13 +1,13 @@
-"""Tests for TableBox3D parameterized skills."""
+"""Tests for Transport3D parameterized skills."""
 
 import numpy as np
 import prbench
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
-from prbench.envs.geom3d.tablebox3d import ObjectCentricTableBox3DEnv
+from prbench.envs.geom3d.transport3d import ObjectCentricTransport3DEnv
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from prbench_models.geom3d.tablebox3d.parameterized_skills import (
+from prbench_models.geom3d.transport3d.parameterized_skills import (
     create_lifted_controllers,
 )
 
@@ -15,22 +15,22 @@ prbench.register_all_environments()
 
 
 def test_pick_controller():
-    """Test pick controller in TableBox3D environment."""
+    """Test pick controller in Transport3D environment."""
 
     env = prbench.make(
-        "prbench/TableBox3D-o1-v0",
+        "prbench/Transport3D-o1-v0",
         render_mode="rgb_array",
         use_gui=False,
         realistic_bg=True,
     )
     if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
+        env = RecordVideo(env, "unit_test_videos", name_prefix="Transport3D")
 
     obs, _ = env.reset(seed=123)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=1, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(num_cubes=1, use_gui=False)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -59,22 +59,22 @@ def test_pick_controller():
 
 
 def test_pick_and_place_controller():
-    """Test pick and place controller in TableBox3D environment."""
+    """Test pick and place controller in Transport3D environment."""
 
     env = prbench.make(
-        "prbench/TableBox3D-o1-v0",
+        "prbench/Transport3D-o1-v0",
         render_mode="rgb_array",
         use_gui=False,
         realistic_bg=True,
     )
     if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
+        env = RecordVideo(env, "unit_test_videos", name_prefix="Transport3D")
 
     obs, _ = env.reset(seed=123)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=1, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(num_cubes=1, use_gui=False)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -126,23 +126,23 @@ def test_pick_and_place_controller():
 
 
 def test_pick_and_place_inside_box_controller():
-    """Test pick and place controller inside box in TableBox3D environment."""
+    """Test pick and place controller inside box in Transport3D environment."""
 
     num_cubes = 2
     env = prbench.make(
-        f"prbench/TableBox3D-o{num_cubes}-v0",
+        f"prbench/Transport3D-o{num_cubes}-v0",
         render_mode="rgb_array",
         use_gui=False,
         realistic_bg=True,
     )
     if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
+        env = RecordVideo(env, "unit_test_videos", name_prefix="Transport3D")
 
     obs, _ = env.reset(seed=124)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -277,23 +277,23 @@ def test_pick_and_place_inside_box_controller():
 
 
 def test_pick_cube_and_place_on_table_controller():
-    """Test pick cube and place on table controller in TableBox3D environment."""
+    """Test pick cube and place on table controller in Transport3D environment."""
 
     num_cubes = 2
     env = prbench.make(
-        f"prbench/TableBox3D-o{num_cubes}-v0",
+        f"prbench/Transport3D-o{num_cubes}-v0",
         render_mode="rgb_array",
         use_gui=False,
         realistic_bg=True,
     )
     if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos", name_prefix="TableBox3D")
+        env = RecordVideo(env, "unit_test_videos", name_prefix="Transport3D")
 
     obs, _ = env.reset(seed=123)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
