@@ -133,6 +133,7 @@ def run_inference(
     env = prbench.make(
         f"prbench/{env_name}",
         render_mode=render_mode,
+        realistic_bg=True,
     )
 
     # Create FK solver for computing end-effector pose
