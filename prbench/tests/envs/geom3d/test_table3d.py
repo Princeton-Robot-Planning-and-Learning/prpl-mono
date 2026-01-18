@@ -24,7 +24,9 @@ from tests.conftest import MAKE_VIDEOS
 @pytest.fixture(scope="module")
 def env():
     """Create a shared environment for all tests in this module."""
-    environment = Table3DEnv(num_cubes=2, use_gui=False, render_mode="rgb_array")
+    environment = Table3DEnv(
+        num_cubes=2, use_gui=False, render_mode="rgb_array", realistic_bg=False
+    )
     if MAKE_VIDEOS:
         environment = RecordVideo(environment, "unit_test_videos")
     yield environment
@@ -61,7 +63,9 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricTable3DEnv(num_cubes=2, config=config, use_gui=False)
+    sim = ObjectCentricTable3DEnv(
+        num_cubes=2, config=config, use_gui=False, realistic_bg=False
+    )
     sim.set_state(obs)
 
     if MAKE_VIDEOS:
