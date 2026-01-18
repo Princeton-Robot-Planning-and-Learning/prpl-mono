@@ -16,7 +16,7 @@ from shapely.geometry import Polygon
 from prbench.envs.geom3d.object_types import Geom3DCuboidType
 from prbench.envs.utils import RobotActionSpace
 
-# Path to the default realistic background PLY file
+# Path to the default realistic background OBJ file
 DEFAULT_REALISTIC_BG_PATH = (
     Path(__file__).parent / "assets" / "Stage_v3_sc1_staging.obj"
 )
@@ -29,11 +29,11 @@ def load_realistic_background(
     orientation=(0, 0, 0, 1),
     scale=(1, 1, 1),
 ) -> int:
-    """Load a PLY file as a visual-only background in PyBullet.
+    """Load an OBJ file as a visual-only background in PyBullet.
 
     Args:
         physics_client_id: PyBullet physics client ID.
-        ply_path: Path to the PLY file.
+        obj_path: Path to the OBJ file.
         position: Base position of the mesh (x, y, z).
         orientation: Base orientation as quaternion (x, y, z, w).
         scale: Mesh scale (sx, sy, sz).
