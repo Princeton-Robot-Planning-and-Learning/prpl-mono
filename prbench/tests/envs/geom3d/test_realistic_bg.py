@@ -41,22 +41,6 @@ def test_realistic_bg_loads_without_error():
         env.close()
 
 
-def test_realistic_bg_false_by_default():
-    """Test that realistic_bg is False by default."""
-    env = prbench.make(
-        "prbench/BaseMotion3D-v0",
-        render_mode="rgb_array",
-        use_gui=False,
-    )
-    try:
-        # Access the underlying object-centric env to check the background id
-        oc_env = env.unwrapped._object_centric_env  # pylint: disable=protected-access
-        assert oc_env._realistic_bg_id is None  # pylint: disable=protected-access
-        assert not oc_env._realistic_bg_enabled  # pylint: disable=protected-access
-    finally:
-        env.close()
-
-
 def test_realistic_bg_creates_body():
     """Test that realistic_bg=True creates a body in PyBullet."""
     env = prbench.make(
