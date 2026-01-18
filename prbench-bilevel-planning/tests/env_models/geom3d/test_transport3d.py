@@ -190,7 +190,7 @@ def test_transport3d_bilevel_planning(seed):
         env_models,
         seed=seed,
         max_abstract_plans=1,
-        samples_per_step=1,
+        samples_per_step=10,
         planning_timeout=60.0,
         max_skill_horizon=500,
     )
