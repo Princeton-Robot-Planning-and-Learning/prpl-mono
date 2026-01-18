@@ -804,8 +804,6 @@ class Cupboard(MujocoFixture):
                 # Append site element to the appropriate body
                 # We'll do this after all regions are created to ensure drawer bodies
                 # exist. Store the site for later appending
-                if not hasattr(self, "_pending_region_sites"):
-                    self._pending_region_sites: list[tuple[str, ET.Element]] = []
                 self._pending_region_sites.append((site_name, site))
 
             self.region_objects[region_name] = region_list
