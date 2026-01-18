@@ -64,6 +64,11 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     # Gripper.
     gripper_open_threshold: float = 0.01
 
+    # Goal checking: tolerance below the first shelf layer for determining if an
+    # object is "on the shelf". Objects must be above (shelf_pose.z + shelf_spacing
+    # - on_shelf_z_tolerance) to count as placed.
+    on_shelf_z_tolerance: float = 0.05
+
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
         return {
@@ -228,9 +233,15 @@ class ObjectCentricShelf3DEnv(
         robot_gripper_pose = self._robot_arm.get_finger_state()
         if robot_gripper_pose > self.config.gripper_open_threshold:
             return False
+        # Check that all cubes are above the first shelf layer (with tolerance).
+        min_on_shelf_z = (
+            self.config.shelf_pose.position[2]
+            + self.config.shelf_spacing
+            - self.config.on_shelf_z_tolerance
+        )
         for _, cube_id in self._cubes.items():
             cube_pose = get_pose(cube_id, self.physics_client_id)
-            if cube_pose.position[2] < 0.3:
+            if cube_pose.position[2] < min_on_shelf_z:
                 return False
 
         return True
@@ -265,7 +276,7 @@ class Shelf3DEnv(ConstantObjectPRBenchEnv):
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        return """The reward is a small negative reward (-1) per timestep until termination, which occurs when all objects are placed into the shelf."""
+        return """The reward is -1 per timestep to encourage efficient task completion. The episode terminates successfully when all objects are placed on the shelf (i.e., above the first shelf layer) and the gripper is closed. The gripper must be closed to prevent accidental "success" while an object is still being held above the shelf."""
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""

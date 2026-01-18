@@ -20,7 +20,7 @@ The number of objects differs between environment variants. For example, Shelf3D
 ![initial state GIF](assets/initial_state_gifs/Shelf3D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/Shelf3D-o3/Shelf3D-o3_1768760010.gif)
+![demo GIF](assets/demo_gifs/Shelf3D-o3/Shelf3D-o3_1768761767.gif)
 
 **Demo Stats**: Total Reward: -501.00, Success: Yes, Steps: 501
 
@@ -115,7 +115,7 @@ The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change
 
 
 ## Rewards
-The reward is a small negative reward (-1) per timestep until termination, which occurs when all objects are placed into the shelf.
+The reward is -1 per timestep to encourage efficient task completion. The episode terminates successfully when all objects are placed on the shelf (i.e., above the first shelf layer) and the gripper is closed. The gripper must be closed to prevent accidental "success" while an object is still being held above the shelf.
 
 ## References
 This is a very common kind of environment. The background is adapted from the [Replica dataset](https://arxiv.org/abs/1906.05797) (Straub et al., 2019).
