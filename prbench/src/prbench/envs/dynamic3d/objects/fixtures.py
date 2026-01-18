@@ -452,7 +452,6 @@ class Cupboard(MujocoFixture):
     default_shelf_thickness: float = 0.02  # 2cm thick shelves
     default_partition_thickness: float = 0.01  # 1cm thick partitions
     default_drawer_wall_thickness: float = 0.003  # 3mm thick drawer walls
-    default_drawer_stiffness: float = 100.0  # Spring stiffness for drawer sliding
     default_drawer_damping: float = 10.0  # Damping for smooth sliding
 
     def __init__(
@@ -536,11 +535,6 @@ class Cupboard(MujocoFixture):
         self.drawer_wall_thickness: float = float(
             self.fixture_config.get(
                 "drawer_wall_thickness", Cupboard.default_drawer_wall_thickness
-            )
-        )
-        self.drawer_stiffness: float = float(
-            self.fixture_config.get(
-                "drawer_stiffness", Cupboard.default_drawer_stiffness
             )
         )
         self.drawer_damping: float = float(
