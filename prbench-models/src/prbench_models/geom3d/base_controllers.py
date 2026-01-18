@@ -14,6 +14,7 @@ from prbench.envs.geom3d.utils import (
     Geom3DObjectCentricState,
 )
 from pybullet_helpers.geometry import Pose, SE2Pose
+from pybullet_helpers.inverse_kinematics import InverseKinematicsError
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
@@ -21,7 +22,6 @@ from pybullet_helpers.motion_planning import (
     run_motion_planning,
     smoothly_follow_end_effector_path,
 )
-from pybullet_helpers.inverse_kinematics import InverseKinematicsError
 from relational_structs import (
     Object,
     ObjectCentricState,
@@ -126,9 +126,9 @@ class BasePlaceController(
             except InverseKinematicsError:
                 joint_plan = None
                 # Debugging
-                import pybullet as p
-                while True:
-                    p.getMouseEvents(self._sim.physics_client_id)
+                # import pybullet as p
+                # while True:
+                #     p.getMouseEvents(self._sim.physics_client_id)
 
             if joint_plan is None:
                 raise TrajectorySamplingFailure("Motion planning failed")
