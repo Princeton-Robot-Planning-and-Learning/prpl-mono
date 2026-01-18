@@ -89,12 +89,12 @@ def test_ee_delta_rotations():
     # Define delta rotations to apply sequentially
     # Each entry: (name, delta_roll, delta_pitch, delta_yaw, num_steps)
     rotation_sequence = [
-        # ("yaw +30°", 0.0, 0.0, np.radians(30), 50),
-        ("pitch +20°", 0.0, np.radians(20), 0.0, 50),
-        # ("roll +15°", np.radians(15), 0.0, 0.0, 50),
+        ("yaw -50°", 0.0, 0.0, np.radians(-50), 100),
+        # ("pitch +20°", 0.0, np.radians(20), 0.0, 50),
+        # ("roll +40°", np.radians(40), 0.0, 0.0, 100),
         # ("yaw -30°", 0.0, 0.0, np.radians(-30), 50),
-        # ("pitch -20°", 0.0, np.radians(-20), 0.0, 50),
-        # ("roll -15°", np.radians(-15), 0.0, 0.0, 50),
+        # ("pitch -30°", 0.0, np.radians(-30), 0.0, 100),
+        # ("roll -30°", np.radians(-30), 0.0, 0.0, 100),
     ]
 
     for name, delta_roll, delta_pitch, delta_yaw, num_steps in rotation_sequence:
