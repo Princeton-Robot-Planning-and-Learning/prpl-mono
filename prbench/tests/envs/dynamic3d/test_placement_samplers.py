@@ -295,7 +295,6 @@ def test_empty_regions_dict():
 
 def test_invalid_region_format():
     """Test that invalid region format raises ValueError."""
-    np_random = np.random.default_rng(42)
     # Region with wrong number of elements
     regions = {
         "test_region": {
