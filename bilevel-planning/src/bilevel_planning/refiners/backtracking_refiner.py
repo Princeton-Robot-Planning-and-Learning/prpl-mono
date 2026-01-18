@@ -76,22 +76,23 @@ class BacktrackingRefiner(Refiner[_X, _U, _S, _A]):
 
         start_time = time.perf_counter()
         for _ in range(self._num_sampling_attempts_per_step):
-            try:
-                x_traj, u_traj = self._trajectory_sampler(x, s, a, ns, bpg, self._rng)
-                time_elapsed = time.perf_counter() - start_time
-                success, remainder = self._refine_from_step(
-                    index + 1,
-                    x_traj[-1],
-                    s_plan,
-                    a_plan,
-                    remaining_time - time_elapsed,
-                    bpg,
-                )
-                if success:
-                    assert remainder is not None
-                    return True, [(x_traj, u_traj)] + remainder
-            except TrajectorySamplingFailure:
-                continue
+            # try:
+            x_traj, u_traj = self._trajectory_sampler(x, s, a, ns, bpg, self._rng)
+            time_elapsed = time.perf_counter() - start_time
+            success, remainder = self._refine_from_step(
+                index + 1,
+                x_traj[-1],
+                s_plan,
+                a_plan,
+                remaining_time - time_elapsed,
+                bpg,
+            )
+            if success:
+                assert remainder is not None
+                return True, [(x_traj, u_traj)] + remainder
+            # except TrajectorySamplingFailure:
+            #     import ipdb; ipdb.set_trace()
+            #     continue
 
         return False, None  # backtrack
 
