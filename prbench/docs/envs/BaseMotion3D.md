@@ -16,7 +16,9 @@ This environment has only one variant.
 ![initial state GIF](assets/initial_state_gifs/BaseMotion3D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/demo_gifs/BaseMotion3D/BaseMotion3D_1768756176.gif)
+
+**Demo Stats**: Total Reward: -10.00, Success: Yes, Steps: 10
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
