@@ -5,7 +5,7 @@
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Description
-Environment where only base motion planning is needed to reach a goal.
+A very simple environment where only base motion planning is needed to reach a goal.
 
 ## Available Variants
 This environment has only one variant.
@@ -16,9 +16,9 @@ This environment has only one variant.
 ![initial state GIF](assets/initial_state_gifs/BaseMotion3D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/BaseMotion3D/BaseMotion3D_seed191664963_1768756176.gif)
+![demo GIF](assets/demo_gifs/BaseMotion3D/BaseMotion3D_1768757778.gif)
 
-**Demo Stats**: Total Reward: -10.00, Success: No, Steps: 10
+**Demo Stats**: Total Reward: -10.00, Success: Yes, Steps: 10
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
@@ -57,7 +57,7 @@ An action space for a 7 DOF robot that can open and close its gripper.
 
 
 ## Rewards
-The reward is a small negative reward (-0.01) per timestep to encourage exploration.
+The reward is a small negative reward (-0.01) per timestep.
 
 ## References
 This is a very common kind of environment.
