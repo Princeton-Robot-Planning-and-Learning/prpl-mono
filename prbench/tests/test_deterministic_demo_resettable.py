@@ -1,7 +1,9 @@
 """Tests for deterministic demo replay across all environments."""
 
 from pathlib import Path
+from typing import Any
 
+import gymnasium
 import numpy as np
 import pytest
 
@@ -53,7 +55,12 @@ def test_deterministic_demo_replay(demo_path: Path):
         pytest.skip(f"Demo {demo_path} contains no actions")
 
     # Create environment
-    env = prbench.make(env_id, render_mode="rgb_array")
+    make_kwargs: dict[str, Any] = {"render_mode": "rgb_array"}
+    entrypoint = gymnasium.registry[env_id].entry_point
+    assert isinstance(entrypoint, str)
+    if "geom3d" in entrypoint:
+        make_kwargs["realistic_bg"] = False
+    env = prbench.make(env_id, **make_kwargs)
 
     # Test reproducibility: reset with seed and replay actions
     obs, _ = env.reset(seed=seed)

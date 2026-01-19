@@ -166,7 +166,7 @@ def run_inference(
             # Target object for this episode (can be detected or specified)
             if "Shelf3D" in env_name or "Ground3D" in env_name:
                 target_object_key = f"cube{num_cubes - 1}"
-            elif "TableBox3D" in env_name:
+            elif "Transport3D" in env_name:
                 target_object_key = "box0"
             elif "BaseMotion3D" in env_name:
                 target_object_key = "target"

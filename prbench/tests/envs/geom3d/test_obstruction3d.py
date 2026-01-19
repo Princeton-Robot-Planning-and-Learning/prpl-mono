@@ -28,7 +28,11 @@ def env():
     """Create a shared environment for all tests in this module."""
     config = Obstruction3DEnvConfig(target_block_height=0.01)
     environment = Obstruction3DEnv(
-        num_obstructions=0, config=config, use_gui=False, render_mode="rgb_array"
+        num_obstructions=0,
+        config=config,
+        use_gui=False,
+        render_mode="rgb_array",
+        realistic_bg=False,
     )
     if MAKE_VIDEOS:
         environment = RecordVideo(environment, "unit_test_videos")
@@ -65,7 +69,9 @@ def test_pick_place_no_obstructions(env):  # pylint: disable=redefined-outer-nam
     obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricObstruction3DEnv(num_obstructions=0, config=config)
+    sim = ObjectCentricObstruction3DEnv(
+        num_obstructions=0, config=config, realistic_bg=False
+    )
     sim.set_state(obs)
 
     # Run motion planning.
@@ -228,7 +234,9 @@ def test_grasp_fails_when_fingers_collide_with_table():
     config = Obstruction3DEnvConfig(
         target_block_height=0.015, target_block_size_scale=0.5
     )
-    oc_env = ObjectCentricObstruction3DEnv(num_obstructions=0, config=config)
+    oc_env = ObjectCentricObstruction3DEnv(
+        num_obstructions=0, config=config, realistic_bg=False
+    )
 
     obs, _ = oc_env.reset(seed=456)
 

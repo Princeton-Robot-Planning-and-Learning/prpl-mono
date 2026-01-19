@@ -1,4 +1,4 @@
-"""Bilevel planning models for the tablebox 3D environment."""
+"""Bilevel planning models for the transport 3D environment."""
 
 import numpy as np
 from bilevel_planning.structs import (
@@ -10,15 +10,15 @@ from bilevel_planning.structs import (
 from gymnasium.spaces import Space
 from numpy.typing import NDArray
 from prbench.envs.geom3d.object_types import Geom3DCuboidType, Geom3DFixtureType
-from prbench.envs.geom3d.tablebox3d import (
+from prbench.envs.geom3d.transport3d import (
     Geom3DRobotType,
-    ObjectCentricTableBox3DEnv,
-    TableBox3DObjectCentricState,
+    ObjectCentricTransport3DEnv,
+    Transport3DObjectCentricState,
 )
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
 )
-from prbench_models.geom3d.tablebox3d.parameterized_skills import (
+from prbench_models.geom3d.transport3d.parameterized_skills import (
     create_lifted_controllers,
 )
 from relational_structs import (
@@ -43,7 +43,7 @@ def create_bilevel_planning_models(
     assert isinstance(observation_space, ObjectCentricBoxSpace)
     assert isinstance(action_space, Geom3DRobotActionSpace)
 
-    sim = ObjectCentricTableBox3DEnv(num_cubes=num_objects)
+    sim = ObjectCentricTransport3DEnv(num_cubes=num_objects)
 
     # Convert observations into states. The important thing is that states are hashable.
     def observation_to_state(o: NDArray[np.float32]) -> ObjectCentricState:
@@ -57,7 +57,7 @@ def create_bilevel_planning_models(
     ) -> ObjectCentricState:
         """Simulate the action."""
         state = x.copy()
-        assert isinstance(state, TableBox3DObjectCentricState)
+        assert isinstance(state, Transport3DObjectCentricState)
         sim.set_state(state)
         obs, _, _, _, _ = sim.step(u)
         return obs.copy()
@@ -85,7 +85,7 @@ def create_bilevel_planning_models(
         atoms: set[GroundAtom] = set()
 
         # Check if robot base is at the target.
-        assert isinstance(x, TableBox3DObjectCentricState)
+        assert isinstance(x, Transport3DObjectCentricState)
         sim.set_state(x)
 
         # OnGround.

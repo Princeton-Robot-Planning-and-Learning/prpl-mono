@@ -30,6 +30,7 @@ import imageio.v2 as iio
 from generate_env_docs import sanitize_env_id
 
 import prbench
+from prbench.gif_utils import optimize_gif
 from prbench.utils import load_demo
 
 
@@ -212,6 +213,8 @@ def generate_demo_video(
     try:
         iio.mimsave(output_path, frames, fps=fps, loop=loop)  # type: ignore
         print("Video saved successfully!")
+        # Optimize the GIF to reduce file size.
+        optimize_gif(output_path)
     except Exception as e:
         raise ValueError(f"Error saving video: {e}") from e
 

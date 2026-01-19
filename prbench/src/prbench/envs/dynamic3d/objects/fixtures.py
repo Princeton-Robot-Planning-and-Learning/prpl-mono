@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import math
 import xml.etree.ElementTree as ET
+from typing import Any, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 from prbench.envs.dynamic3d import utils
-from prbench.envs.dynamic3d.objects.base import MujocoFixture, register_fixture
+from prbench.envs.dynamic3d.objects.base import (
+    MujocoFixture,
+    Region,
+    register_fixture,
+)
 
 
 @register_fixture
@@ -68,13 +73,12 @@ class Table(MujocoFixture):
                 f"Must be 'rectangle' or 'circle'"
             )
 
-        # Create region bounding boxes if regions are defined
-        self.region_bboxes: dict[str, list[list[float]]] = {}
-        if self.regions is not None:
-            self._create_region_bboxes()
-
         # Create the XML element
         self.xml_element = self._create_xml_element()
+
+        # Create regions after all attributes are initialized
+        if self.regions is not None:
+            self._create_regions()
 
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this table.
@@ -198,21 +202,21 @@ class Table(MujocoFixture):
 
         return table_body
 
-    def _create_region_bboxes(self) -> None:
-        """Create 3D bounding boxes for each region.
+    def _create_regions(self) -> None:
+        """Create Region objects with site elements for each region.
 
         Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted to 3D
         bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where the z dimension
         spans from the table surface to DEFAULT_REGION_HEIGHT above it.
 
-        The bounding boxes are stored in table-relative coordinates.
+        Sites are attached to the table body.
         """
         assert self.regions is not None, "Regions must be defined"
 
         for region_name, region_config in self.regions.items():
-            region_bboxes = []
+            region_list: list = []
 
-            for region_range in region_config["ranges"]:
+            for region_idx, region_range in enumerate(region_config["ranges"]):
                 if len(region_range) != 4:
                     raise ValueError(
                         f"Each region range must have exactly 4 values "
@@ -240,10 +244,39 @@ class Table(MujocoFixture):
                 z_min = self.table_height + self.DEFAULT_REGION_Z_OFFSET
                 z_max = z_min + self.DEFAULT_REGION_HEIGHT
 
-                bbox = [x_start, y_start, z_min, x_end, y_end, z_max]
-                region_bboxes.append(bbox)
+                # Calculate center and half-sizes for MuJoCo box site
+                region_center_x = (x_start + x_end) / 2
+                region_center_y = (y_start + y_end) / 2
+                region_center_z = (z_min + z_max) / 2
+                region_size_x = (x_end - x_start) / 2
+                region_size_y = (y_end - y_start) / 2
+                region_size_z = (z_max - z_min) / 2
 
-            self.region_bboxes[region_name] = region_bboxes
+                # Create site element for the region
+                site = ET.Element("site")
+                site.set("name", f"{self.name}_{region_name}_region_{region_idx}")
+                site.set("type", "box")
+                site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
+                site.set(
+                    "pos", f"{region_center_x} {region_center_y} {region_center_z}"
+                )
+                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
+                site.set("rgba", " ".join(map(str, rgba_values)))
+                site.set("group", "0")
+
+                # Create Region object
+                site_name = f"{self.name}_{region_name}_region_{region_idx}"
+                region = Region(
+                    name=site_name,
+                    rgba=rgba_values,
+                    site_element=site,
+                )
+                region_list.append(region)
+
+                # Append site element to xml_element
+                self.xml_element.append(site)
+
+            self.region_objects[region_name] = region_list
 
     @staticmethod
     def get_bounding_box_from_config(
@@ -316,21 +349,22 @@ class Table(MujocoFixture):
             ValueError: If regions list is empty or if any region has invalid bounds
         """
         assert self.regions is not None, "Regions must be defined"
-        assert region_name in self.region_bboxes, f"Region '{region_name}' not found"
+        assert region_name in self.region_objects, f"Region '{region_name}' not found"
 
         region_config = self.regions[region_name]
-        region_bboxes = self.region_bboxes[region_name]
+        region_list = self.region_objects[region_name]
 
-        # Randomly select one of the region bounding boxes
-        selected_bbox_index = np_random.choice(len(region_bboxes))
-        selected_bbox = region_bboxes[selected_bbox_index]
+        # Randomly select one of the regions
+        selected_region_index = np_random.choice(len(region_list))
+        selected_region = region_list[selected_region_index]
+        selected_bbox = selected_region.bbox
 
         # Get yaw range for this region
         yaw_range = (0.0, 360.0)  # Default range
         if "yaw_ranges" in region_config:
             yaw_ranges = region_config["yaw_ranges"]
-            if yaw_ranges and len(yaw_ranges) > selected_bbox_index:
-                yaw_range = tuple(yaw_ranges[selected_bbox_index])
+            if yaw_ranges and len(yaw_ranges) > selected_region_index:
+                yaw_range = tuple(yaw_ranges[selected_region_index])
 
         # Sample pose from the 3D bounding box (in table-relative coordinates)
         x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
@@ -357,22 +391,15 @@ class Table(MujocoFixture):
         """
         # Validate region exists
         assert self.regions is not None, "Regions must be defined"
-        if region_name not in self.region_bboxes:
+        if region_name not in self.region_objects:
             raise ValueError(f"Region '{region_name}' not found")
 
-        # Convert world coordinates to table-relative coordinates
-        table_relative_pos = np.array(
-            [
-                position[0] - self.position[0],
-                position[1] - self.position[1],
-                position[2] - self.position[2],
-            ]
-        )
-
-        # Check if position is in any of the region's bounding boxes
-        region_bboxes = self.region_bboxes[region_name]
-        for bbox in region_bboxes:
-            if utils.point_in_bbox_3d(table_relative_pos, bbox):
+        # Check if position is in any of the region objects
+        # Pass fixture position as parent_pos to convert from world to local coordinates
+        region_list = self.region_objects[region_name]
+        fixture_pos = np.array(self.position, dtype=np.float32)
+        for region in region_list:
+            if region.check_in_region(position, fixture_pos, None, region.name):
                 return True
 
         return False
@@ -380,49 +407,15 @@ class Table(MujocoFixture):
     def visualize_regions(self) -> None:
         """Visualize the table's regions in the MuJoCo environment.
 
-        This method adds visual elements to the MuJoCo XML to represent the regions
-        defined for this table using the 3D bounding boxes.
+        This method is a no-op since regions are now added to the XML during
+        _create_regions().
         """
         if self.regions is None:
             return
 
-        for region_name, region_config in self.regions.items():
-            if "rgba" in region_config:
-                # Get the bounding boxes for this region
-                region_bboxes = self.region_bboxes.get(region_name, [])
-
-                for i_region, bbox in enumerate(region_bboxes):
-                    # bbox is [x_min, y_min, z_min, x_max, y_max, z_max]
-                    # in table-relative coords
-                    x_min, y_min, z_min, x_max, y_max, z_max = bbox
-
-                    # Calculate center and half-sizes for MuJoCo box geom
-                    region_center_x = (x_min + x_max) / 2
-                    region_center_y = (y_min + y_max) / 2
-                    region_center_z = (z_min + z_max) / 2
-
-                    region_size_x = (x_max - x_min) / 2
-                    region_size_y = (y_max - y_min) / 2
-                    region_size_z = (z_max - z_min) / 2
-
-                    # Create geom element for the region visualization
-                    region_geom = ET.SubElement(self.xml_element, "geom")
-                    region_geom.set(
-                        "name", f"{self.name}_{region_name}_region_{i_region}"
-                    )
-                    region_geom.set("type", "box")
-                    region_geom.set(
-                        "size",
-                        f"{region_size_x} {region_size_y} {region_size_z}",
-                    )
-                    region_geom.set(
-                        "pos",
-                        f"{region_center_x} {region_center_y} {region_center_z}",
-                    )
-                    region_geom.set("rgba", " ".join(map(str, region_config["rgba"])))
-                    # Disable collision for visual-only representation
-                    region_geom.set("contype", "0")
-                    region_geom.set("conaffinity", "0")
+        for region_list in self.region_objects.values():
+            for region in region_list:
+                region.visualize_region()
 
     def __str__(self) -> str:
         """String representation of the table."""
@@ -446,8 +439,12 @@ class Table(MujocoFixture):
 class Cupboard(MujocoFixture):
     """A cupboard fixture with multiple shelves."""
 
-    default_shelf_thickness: float = 0.02
+    default_panel_thickness: float = 0.01  # 1cm thick side and back panels
+    default_open_cupboard_leg_thickness: float = 0.03  # 3cm thick legs when open
+    default_shelf_thickness: float = 0.02  # 2cm thick shelves
     default_partition_thickness: float = 0.01  # 1cm thick partitions
+    default_drawer_wall_thickness: float = 0.003  # 3mm thick drawer walls
+    default_drawer_damping: float = 10.0  # Damping for smooth sliding
 
     def __init__(
         self,
@@ -501,11 +498,43 @@ class Cupboard(MujocoFixture):
         self.shelf_thickness: float = float(
             self.fixture_config.get("shelf_thickness", Cupboard.default_shelf_thickness)
         )
-        self.panel_thickness: float = 0.01  # Thickness of side and back panels
-        # Set leg thickness: thin when panels present, thicker when open
-        self.leg_thickness: float = (
-            self.panel_thickness if not self.side_and_back_open else 0.03
+        self.panel_thickness: float = float(
+            self.fixture_config.get("panel_thickness", Cupboard.default_panel_thickness)
         )
+        # Set leg thickness only when cupboard is open (has legs, not panels)
+        self.leg_thickness: float = (
+            float(
+                self.fixture_config.get(
+                    "leg_thickness", Cupboard.default_open_cupboard_leg_thickness
+                )
+            )
+            if self.side_and_back_open
+            else 0.0
+        )
+
+        # Handle shelf_drawers - convert to list of lists of bools
+        shelf_drawers_raw: list[Any] = cast(
+            list[Any], self.fixture_config.get("shelf_drawers", [])
+        )
+        self.shelf_drawers: list[list[bool]] = []
+        if shelf_drawers_raw:
+            for drawer_list in shelf_drawers_raw:  # type: ignore
+                self.shelf_drawers.append(
+                    [bool(d) for d in drawer_list]  # type: ignore
+                )
+
+        # Drawer parameters
+        self.drawer_wall_thickness: float = float(
+            self.fixture_config.get(
+                "drawer_wall_thickness", Cupboard.default_drawer_wall_thickness
+            )
+        )
+        self.drawer_damping: float = float(
+            self.fixture_config.get("drawer_damping", Cupboard.default_drawer_damping)
+        )
+
+        # Max drawer slide distance (80% of shelf depth)
+        self.drawer_max_slide: float = self.cupboard_depth * 0.8
 
         # Calculate derived properties
         self.num_shelves: int = len(self.shelf_heights) + 1  # +1 for the top shelf
@@ -533,21 +562,39 @@ class Cupboard(MujocoFixture):
                 ):
                     raise ValueError(
                         f"Partition position {partition_pos} on shelf {i} must be "
-                        f"between -{self.cupboard_length/2} and "
+                        f"strictly between -{self.cupboard_length/2} and "
                         f"{self.cupboard_length/2} "
                         f"(cupboard length is {self.cupboard_length})"
+                    )
+
+        # Validate shelf_drawers configuration if provided
+        if self.shelf_drawers:
+            if len(self.shelf_drawers) != len(self.shelf_heights):
+                raise ValueError(
+                    f"shelf_drawers must have {len(self.shelf_heights)} lists, "
+                    f"got {len(self.shelf_drawers)} (one list per shelf gap, "
+                    f"not including top shelf)"
+                )
+            for i, drawer_list in enumerate(self.shelf_drawers):
+                expected_len = len(self.shelf_partitions[i]) + 1
+                if len(drawer_list) != expected_len:
+                    raise ValueError(
+                        f"shelf_drawers[{i}] must have {expected_len} elements "
+                        f"(num_partitions + 1), got {len(drawer_list)}"
                     )
 
         # Precompute shelf z positions for efficiency
         self._shelf_z_positions = self._compute_shelf_z_positions()
 
-        # Create region bounding boxes if regions are defined
-        self.region_bboxes: dict[str, list[list[float]]] = {}
-        if self.regions is not None:
-            self._create_region_bboxes()
-
         # Create the XML element
         self.xml_element = self._create_xml_element()
+
+        # Initialize pending region sites list (populated by _create_regions)
+        self._pending_region_sites: list[tuple[str, ET.Element]] = []
+
+        # Create regions after all attributes are initialized
+        if self.regions is not None:
+            self._create_regions()
 
     def _compute_shelf_z_positions(self) -> list[float]:
         """Compute the z position of each shelf surface.
@@ -573,14 +620,22 @@ class Cupboard(MujocoFixture):
 
         return shelf_z_positions
 
-    def _create_region_bboxes(self) -> None:
-        """Create 3D bounding boxes for each region.
+    def _create_regions(self) -> None:
+        """Create Region objects with site elements for each region.
 
-        Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted to 3D
-        bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where the z dimension
-        spans from the shelf surface to the height available on that shelf.
+        For shelves with partitions: region config must include:
+            - "shelf": shelf index
+            - "partition": partition index (0 for first partition, 1 for second, etc.)
+            - "ranges": [[x_start, y_start, x_end, y_end]] relative to partition center
 
-        The bounding boxes are stored in cupboard-relative coordinates.
+        For non-partitioned shelves (top shelf): region config must include:
+            - "shelf": shelf index (top shelf = num_shelves - 1)
+            - "ranges": [[x_start, y_start, x_end, y_end]] relative to shelf center
+
+        For drawers: if "drawer" is True, site is attached to drawer body instead
+        of cupboard.
+
+        Sites are positioned at the partition/compartment center.
         """
         assert self.regions is not None, "Regions must be defined"
 
@@ -588,8 +643,7 @@ class Cupboard(MujocoFixture):
             # Get the shelf index for this region
             if "shelf" not in region_config:
                 raise ValueError(
-                    f"Cupboard region '{region_name}' must specify "
-                    f"'shelf' for bbox creation"
+                    f"Cupboard region '{region_name}' must specify 'shelf'"
                 )
             shelf = region_config["shelf"]
 
@@ -600,6 +654,8 @@ class Cupboard(MujocoFixture):
                     f"{self.num_shelves} shelves in region '{region_name}'"
                 )
 
+            region_list: list = []
+
             # Determine the height available on this shelf
             if shelf < len(self.shelf_heights):
                 shelf_height = self.shelf_heights[shelf]
@@ -607,9 +663,45 @@ class Cupboard(MujocoFixture):
                 # For the top shelf, use the last shelf height as default
                 shelf_height = self.shelf_heights[-1] if self.shelf_heights else 0.2
 
-            region_bboxes = []
+            # Check if this shelf has partitions
+            has_partitions = (
+                shelf < len(self.shelf_partitions) and self.shelf_partitions[shelf]
+            )
 
-            for region_range in region_config["ranges"]:
+            if has_partitions:
+                # Region with partitions - must specify partition index
+                if "partition" not in region_config:
+                    raise ValueError(
+                        f"Cupboard region '{region_name}' on shelf {shelf} "
+                        f"has partitions but does not specify 'partition' index"
+                    )
+                partition_idx = region_config["partition"]
+                partitions = self.shelf_partitions[shelf]
+
+                # Validate partition index
+                if partition_idx < 0 or partition_idx > len(partitions):
+                    raise ValueError(
+                        f"Partition index {partition_idx} out of range for "
+                        f"shelf {shelf} with {len(partitions)} partitions "
+                        f"in '{region_name}'"
+                    )
+
+                # Get the x bounds of this partition/compartment
+                x_min, x_max = self._get_drawer_compartment_bounds(shelf, partition_idx)
+                partition_center_x = (x_min + x_max) / 2
+            else:
+                # Non-partitioned shelf (top shelf) - entire shelf is one region
+                if "partition" in region_config:
+                    raise ValueError(
+                        f"Cupboard region '{region_name}' on shelf {shelf} "
+                        f"has no partitions but specifies 'partition' index"
+                    )
+                cupboard_half_length = self.cupboard_length / 2
+                partition_center_x = 0.0  # Center of shelf
+                x_min = -cupboard_half_length
+                x_max = cupboard_half_length
+
+            for region_idx, region_range in enumerate(region_config["ranges"]):
                 if len(region_range) != 4:
                     raise ValueError(
                         f"Each region range must have exactly 4 values "
@@ -619,7 +711,7 @@ class Cupboard(MujocoFixture):
 
                 x_start, y_start, x_end, y_end = region_range
 
-                # Validate bounds
+                # Validate bounds (ranges are relative to partition center)
                 if x_start >= x_end:
                     raise ValueError(
                         f"x_start ({x_start}) must be less than x_end ({x_end}) "
@@ -631,15 +723,462 @@ class Cupboard(MujocoFixture):
                         f"for region '{region_name}'"
                     )
 
-                # Create 3D bounding box:
-                # z_min is at the shelf surface, z_max is shelf_height above
-                z_min = self._shelf_z_positions[shelf]
-                z_max = z_min + shelf_height
+                # Determine if this compartment has a drawer (before coordinate
+                # conversion)
+                compartment_has_drawer = False
+                if self.shelf_drawers and shelf < len(self.shelf_drawers):
+                    shelf_drawers_list = self.shelf_drawers[shelf]
+                    if has_partitions:
+                        # For partitioned shelves, check if this specific partition
+                        # has a drawer
+                        if partition_idx < len(shelf_drawers_list):
+                            compartment_has_drawer = shelf_drawers_list[partition_idx]
+                    else:
+                        # For non-partitioned shelves, check if the single compartment
+                        # has a drawer
+                        if shelf_drawers_list:
+                            compartment_has_drawer = shelf_drawers_list[0]
 
-                bbox = [x_start, y_start, z_min, x_end, y_end, z_max]
-                region_bboxes.append(bbox)
+                # Calculate center and half-sizes for MuJoCo box site
+                if compartment_has_drawer:
+                    # For drawer sites: keep partition-relative coordinates
+                    # (drawer body has its own local frame centered at partition center)
+                    region_center_x = (x_start + x_end) / 2
+                    region_center_y = (y_start + y_end) / 2
+                    region_center_z = shelf_height / 2  # Center of drawer height
+                    region_size_x = (x_end - x_start) / 2
+                    region_size_y = (y_end - y_start) / 2
+                    region_size_z = shelf_height / 2
+                else:
+                    # For cupboard sites: convert partition-relative to world-relative
+                    region_center_x = (
+                        partition_center_x + x_start + partition_center_x + x_end
+                    ) / 2
+                    region_center_y = (y_start + y_end) / 2
+                    z_min = self._shelf_z_positions[shelf]
+                    z_max = z_min + shelf_height
+                    region_center_z = (z_min + z_max) / 2
+                    region_size_x = (x_end - x_start) / 2
+                    region_size_y = (y_end - y_start) / 2
+                    region_size_z = (z_max - z_min) / 2
 
-            self.region_bboxes[region_name] = region_bboxes
+                # Create site element for the region
+                site = ET.Element("site")
+                site_name = f"{self.name}_{region_name}_region_{region_idx}"
+                site.set("name", site_name)
+                site.set("type", "box")
+                site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
+                site.set(
+                    "pos", f"{region_center_x} {region_center_y} {region_center_z}"
+                )
+                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
+                site.set("rgba", " ".join(map(str, rgba_values)))
+                site.set("group", "0")
+
+                # Create Region object (derived from site_element)
+                region = Region(
+                    name=site_name,
+                    rgba=rgba_values,
+                    site_element=site,
+                )
+                region_list.append(region)
+
+                # Store which body this site should be attached to
+                if not hasattr(self, "_region_site_bodies"):
+                    self._region_site_bodies: dict[str, str] = {}
+
+                if compartment_has_drawer:
+                    # Attach to drawer body
+                    # Use the same naming convention as in _create_xml_element()
+                    if has_partitions:
+                        drawer_index = f"s{shelf+1}c{partition_idx}"
+                    else:
+                        drawer_index = f"s{shelf+1}c0"
+                    self._region_site_bodies[site_name] = (
+                        f"{self.name}_drawer_{drawer_index}"
+                    )
+                else:
+                    # Attach to main cupboard body
+                    self._region_site_bodies[site_name] = self.name
+
+                # Append site element to the appropriate body
+                # We'll do this after all regions are created to ensure drawer bodies
+                # exist. Store the site for later appending
+                self._pending_region_sites.append((site_name, site))
+
+            self.region_objects[region_name] = region_list
+
+        # Now append all pending sites to their target bodies
+        self._append_region_sites_to_bodies()
+
+    def _append_region_sites_to_bodies(self) -> None:
+        """Append pending region sites to their target bodies in the XML.
+
+        This is called after _create_regions() to ensure all drawer bodies have been
+        created in the XML.
+        """
+        if not hasattr(self, "_pending_region_sites"):
+            return
+
+        # Build a map of body names to body elements
+        body_map: dict[str, ET.Element] = {self.name: self.xml_element}
+
+        # Recursively find all drawer bodies
+        def find_bodies(parent_elem: ET.Element) -> None:
+            for child in parent_elem:
+                if child.tag == "body":
+                    body_name = child.get("name", "")
+                    if body_name:
+                        body_map[body_name] = child
+
+        find_bodies(self.xml_element)
+
+        # Append each site to its target body
+        for site_name, site_element in self._pending_region_sites:
+            if (
+                hasattr(self, "_region_site_bodies")
+                and site_name in self._region_site_bodies
+            ):
+                body_name = self._region_site_bodies[site_name]
+                if body_name in body_map:
+                    body_map[body_name].append(site_element)
+                else:
+                    # Fallback to main cupboard body if target not found
+                    self.xml_element.append(site_element)
+            else:
+                # Default: attach to main cupboard body
+                self.xml_element.append(site_element)
+
+        # Clear pending sites
+        self._pending_region_sites = []
+
+    def _get_drawer_compartment_bounds(
+        self, shelf_index: int, compartment_index: int
+    ) -> tuple[float, float]:
+        """Get the x-bounds of a specific drawer compartment.
+
+        Args:
+            shelf_index: Index of the shelf (0-based)
+            compartment_index: Index of the compartment (0-based)
+
+        Returns:
+            Tuple of (x_min, x_max) in cupboard-relative coordinates
+        """
+        cupboard_half_length = self.cupboard_length / 2
+        partitions = self.shelf_partitions[shelf_index]
+
+        # Sort partitions for consistent ordering
+        sorted_partitions = sorted(partitions)
+
+        # Account for side panel thickness when panels are present
+        side_panel_extent = 0.0
+        if not self.side_and_back_open:
+            side_panel_extent = self.panel_thickness
+        else:
+            side_panel_extent = self.leg_thickness
+
+        # Partition half-thickness for computing compartment edges
+        partition_half_thickness = Cupboard.default_partition_thickness / 2
+
+        if compartment_index == 0:
+            # Leftmost compartment: start after left side panel
+            x_min = -cupboard_half_length + side_panel_extent
+            if sorted_partitions:
+                # End at the left edge of the first partition
+                x_max = sorted_partitions[0] - partition_half_thickness
+            else:
+                x_max = cupboard_half_length - side_panel_extent
+        elif compartment_index == len(sorted_partitions):
+            # Rightmost compartment: start at right edge of last partition,
+            # end before right side panel
+            x_min = sorted_partitions[-1] + partition_half_thickness
+            x_max = cupboard_half_length - side_panel_extent
+        else:
+            # Middle compartment: bounded by two partitions
+            x_min = sorted_partitions[compartment_index - 1] + partition_half_thickness
+            x_max = sorted_partitions[compartment_index] - partition_half_thickness
+
+        return x_min, x_max
+
+    def _create_drawer_handle(
+        self, handle_length: float, handle_depth: float
+    ) -> ET.Element:
+        """Create a handle body for a drawer.
+
+        The handle consists of 3 box geoms:
+        - One main box along the x-axis
+        - Two smaller boxes attached perpendicularly (along y-axis) at the ends,
+          positioned to span 80% of the handle length
+
+        The origin is at the center of the main box in x, and the perpendicular
+        boxes end at y=0 (extending from y=-handle_depth to y=0).
+
+        Example handle layout (top view):
+                        (x=0 ➡️, y=0 ⬇️) <-- Origin at center of main box
+                               ^
+                               |
+                               |
+                               .
+                ||                           ||  <-- Perpendicular attachments
+                ||                           ||
+                ||                           ||
+        =============================================== <-- Main horizontal handle
+        |<-------------- handle_length -------------->|
+
+        Args:
+            handle_length: Length of the main handle box (x-direction)
+            handle_depth: Depth of the perpendicular boxes (y-direction)
+
+        Returns:
+            ET.Element representing the handle body
+        """
+        handle_body = ET.Element("body")
+
+        handle_size = 0.006  # 6mm wide boxes for the handle
+        handle_half_size = handle_size / 2
+
+        # Main horizontal box (along x-axis)
+        main_box = ET.SubElement(handle_body, "geom")
+        main_box.set("type", "box")
+        main_box.set(
+            "size", f"{handle_length / 2} {handle_half_size} {handle_half_size}"
+        )
+        main_box.set("pos", f"0 {handle_depth - handle_half_size} 0")
+        main_box.set("rgba", "0.3 0.3 0.3 1")
+
+        # Two perpendicular boxes at the ends (along y-axis)
+        # Positioned 10% from each end, so total span is 80% of handle_length
+        # 10% inset from each end
+        x_offset = (handle_length / 2 - handle_half_size) * 0.8
+        # half length of perpendicular attachments
+        perp_half_depth = handle_depth / 2
+
+        for x_pos in [-x_offset, x_offset]:
+            y_pos = perp_half_depth - handle_half_size
+            perp_box = ET.SubElement(handle_body, "geom")
+            perp_box.set("type", "box")
+            perp_box.set("size", f"{handle_half_size} {y_pos} {handle_half_size}")
+            perp_box.set("pos", f"{x_pos} {y_pos} 0")
+            perp_box.set("rgba", "0.3 0.3 0.3 1")
+
+        return handle_body
+
+    def _create_drawer_body(
+        self,
+        drawer_index: str,
+        shelf_z: float,
+        shelf_half_thickness: float,
+        shelf_height: float,
+        x_min: float,
+        x_max: float,
+        cupboard_half_depth: float,
+        compartment_index: int = 0,
+        num_compartments: int = 1,
+    ) -> ET.Element:
+        """Create a drawer body with 5 geoms (front, back, left, right, bottom).
+
+        Args:
+            drawer_index: Unique identifier for the drawer (e.g., "shelf1_comp0")
+            shelf_z: Z position of the shelf surface
+            shelf_half_thickness: Half thickness of the shelf
+            shelf_height: Height available for the drawer
+            x_min: Minimum x coordinate of the drawer compartment
+            x_max: Maximum x coordinate of the drawer compartment
+            cupboard_half_depth: Half depth of the cupboard
+            compartment_index: Index of this compartment (0-based)
+            num_compartments: Total number of compartments on this shelf
+
+        Returns:
+            ET.Element representing the drawer body
+        """
+        # Create drawer body
+        drawer_body = ET.Element("body")
+        drawer_body.set("name", f"{self.name}_drawer_{drawer_index}")
+
+        # x_min and x_max are the unadjusted compartment bounds
+        # (representing actual panel/partition extents)
+        # Drawer compartment dimensions
+        drawer_length = x_max - x_min
+        drawer_half_length = drawer_length / 2
+
+        # Adjust for side panel width (when panels present) or leg thickness (when open)
+        # This insets the drawable space from the compartment boundaries
+        # Use multiple of wall thickness for clearance
+        adjust_half_t = 4 * self.drawer_wall_thickness
+
+        x_min_adjusted = x_min + adjust_half_t
+        x_max_adjusted = x_max - adjust_half_t
+
+        # Create drawer walls using thin geoms
+        wall_t = self.drawer_wall_thickness
+        wall_half_t = wall_t / 2
+
+        # Compute clearances for left and right sides
+        # Using adjusted bounds (already inset by structural thickness)
+        # So we only need wall thickness clearance from the adjusted boundaries
+        left_clearance = wall_t
+        right_clearance = wall_t
+
+        # Adjust drawer center if left and right clearances are asymmetric
+        drawer_center_shift = (left_clearance - right_clearance) / 2
+        drawer_center_x = (x_min_adjusted + x_max_adjusted) / 2 + drawer_center_shift
+
+        drawer_length_adjusted = x_max_adjusted - x_min_adjusted
+        drawer_length_adjusted = (
+            drawer_length_adjusted - left_clearance - right_clearance
+        )
+        drawer_half_length = drawer_length_adjusted / 2
+
+        # Determine edge thickness based on cupboard configuration
+        # When open: edges have legs; when closed: edges have panels
+        edge_thickness = (
+            self.leg_thickness if self.side_and_back_open else self.panel_thickness
+        )
+
+        # Depth margin: inset from back panel/leg to keep drawer inside
+        # Use panel thickness for closed cupboard, leg thickness for open
+        depth_margin = edge_thickness
+        drawer_half_depth = cupboard_half_depth - depth_margin / 2
+
+        # Drawer position: centered in inset compartment, at shelf surface
+        # Adjust y position so front face is flush with shelf edge
+        # at cupboard_half_depth - depth_margin/2
+        drawer_y = depth_margin / 2
+        drawer_z = shelf_z + shelf_half_thickness + self.drawer_wall_thickness
+        drawer_body.set("pos", f"{drawer_center_x} {drawer_y} {drawer_z}")
+
+        # Create sliding joint inside the drawer body
+        joint = ET.SubElement(drawer_body, "joint")
+        joint.set("name", f"{self.name}_drawer_{drawer_index}_joint")
+        joint.set("type", "slide")
+        joint.set("axis", "0 1 0")  # Slide along Y axis (in/out)
+        joint.set("range", f"0 {self.drawer_max_slide}")
+        joint.set("damping", str(self.drawer_damping))
+
+        # Vertical clearance: reduce wall height to avoid collision with shelf above
+        vertical_clearance = 4 * wall_t
+        wall_height = shelf_height - vertical_clearance
+        wall_half_height = wall_height / 2
+        wall_pos_z = wall_half_t + wall_half_height  # Position above the bottom geom
+
+        # Bottom geom (closes bottom of drawer) - align flush with side walls
+        bottom = ET.SubElement(drawer_body, "geom")
+        bottom.set("name", f"{self.name}_drawer_{drawer_index}_bottom")
+        bottom.set("type", "box")
+        bottom.set(
+            "size",
+            f"{drawer_half_length - wall_half_t} {drawer_half_depth} {wall_half_t}",
+        )
+        bottom.set("pos", f"0 0 {wall_half_t/2}")
+        bottom.set("rgba", "0.6 0.5 0.4 0.8")
+
+        # Front geom (facing out towards user)
+        front = ET.SubElement(drawer_body, "geom")
+        front.set("name", f"{self.name}_drawer_{drawer_index}_front")
+        front.set("type", "box")
+        front.set(
+            "size",
+            f"{drawer_half_length - wall_half_t} {wall_half_t} {wall_half_height}",
+        )
+        front.set("pos", f"0 {drawer_half_depth - wall_half_t} {wall_pos_z}")
+        front.set("rgba", "0.5 0.4 0.3 0.9")
+
+        # Drawer face geom (spans full width accounting for partitions)
+        partition_thickness = Cupboard.default_partition_thickness
+
+        # Determine face left and right bounds
+        # At side panels/legs (edges): extend by the appropriate edge thickness
+        # At partitions (middle): extend by half partition thickness
+        if compartment_index == 0:
+            # Left side is at the edge, extend by edge thickness into it
+            face_left = x_min - edge_thickness
+        else:
+            # Left side is at a partition, extend half partition thickness into it
+            face_left = x_min - partition_thickness / 2
+
+        if compartment_index == num_compartments - 1:
+            # Right side is at the edge, extend by edge thickness into it
+            face_right = x_max + edge_thickness
+        else:
+            # Right side is at a partition, extend half partition thickness into it
+            face_right = x_max + partition_thickness / 2
+
+        # Calculate face dimensions
+        face_length = face_right - face_left
+        face_half_length = face_length / 2
+        face_center_x = (face_left + face_right) / 2
+
+        face_thickness_half = self.shelf_thickness / 2
+
+        # Position relative to drawer body center
+        face_local_center_x = face_center_x - drawer_center_x
+        face_local_center_y = drawer_half_depth + face_thickness_half
+        # Face geom height: covers drawer wall plus shelf thickness plus extends
+        # halfway into shelf above
+        face_height = wall_half_height + shelf_half_thickness + shelf_half_thickness / 2
+        # Shift face position upward to extend into the shelf above
+        face_z_pos = wall_pos_z - wall_half_t + shelf_half_thickness / 4
+        face = ET.SubElement(drawer_body, "geom")
+        face.set("name", f"{self.name}_drawer_{drawer_index}_face")
+        face.set("type", "box")
+        face.set("size", f"{face_half_length} {face_thickness_half} {face_height}")
+        face.set(
+            "pos",
+            f"{face_local_center_x} {face_local_center_y} {face_z_pos}",
+        )
+        face.set("rgba", "0.4 0.3 0.2 1")  # Slightly darker for visual distinction
+
+        # Back geom (facing away, allows sliding)
+        back = ET.SubElement(drawer_body, "geom")
+        back.set("name", f"{self.name}_drawer_{drawer_index}_back")
+        back.set("type", "box")
+        back.set(
+            "size",
+            f"{drawer_half_length - wall_half_t} {wall_half_t} {wall_half_height}",
+        )
+        back.set("pos", f"0 {-(drawer_half_depth - wall_half_t)} {wall_pos_z}")
+        back.set("rgba", "0.5 0.4 0.3 0.9")
+
+        # Left geom (left side wall) - inset to avoid partition/panel collision
+        left = ET.SubElement(drawer_body, "geom")
+        left.set("name", f"{self.name}_drawer_{drawer_index}_left")
+        left.set("type", "box")
+        left.set("size", f"{wall_half_t} {drawer_half_depth} {wall_half_height}")
+        left.set(
+            "pos",
+            f"{-(drawer_half_length - 2*wall_half_t)} 0 {wall_pos_z}",
+        )
+        left.set("rgba", "0.5 0.4 0.3 0.9")
+
+        # Right geom (right side wall) - inset to avoid partition/panel collision
+        right = ET.SubElement(drawer_body, "geom")
+        right.set("name", f"{self.name}_drawer_{drawer_index}_right")
+        right.set("type", "box")
+        right.set("size", f"{wall_half_t} {drawer_half_depth} {wall_half_height}")
+        right.set(
+            "pos",
+            f"{drawer_half_length - 2*wall_half_t} 0 {wall_pos_z}",
+        )
+        right.set("rgba", "0.5 0.4 0.3 0.9")
+
+        # Create handle body with 3 boxes (main + 2 perpendicular)
+        # 40% of drawer width
+        handle_length = (drawer_half_length - wall_half_t) * 0.4
+        # total protrusion of handle body
+        handle_depth = face_thickness_half * 2
+        handle_body = self._create_drawer_handle(handle_length, handle_depth)
+
+        # Set handle body properties and position at center of face geom
+        handle_body.set("name", f"{self.name}_drawer_{drawer_index}_handle")
+        handle_body.set(
+            "pos",
+            f"{face_local_center_x} {face_local_center_y + face_thickness_half} "
+            f"{face_z_pos}",
+        )
+        # Add handle body to drawer
+        drawer_body.append(handle_body)
+
+        return drawer_body
 
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this cupboard.
@@ -673,26 +1212,27 @@ class Cupboard(MujocoFixture):
         leg_x_offset = cupboard_half_length - self.leg_thickness / 2
         leg_y_offset = cupboard_half_depth - self.leg_thickness / 2
 
-        # Create vertical legs at four corners
-        leg_positions = [
-            (f"{leg_x_offset} {leg_y_offset}", f"{self.name}_leg1"),
-            (f"{-leg_x_offset} {leg_y_offset}", f"{self.name}_leg2"),
-            (f"{leg_x_offset} {-leg_y_offset}", f"{self.name}_leg3"),
-            (f"{-leg_x_offset} {-leg_y_offset}", f"{self.name}_leg4"),
-        ]
+        # Create vertical legs at four corners (only when cupboard is open)
+        if self.side_and_back_open:
+            leg_positions = [
+                (f"{leg_x_offset} {leg_y_offset}", f"{self.name}_leg1"),
+                (f"{-leg_x_offset} {leg_y_offset}", f"{self.name}_leg2"),
+                (f"{leg_x_offset} {-leg_y_offset}", f"{self.name}_leg3"),
+                (f"{-leg_x_offset} {-leg_y_offset}", f"{self.name}_leg4"),
+            ]
 
-        for pos, name in leg_positions:
-            leg = ET.SubElement(cupboard_body, "geom")
-            leg.set("name", name)
-            leg.set("type", "box")
-            leg.set(
-                "size",
-                f"{self.leg_thickness/2} {self.leg_thickness/2} {leg_half_height}",
-            )
-            leg.set(
-                "pos", f"{pos.split()[0]} {pos.split()[1]} {leg_half_height}"
-            )  # Position leg center at half its height
-            leg.set("rgba", "0.6 0.4 0.2 1")  # Brown color for legs
+            for pos, name in leg_positions:
+                leg = ET.SubElement(cupboard_body, "geom")
+                leg.set("name", name)
+                leg.set("type", "box")
+                leg.set(
+                    "size",
+                    f"{self.leg_thickness/2} {self.leg_thickness/2} {leg_half_height}",
+                )
+                leg.set(
+                    "pos", f"{pos.split()[0]} {pos.split()[1]} {leg_half_height}"
+                )  # Position leg center at half its height
+                leg.set("rgba", "0.6 0.4 0.2 1")  # Brown color for legs
 
         # Calculate cumulative shelf positions
         current_z = shelf_half_thickness
@@ -743,6 +1283,35 @@ class Cupboard(MujocoFixture):
                     partition.set(
                         "rgba", "0.7 0.5 0.3 1"
                     )  # Slightly different color for partitions
+
+                # Create drawers for this shelf if configured
+                if self.shelf_drawers and i < len(self.shelf_drawers):
+                    drawer_list = self.shelf_drawers[i]
+                    num_compartments = len(drawer_list)
+
+                    for comp_idx in range(num_compartments):
+                        if drawer_list[comp_idx]:
+                            # Create drawer for this compartment
+                            x_min, x_max = self._get_drawer_compartment_bounds(
+                                i, comp_idx
+                            )
+                            drawer_index = f"s{i+1}c{comp_idx}"
+
+                            # Create drawer body (includes joint inside)
+                            drawer_body = self._create_drawer_body(
+                                drawer_index,
+                                shelf_z,
+                                shelf_half_thickness,
+                                shelf_height,
+                                x_min,
+                                x_max,
+                                cupboard_half_depth,
+                                compartment_index=comp_idx,
+                                num_compartments=num_compartments,
+                            )
+
+                            # Add drawer body to cupboard
+                            cupboard_body.append(drawer_body)
 
         # Create side and back panels if not open
         if not self.side_and_back_open:
@@ -865,21 +1434,22 @@ class Cupboard(MujocoFixture):
             ValueError: If regions list is empty or if any region has invalid bounds
         """
         assert self.regions is not None, "Regions must be defined"
-        assert region_name in self.region_bboxes, f"Region '{region_name}' not found"
+        assert region_name in self.region_objects, f"Region '{region_name}' not found"
 
         region_config = self.regions[region_name]
-        region_bboxes = self.region_bboxes[region_name]
+        region_list = self.region_objects[region_name]
 
-        # Randomly select one of the region bounding boxes
-        selected_bbox_index = np_random.choice(len(region_bboxes))
-        selected_bbox = region_bboxes[selected_bbox_index]
+        # Randomly select one of the regions
+        selected_region_index = np_random.choice(len(region_list))
+        selected_region = region_list[selected_region_index]
+        selected_bbox = selected_region.bbox
 
         # Get yaw range for this region
         yaw_range = (0.0, 360.0)  # Default range
         if "yaw_ranges" in region_config:
             yaw_ranges = region_config["yaw_ranges"]
-            if yaw_ranges and len(yaw_ranges) > selected_bbox_index:
-                yaw_range = tuple(yaw_ranges[selected_bbox_index])
+            if yaw_ranges and len(yaw_ranges) > selected_region_index:
+                yaw_range = tuple(yaw_ranges[selected_region_index])
 
         # Sample pose from the 3D bounding box (in cupboard-relative coordinates)
         x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
@@ -907,22 +1477,15 @@ class Cupboard(MujocoFixture):
         """
         # Validate region exists
         assert self.regions is not None, "Regions must be defined"
-        if region_name not in self.region_bboxes:
+        if region_name not in self.region_objects:
             raise ValueError(f"Region '{region_name}' not found")
 
-        # Convert world coordinates to cupboard-relative coordinates
-        cupboard_relative_pos = np.array(
-            [
-                position[0] - self.position[0],
-                position[1] - self.position[1],
-                position[2] - self.position[2],
-            ]
-        )
-
-        # Check if position is in any of the region's bounding boxes
-        region_bboxes = self.region_bboxes[region_name]
-        for bbox in region_bboxes:
-            if utils.point_in_bbox_3d(cupboard_relative_pos, bbox):
+        # Check if position is in any of the region objects
+        # Pass fixture position as parent_pos to convert from world to local coordinates
+        region_list = self.region_objects[region_name]
+        fixture_pos = np.array(self.position, dtype=np.float32)
+        for region in region_list:
+            if region.check_in_region(position, fixture_pos, None, region.name):
                 return True
 
         return False
@@ -930,50 +1493,15 @@ class Cupboard(MujocoFixture):
     def visualize_regions(self) -> None:
         """Visualize the cupboard's regions in the MuJoCo environment.
 
-        This method adds visual elements to the MuJoCo XML to represent the regions
-        defined for this cupboard using the 3D bounding boxes.
+        This method is a no-op since regions are now added to the XML during
+        _create_regions().
         """
         if self.regions is None:
             return
 
-        for region_name, region_config in self.regions.items():
-            if "rgba" in region_config:
-                # Get the bounding boxes for this region
-                region_bboxes = self.region_bboxes.get(region_name, [])
-
-                for i_region, bbox in enumerate(region_bboxes):
-                    # bbox is [x_min, y_min, z_min, x_max, y_max, z_max]
-                    # in cupboard-relative coords
-
-                    x_min, y_min, z_min, x_max, y_max, z_max = bbox
-
-                    # Calculate center and half-sizes for MuJoCo box geom
-                    region_center_x = (x_min + x_max) / 2
-                    region_center_y = (y_min + y_max) / 2
-                    region_center_z = (z_min + z_max) / 2
-
-                    region_size_x = (x_max - x_min) / 2
-                    region_size_y = (y_max - y_min) / 2
-                    region_size_z = (z_max - z_min) / 2
-
-                    # Create geom element for the region visualization
-                    region_geom = ET.SubElement(self.xml_element, "geom")
-                    region_geom.set(
-                        "name", f"{self.name}_{region_name}_region_{i_region}"
-                    )
-                    region_geom.set("type", "box")
-                    region_geom.set(
-                        "size",
-                        f"{region_size_x} {region_size_y} {region_size_z}",
-                    )
-                    region_geom.set(
-                        "pos",
-                        f"{region_center_x} {region_center_y} {region_center_z}",
-                    )
-                    region_geom.set("rgba", " ".join(map(str, region_config["rgba"])))
-                    # Disable collision for visual-only representation
-                    region_geom.set("contype", "0")
-                    region_geom.set("conaffinity", "0")
+        for region_list in self.region_objects.values():
+            for region in region_list:
+                region.visualize_region()
 
     def __str__(self) -> str:
         """String representation of the cupboard."""

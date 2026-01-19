@@ -274,21 +274,21 @@ def register_all_environments() -> None:
         variant_ids=variant_ids,
     )
 
-    # TableBox3D environment.
+    # Transport3D environment.
     num_cubes = [1, 2]
     num_boxes = 1
     variant_ids = []
     for num_cube in num_cubes:
-        variant_id = f"prbench/TableBox3D-o{num_cube}-v0"
+        variant_id = f"prbench/Transport3D-o{num_cube}-v0"
         _register(
             id=variant_id,
-            entry_point="prbench.envs.geom3d.tablebox3d:TableBox3DEnv",
+            entry_point="prbench.envs.geom3d.transport3d:Transport3DEnv",
             kwargs={"num_cubes": num_cube, "num_boxes": num_boxes},
         )
         variant_ids.append(variant_id)
     _register_env_class(
-        class_name="TableBox3D",
-        entry_point="prbench.envs.geom3d.tablebox3d:TableBox3DEnv",
+        class_name="Transport3D",
+        entry_point="prbench.envs.geom3d.transport3d:Transport3DEnv",
         category="Geom3D",
         variant_ids=variant_ids,
     )

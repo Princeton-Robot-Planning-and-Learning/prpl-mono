@@ -34,8 +34,8 @@ from prbench.envs.geom3d.utils import (
 
 
 @dataclass(frozen=True)
-class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
-    """Config for TableBox3DEnv()."""
+class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
+    """Config for Transport3DEnv()."""
 
     max_action_mag: float = 0.2
 
@@ -161,8 +161,8 @@ class TableBox3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         raise ValueError(f"Invalid index: {idx}")
 
 
-class TableBox3DObjectCentricState(Geom3DObjectCentricState):
-    """A state in the TableBox3DEnv().
+class Transport3DObjectCentricState(Geom3DObjectCentricState):
+    """A state in the Transport3DEnv().
 
     Adds convenience methods on top of Geom3DObjectCentricState().
     """
@@ -193,8 +193,8 @@ class TableBox3DObjectCentricState(Geom3DObjectCentricState):
         return Pose(position, orientation)
 
 
-class ObjectCentricTableBox3DEnv(
-    ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, TableBox3DEnvConfig]
+class ObjectCentricTransport3DEnv(
+    ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Transport3DEnvConfig]
 ):
     """PyBullet environment where a box must be picked from the table.
 
@@ -205,7 +205,7 @@ class ObjectCentricTableBox3DEnv(
         self,
         num_cubes: int = 2,
         num_boxes: int = 1,
-        config: TableBox3DEnvConfig = TableBox3DEnvConfig(),
+        config: Transport3DEnvConfig = Transport3DEnvConfig(),
         **kwargs,
     ) -> None:
         super().__init__(config=config, **kwargs)
@@ -279,7 +279,7 @@ class ObjectCentricTableBox3DEnv(
 
     @property
     def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
-        return TableBox3DObjectCentricState
+        return Transport3DObjectCentricState
 
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
         return self._create_state_dict([("table", Geom3DCuboidType)])
@@ -314,7 +314,7 @@ class ObjectCentricTableBox3DEnv(
         )
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
-        assert isinstance(obs, TableBox3DObjectCentricState)
+        assert isinstance(obs, Transport3DObjectCentricState)
         for cube_name, cube_id in self._cubes.items():
             assert cube_id is not None
             set_pose(
@@ -369,7 +369,7 @@ class ObjectCentricTableBox3DEnv(
             return self.config.table_half_extents
         raise ValueError(f"Unrecognized object name: {object_name}")
 
-    def _get_obs(self) -> TableBox3DObjectCentricState:
+    def _get_obs(self) -> Transport3DObjectCentricState:
         state_dict = self._create_state_dict(
             [("robot", Geom3DRobotType)]
             + [("table", Geom3DCuboidType)]
@@ -377,9 +377,9 @@ class ObjectCentricTableBox3DEnv(
             + [("box" + str(i), Geom3DCuboidType) for i in range(self._num_boxes)]
         )
         state = create_state_from_dict(
-            state_dict, Geom3DEnvTypeFeatures, state_cls=TableBox3DObjectCentricState
+            state_dict, Geom3DEnvTypeFeatures, state_cls=Transport3DObjectCentricState
         )
-        assert isinstance(state, TableBox3DObjectCentricState)
+        assert isinstance(state, Transport3DObjectCentricState)
         return state
 
     def goal_reached(self) -> bool:
@@ -412,13 +412,13 @@ class ObjectCentricTableBox3DEnv(
         return True
 
 
-class TableBox3DEnv(ConstantObjectPRBenchEnv):
+class Transport3DEnv(ConstantObjectPRBenchEnv):
     """Table Box 3D env with a constant number of objects."""
 
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom3DRobotEnv:
-        return ObjectCentricTableBox3DEnv(*args, **kwargs)
+        return ObjectCentricTransport3DEnv(*args, **kwargs)
 
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
@@ -437,15 +437,7 @@ class TableBox3DEnv(ConstantObjectPRBenchEnv):
 
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return "The number of cubes differs between environment variants. For example, TableBox3D-o1 has 1 cube, while TableBox3D-o2 has 2 cubes."
-
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
-        return """Observations consist of:
-- **robot**: The pose of the robot.
-- **cubes**: The poses of the cubes.
-- **boxes**: The poses of the boxes.
-"""
+        return "The number of cubes differs between environment variants. For example, Transport3D-o1 has 1 cube, while Transport3D-o2 has 2 cubes."
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""

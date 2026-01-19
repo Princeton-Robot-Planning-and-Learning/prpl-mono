@@ -2,6 +2,22 @@
     "robots": [
         "tidybot"
     ],
+    "scene": {
+        "simple": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab6": {
+            "position": [
+                0,
+                0.5,
+                0
+            ]
+        }
+    },
     "fixtures": {
         "table": {
             "table_1": {
@@ -133,11 +149,12 @@
         "cupboard_1_shelf_3_red_partition_goal": {
             "target": "cupboard_1",
             "shelf": 3,
+            "partition": 0,
             "ranges": [
                 [
-                    -0.21,
+                    -0.05,
                     -0.13,
-                    -0.09,
+                    0.05,
                     0.13
                 ]
             ],
@@ -151,11 +168,12 @@
         "cupboard_1_shelf_3_green_partition_goal": {
             "target": "cupboard_1",
             "shelf": 3,
+            "partition": 1,
             "ranges": [
                 [
-                    -0.06,
+                    -0.05,
                     -0.13,
-                    0.06,
+                    0.05,
                     0.13
                 ]
             ],
@@ -169,11 +187,12 @@
         "cupboard_1_shelf_3_blue_partition_goal": {
             "target": "cupboard_1",
             "shelf": 3,
+            "partition": 2,
             "ranges": [
                 [
-                    0.09,
+                    -0.05,
                     -0.13,
-                    0.21,
+                    0.05,
                     0.13
                 ]
             ],
@@ -325,10 +344,21 @@
     },
     "cameras": {
         "agentview_1": {
-            "position": [1, 1, 2],
-            "lookat": [0, 0, 0],
+            "position": [
+                1,
+                1,
+                2
+            ],
+            "lookat": [
+                0,
+                0,
+                0
+            ],
             "fovy": 42,
-            "resolution": [640, 480]
+            "resolution": [
+                640,
+                480
+            ]
         }
     },
     "initial_state": [
