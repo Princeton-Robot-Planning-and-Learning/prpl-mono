@@ -125,7 +125,6 @@ def test_namo_robot_can_navigate_to_goal():
     obstacle = obs.get_object_from_name("obstacle_chair")
     robot = obs.get_object_from_name("robot")
     initial_obstacle_x = obs.get(obstacle, "x")
-    initial_obstacle_y = obs.get(obstacle, "y")
     robot_x = obs.get(robot, "pos_base_x")
     robot_y = obs.get(robot, "pos_base_y")
     robot_rot = obs.get(robot, "pos_base_rot")

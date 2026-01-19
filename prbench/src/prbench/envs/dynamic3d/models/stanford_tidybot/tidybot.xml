@@ -98,8 +98,8 @@
   <worldbody>
     <body name="base_link">
       <inertial pos="0 0 0.035" mass="60" diaginertia="0.001 0.001 0.001"/>
-      <joint name="joint_x" type="slide" axis="1 0 0"/>
-      <joint name="joint_y" type="slide" axis="0 1 0"/>
+      <joint name="joint_x" type="slide" axis="1 0 0" range="-10 10"/>
+      <joint name="joint_y" type="slide" axis="0 1 0" range="-10 10"/>
       <joint name="joint_th"/>
       <geom class="base/visual" mesh="body" material="silver"/>
       <geom class="base/visual" mesh="arm_plate" material="black"/>
