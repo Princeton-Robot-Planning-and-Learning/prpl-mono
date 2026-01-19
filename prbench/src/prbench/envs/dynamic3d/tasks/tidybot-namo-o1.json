@@ -121,7 +121,7 @@
         [
             "on",
             "obstacle_chair",
-            "ground_obstacle1_init_region"
+            "ground_goal_region"
         ]
     ],
     "goal_state": [
