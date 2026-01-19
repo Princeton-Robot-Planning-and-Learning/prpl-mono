@@ -303,7 +303,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://kortex_description/grippers/robotiq_2f_85/meshes/collision/robotiq_arg2f_base_link.stl"/>
+        <mesh filename="package://kortex_description/grippers/robotiq_2f_85/meshes/visual/robotiq_arg2f_85_base_link_realsense.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
