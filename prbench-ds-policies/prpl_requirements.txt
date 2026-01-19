@@ -1,0 +1,5 @@
+# PRPL mono requirements.
+../prbench[all]
+../prpl-utils
+../relational-structs
+../pybullet-helpers
