@@ -171,12 +171,6 @@ class BasePlaceController(
                 max_distance=self._sim.config.max_action_mag / 2,
             )
 
-            if "box" in self._sim._grasped_object:
-                import pybullet as p
-                while True:
-                    p.getMouseEvents(self._sim.physics_client_id)
-
-
             # Store the plan (excluding the first state which is the current state).
             self._current_arm_joint_plan = joint_plan[1:]
         # Pop the next target joint positions from the plan.
