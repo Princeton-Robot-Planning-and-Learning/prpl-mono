@@ -109,6 +109,9 @@ class BasePlaceController(
             )
             if grasped_object_id is not None:
                 collision_ids = collision_ids - {grasped_object_id}
+                if "box" in self._sim._grasped_object:
+                    import ipdb; ipdb.set_trace()
+                    collision_ids = set()  # TODO
 
             joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
 
@@ -168,6 +171,12 @@ class BasePlaceController(
                 self._sim.robot.arm,
                 max_distance=self._sim.config.max_action_mag / 2,
             )
+
+            if "box" in self._sim._grasped_object:
+                import pybullet as p
+                while True:
+                    p.getMouseEvents(self._sim.physics_client_id)
+
 
             # Store the plan (excluding the first state which is the current state).
             self._current_arm_joint_plan = joint_plan[1:]
