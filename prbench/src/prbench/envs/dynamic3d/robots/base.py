@@ -78,7 +78,7 @@ class RobotEnv(MujocoEnv, abc.ABC):
         for child in list(robot_root):
             if child.tag == "worldbody":
                 # Merge worldbody content
-                input_worldbody = input_root.find(  # type:ignore[union-attr]
+                input_worldbody = input_root.find(  # type: ignore[union-attr]
                     "worldbody"
                 )
                 if input_worldbody is not None:
