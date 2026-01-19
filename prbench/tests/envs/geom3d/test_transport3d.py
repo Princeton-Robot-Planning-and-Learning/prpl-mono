@@ -1,4 +1,4 @@
-"""Tests for tablebox3d.py."""
+"""Tests for transport3d.py."""
 
 import numpy as np
 import pytest
@@ -14,10 +14,10 @@ from pybullet_helpers.motion_planning import (
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from prbench.envs.geom3d.tablebox3d import (
-    ObjectCentricTableBox3DEnv,
-    TableBox3DEnv,
-    TableBox3DObjectCentricState,
+from prbench.envs.geom3d.transport3d import (
+    ObjectCentricTransport3DEnv,
+    Transport3DEnv,
+    Transport3DObjectCentricState,
 )
 from prbench.envs.geom3d.utils import extend_joints_to_include_fingers
 from tests.conftest import MAKE_VIDEOS
@@ -26,8 +26,12 @@ from tests.conftest import MAKE_VIDEOS
 @pytest.fixture(scope="module")
 def env():
     """Create a shared environment for all tests in this module."""
-    environment = TableBox3DEnv(
-        num_cubes=2, num_boxes=1, use_gui=False, render_mode="rgb_array"
+    environment = Transport3DEnv(
+        num_cubes=2,
+        num_boxes=1,
+        use_gui=False,
+        render_mode="rgb_array",
+        realistic_bg=False,
     )
     if MAKE_VIDEOS:
         environment = RecordVideo(environment, "unit_test_videos")
@@ -35,8 +39,8 @@ def env():
     environment.close()
 
 
-def test_base_tablebox3d_env(env):  # pylint: disable=redefined-outer-name
-    """Tests for basic methods in base tablebox3d env."""
+def test_base_transport3d_env(env):  # pylint: disable=redefined-outer-name
+    """Tests for basic methods in base transport3d env."""
     obs, _ = env.reset(seed=123)
     assert isinstance(obs, np.ndarray)
 
@@ -62,7 +66,7 @@ def _execute_joint_plan(environment, joint_plan, obs):
         action = np.array(action_lst, dtype=np.float32)
         vec_obs, _, _, _, _ = environment.step(action)
         oc_obs = environment.observation_space.devectorize(vec_obs)
-        obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+        obs = Transport3DObjectCentricState(oc_obs.data, oc_obs.type_features)
     return obs
 
 
@@ -75,10 +79,12 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
 
     vec_obs, _ = env.reset(seed=123)
     oc_obs = env.observation_space.devectorize(vec_obs)
-    obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+    obs = Transport3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricTableBox3DEnv(num_cubes=2, num_boxes=1, config=config)
+    sim = ObjectCentricTransport3DEnv(
+        num_cubes=2, num_boxes=1, config=config, realistic_bg=False
+    )
     sim.set_state(obs)
 
     if MAKE_VIDEOS:
@@ -110,7 +116,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         action = np.array(action_lst, dtype=np.float32)
         vec_obs, _, _, _, _ = env.step(action)
         oc_obs = env.observation_space.devectorize(vec_obs)
-        obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+        obs = Transport3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Step 2: Move arm to pre-grasp pose and then to grasp pose
     sim.set_state(obs)
@@ -146,7 +152,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         action = np.array([0.0] * 3 + [0.0] * 7 + [-1.0], dtype=np.float32)
         vec_obs, _, _, _, _ = env.step(action)
         oc_obs = env.observation_space.devectorize(vec_obs)
-        obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+        obs = Transport3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # The cube should now be grasped
     assert obs.grasped_object == "box0"
@@ -228,7 +234,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         action = np.array(action_lst, dtype=np.float32)
         vec_obs, _, _, _, _ = env.step(action)
         oc_obs = env.observation_space.devectorize(vec_obs)
-        obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+        obs = Transport3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Step 7: Place it back down
     sim.set_state(obs)
@@ -277,6 +283,6 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
         vec_obs, _, _, _, _ = env.step(action)
         oc_obs = env.observation_space.devectorize(vec_obs)
-        obs = TableBox3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+        obs = Transport3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # assert obs.grasped_object is None, "Object not released"

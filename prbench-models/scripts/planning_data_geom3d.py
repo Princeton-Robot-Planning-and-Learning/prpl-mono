@@ -11,7 +11,7 @@ from prbench.envs.geom3d.ground3d import ObjectCentricGround3DEnv
 from prbench.envs.geom3d.motion3d import ObjectCentricMotion3DEnv
 from prbench.envs.geom3d.obstruction3d import ObjectCentricObstruction3DEnv
 from prbench.envs.geom3d.shelf3d import ObjectCentricShelf3DEnv
-from prbench.envs.geom3d.tablebox3d import ObjectCentricTableBox3DEnv
+from prbench.envs.geom3d.transport3d import ObjectCentricTransport3DEnv
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
@@ -62,9 +62,9 @@ def collect_data(
         from prbench_models.geom3d.ground3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
-    elif "TableBox3D" in env_name:
-        sim = ObjectCentricTableBox3DEnv(num_cubes=num_cubes)  # type: ignore
-        from prbench_models.geom3d.tablebox3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
+    elif "Transport3D" in env_name:
+        sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes)  # type: ignore
+        from prbench_models.geom3d.transport3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
     elif "BaseMotion3D" in env_name:
@@ -96,7 +96,7 @@ def collect_data(
         robot = state.get_object_from_name("robot")
         cube = state.get_object_from_name(target_object_key)
         object_parameters = (robot, cube)
-    elif "TableBox3D" in env_name:
+    elif "Transport3D" in env_name:
         target_object_key = "box0"
         lifted_controller = controllers["pick"]
         robot = state.get_object_from_name("robot")

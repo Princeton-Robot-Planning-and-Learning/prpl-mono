@@ -295,7 +295,6 @@ def test_empty_regions_dict():
 
 def test_invalid_region_format():
     """Test that invalid region format raises ValueError."""
-    np_random = np.random.default_rng(42)
     # Region with wrong number of elements
     regions = {
         "test_region": {
@@ -303,10 +302,9 @@ def test_invalid_region_format():
             "yaw_ranges": None,
         }
     }
-    ground = MujocoGround(regions=regions)
 
     with pytest.raises((ValueError, IndexError)):
-        ground.sample_pose_in_region("test_region", np_random)
+        MujocoGround(regions=regions)
 
 
 def test_invalid_x_bounds():

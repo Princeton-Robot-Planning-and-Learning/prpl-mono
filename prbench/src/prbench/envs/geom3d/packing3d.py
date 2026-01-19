@@ -766,25 +766,6 @@ The task requires planning to grasp and place each part into the rack while avoi
         # pylint: disable=line-too-long
         return "The number of parts to pack differs between environment variants. For example, Packing3D-p1 has 1 part, while Packing3D-p3 has 3 parts."
 
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
-        # pylint: disable=line-too-long
-        config = self._object_centric_env.config
-        assert isinstance(config, Packing3DEnvConfig)
-        return f"""Observations consist of:
-- **joint_positions**: Current joint positions of the {len(config.initial_joints)}-DOF robot arm (list of floats)
-- **grasped_object**: Name of currently grasped object, or None if not grasping anything (string or None)
-- **grasped_object_transform**: Relative transform of grasped object to gripper, or None if not grasping (transform or None)
-- **rack**: State of the rack including:
-  - pose: 3D position and orientation (Pose object)
-  - geometry: Half-extents (width/2, height/2, depth/2) of the rack (tuple of 3 floats)
-- **parts**: Dictionary of part states, keyed by part name (e.g., "part0"), each containing:
-  - pose: 3D position and orientation (Pose object)
-  - geometry: For cuboids: half-extents (tuple of 3 floats); for triangles: side lengths and depth (tuple of floats)
-
-The observation is returned as a Packing3DState dataclass with these fields.
-"""
-
     def _create_action_space_markdown_description(self) -> str:
         """Create action space description."""
         # pylint: disable=line-too-long

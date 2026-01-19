@@ -358,6 +358,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 # Create ground fixture for region sampling
                 self._ground_fixture = MujocoGround(
                     regions=regions_on_ground,
+                    worldbody=worldbody,
                 )
                 self._ground_fixture.visualize_regions()
 

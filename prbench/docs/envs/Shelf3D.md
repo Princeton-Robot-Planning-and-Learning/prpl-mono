@@ -5,10 +5,10 @@
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Description
-A 3D environment where the goal is to pick up a cube from the ground and place it on a shelf.
+A 3D environment where the goal is to pick up objects from the ground and place them onto a shelf.
 
 ## Available Variants
-The number of cubes differs between environment variants. For example, Shelf3D-o1 has 1 cube, while Shelf3D-o10 has 10 cubes.
+The number of objects differs between environment variants. For example, Shelf3D-o1 has 1 object, while Shelf3D-o10 has 10 objects.
 
 - `prbench/Shelf3D-o1-v0` (o1)
 - `prbench/Shelf3D-o2-v0` (o2)
@@ -20,7 +20,9 @@ The number of cubes differs between environment variants. For example, Shelf3D-o
 ![initial state GIF](assets/initial_state_gifs/Shelf3D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/demo_gifs/Shelf3D-o3/Shelf3D-o3_1768761767.gif)
+
+**Demo Stats**: Total Reward: -501.00, Success: Yes, Steps: 501
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
@@ -91,15 +93,29 @@ The entries of an array in this Box space correspond to the following object fea
 
 
 ## Action Space
-An action space for a 7 DOF robot that can open and close its gripper.
+An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+Actions are bounded relative base position, rotation, and joint positions, and open / close.
 
-    The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
+| **Index** | **Description** |
+| --- | --- |
+| 0 | delta base x |
+| 1 | delta base y |
+| 2 | delta base rotation |
+| 3 | delta joint 1 |
+| 4 | delta joint 2 |
+| 5 | delta joint 3 |
+| 6 | delta joint 4 |
+| 7 | delta joint 5 |
+| 8 | delta joint 6 |
+| 9 | delta joint 7 |
+| 10 | gripper open/close |
+
+The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
 
 
 ## Rewards
-The reward is a small negative reward (-0.01) per timestep to encourage exploration.
+The reward is -1 per timestep to encourage efficient task completion. The episode terminates successfully when all objects are placed on the shelf (i.e., above the first shelf layer) and the gripper is closed. The gripper must be closed to prevent accidental "success" while an object is still being held above the shelf.
 
 ## References
-This is a very common kind of environment.
+This is a very common kind of environment. The background is adapted from the [Replica dataset](https://arxiv.org/abs/1906.05797) (Straub et al., 2019).

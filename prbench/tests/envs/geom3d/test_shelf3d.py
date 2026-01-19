@@ -33,7 +33,7 @@ def env():
         num_cubes=2,
         use_gui=False,
         render_mode="rgb_array",
-        realistic_bg=True,
+        realistic_bg=False,
     )
     if MAKE_VIDEOS:
         environment = RecordVideo(environment, "unit_test_videos")
@@ -147,7 +147,9 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
     obs = Shelf3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricShelf3DEnv(num_cubes=2, config=config, use_gui=False)
+    sim = ObjectCentricShelf3DEnv(
+        num_cubes=2, config=config, use_gui=False, realistic_bg=False
+    )
     sim.set_state(obs)
 
     # Extract body IDs for collision checking
