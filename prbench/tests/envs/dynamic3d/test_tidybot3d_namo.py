@@ -72,8 +72,8 @@ def test_namo_goal_not_satisfied_initially():
 def test_namo_goal_satisfied_when_robot_in_region():
     """Test that goal is satisfied when robot reaches the goal region.
 
-    In this NAMO task, the goal is for the robot (tidybot) to navigate
-    to the goal region, potentially by pushing the obstacle out of the way.
+    In this NAMO task, the goal is for the robot (tidybot) to navigate to the goal
+    region, potentially by pushing the obstacle out of the way.
     """
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
@@ -98,7 +98,9 @@ def test_namo_goal_satisfied_when_robot_in_region():
     env.set_state(modified_state)
 
     # Now goal should be satisfied (robot is in the goal region)
-    assert env._check_goals(), (  # pylint: disable=protected-access
+    assert (
+        env._check_goals()
+    ), (  # pylint: disable=protected-access
         "Goal should be satisfied after moving robot to goal region"
     )
 
@@ -108,8 +110,8 @@ def test_namo_goal_satisfied_when_robot_in_region():
 def test_namo_robot_can_navigate_to_goal():
     """Test that robot can navigate towards the goal region.
 
-    This is a smoke test that verifies the environment handles robot navigation.
-    The robot should be able to move towards the goal region.
+    This is a smoke test that verifies the environment handles robot navigation. The
+    robot should be able to move towards the goal region.
     """
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
@@ -130,7 +132,9 @@ def test_namo_robot_can_navigate_to_goal():
 
     # Verify obstacle chair exists and has valid position
     assert obstacle is not None, "Obstacle chair should exist in the scene"
-    assert initial_obstacle_x > 0, f"Obstacle should have positive x: {initial_obstacle_x}"
+    assert (
+        initial_obstacle_x > 0
+    ), f"Obstacle should have positive x: {initial_obstacle_x}"
 
     # Goal region is at x=0.8 to x=1.2, y=-0.2 to 0.2
     # Move robot towards the goal region center
