@@ -219,6 +219,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 "type": "mimiclabs",
                 "lab": lab_num,
                 "position": position,
+                "wall_collision": scene_config.get("wall_collision", False),
             }
         else:
             raise ValueError(

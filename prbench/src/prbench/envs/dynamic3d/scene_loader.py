@@ -162,6 +162,11 @@ class MimicLabsSceneLoader:
         # Apply position offset to the scene
         MimicLabsSceneLoader._apply_position_offset(tree, position)
 
+        # Enable wall collisions if requested
+        wall_collision = scene_config.get("wall_collision", False)
+        if wall_collision:
+            MimicLabsSceneLoader._enable_wall_collisions(tree)
+
         return ET.tostring(tree, encoding="unicode")
 
     @staticmethod
@@ -195,3 +200,40 @@ class MimicLabsSceneLoader:
             "No <body name='scene'> found in MimicLabs XML. "
             "Position offset will not be applied."
         )
+
+    @staticmethod
+    def _enable_wall_collisions(tree: ET.Element) -> None:
+        """Enable collisions for wall geoms in the scene.
+
+        MimicLabs scenes have wall geoms with conaffinity="0" contype="0"
+        (collisions disabled). This method enables collisions for these walls
+        by setting conaffinity="1" contype="1".
+
+        Args:
+            tree: Root XML element
+        """
+        worldbody = tree.find("worldbody")
+        if worldbody is None:
+            return
+
+        # Find the scene body
+        scene_body = None
+        for body in worldbody.findall("body"):
+            if body.get("name") == "scene":
+                scene_body = body
+                break
+
+        if scene_body is None:
+            logging.warning(
+                "No <body name='scene'> found in MimicLabs XML. "
+                "Wall collisions cannot be enabled."
+            )
+            return
+
+        # Find all wall geoms and enable collisions
+        # Wall geoms typically have names containing "wall"
+        for geom in scene_body.findall("geom"):
+            geom_name = geom.get("name", "")
+            if "wall" in geom_name.lower():
+                geom.set("conaffinity", "1")
+                geom.set("contype", "1")
