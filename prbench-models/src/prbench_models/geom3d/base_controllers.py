@@ -20,8 +20,8 @@ from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
     run_motion_planning,
-    smoothly_follow_end_effector_path,
     run_smooth_motion_planning_to_pose,
+    smoothly_follow_end_effector_path,
 )
 from relational_structs import (
     Object,
@@ -120,6 +120,7 @@ class BasePlaceController(
                     collision_ids=collision_ids,
                     end_effector_frame_to_plan_frame=Pose.identity(),
                     seed=0,  # for determinism
+                    max_time=0.5,
                     max_candidate_plans=1,
                     held_object=grasped_object_id,
                     base_link_to_held_obj=grasped_object_transform,
@@ -133,7 +134,7 @@ class BasePlaceController(
 
             if joint_plan1 is None:
                 raise TrajectorySamplingFailure("Motion planning failed")
-            
+
             # Run motion planning to the target joint positions.
             try:
                 self._sim.robot.arm.set_joints(joint_plan1[-1])
