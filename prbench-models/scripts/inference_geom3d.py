@@ -133,6 +133,8 @@ def run_inference(
     env = prbench.make(
         f"prbench/{env_name}",
         render_mode=render_mode,
+        use_gui=False,
+        realistic_bg=True,
     )
 
     # Create FK solver for computing end-effector pose
@@ -142,6 +144,7 @@ def run_inference(
     # Create remote policy
     policy = RemotePolicy(host=policy_host, port=policy_port)
 
+    successes = 0
     try:
         for episode_idx in range(num_episodes):
             print(f"\n=== Episode {episode_idx + 1}/{num_episodes} ===")
@@ -194,7 +197,8 @@ def run_inference(
                         state.get(target_cube, "pose_z"),
                     ]
                 )
-                if target_cube_pos[2] > 0.05:
+                if target_cube_pos[2] > 0.1:
+                    successes += 1
                     break
                 current_joints = np.array(
                     [state.get(robot, f"joint_{i}") for i in range(1, 8)]
@@ -281,6 +285,8 @@ def run_inference(
                 print(f"Episode saved with {len(writer)} steps")
 
     finally:
+        print(f"Successes: {successes}")
+        print(f"Success rate: {successes / num_episodes}")
         policy.close()  # type: ignore
         env.close()  # type: ignore
 
