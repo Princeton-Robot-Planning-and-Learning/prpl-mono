@@ -99,10 +99,8 @@ def test_namo_goal_satisfied_when_robot_in_region():
 
     # Now goal should be satisfied (robot is in the goal region)
     assert (
-        env._check_goals()
-    ), (  # pylint: disable=protected-access
-        "Goal should be satisfied after moving robot to goal region"
-    )
+        env._check_goals()  # pylint: disable=protected-access
+    ), "Goal should be satisfied after moving robot to goal region"
 
     env.close()
 
