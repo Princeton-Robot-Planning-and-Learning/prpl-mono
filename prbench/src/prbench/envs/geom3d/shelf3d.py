@@ -53,10 +53,10 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # World bounds.
     specific_range: bool = False
-    x_lb: float = -1.5
-    x_ub: float = 1.5
-    y_lb: float = -1.5
-    y_ub: float = 1.5
+    x_lb: float = -1.0
+    x_ub: float = 1.0
+    y_lb: float = -1.0
+    y_ub: float = 1.0
     if specific_range:
         x_lb = 0.4
         x_ub = 0.5
