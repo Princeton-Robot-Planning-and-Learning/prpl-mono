@@ -56,17 +56,8 @@
         }
     },
     "objects": {
-        "cube": {
-            "obstacle_block": {
-                "size": 0.2,
-                "rgba": [
-                    0.7,
-                    0.3,
-                    0.1,
-                    1
-                ],
-                "mass": 2.0
-            }
+        "robocasafrlapartmentchair01": {
+            "obstacle_chair": {}
         }
     },
     "cameras": {
@@ -125,14 +116,14 @@
     "initial_state": [
         [
             "on",
-            "obstacle_block",
+            "obstacle_chair",
             "ground_obstacle1_init_region"
         ]
     ],
     "goal_state": [
         [
             "on",
-            "tidybot",
+            "robot",
             "ground_goal_region"
         ]
     ]

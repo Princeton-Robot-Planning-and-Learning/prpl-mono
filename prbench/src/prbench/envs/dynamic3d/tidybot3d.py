@@ -893,14 +893,27 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 obj_name = pred[1]
                 region_name = pred[2]
                 obj = state.get_object_from_name(obj_name)
-                position = np.array(
-                    [
-                        state.get(obj, "x"),
-                        state.get(obj, "y"),
-                        state.get(obj, "z"),
-                    ],
-                    dtype=np.float32,
-                )
+
+                # Handle robot objects specially (they have pos_base_x/y instead
+                # of x/y/z)
+                if obj_name == "robot":
+                    position = np.array(
+                        [
+                            state.get(obj, "pos_base_x"),
+                            state.get(obj, "pos_base_y"),
+                            0.0,  # Robot base is on the ground
+                        ],
+                        dtype=np.float32,
+                    )
+                else:
+                    position = np.array(
+                        [
+                            state.get(obj, "x"),
+                            state.get(obj, "y"),
+                            state.get(obj, "z"),
+                        ],
+                        dtype=np.float32,
+                    )
                 region_config = self.task_config["regions"][region_name]
 
                 if region_config["target"] == "ground":
