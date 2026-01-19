@@ -63,7 +63,7 @@ def capture_image(
         physicsClientId=physics_client_id,
     )
 
-    (_, _, px, _, _) = p.getCameraImage(
+    _, _, px, _, _ = p.getCameraImage(
         width=image_width,
         height=image_height,
         viewMatrix=view_matrix,

@@ -470,6 +470,46 @@ def remap_joint_position_plan_to_constant_distance(
     return remapped_plan
 
 
+def remap_se2_pose_plan_to_constant_distance(
+    plan: list[SE2Pose],
+    max_distance: float,
+) -> list[SE2Pose]:
+    """Re-interpolate an SE2Pose plan so that no step exceeds max_distance.
+
+    Args:
+        plan: List of SE2Pose waypoints.
+        max_distance: Maximum allowed distance between consecutive waypoints,
+            measured as the maximum of |delta_x|, |delta_y|, |delta_rot|.
+
+    Returns:
+        A new list of SE2Pose waypoints with additional interpolated points
+        where needed to ensure no step exceeds max_distance.
+    """
+    if len(plan) < 2:
+        return plan
+
+    result = [plan[0]]
+    for i in range(len(plan) - 1):
+        p1, p2 = plan[i], plan[i + 1]
+        delta = p2 - p1
+        dist = max(abs(delta.x), abs(delta.y), abs(delta.rot))
+
+        if dist <= max_distance:
+            result.append(p2)
+        else:
+            num_segments = int(np.ceil(dist / max_distance))
+            for j in range(1, num_segments + 1):
+                t = j / num_segments
+                interp = SE2Pose(
+                    p1.x + t * delta.x,
+                    p1.y + t * delta.y,
+                    p1.rot + t * delta.rot,
+                )
+                result.append(interp)
+
+    return result
+
+
 def run_base_motion_planning(
     robot: SingleArmPyBulletRobot,
     initial_pose: Pose,
