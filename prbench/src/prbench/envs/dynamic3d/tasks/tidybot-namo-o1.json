@@ -42,10 +42,10 @@
             "target": "ground",
             "ranges": [
                 [
-                    2.5,
-                    2.5,
-                    2.7,
-                    2.7
+                    2.1,
+                    2.1,
+                    2.4,
+                    2.4
                 ]
             ],
             "rgba": [
@@ -58,7 +58,10 @@
     },
     "objects": {
         "robocasafrlapartmentchair01": {
-            "obstacle_chair": {}
+            "obstacle_chair": {
+                "pos_z": 0.55,
+                "euler": [90, 0, 0]
+            }
         }
     },
     "cameras": {

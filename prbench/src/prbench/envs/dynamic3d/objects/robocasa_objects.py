@@ -24,6 +24,36 @@ ROBOCASA_OBJECTS_DIR = (
 )
 
 
+def euler_to_quat(euler: list[float]) -> str:
+    """Convert euler angles (roll, pitch, yaw) in degrees to MuJoCo quaternion string.
+
+    Args:
+        euler: [roll, pitch, yaw] in degrees
+
+    Returns:
+        Quaternion string "w x y z" for MuJoCo
+    """
+    # Convert degrees to radians
+    roll = np.radians(euler[0])
+    pitch = np.radians(euler[1])
+    yaw = np.radians(euler[2])
+
+    # Calculate quaternion components
+    cy = np.cos(yaw * 0.5)
+    sy = np.sin(yaw * 0.5)
+    cp = np.cos(pitch * 0.5)
+    sp = np.sin(pitch * 0.5)
+    cr = np.cos(roll * 0.5)
+    sr = np.sin(roll * 0.5)
+
+    w = cr * cp * cy + sr * sp * sy
+    x = sr * cp * cy - cr * sp * sy
+    y = cr * sp * cy + sr * cp * sy
+    z = cr * cp * sy - sr * sp * cy
+
+    return f"{w} {x} {y} {z}"
+
+
 class RoboCasaObject(MujocoObject):
     """Base class for RoboCasa objects loaded from model.xml files."""
 
@@ -166,6 +196,10 @@ class RoboCasaObject(MujocoObject):
         # Add freejoint for position/orientation control
         ET.SubElement(new_body, "freejoint", name=self.joint_name)
 
+        # Get optional pos_z and euler from options
+        pos_z = self.options.get("pos_z", 0.0)
+        euler = self.options.get("euler", None)
+
         # Copy all geom elements from the object body and update mesh references
         for geom in object_body.findall("geom"):
             new_geom = ET.Element("geom", geom.attrib.copy())
@@ -181,6 +215,19 @@ class RoboCasaObject(MujocoObject):
             if "material" in geom.attrib:
                 original_material = geom.attrib["material"]
                 new_geom.attrib["material"] = f"{self.name}_{original_material}"
+
+            # Apply pos_z offset if specified
+            if pos_z != 0.0:
+                # Get existing pos or default to "0 0 0"
+                existing_pos = new_geom.attrib.get("pos", "0 0 0")
+                pos_parts = [float(p) for p in existing_pos.split()]
+                pos_parts[2] += pos_z  # Add to z component
+                new_geom.attrib["pos"] = f"{pos_parts[0]} {pos_parts[1]} {pos_parts[2]}"
+
+            # Apply euler rotation if specified (in degrees: [roll, pitch, yaw])
+            if euler is not None:
+                quat_str = euler_to_quat(euler)
+                new_geom.attrib["quat"] = quat_str
 
             new_body.append(new_geom)
 
