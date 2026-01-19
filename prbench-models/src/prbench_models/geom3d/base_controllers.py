@@ -109,9 +109,8 @@ class BasePlaceController(
             )
             if grasped_object_id is not None:
                 collision_ids = collision_ids - {grasped_object_id}
-                if "box" in self._sim._grasped_object:
-                    import ipdb; ipdb.set_trace()
-                    collision_ids = set()  # TODO
+            # pylint: disable-next=protected-access
+            collision_ids -= self._sim._get_inside_object_ids()
 
             joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
 

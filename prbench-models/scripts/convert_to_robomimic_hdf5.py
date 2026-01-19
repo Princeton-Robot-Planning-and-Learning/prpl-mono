@@ -198,7 +198,7 @@ def main(
                     else:
                         episode_group.create_dataset(
                             "language",
-                            data=f"Pick the {target_object_key} and place it on the shelf.",  # pylint: disable=line-too-long
+                            data=f"Pick the {target_object_key}.",  # pylint: disable=line-too-long
                         )
                 else:
                     episode_group.create_dataset(

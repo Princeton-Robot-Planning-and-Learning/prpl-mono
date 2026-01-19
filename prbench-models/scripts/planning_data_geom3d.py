@@ -37,7 +37,9 @@ def collect_data(
     """
 
     # Create the environment.
-    env = prbench.make(f"prbench/{env_name}", render_mode="rgb_array")
+    env = prbench.make(
+        f"prbench/{env_name}", render_mode="rgb_array", realistic_bg=False
+    )
 
     # Create episode writer if saving is enabled.
     writer = EpisodeWriter(output_dir) if save else None
@@ -124,8 +126,7 @@ def collect_data(
         raise ValueError(f"Environment {env_name} not supported")
     controller = lifted_controller.ground(object_parameters)
 
-    rng = np.random.default_rng(123)
-    params = controller.sample_parameters(state, rng)
+    params = np.array([0.5, 0.0])
 
     controller.reset(state, params)
     for step_idx in range(400):
