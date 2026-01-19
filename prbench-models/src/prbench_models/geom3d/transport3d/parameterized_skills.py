@@ -24,6 +24,7 @@ from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
+    remap_se2_pose_plan_to_constant_distance,
     run_motion_planning,
     run_single_arm_mobile_base_motion_planning,
     smoothly_follow_end_effector_path,
@@ -126,6 +127,12 @@ class GroundPickController(
 
             if base_plan is None:
                 raise TrajectorySamplingFailure("Base motion planning failed")
+
+            # Remap the plan to ensure we stay within action limits.
+            base_plan = remap_se2_pose_plan_to_constant_distance(
+                base_plan,
+                max_distance=self._sim.config.max_action_mag,
+            )
 
             # Store the plan (excluding the first state which is the current state).
             self._current_plan = base_plan[1:]
@@ -446,6 +453,12 @@ class GroundPlaceController(BasePlaceController):
 
             if base_plan is None:
                 raise TrajectorySamplingFailure("Base motion planning failed")
+
+            # Remap the plan to ensure we stay within action limits.
+            base_plan = remap_se2_pose_plan_to_constant_distance(
+                base_plan,
+                max_distance=self._sim.config.max_action_mag,
+            )
 
             # Store the plan (excluding the first state which is the current state).
             self._current_plan = base_plan[1:]
