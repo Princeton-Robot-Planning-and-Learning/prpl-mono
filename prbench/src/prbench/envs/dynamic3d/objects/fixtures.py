@@ -701,7 +701,19 @@ class Cupboard(MujocoFixture):
                 x_min = -cupboard_half_length
                 x_max = cupboard_half_length
 
-            for region_idx, region_range in enumerate(region_config["ranges"]):
+            # Get ranges - if not provided, use the computed x_min, x_max, y_min, y_max
+            ranges = region_config.get("ranges")
+            if ranges is None:
+                # Compute y_min and y_max from cupboard depth
+                cupboard_half_depth = self.cupboard_depth / 2
+                y_min = -cupboard_half_depth
+                y_max = cupboard_half_depth
+                # Convert x bounds to be relative to partition center
+                x_min_relative = x_min - partition_center_x
+                x_max_relative = x_max - partition_center_x
+                ranges = [[x_min_relative, y_min, x_max_relative, y_max]]
+
+            for region_idx, region_range in enumerate(ranges):
                 if len(region_range) != 4:
                     raise ValueError(
                         f"Each region range must have exactly 4 values "
