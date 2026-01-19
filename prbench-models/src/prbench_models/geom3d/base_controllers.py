@@ -132,7 +132,6 @@ class BasePlaceController(
                 #     p.getMouseEvents(self._sim.physics_client_id)
 
             if joint_plan1 is None:
-                import ipdb; ipdb.set_trace()
                 raise TrajectorySamplingFailure("Motion planning failed")
             
             # Run motion planning to the target joint positions.
@@ -160,7 +159,6 @@ class BasePlaceController(
                 #     p.getMouseEvents(self._sim.physics_client_id)
 
             if joint_plan2 is None:
-                import ipdb; ipdb.set_trace()
                 raise TrajectorySamplingFailure("Motion planning failed")
 
             # Remap the plan to ensure we stay within action limits.
@@ -169,14 +167,6 @@ class BasePlaceController(
                 self._sim.robot.arm,
                 max_distance=self._sim.config.max_action_mag / 2,
             )
-
-            for state in joint_plan:
-                self._sim._set_robot_and_held_object(self._sim.robot.get_base(), state[:7], finger_state=self._sim.robot.arm.get_finger_state())
-                import time
-                time.sleep(0.01)
-            import pybullet as p
-            while True:
-                p.getMouseEvents(self._sim.physics_client_id)
 
             # Store the plan (excluding the first state which is the current state).
             self._current_arm_joint_plan = joint_plan[1:]
@@ -229,7 +219,6 @@ class BasePlaceController(
             )
 
             if joint_plan is None:
-                import ipdb; ipdb.set_trace()
                 raise TrajectorySamplingFailure("Motion planning failed")
 
             # Remap the plan to ensure we stay within action limits.

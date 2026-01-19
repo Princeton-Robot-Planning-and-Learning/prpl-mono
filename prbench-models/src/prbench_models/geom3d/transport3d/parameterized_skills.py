@@ -125,7 +125,6 @@ class GroundPickController(
             )
 
             if base_plan is None:
-                import ipdb; ipdb.set_trace()
                 raise TrajectorySamplingFailure("Base motion planning failed")
 
             # Store the plan (excluding the first state which is the current state).
@@ -190,7 +189,6 @@ class GroundPickController(
                 )
 
                 if joint_plan is None:
-                    import ipdb; ipdb.set_trace()
                     raise TrajectorySamplingFailure("Motion planning failed")
 
                 # Remap the plan to ensure we stay within action limits.
@@ -260,7 +258,6 @@ class GroundPickController(
                 )
 
                 if joint_plan is None:
-                    import ipdb; ipdb.set_trace()
                     raise TrajectorySamplingFailure("Motion planning failed")
 
                 # Remap the plan to ensure we stay within action limits.
@@ -448,7 +445,6 @@ class GroundPlaceController(BasePlaceController):
             )
 
             if base_plan is None:
-                import ipdb; ipdb.set_trace()
                 raise TrajectorySamplingFailure("Base motion planning failed")
 
             # Store the plan (excluding the first state which is the current state).

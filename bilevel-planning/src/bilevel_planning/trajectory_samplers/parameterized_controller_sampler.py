@@ -91,9 +91,4 @@ class ParameterizedControllerTrajectorySampler(TrajectorySampler[_X, _U, _S, _A]
             return x_traj, u_traj
 
         # Failure.
-        # import ipdb; ipdb.set_trace()
-        controller._sim.set_state(final_state)
-        import pybullet as p
-        while True:
-            p.getMouseEvents(controller._sim.physics_client_id)
         raise TrajectorySamplingFailure()
