@@ -357,7 +357,9 @@ def register_all_environments() -> None:
         if task_item.is_file():
             # Handle single config file directly in tasks_root
             config_name = task_item.stem
-            robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[config_name.split("-")[0]]
+            robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[
+                config_name.split("-")[0]
+            ]
             scene_type = config_name.split("-")[1]
             num_task_objects = int(config_name.split("-")[2][1:])
             task_cfg = "-".join(config_name.split("-")[1:])
@@ -380,7 +382,9 @@ def register_all_environments() -> None:
             for task_config in task_item.iterdir():
                 if task_config.is_file():
                     config_name = task_config.stem
-                    robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[config_name.split("-")[0]]
+                    robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[
+                        config_name.split("-")[0]
+                    ]
                     scene_type = config_name.split("-")[1]
                     num_task_objects = int(config_name.split("-")[2][1:])
                     task_cfg = "-".join(config_name.split("-")[1:])

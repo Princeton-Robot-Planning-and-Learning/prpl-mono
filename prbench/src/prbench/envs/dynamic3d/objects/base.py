@@ -285,7 +285,9 @@ class MujocoObject:
         spans a small height above the object surface.
         """
         assert self.regions is not None, "Regions must be defined"
-        assert self.xml_element is not None, "XML element must be defined to create regions"
+        assert (
+            self.xml_element is not None
+        ), "XML element must be defined to create regions"
         placement_threshold = 0.01  # 1cm tolerance for placement
         # Note: we are currently hard-coding the z range for the bounding boxes
         # This could potentially be made configurable in the future.
