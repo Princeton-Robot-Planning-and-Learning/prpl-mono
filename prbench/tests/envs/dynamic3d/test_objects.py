@@ -887,3 +887,155 @@ def test_check_in_region_multiple_regions_in_object():
     world_position2 = np.array([1.25, 2.25, 0.0], dtype=np.float32)
     assert cuboid.check_in_region(world_position2, "region1") is False
     assert cuboid.check_in_region(world_position2, "region2") is True
+
+
+def test_cube_region_site_creation_and_placement():
+    """Test Cube construction with regions.
+
+    Verify site creation, placement, sizing, and attachment to xml_element.
+    """
+    # Create cube config with size
+    cube_size = 0.1
+
+    # Define multiple regions with different positions and sizes
+    regions_config = {
+        "cube_top_region": {
+            "ranges": [[-0.04, -0.04, 0.04, 0.04]],
+            "rgba": [1.0, 0.0, 0.0, 0.3],
+        },
+        "cube_side_region": {
+            "ranges": [[-0.02, -0.03, 0.02, 0.03]],
+            "rgba": [0.0, 1.0, 0.0, 0.3],
+        },
+        "cube_corner_region": {
+            "ranges": [[0.01, 0.01, 0.05, 0.05]],
+            "rgba": [0.0, 0.0, 1.0, 0.3],
+        },
+    }
+
+    # Create the cube with regions
+    cube = Cube("test_cube", options={"size": cube_size, "regions": regions_config})
+
+    # Verify that all regions were created
+    assert len(cube.region_objects) == 3
+    for region_name in regions_config:
+        assert region_name in cube.region_objects
+
+    # Helper function to find the parent element of a site element
+    def find_site_parent(elem, site_element):
+        """Recursively find the parent element of a site element in the XML tree."""
+        for child in elem:
+            if child == site_element:
+                return elem
+            parent = find_site_parent(child, site_element)
+            if parent is not None:
+                return parent
+        return None
+
+    placement_threshold = 0.01  # 1cm tolerance for placement
+
+    # Test each region
+    test_cases = [
+        {
+            "region_name": "cube_top_region",
+            "expected_range": [-0.04, -0.04, 0.04, 0.04],
+        },
+        {
+            "region_name": "cube_side_region",
+            "expected_range": [-0.02, -0.03, 0.02, 0.03],
+        },
+        {
+            "region_name": "cube_corner_region",
+            "expected_range": [0.01, 0.01, 0.05, 0.05],
+        },
+    ]
+
+    for test_case in test_cases:
+        region_name = test_case["region_name"]
+        expected_range = test_case["expected_range"]
+
+        # Get the region objects
+        regions = cube.region_objects[region_name]
+        assert (
+            len(regions) == 1
+        ), f"Expected 1 region for {region_name}, got {len(regions)}"
+
+        region = regions[0]
+
+        # Verify site element exists
+        assert (
+            region.site_element is not None
+        ), f"Site element should exist for {region_name}"
+
+        site_name = region.site_element.get("name", "")
+        assert site_name != "", f"Site name should not be empty for {region_name}"
+
+        # Find the parent element of the site
+        site_parent = find_site_parent(cube.xml_element, region.site_element)
+        assert (
+            site_parent is not None
+        ), f"Could not find parent element of site {site_name}"
+
+        # Verify the site is directly attached to the cube's xml_element
+        assert site_parent == cube.xml_element, (
+            f"Site {site_name} should be attached to cube's xml_element, "
+            f"but found parent: {site_parent.get('name', 'unknown')}"
+        )
+
+        # Verify site position and size match the specified ranges
+        x_start, y_start, x_end, y_end = expected_range
+
+        # Extract site position and size from XML
+        site_pos_str = region.site_element.get("pos", "")
+        site_size_str = region.site_element.get("size", "")
+
+        assert site_pos_str, f"Site {site_name} has no position"
+        assert site_size_str, f"Site {site_name} has no size"
+
+        site_pos = [float(x) for x in site_pos_str.split()]
+        site_size = [float(x) for x in site_size_str.split()]
+
+        assert (
+            len(site_pos) == 3
+        ), f"Site position should have 3 components, got {len(site_pos)}"
+        assert (
+            len(site_size) == 3
+        ), f"Site size should have 3 components, got {len(site_size)}"
+
+        site_x, site_y, site_z = site_pos
+        size_x, size_y, size_z = site_size
+
+        # Size should be half the range span with placement_threshold added
+        # bbox = [x_start - threshold, y_start - threshold, ..., x_end + threshold, y_end + threshold, ...]
+        # size = (x_end + threshold - (x_start - threshold)) / 2
+        expected_size_x = (x_end - x_start + 2 * placement_threshold) / 2
+        expected_size_y = (y_end - y_start + 2 * placement_threshold) / 2
+
+        assert np.isclose(size_x, expected_size_x, atol=1e-6), (
+            f"Site X size mismatch for {region_name}: "
+            f"expected {expected_size_x}, got {size_x}"
+        )
+        assert np.isclose(size_y, expected_size_y, atol=1e-6), (
+            f"Site Y size mismatch for {region_name}: "
+            f"expected {expected_size_y}, got {size_y}"
+        )
+
+        # Position should be at the center of the bounding box with threshold applied
+        # bbox = [x_start - threshold, y_start - threshold, ..., x_end + threshold, y_end + threshold, ...]
+        # center = (x_start - threshold + x_end + threshold) / 2 = (x_start + x_end) / 2
+        adjusted_x_start = x_start - placement_threshold
+        adjusted_x_end = x_end + placement_threshold
+        adjusted_y_start = y_start - placement_threshold
+        adjusted_y_end = y_end + placement_threshold
+
+        expected_pos_x = (adjusted_x_start + adjusted_x_end) / 2
+        expected_pos_y = (adjusted_y_start + adjusted_y_end) / 2
+
+        assert np.isclose(site_x, expected_pos_x, atol=1e-6), (
+            f"Site X position mismatch for {region_name}: "
+            f"expected {expected_pos_x}, got {site_x}"
+        )
+        assert np.isclose(site_y, expected_pos_y, atol=1e-6), (
+            f"Site Y position mismatch for {region_name}: "
+            f"expected {expected_pos_y}, got {site_y}"
+        )
