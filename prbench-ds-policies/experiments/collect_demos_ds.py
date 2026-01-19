@@ -139,6 +139,7 @@ def _main(cfg: DictConfig) -> None:
     policy = create_domain_specific_policy(
         cfg.env.env_name,
         observation_space=env.observation_space,
+        action_space=env.action_space,
         **cfg.env.policy_kwargs,
     )
 

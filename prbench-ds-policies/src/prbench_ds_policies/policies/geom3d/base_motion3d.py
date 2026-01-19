@@ -20,6 +20,7 @@ def create_domain_specific_policy(
     observation_space: ObjectCentricBoxSpace,
     max_action_magnitude: float = 0.05,
     position_gain: float = 1.0,
+    action_space=None,  # pylint: disable=unused-argument
 ) -> Policy:
     """Create a domain-specific policy for BaseMotion3D.
 
@@ -31,10 +32,12 @@ def create_domain_specific_policy(
         observation_space: The observation space used to devectorize observations.
         max_action_magnitude: Maximum magnitude for base movement actions.
         position_gain: Proportional gain for position control.
+        action_space: The action space (unused, for interface consistency).
 
     Returns:
         A policy function that maps observations to actions.
     """
+    del action_space  # Unused in this policy.
 
     def policy(observation: NDArray[np.float32]) -> NDArray[np.float32]:
         """Compute action to move robot base toward target.
