@@ -38,7 +38,7 @@ def collect_data(
 
     # Create the environment.
     env = prbench.make(
-        f"prbench/{env_name}", render_mode="rgb_array", realistic_bg=False
+        f"prbench/{env_name}", render_mode="rgb_array", realistic_bg=True
     )
 
     # Create episode writer if saving is enabled.

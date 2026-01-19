@@ -52,7 +52,7 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     shelf_texture: Path = Path(__file__).parent / "assets" / "dark-wood-texture.png"
 
     # World bounds.
-    specific_range: bool = False
+    specific_range: bool = True
     x_lb: float = -1.0
     x_ub: float = 1.0
     y_lb: float = -1.0

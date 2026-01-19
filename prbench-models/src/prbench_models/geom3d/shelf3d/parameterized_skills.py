@@ -45,7 +45,6 @@ from prbench_models.geom3d.constants import (
 from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 
 # constants
-SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
 PLACE_X_OFFSET_BOUNDS = (-0.15, 0.15)
@@ -72,7 +71,7 @@ class GroundPickController(
         self._current_retract_plan: list[JointPositions] | None = None
         self._current_plan: list[SE2Pose] | None = None
         self._current_state: ObjectCentricState | None = None
-        self._navigated: bool = False
+        self._navigated: bool = True
         self._pre_grasp: bool = False
         self._closed_gripper: bool = False
         self._lifted: bool = False
