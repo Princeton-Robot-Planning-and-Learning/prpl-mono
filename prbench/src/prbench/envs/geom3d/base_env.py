@@ -59,8 +59,14 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # Robot.
     robot_name: str = "tidybot-kinova"
     robot_base_home_pose: SE2Pose = SE2Pose.identity()
+    randomize_base_pose: bool = True
+    if randomize_base_pose:
+        initialize_x = np.random.uniform(-0.05, 0.05)
+        initialize_y = np.random.uniform(-0.05, 0.05)
+        initialize_rot = np.random.uniform(-np.pi / 4, np.pi / 4)
+        robot_base_home_pose = SE2Pose(initialize_x, initialize_y, initialize_rot)
     robot_base_pose_lower_bound: SE2Pose = SE2Pose(-10.0, -10.0, -np.pi)
-    robot_base_pose_upper_bound: SE2Pose = SE2Pose(10.0, 10.0, -np.pi)
+    robot_base_pose_upper_bound: SE2Pose = SE2Pose(10.0, 10.0, np.pi)
     robot_base_z: float = 0.0
     initial_joints: JointPositions = field(
         # This is a retract position.

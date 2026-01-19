@@ -125,7 +125,7 @@ def collect_data(
     controller = lifted_controller.ground(object_parameters)
 
     rng = np.random.default_rng(123)
-    params = controller.sample_parameters(state, rng)
+    params = np.array([0.5, 0.0])
 
     controller.reset(state, params)
     for step_idx in range(400):
