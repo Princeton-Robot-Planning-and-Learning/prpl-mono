@@ -603,6 +603,64 @@ class MjData:
         jacr = self.get_body_jacr(name)
         return np.dot(jacr, self.mj_data.qvel)
 
+    def get_site_xpos(self, name: str) -> NDArray[np.float32]:
+        """Get cartesian position of a mujoco site using site name.
+
+        Args:
+            name: Name of a mujoco site
+
+        Returns:
+            xpos: Position [x, y, z] of the mujoco site in world coordinates
+        """
+        # Find site ID by name in the model
+        site_id = None
+        for i in range(self.model.mj_model.nsite):
+            if (
+                self.model.mj_model.names[
+                    self.model.mj_model.name_siteadr[
+                        i
+                    ] : self.model.mj_model.name_siteadr[i]
+                    + len(name)
+                ]
+                == name.encode()
+            ):
+                site_id = i
+                break
+
+        if site_id is None:
+            raise ValueError(f"Site '{name}' not found in model")
+
+        return self.mj_data.site_xpos[site_id]
+
+    def get_site_xmat(self, name: str) -> NDArray[np.float32]:
+        """Get rotation matrix of a mujoco site using site name.
+
+        Args:
+            name: Name of a mujoco site
+
+        Returns:
+            xmat: Rotation matrix (3x3) of the mujoco site in world coordinates
+        """
+        # Find site ID by name in the model
+        site_id = None
+        for i in range(self.model.mj_model.nsite):
+            if (
+                self.model.mj_model.names[
+                    self.model.mj_model.name_siteadr[
+                        i
+                    ] : self.model.mj_model.name_siteadr[i]
+                    + len(name)
+                ]
+                == name.encode()
+            ):
+                site_id = i
+                break
+
+        if site_id is None:
+            raise ValueError(f"Site '{name}' not found in model")
+
+        return self.mj_data.site_xmat[site_id]
+
 
 class MjSim:
     """A simplified MjSim class for MuJoCo simulation."""
