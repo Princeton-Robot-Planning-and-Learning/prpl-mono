@@ -668,9 +668,9 @@ class ObjectCentricGeom3DRobotEnv(
         camera_pose = multiply_poses(ee_pose, camera_to_ee_transform)
 
         # for debugging
-        from pybullet_helpers.gui import visualize_pose
-        visualize_pose(ee_pose, self.physics_client_id)
-        visualize_pose(camera_pose, self.physics_client_id)
+        # from pybullet_helpers.gui import visualize_pose
+        # visualize_pose(ee_pose, self.physics_client_id)
+        # visualize_pose(camera_pose, self.physics_client_id)
 
         return capture_image(
             self.physics_client_id,

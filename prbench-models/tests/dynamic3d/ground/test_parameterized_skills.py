@@ -1211,9 +1211,19 @@ def test_pick_toss():
     # else:
     #     assert False, "Controller did not terminate"
     cube_position = [state.get(cube, "x"), state.get(cube, "y"), state.get(cube, "z")]
-    cube_orientation = [state.get(cube, "qx"), state.get(cube, "qy"), state.get(cube, "qz"), state.get(cube, "qw")]
-    robot_base_position = [state.get(robot, "pos_base_x"), state.get(robot, "pos_base_y")]
-    distance = np.linalg.norm(np.array(cube_position[:2]) - np.array(robot_base_position[:2]))
+    cube_orientation = [
+        state.get(cube, "qx"),
+        state.get(cube, "qy"),
+        state.get(cube, "qz"),
+        state.get(cube, "qw"),
+    ]
+    robot_base_position = [
+        state.get(robot, "pos_base_x"),
+        state.get(robot, "pos_base_y"),
+    ]
+    distance = np.linalg.norm(
+        np.array(cube_position[:2]) - np.array(robot_base_position[:2])
+    )
     print("cube_position", cube_position)
     print("cube_orientation", cube_orientation)
     print("robot base position", robot_base_position)
