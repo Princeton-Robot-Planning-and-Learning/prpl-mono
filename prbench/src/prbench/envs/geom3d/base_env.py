@@ -59,7 +59,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # Robot.
     robot_name: str = "tidybot-kinova"
     robot_base_home_pose: SE2Pose = SE2Pose.identity()
-    randomize_base_pose: bool = True
+    randomize_base_pose: bool = False
     if randomize_base_pose:
         initialize_x = np.random.uniform(-0.05, 0.05)
         initialize_y = np.random.uniform(-0.05, 0.05)
@@ -82,7 +82,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     )
     initial_finger_state: float = 0.0
     end_effector_viz_half_extents: tuple[float, float, float] = (0.01, 0.01, 0.035)
-    end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
+    end_effector_viz_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.0)
     max_action_mag: float = 0.4
     check_base_collisions: bool = False
 
@@ -105,7 +105,8 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
 
     # End-effector camera (mounted on wrist) - matches dynamics3d tidybot
     # From tidybot.xml: pos="0 -0.05639 -0.058475" quat="0 0 0 1"
-    ee_camera_offset: tuple[float, float, float] = (0.0, 0.05639, -0.058475)
+    # add 2cm in z direction to avoid camera too close to the object/ground.
+    ee_camera_offset: tuple[float, float, float] = (0.0, 0.04639, -0.108475)
     ee_camera_euler: tuple[float, float, float] = (np.pi, 0.0, 0.0)
     ee_camera_fov: float = 41.83792730009236
     ee_camera_image_width: int = 640
@@ -667,9 +668,9 @@ class ObjectCentricGeom3DRobotEnv(
         camera_pose = multiply_poses(ee_pose, camera_to_ee_transform)
 
         # for debugging
-        # from pybullet_helpers.gui import visualize_pose
-        # visualize_pose(ee_pose, self.physics_client_id)
-        # visualize_pose(camera_pose, self.physics_client_id)
+        from pybullet_helpers.gui import visualize_pose
+        visualize_pose(ee_pose, self.physics_client_id)
+        visualize_pose(camera_pose, self.physics_client_id)
 
         return capture_image(
             self.physics_client_id,
