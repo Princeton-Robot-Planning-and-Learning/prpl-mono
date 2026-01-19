@@ -356,9 +356,7 @@ def test_cupboard_region_site_creation_and_placement():
             ), f"Site {site_name} should be in drawer body, but parent is {parent_name}"
         else:
             # Parent should be the main cupboard body
-            assert (
-                parent_name == cupboard.name
-            ), (
+            assert parent_name == cupboard.name, (
                 f"Site {site_name} should be in cupboard body {cupboard.name}, "
                 f"but parent is {parent_name}"
             )
