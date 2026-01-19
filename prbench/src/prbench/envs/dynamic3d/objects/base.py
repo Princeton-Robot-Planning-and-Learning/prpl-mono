@@ -274,8 +274,6 @@ class MujocoObject:
 
         # Create regions if defined
         self.region_objects: dict[str, list[Region]] = {}
-        if self.regions is not None:
-            self._create_regions()
 
         self.xml_element: ET.Element  # To be defined in subclasses
 
@@ -287,6 +285,7 @@ class MujocoObject:
         spans a small height above the object surface.
         """
         assert self.regions is not None, "Regions must be defined"
+        assert self.xml_element is not None, "XML element must be defined to create regions"
         placement_threshold = 0.01  # 1cm tolerance for placement
         # Note: we are currently hard-coding the z range for the bounding boxes
         # This could potentially be made configurable in the future.
@@ -338,9 +337,8 @@ class MujocoObject:
                 )
                 region_list.append(region)
 
-                # Append site element to xml_element if it exists
-                if hasattr(self, "xml_element") and self.xml_element is not None:
-                    self.xml_element.append(site)
+                # Append site element to xml_element
+                self.xml_element.append(site)
 
             self.region_objects[region_name] = region_list
 

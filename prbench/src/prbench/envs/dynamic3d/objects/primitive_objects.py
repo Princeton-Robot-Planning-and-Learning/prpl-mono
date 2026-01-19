@@ -72,6 +72,9 @@ class Cuboid(MujocoObject):
         # Create the XML element
         self.xml_element = self._create_xml_element()
 
+        if self.regions is not None:
+            self._create_regions()
+
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this cuboid.
 
@@ -273,6 +276,9 @@ class Bin(MujocoObject):
 
         # Create the XML element
         self.xml_element = self._create_xml_element()
+
+        if self.regions is not None:
+            self._create_regions()
 
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this bin using multiple box geoms.
