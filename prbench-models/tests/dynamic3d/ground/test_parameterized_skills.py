@@ -1208,8 +1208,8 @@ def test_pick_toss():
         state = next_state
         if controller.terminated():
             break
-    # else:
-    #     assert False, "Controller did not terminate"
+    else:
+        assert False, "Controller did not terminate"
     cube_position = [state.get(cube, "x"), state.get(cube, "y"), state.get(cube, "z")]
     cube_orientation = [
         state.get(cube, "qx"),
