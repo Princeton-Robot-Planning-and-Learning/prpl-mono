@@ -112,6 +112,7 @@ def run_inference(
     render: bool = False,
     num_cubes: int = 1,
     show_images: bool = False,
+    use_qpos: bool = False,
 ):
     """Run policy inference in the prbench environment.
 
@@ -127,26 +128,29 @@ def run_inference(
         render: Whether to render the environment.
         num_cubes: Number of cubes in the environment.
         show_images: Whether to show images in a window.
+        use_qpos: Whether to use qpos for the policy.
     """
-    # Create the environment
-    render_mode = "rgb_array" if render or save else None
-    env = prbench.make(
-        f"prbench/{env_name}",
-        render_mode=render_mode,
-        use_gui=False,
-        realistic_bg=True,
-    )
-
-    # Create FK solver for computing end-effector pose
-    fk_solver = TidybotFKSolver(ee_offset=0.12)
-    ik_solver = TidybotIKSolver(ee_offset=0.12)
-
-    # Create remote policy
-    policy = RemotePolicy(host=policy_host, port=policy_port)
+    
 
     successes = 0
     try:
         for episode_idx in range(num_episodes):
+            # Create the environment
+            render_mode = "rgb_array" if render or save else None
+            env = prbench.make(
+                f"prbench/{env_name}",
+                render_mode=render_mode,
+                use_gui=False,
+                realistic_bg=True,
+            )
+
+            # Create FK solver for computing end-effector pose
+            fk_solver = TidybotFKSolver(ee_offset=0.12)
+            ik_solver = TidybotIKSolver(ee_offset=0.12)
+
+            # Create remote policy
+            policy = RemotePolicy(host=policy_host, port=policy_port)
+
             print(f"\n=== Episode {episode_idx + 1}/{num_episodes} ===")
 
             # Create episode writer if saving is enabled
@@ -214,21 +218,37 @@ def run_inference(
                     _visualize_image_in_window(all_images["wrist"], "wrist")
 
                 # Create observation dict for policy
-                obs_dict = {
-                    "base_pose": np.array(
-                        [
-                            state.get(robot, "pos_base_x"),
-                            state.get(robot, "pos_base_y"),
-                            state.get(robot, "pos_base_rot"),
-                        ]
-                    ),
-                    "arm_pos": current_position,
-                    "arm_quat": current_orientation,
-                    "gripper_pos": np.array([state.get(robot, "finger_state")]),
-                    "base_image": all_images["base"],
-                    "wrist_image": all_images["wrist"],
-                    "overview_image": all_images["overview"],
-                }
+                if use_qpos:
+                    obs_dict = {
+                        "base_pose": np.array(
+                            [
+                                state.get(robot, "pos_base_x"),
+                                state.get(robot, "pos_base_y"),
+                                state.get(robot, "pos_base_rot"),
+                            ]
+                        ),
+                        "arm_qpos": np.array(current_joints),
+                        "gripper_pos": np.array([state.get(robot, "finger_state")]),
+                        "base_image": all_images["base"],
+                        "wrist_image": all_images["wrist"],
+                        "overview_image": all_images["overview"],
+                    }
+                else:
+                    obs_dict = {
+                        "base_pose": np.array(
+                            [
+                                state.get(robot, "pos_base_x"),
+                                state.get(robot, "pos_base_y"),
+                                state.get(robot, "pos_base_rot"),
+                            ]
+                        ),
+                        "arm_pos": current_position,
+                        "arm_quat": current_orientation,
+                        "gripper_pos": np.array([state.get(robot, "finger_state")]),
+                        "base_image": all_images["base"],
+                        "wrist_image": all_images["wrist"],
+                        "overview_image": all_images["overview"],
+                    }
 
                 if state.get(robot, "finger_state") > 0.005:
                     obs_dict["gripper_pos"] = np.array([0.35])
@@ -239,27 +259,44 @@ def run_inference(
                 action_dict = policy.step(obs_dict)
 
                 if action_dict is None:
-                    action_dict: dict[str, np.ndarray] = {  # type: ignore
-                        "base_pose": obs_dict["base_pose"],
-                        "arm_pos": obs_dict["arm_pos"],
-                        "arm_quat": obs_dict["arm_quat"],
-                        "gripper_pos": obs_dict["gripper_pos"],
-                    }
+                    if use_qpos:
+                        action_dict: dict[str, np.ndarray] = {  # type: ignore
+                            "base_pose": obs_dict["base_pose"],
+                            "arm_qpos": obs_dict["arm_qpos"],
+                            "gripper_pos": obs_dict["gripper_pos"],
+                        }
+                    else:
+                        action_dict: dict[str, np.ndarray] = {  # type: ignore
+                            "base_pose": obs_dict["base_pose"],
+                            "arm_pos": obs_dict["arm_pos"],
+                            "arm_quat": obs_dict["arm_quat"],
+                            "gripper_pos": obs_dict["gripper_pos"],
+                        }
 
-                qpos = ik_solver.solve(
-                    action_dict["arm_pos"], action_dict["arm_quat"], current_joints
-                )
-                delta_qpos = (
-                    np.mod((qpos - current_joints) + np.pi, 2 * np.pi) - np.pi
-                )  # Unwrapped joint angles
+                
 
-                action = np.concatenate(
-                    [
-                        action_dict["base_pose"] - obs_dict["base_pose"],
-                        delta_qpos,
-                        action_dict["gripper_pos"],
-                    ]
-                )
+                if use_qpos:
+                    action = np.concatenate(
+                        [
+                            action_dict["base_pose"] - obs_dict["base_pose"],
+                            action_dict["arm_qpos"] - obs_dict["arm_qpos"],
+                            action_dict["gripper_pos"],
+                        ]
+                    )
+                else:
+                    qpos = ik_solver.solve(
+                        action_dict["arm_pos"], action_dict["arm_quat"], current_joints
+                    )
+                    delta_qpos = (
+                        np.mod((qpos - current_joints) + np.pi, 2 * np.pi) - np.pi
+                    )  # Unwrapped joint angles
+                    action = np.concatenate(
+                        [
+                            action_dict["base_pose"] - obs_dict["base_pose"],
+                            delta_qpos,
+                            action_dict["gripper_pos"],
+                        ]
+                    )
 
                 # Record observation and action before stepping
                 if writer is not None:
@@ -283,6 +320,10 @@ def run_inference(
             else:
                 print(f"Episode reached max steps ({max_steps})")
 
+            print(f"Successes: {successes}")
+            print(f"Success rate: {successes / num_episodes}")
+            policy.close()  # type: ignore
+            env.close()  # type: ignore
             # Save episode data to disk
             if writer is not None and len(writer) > 0:
                 writer.flush_async()
@@ -292,8 +333,6 @@ def run_inference(
     finally:
         print(f"Successes: {successes}")
         print(f"Success rate: {successes / num_episodes}")
-        policy.close()  # type: ignore
-        env.close()  # type: ignore
 
 
 def main() -> None:
@@ -339,7 +378,7 @@ def main() -> None:
         help="Show images in a window",
     )
     parser.add_argument("--render", action="store_true", help="Render the environment")
-
+    parser.add_argument("--use-qpos", action="store_true", default=False, help="Use qpos for the policy")
     args = parser.parse_args()
 
     run_inference(
@@ -354,6 +393,7 @@ def main() -> None:
         env_name=args.env_name,
         render=args.render,
         show_images=args.show_images,
+        use_qpos=args.use_qpos,
     )
 
 

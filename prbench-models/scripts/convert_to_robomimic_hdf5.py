@@ -137,19 +137,31 @@ def main(
                     for action in reader.actions
                 ]
             else:  # Convert quat to axis-angle
-                actions = [
-                    np.concatenate(
-                        (
-                            action["base_pose"],
-                            action["arm_pos"],
-                            Rotation.from_quat(
-                                action["arm_quat"]
-                            ).as_rotvec(),  # Convert quat to axis-angle
-                            action["gripper_pos"],
+                if "arm_qpos" in reader.actions[0].keys():
+                    actions = [
+                        np.concatenate(
+                            (
+                                action["base_pose"],
+                                action["arm_qpos"],
+                                action["gripper_pos"],
+                            )
                         )
-                    )
-                    for action in reader.actions
-                ]
+                        for action in reader.actions
+                    ]
+                else:
+                    actions = [
+                        np.concatenate(
+                            (
+                                action["base_pose"],
+                                action["arm_pos"],
+                                Rotation.from_quat(
+                                    action["arm_quat"]
+                                ).as_rotvec(),  # Convert quat to axis-angle
+                                action["gripper_pos"],
+                            )
+                        )
+                        for action in reader.actions
+                    ]
 
             if args.predicate:
                 predicates = []
