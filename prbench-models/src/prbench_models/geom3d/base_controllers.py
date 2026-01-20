@@ -22,6 +22,7 @@ from pybullet_helpers.motion_planning import (
     run_motion_planning,
     run_smooth_motion_planning_to_pose,
     smoothly_follow_end_effector_path,
+    MotionPlanningHyperparameters
 )
 from relational_structs import (
     Object,
@@ -122,8 +123,8 @@ class BasePlaceController(
                     collision_ids=collision_ids,
                     end_effector_frame_to_plan_frame=Pose.identity(),
                     seed=0,  # for determinism
-                    max_time=0.5,
-                    max_candidate_plans=1,
+                    max_time=10,
+                    max_candidate_plans=50,
                     held_object=grasped_object_id,
                     base_link_to_held_obj=grasped_object_transform,
                     birrt_extend_num_interp=50,
@@ -221,6 +222,9 @@ class BasePlaceController(
                 collision_bodies=collision_ids,
                 seed=0,  # for determinism
                 physics_client_id=self._sim.physics_client_id,
+                hyperparameters=MotionPlanningHyperparameters(
+                    birrt_extend_num_interp=50,
+                )
             )
 
             if joint_plan is None:

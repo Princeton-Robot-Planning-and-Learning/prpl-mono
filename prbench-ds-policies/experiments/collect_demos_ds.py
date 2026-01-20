@@ -134,7 +134,7 @@ def _main(cfg: DictConfig) -> None:
 
     # Create the environment.
     prbench.register_all_environments()
-    env = prbench.make(**cfg.env.make_kwargs, render_mode="rgb_array", use_gui=False)
+    env = prbench.make(**cfg.env.make_kwargs, render_mode="rgb_array", use_gui=True)
     env_id = cfg.env.make_kwargs["id"]
 
     # Create the domain-specific policy.

@@ -197,9 +197,9 @@ class GroundPickController(
                         collision_ids=collision_ids,
                         end_effector_frame_to_plan_frame=Pose.identity(),
                         seed=0,  # for determinism
-                        max_time=0.5,
+                        max_time=2,
                         birrt_extend_num_interp=50,
-                        max_candidate_plans=1,
+                        max_candidate_plans=10,
                     )
                 except InverseKinematicsError:
                     joint_plan1 = None
