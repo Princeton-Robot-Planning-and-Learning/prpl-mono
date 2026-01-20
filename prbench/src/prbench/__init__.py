@@ -353,25 +353,54 @@ def register_all_environments() -> None:
     tasks_root = Path(__file__).parent / "envs" / "dynamic3d" / "tasks"
 
     env_class_variants: dict[str, list[str]] = {}
-    for task_config in tasks_root.iterdir():
-        config_name = task_config.stem
-        robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[config_name.split("-")[0]]
-        scene_type = config_name.split("-")[1]
-        num_task_objects = int(config_name.split("-")[2][1:])
-        task_cfg = "-".join(config_name.split("-")[1:])
-        variant_id = f"prbench/{robot}-{task_cfg}-v0"
-        _register(
-            id=variant_id,
-            entry_point=f"prbench.envs.dynamic3d.tidybot3d:{robot}Env",
-            kwargs={
-                "scene_type": scene_type,
-                "num_objects": num_task_objects,
-                "task_config_path": str(task_config),
-            },
-        )
-        if robot not in env_class_variants:
-            env_class_variants[robot] = []
-        env_class_variants[robot].append(variant_id)
+    for task_item in tasks_root.iterdir():
+        if task_item.is_file():
+            # Handle single config file directly in tasks_root
+            config_name = task_item.stem
+            robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[
+                config_name.split("-")[0]
+            ]
+            scene_type = config_name.split("-")[1]
+            num_task_objects = int(config_name.split("-")[2][1:])
+            task_cfg = "-".join(config_name.split("-")[1:])
+            variant_id = f"prbench/{robot}-{task_cfg}-v0"
+            _register(
+                id=variant_id,
+                entry_point=f"prbench.envs.dynamic3d.tidybot3d:{robot}Env",
+                kwargs={
+                    "scene_type": scene_type,
+                    "num_objects": num_task_objects,
+                    "task_config_path": str(task_item),
+                },
+            )
+            if robot not in env_class_variants:
+                env_class_variants[robot] = []
+            env_class_variants[robot].append(variant_id)
+        elif task_item.is_dir():
+            # Handle folders and register each config file within
+            folder_name = task_item.name
+            for task_config in task_item.iterdir():
+                if task_config.is_file():
+                    config_name = task_config.stem
+                    robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[
+                        config_name.split("-")[0]
+                    ]
+                    scene_type = config_name.split("-")[1]
+                    num_task_objects = int(config_name.split("-")[2][1:])
+                    task_cfg = "-".join(config_name.split("-")[1:])
+                    variant_id = f"prbench/{robot}-{folder_name}-{task_cfg}-v0"
+                    _register(
+                        id=variant_id,
+                        entry_point=f"prbench.envs.dynamic3d.tidybot3d:{robot}Env",
+                        kwargs={
+                            "scene_type": scene_type,
+                            "num_objects": num_task_objects,
+                            "task_config_path": str(task_config),
+                        },
+                    )
+                    if robot not in env_class_variants:
+                        env_class_variants[robot] = []
+                    env_class_variants[robot].append(variant_id)
 
     for robot, variant_ids in env_class_variants.items():
         _register_env_class(

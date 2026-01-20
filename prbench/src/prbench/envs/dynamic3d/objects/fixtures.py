@@ -270,6 +270,8 @@ class Table(MujocoFixture):
                     name=site_name,
                     rgba=rgba_values,
                     site_element=site,
+                    parent_pos=np.array(self.position, dtype=np.float32),
+                    parent_yaw=self.yaw,
                 )
                 region_list.append(region)
 
@@ -366,15 +368,10 @@ class Table(MujocoFixture):
             if yaw_ranges and len(yaw_ranges) > selected_region_index:
                 yaw_range = tuple(yaw_ranges[selected_region_index])
 
-        # Sample pose from the 3D bounding box (in table-relative coordinates)
+        # Sample pose from the 3D bounding box (already in world coordinates)
         x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
 
-        # Convert to world coordinates
-        world_x = x + self.position[0]
-        world_y = y + self.position[1]
-        world_z = z + self.position[2]
-
-        return (world_x, world_y, world_z, yaw)
+        return (x, y, z, yaw)
 
     def check_in_region(
         self,
@@ -395,11 +392,9 @@ class Table(MujocoFixture):
             raise ValueError(f"Region '{region_name}' not found")
 
         # Check if position is in any of the region objects
-        # Pass fixture position as parent_pos to convert from world to local coordinates
         region_list = self.region_objects[region_name]
-        fixture_pos = np.array(self.position, dtype=np.float32)
         for region in region_list:
-            if region.check_in_region(position, fixture_pos, None, region.name):
+            if region.check_in_region(position):
                 return True
 
         return False
@@ -445,6 +440,16 @@ class Cupboard(MujocoFixture):
     default_partition_thickness: float = 0.01  # 1cm thick partitions
     default_drawer_wall_thickness: float = 0.003  # 3mm thick drawer walls
     default_drawer_damping: float = 10.0  # Damping for smooth sliding
+
+    # Default RGBA colors for cupboard and drawer components
+    default_rgba_cupboard_shelf: list[float] = [0.8, 0.6, 0.4, 1.0]
+    default_rgba_cupboard_leg: list[float] = [0.6, 0.4, 0.2, 1.0]
+    default_rgba_cupboard_partition: list[float] = [0.7, 0.5, 0.3, 1.0]
+    default_rgba_cupboard_panel: list[float] = [0.7, 0.5, 0.3, 1.0]
+    default_rgba_drawer_bottom: list[float] = [0.6, 0.5, 0.4, 0.8]
+    default_rgba_drawer_wall: list[float] = [0.5, 0.4, 0.3, 0.9]
+    default_rgba_drawer_face: list[float] = [0.4, 0.3, 0.2, 1.0]
+    default_rgba_drawer_handle: list[float] = [0.3, 0.3, 0.3, 1.0]
 
     def __init__(
         self,
@@ -533,6 +538,31 @@ class Cupboard(MujocoFixture):
             self.fixture_config.get("drawer_damping", Cupboard.default_drawer_damping)
         )
 
+        # Parse RGBA colors from fixture config or use class defaults
+        self.rgba_cupboard_shelf: list[float] = self.fixture_config.get(
+            "rgba_cupboard_shelf", Cupboard.default_rgba_cupboard_shelf
+        )  # type: ignore
+        self.rgba_cupboard_leg: list[float] = self.fixture_config.get(
+            "rgba_cupboard_leg", Cupboard.default_rgba_cupboard_leg
+        )  # type: ignore
+        self.rgba_cupboard_partition: list[float] = self.fixture_config.get(
+            "rgba_cupboard_partition", Cupboard.default_rgba_cupboard_partition
+        )  # type: ignore
+        self.rgba_cupboard_panel: list[float] = self.fixture_config.get(
+            "rgba_cupboard_panel", Cupboard.default_rgba_cupboard_panel
+        )  # type: ignore
+        self.rgba_drawer_bottom: list[float] = self.fixture_config.get(
+            "rgba_drawer_bottom", Cupboard.default_rgba_drawer_bottom
+        )  # type: ignore
+        self.rgba_drawer_wall: list[float] = self.fixture_config.get(
+            "rgba_drawer_wall", Cupboard.default_rgba_drawer_wall
+        )  # type: ignore
+        self.rgba_drawer_face: list[float] = self.fixture_config.get(
+            "rgba_drawer_face", Cupboard.default_rgba_drawer_face
+        )  # type: ignore
+        self.rgba_drawer_handle: list[float] = self.fixture_config.get(
+            "rgba_drawer_handle", Cupboard.default_rgba_drawer_handle
+        )  # type: ignore
         # Max drawer slide distance (80% of shelf depth)
         self.drawer_max_slide: float = self.cupboard_depth * 0.8
 
@@ -701,7 +731,19 @@ class Cupboard(MujocoFixture):
                 x_min = -cupboard_half_length
                 x_max = cupboard_half_length
 
-            for region_idx, region_range in enumerate(region_config["ranges"]):
+            # Get ranges - if not provided, use the computed x_min, x_max, y_min, y_max
+            ranges = region_config.get("ranges")
+            if ranges is None:
+                # Compute y_min and y_max from cupboard depth
+                cupboard_half_depth = self.cupboard_depth / 2
+                y_min = -cupboard_half_depth
+                y_max = cupboard_half_depth
+                # Convert x bounds to be relative to partition center
+                x_min_relative = x_min - partition_center_x
+                x_max_relative = x_max - partition_center_x
+                ranges = [[x_min_relative, y_min, x_max_relative, y_max]]
+
+            for region_idx, region_range in enumerate(ranges):
                 if len(region_range) != 4:
                     raise ValueError(
                         f"Each region range must have exactly 4 values "
@@ -776,10 +818,43 @@ class Cupboard(MujocoFixture):
                 site.set("group", "0")
 
                 # Create Region object (derived from site_element)
+                # Determine parent pose: cupboard pose + drawer pose if applicable
+                if compartment_has_drawer:
+                    if has_partitions:
+                        drawer_index = f"s{shelf+1}c{partition_idx}"
+                    else:
+                        drawer_index = f"s{shelf+1}c0"
+                    # Calculate drawer pose from compartment geometry
+                    # (this is the same calculation as in _create_drawer_body)
+                    x_min_comp, x_max_comp = self._get_drawer_compartment_bounds(
+                        shelf, partition_idx if has_partitions else 0
+                    )
+                    drawer_center_x = (x_min_comp + x_max_comp) / 2
+                    shelf_z = self._shelf_z_positions[shelf]
+                    depth_margin = (
+                        self.leg_thickness
+                        if self.side_and_back_open
+                        else self.panel_thickness
+                    )
+                    drawer_y = depth_margin / 2
+                    drawer_z = (
+                        shelf_z + self.shelf_thickness / 2 + self.drawer_wall_thickness
+                    )
+                    # Parent pose is cupboard position + drawer position
+                    drawer_pos = np.array(
+                        [drawer_center_x, drawer_y, drawer_z], dtype=np.float32
+                    )
+                    parent_pos = np.array(self.position, dtype=np.float32) + drawer_pos
+                else:
+                    # Parent pose is just the cupboard position
+                    parent_pos = np.array(self.position, dtype=np.float32)
+
                 region = Region(
                     name=site_name,
                     rgba=rgba_values,
                     site_element=site,
+                    parent_pos=parent_pos,
+                    parent_yaw=self.yaw,
                 )
                 region_list.append(region)
 
@@ -944,7 +1019,7 @@ class Cupboard(MujocoFixture):
             "size", f"{handle_length / 2} {handle_half_size} {handle_half_size}"
         )
         main_box.set("pos", f"0 {handle_depth - handle_half_size} 0")
-        main_box.set("rgba", "0.3 0.3 0.3 1")
+        main_box.set("rgba", " ".join(map(str, self.rgba_drawer_handle)))
 
         # Two perpendicular boxes at the ends (along y-axis)
         # Positioned 10% from each end, so total span is 80% of handle_length
@@ -959,7 +1034,7 @@ class Cupboard(MujocoFixture):
             perp_box.set("type", "box")
             perp_box.set("size", f"{handle_half_size} {y_pos} {handle_half_size}")
             perp_box.set("pos", f"{x_pos} {y_pos} 0")
-            perp_box.set("rgba", "0.3 0.3 0.3 1")
+            perp_box.set("rgba", " ".join(map(str, self.rgba_drawer_handle)))
 
         return handle_body
 
@@ -1070,7 +1145,7 @@ class Cupboard(MujocoFixture):
             f"{drawer_half_length - wall_half_t} {drawer_half_depth} {wall_half_t}",
         )
         bottom.set("pos", f"0 0 {wall_half_t/2}")
-        bottom.set("rgba", "0.6 0.5 0.4 0.8")
+        bottom.set("rgba", " ".join(map(str, self.rgba_drawer_bottom)))
 
         # Front geom (facing out towards user)
         front = ET.SubElement(drawer_body, "geom")
@@ -1081,7 +1156,7 @@ class Cupboard(MujocoFixture):
             f"{drawer_half_length - wall_half_t} {wall_half_t} {wall_half_height}",
         )
         front.set("pos", f"0 {drawer_half_depth - wall_half_t} {wall_pos_z}")
-        front.set("rgba", "0.5 0.4 0.3 0.9")
+        front.set("rgba", " ".join(map(str, self.rgba_drawer_wall)))
 
         # Drawer face geom (spans full width accounting for partitions)
         partition_thickness = Cupboard.default_partition_thickness
@@ -1126,7 +1201,7 @@ class Cupboard(MujocoFixture):
             "pos",
             f"{face_local_center_x} {face_local_center_y} {face_z_pos}",
         )
-        face.set("rgba", "0.4 0.3 0.2 1")  # Slightly darker for visual distinction
+        face.set("rgba", " ".join(map(str, self.rgba_drawer_face)))
 
         # Back geom (facing away, allows sliding)
         back = ET.SubElement(drawer_body, "geom")
@@ -1137,7 +1212,7 @@ class Cupboard(MujocoFixture):
             f"{drawer_half_length - wall_half_t} {wall_half_t} {wall_half_height}",
         )
         back.set("pos", f"0 {-(drawer_half_depth - wall_half_t)} {wall_pos_z}")
-        back.set("rgba", "0.5 0.4 0.3 0.9")
+        back.set("rgba", " ".join(map(str, self.rgba_drawer_wall)))
 
         # Left geom (left side wall) - inset to avoid partition/panel collision
         left = ET.SubElement(drawer_body, "geom")
@@ -1148,7 +1223,7 @@ class Cupboard(MujocoFixture):
             "pos",
             f"{-(drawer_half_length - 2*wall_half_t)} 0 {wall_pos_z}",
         )
-        left.set("rgba", "0.5 0.4 0.3 0.9")
+        left.set("rgba", " ".join(map(str, self.rgba_drawer_wall)))
 
         # Right geom (right side wall) - inset to avoid partition/panel collision
         right = ET.SubElement(drawer_body, "geom")
@@ -1159,7 +1234,7 @@ class Cupboard(MujocoFixture):
             "pos",
             f"{drawer_half_length - 2*wall_half_t} 0 {wall_pos_z}",
         )
-        right.set("rgba", "0.5 0.4 0.3 0.9")
+        right.set("rgba", " ".join(map(str, self.rgba_drawer_wall)))
 
         # Create handle body with 3 boxes (main + 2 perpendicular)
         # 40% of drawer width
@@ -1232,7 +1307,7 @@ class Cupboard(MujocoFixture):
                 leg.set(
                     "pos", f"{pos.split()[0]} {pos.split()[1]} {leg_half_height}"
                 )  # Position leg center at half its height
-                leg.set("rgba", "0.6 0.4 0.2 1")  # Brown color for legs
+                leg.set("rgba", " ".join(map(str, self.rgba_cupboard_leg)))
 
         # Calculate cumulative shelf positions
         current_z = shelf_half_thickness
@@ -1252,7 +1327,7 @@ class Cupboard(MujocoFixture):
                 f"{cupboard_half_length} {cupboard_half_depth} {shelf_half_thickness}",
             )
             shelf.set("pos", f"0 0 {shelf_z}")
-            shelf.set("rgba", "0.8 0.6 0.4 1")  # Light brown color for shelves
+            shelf.set("rgba", " ".join(map(str, self.rgba_cupboard_shelf)))
 
             # Create vertical partitions for this shelf
             # (if we have partition data for it)
@@ -1281,8 +1356,8 @@ class Cupboard(MujocoFixture):
                     )
                     partition.set("pos", f"{partition_x} 0 {partition_z}")
                     partition.set(
-                        "rgba", "0.7 0.5 0.3 1"
-                    )  # Slightly different color for partitions
+                        "rgba", " ".join(map(str, self.rgba_cupboard_partition))
+                    )
 
                 # Create drawers for this shelf if configured
                 if self.shelf_drawers and i < len(self.shelf_drawers):
@@ -1331,7 +1406,7 @@ class Cupboard(MujocoFixture):
                 "pos",
                 f"0 {-cupboard_half_depth + panel_half_thickness} {panel_half_height}",
             )
-            back_panel.set("rgba", "0.7 0.5 0.3 1")
+            back_panel.set("rgba", " ".join(map(str, self.rgba_cupboard_panel)))
 
             # Left side panel (at -X edge)
             left_panel = ET.SubElement(cupboard_body, "geom")
@@ -1345,7 +1420,7 @@ class Cupboard(MujocoFixture):
                 "pos",
                 f"{-cupboard_half_length + panel_half_thickness} 0 {panel_half_height}",
             )
-            left_panel.set("rgba", "0.7 0.5 0.3 1")
+            left_panel.set("rgba", " ".join(map(str, self.rgba_cupboard_panel)))
 
             # Right side panel (at +X edge)
             right_panel = ET.SubElement(cupboard_body, "geom")
@@ -1359,7 +1434,7 @@ class Cupboard(MujocoFixture):
                 "pos",
                 f"{cupboard_half_length - panel_half_thickness} 0 {panel_half_height}",
             )
-            right_panel.set("rgba", "0.7 0.5 0.3 1")
+            right_panel.set("rgba", " ".join(map(str, self.rgba_cupboard_panel)))
 
         return cupboard_body
 
@@ -1451,15 +1526,10 @@ class Cupboard(MujocoFixture):
             if yaw_ranges and len(yaw_ranges) > selected_region_index:
                 yaw_range = tuple(yaw_ranges[selected_region_index])
 
-        # Sample pose from the 3D bounding box (in cupboard-relative coordinates)
+        # Sample pose from the 3D bounding box (already in world coordinates)
         x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
 
-        # Convert to world coordinates
-        world_x = x + self.position[0]
-        world_y = y + self.position[1]
-        world_z = z + self.position[2]
-
-        return (world_x, world_y, world_z, yaw)
+        return (x, y, z, yaw)
 
     def check_in_region(
         self,
@@ -1481,11 +1551,9 @@ class Cupboard(MujocoFixture):
             raise ValueError(f"Region '{region_name}' not found")
 
         # Check if position is in any of the region objects
-        # Pass fixture position as parent_pos to convert from world to local coordinates
         region_list = self.region_objects[region_name]
-        fixture_pos = np.array(self.position, dtype=np.float32)
         for region in region_list:
-            if region.check_in_region(position, fixture_pos, None, region.name):
+            if region.check_in_region(position):
                 return True
 
         return False
