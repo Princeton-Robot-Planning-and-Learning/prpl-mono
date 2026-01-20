@@ -218,6 +218,8 @@ def get_jointwise_difference(
             joint_diff = get_signed_angle_distance(wrap_angle(v2), wrap_angle(v1))
         else:
             joint_diff = v2 - v1
+        if abs(joint_diff) > 6 and joint_info.jointIndex == 2:
+            import ipdb; ipdb.set_trace()
         diff.append(joint_diff)
     return diff
 

@@ -194,6 +194,7 @@ def run_smooth_motion_planning_to_pose(
     joint_geometric_scalar: float = 0.9,
     birrt_num_attempts: int = 10,
     birrt_num_iters: int = 100,
+    birrt_extend_num_interp: int = 10,
     sampling_fn: Callable[[JointPositions], JointPositions] | None = None,
     distance_threshold: float = 1e-6,
 ) -> Optional[list[JointPositions]]:
@@ -264,6 +265,7 @@ def run_smooth_motion_planning_to_pose(
                 base_link_to_held_obj=base_link_to_held_obj,
                 sampling_fn=sampling_fn,
                 hyperparameters=MotionPlanningHyperparameters(
+                    birrt_extend_num_interp=birrt_extend_num_interp,
                     birrt_num_attempts=birrt_num_attempts,
                     birrt_num_iters=birrt_num_iters,
                 ),

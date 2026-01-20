@@ -37,7 +37,7 @@ from prbench.envs.geom3d.utils import (
 class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Transport3DEnv()."""
 
-    max_action_mag: float = 0.2
+    max_action_mag: float = 0.1
 
     # Table.
     table_pose: Pose = Pose((0.6, 0.0, 0.2))

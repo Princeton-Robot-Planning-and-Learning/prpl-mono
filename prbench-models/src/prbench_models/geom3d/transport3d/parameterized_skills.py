@@ -20,12 +20,14 @@ from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
 )
 from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
-from pybullet_helpers.joint import JointPositions, get_jointwise_difference
+from pybullet_helpers.joint import JointPositions, get_jointwise_difference, get_joint_infos
+from pybullet_helpers.inverse_kinematics import InverseKinematicsError
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
     remap_se2_pose_plan_to_constant_distance,
     run_motion_planning,
+    run_smooth_motion_planning_to_pose,
     run_single_arm_mobile_base_motion_planning,
     smoothly_follow_end_effector_path,
 )
@@ -71,7 +73,9 @@ class GroundPickController(
     ) -> None:
         super().__init__(objects)
         self._sim = sim
-        self._joint_infos = sim.robot.arm.joint_infos[:7]
+        self._joint_infos = get_joint_infos(  # TODO fix this elsewhere
+            self._sim.robot.arm.robot_id, self._sim.robot.arm.arm_joints, self._sim.physics_client_id
+        )[:7]
         self._robot, self._target = objects
         self._current_params: np.ndarray | None = None
         self._current_arm_joint_plan: list[JointPositions] | None = None
@@ -183,31 +187,76 @@ class GroundPickController(
                     ),
                     target_end_effector_pose.orientation,
                 )
-
+                collision_ids = self._sim._get_collision_object_ids()  # pylint: disable=protected-access
                 joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
-                # Run motion planning to the target joint positions.
-                joint_plan = smoothly_follow_end_effector_path(
-                    self._sim.robot.arm,
-                    [self._pre_pick_pose_world, self._target_pick_pose_world],
-                    initial_joints=self._sim.robot.arm.get_joint_positions(),
-                    collision_ids=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
-                    seed=0,  # for determinism
-                    joint_distance_fn=joint_distance_fn,
-                    max_smoothing_iters_per_step=1,
-                )
 
-                if joint_plan is None:
+                # First run motion planning to get to the pre-pick pose.
+                try:
+                    joint_plan1 = run_smooth_motion_planning_to_pose(
+                        self._pre_pick_pose_world,
+                        self._sim.robot.arm,
+                        collision_ids=collision_ids,
+                        end_effector_frame_to_plan_frame=Pose.identity(),
+                        seed=0,  # for determinism
+                        max_time=0.5,
+                        birrt_extend_num_interp=50,
+                        max_candidate_plans=1,
+                    )
+                except InverseKinematicsError:
+                    joint_plan1 = None
+                    # Debugging
+                    # import pybullet as p
+                    # while True:
+                    #     p.getMouseEvents(self._sim.physics_client_id)
+
+                if joint_plan1 is None:
+                    raise TrajectorySamplingFailure("Motion planning failed")
+
+                # Run motion planning to the target joint positions.
+                try:
+                    self._sim.robot.arm.set_joints(joint_plan1[-1])
+                    ee_pose = self._sim.robot.arm.get_end_effector_pose()
+                    assert ee_pose.allclose(self._pre_pick_pose_world, atol=1e-4)
+                    joint_plan2 = smoothly_follow_end_effector_path(
+                        self._sim.robot.arm,
+                        [self._pre_pick_pose_world, self._target_pick_pose_world],
+                        initial_joints=self._sim.robot.arm.get_joint_positions(),
+                        collision_ids=collision_ids,
+                        seed=0,  # for determinism
+                        joint_distance_fn=joint_distance_fn,
+                        max_smoothing_iters_per_step=1,
+                        include_start=False,
+                    )
+                except InverseKinematicsError:
+                    joint_plan2 = None
+                    # Debugging
+                    # import pybullet as p
+                    # while True:
+                    #     p.getMouseEvents(self._sim.physics_client_id)
+
+                if joint_plan2 is None:
                     raise TrajectorySamplingFailure("Motion planning failed")
 
                 # Remap the plan to ensure we stay within action limits.
                 joint_plan = remap_joint_position_plan_to_constant_distance(
-                    joint_plan,
+                    joint_plan1 + joint_plan2,
                     self._sim.robot.arm,
                     max_distance=self._sim.config.max_action_mag / 2,
+                    distance_fn=joint_distance_fn,  # TODO fix this elsewhere
                 )
 
                 # Store the plan (excluding the first state which is the current state).
                 self._current_arm_joint_plan = joint_plan[1:]
+
+                # import time
+                # for state in joint_plan:
+                #     self._sim.robot.arm.set_joints(state)
+                #     time.sleep(0.01)
+                # import pybullet as p
+                # while True:
+                #     p.getMouseEvents(self._sim.physics_client_id)
+
+
             # Pop the next target joint positions from the plan.
             assert self._current_arm_joint_plan is not None
             target_joints = self._current_arm_joint_plan.pop(0)
@@ -223,6 +272,9 @@ class GroundPickController(
             # Create action: [base_x, base_y, base_rot, joint1, ..., joint7, gripper].
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
+            print(action_lst)
+            if action[5] > 6:
+                import ipdb; ipdb.set_trace()
 
             return action
 
