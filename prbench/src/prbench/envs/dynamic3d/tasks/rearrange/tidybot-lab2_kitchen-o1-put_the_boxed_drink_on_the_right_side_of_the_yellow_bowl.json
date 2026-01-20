@@ -2,52 +2,8 @@
     "robots": [
         "tidybot"
     ],
-    "scene": {
-        "simple": {
-            "position": [
-                0,
-                0,
-                0
-            ]
-        },
-        "mimiclabs-lab7": {
-            "position": [
-                0,
-                0,
-                0
-            ]
-        }
-    },
-    "fixtures": {
-        "table": {
-            "table_1": {
-                "shape": "rectangle",
-                "length": 0.8,
-                "width": 0.6,
-                "height": 0.4,
-                "thickness": 0.04,
-                "texture": "wood"
-            }
-        }
-    },
+    "scene": "lab2_kitchen",
     "regions": {
-        "ground_table_init_region": {
-            "target": "ground",
-            "ranges": [
-                [
-                    0,
-                    0,
-                    0,
-                    0
-                ]
-            ],
-            "yaw_ranges": [
-                [
-                    0,
-                    0
-                ]
-            ]
-        },
         "table_1_object_init_region": {
             "target": "table_1",
             "ranges": [
@@ -82,14 +38,14 @@
                 ]
             ]
         },
-        "yellow_bowl_1_front_region": {
+        "yellow_bowl_1_right_region": {
             "target": "yellow_bowl_1",
             "ranges": [
                 [
-                    -0.05,
-                    -0.15,
                     0.05,
-                    -0.05
+                    -0.05,
+                    0.15,
+                    0.05
                 ]
             ],
             "yaw_ranges": [
@@ -124,47 +80,23 @@
             }
         }
     },
-    "cameras": {
-        "agentview_1": {
-            "position": [
-                1,
-                1,
-                2
-            ],
-            "lookat": [
-                0,
-                0,
-                0
-            ],
-            "fovy": 42,
-            "resolution": [
-                640,
-                480
-            ]
-        }
-    },
     "initial_state": [
         [
             "on",
-            "table_1",
-            "ground_table_init_region"
-        ],
-        [
-            "on",
             "object_0",
-            "table_1_object_init_region"
+            "kitchen_island_shelf_2_region"
         ],
         [
             "on",
             "yellow_bowl_1",
-            "table_1_bowl_init_region"
+            "kitchen_island_shelf_2_region"
         ]
     ],
     "goal_state": [
         [
             "on",
             "object_0",
-            "yellow_bowl_1_front_region"
+            "yellow_bowl_1_right_region"
         ]
     ]
 }
