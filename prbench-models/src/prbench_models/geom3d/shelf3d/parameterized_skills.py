@@ -65,7 +65,7 @@ class GroundPickController(
     ) -> None:
         super().__init__(objects)
         self._sim = sim
-        self._joint_infos = sim.robot.arm.joint_infos[:7]
+        self._joint_infos = sim.robot.arm.get_arm_joint_infos()[:7]
         self._robot, self._target = objects
         self._current_params: np.ndarray | None = None
         self._current_arm_joint_plan: list[JointPositions] | None = None
