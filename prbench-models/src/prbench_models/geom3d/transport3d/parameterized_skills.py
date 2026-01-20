@@ -444,6 +444,8 @@ class GroundPlaceController(BasePlaceController):
                 desired_object_z = (
                     self._sim.config.box_wall_thickness
                     + self._sim.config.block_size / 2
+                    + target_surface_pose.position[2]
+                    - self._sim.config.box_half_extents[2]
                 )
                 desired_object_pose = Pose(
                     (

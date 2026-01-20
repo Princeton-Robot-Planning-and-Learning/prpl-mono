@@ -74,6 +74,9 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         Path(__file__).parent / "assets" / "use_textures" / "blue-flower.png"
     )
 
+    # Floor.
+    floor_z: float = 0.02
+
     # Gripper.
     gripper_open_threshold: float = 0.01
 
@@ -288,12 +291,13 @@ class ObjectCentricTransport3DEnv(
         # Randomly sample collision-free positions for the cubes.
         # Also ensure that they are not in collision with the robot.
         # Samples the poses of the cubes
+        box_ids = set(self._boxes.values())
         sample_collision_free_object_poses(
-            object_ids=set(self._boxes.values()),
+            object_ids=box_ids,
             table_pose=self.config.table_pose,
             table_half_extents=self.config.table_half_extents,
-            lb=(self.config.x_lb, self.config.y_lb, self.config.box_half_extents[2]),
-            ub=(self.config.x_ub, self.config.y_ub, self.config.box_half_extents[2]),
+            lb=(self.config.x_lb, self.config.y_lb, self.config.box_half_extents[2] + self.config.floor_z),
+            ub=(self.config.x_ub, self.config.y_ub, self.config.box_half_extents[2] + self.config.floor_z),
             physics_client_id=self.physics_client_id,
             rng=self.np_random,
             other_collision_ids={self.robot.base.robot_id},
@@ -306,11 +310,11 @@ class ObjectCentricTransport3DEnv(
             table_half_extents=self.config.table_half_extents,
             box_half_extents=self.config.box_half_extents,
             object_ids=set(self._cubes.values()),
-            lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2),
-            ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2),
+            lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2 + self.config.floor_z),
+            ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2 + self.config.floor_z),
             physics_client_id=self.physics_client_id,
             rng=self.np_random,
-            other_collision_ids={self.robot.base.robot_id},
+            other_collision_ids=box_ids | {self.robot.base.robot_id},
         )
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
