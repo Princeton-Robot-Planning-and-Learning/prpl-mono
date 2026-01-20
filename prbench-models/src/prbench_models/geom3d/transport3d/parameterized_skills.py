@@ -19,8 +19,8 @@ from prbench.envs.geom3d.transport3d import (
 from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
 )
-from pybullet_helpers.inverse_kinematics import InverseKinematicsError
 from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
+from pybullet_helpers.inverse_kinematics import InverseKinematicsError
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
@@ -28,8 +28,8 @@ from pybullet_helpers.motion_planning import (
     remap_se2_pose_plan_to_constant_distance,
     run_motion_planning,
     run_single_arm_mobile_base_motion_planning,
-    smoothly_follow_end_effector_path,
     run_smooth_motion_planning_to_pose,
+    smoothly_follow_end_effector_path,
 )
 from relational_structs import (
     Object,
@@ -70,6 +70,9 @@ class GroundPickController(
         self,
         objects: Sequence[Object],
         sim: ObjectCentricTransport3DEnv,
+        birrt_extend_num_interp: int | None = None,
+        smooth_mp_max_time: float | None = None,
+        smooth_mp_max_candidate_plans: int | None = None,
     ) -> None:
         super().__init__(objects)
         self._sim = sim
@@ -87,6 +90,10 @@ class GroundPickController(
         self._last_gripper_state: float = 0.0
         self._target_pick_pose_world: Pose | None = None
         self._pre_pick_pose_world: Pose | None = None
+        # Motion planning hyperparameters (None means use library defaults).
+        self._birrt_extend_num_interp = birrt_extend_num_interp
+        self._smooth_mp_max_time = smooth_mp_max_time
+        self._smooth_mp_max_candidate_plans = smooth_mp_max_candidate_plans
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
@@ -186,10 +193,30 @@ class GroundPickController(
                     target_end_effector_pose.orientation,
                 )
 
-                collision_ids = self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+                collision_ids = (
+                    self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+                )
                 joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
 
                 # First run motion planning to get to the pre-pick pose.
+                # Note: run_smooth_motion_planning_to_pose requires either max_time
+                # or max_candidate_plans to be set.
+                smooth_mp_max_time = self._smooth_mp_max_time
+                smooth_mp_max_candidate_plans = self._smooth_mp_max_candidate_plans
+                if smooth_mp_max_time is None and smooth_mp_max_candidate_plans is None:
+                    # Use fast defaults when neither is specified.
+                    smooth_mp_max_candidate_plans = 1
+                smooth_mp_kwargs: dict[str, Any] = {}
+                if smooth_mp_max_time is not None:
+                    smooth_mp_kwargs["max_time"] = smooth_mp_max_time
+                if smooth_mp_max_candidate_plans is not None:
+                    smooth_mp_kwargs["max_candidate_plans"] = (
+                        smooth_mp_max_candidate_plans
+                    )
+                if self._birrt_extend_num_interp is not None:
+                    smooth_mp_kwargs["birrt_extend_num_interp"] = (
+                        self._birrt_extend_num_interp
+                    )
                 try:
                     joint_plan1 = run_smooth_motion_planning_to_pose(
                         self._pre_pick_pose_world,
@@ -197,9 +224,7 @@ class GroundPickController(
                         collision_ids=collision_ids,
                         end_effector_frame_to_plan_frame=Pose.identity(),
                         seed=0,  # for determinism
-                        max_time=2,
-                        birrt_extend_num_interp=50,
-                        max_candidate_plans=10,
+                        **smooth_mp_kwargs,
                     )
                 except InverseKinematicsError:
                     joint_plan1 = None
@@ -241,7 +266,6 @@ class GroundPickController(
                     joint_plan1 + joint_plan2,
                     self._sim.robot.arm,
                     max_distance=self._sim.config.max_action_mag / 2,
-                    distance_fn=joint_distance_fn,  # TODO fix this elsewhere
                 )
 
                 # Store the plan (excluding the first state which is the current state).
@@ -524,21 +548,48 @@ class GroundPlaceController(BasePlaceController):
 def create_lifted_controllers(
     action_space: Geom3DRobotActionSpace,
     sim: ObjectCentricTransport3DEnv,
+    birrt_extend_num_interp: int | None = None,
+    smooth_mp_max_time: float | None = None,
+    smooth_mp_max_candidate_plans: int | None = None,
 ) -> dict[str, LiftedParameterizedController]:
-    """Create lifted parameterized controllers for Transport3D."""
+    """Create lifted parameterized controllers for Transport3D.
+
+    Args:
+        action_space: The action space for the controllers.
+        sim: The simulation environment.
+        birrt_extend_num_interp: Number of interpolation steps for BiRRT extension.
+            Higher values produce smoother motion but are slower. None uses default.
+        smooth_mp_max_time: Maximum time for smooth motion planning.
+            None uses default.
+        smooth_mp_max_candidate_plans: Maximum candidate plans to consider
+            for smooth motion planning. Higher values may produce smoother
+            motion. None uses default.
+    """
 
     # Create partial controller classes that include the sim
     class PickController(GroundPickController):
         """Controller for picking up an object."""
 
         def __init__(self, objects):
-            super().__init__(objects, sim)
+            super().__init__(
+                objects,
+                sim,
+                birrt_extend_num_interp=birrt_extend_num_interp,
+                smooth_mp_max_time=smooth_mp_max_time,
+                smooth_mp_max_candidate_plans=smooth_mp_max_candidate_plans,
+            )
 
     class PlaceController(GroundPlaceController):
         """Controller for placing an object."""
 
         def __init__(self, objects):
-            super().__init__(objects, sim)
+            super().__init__(
+                objects,
+                sim,
+                birrt_extend_num_interp=birrt_extend_num_interp,
+                smooth_mp_max_time=smooth_mp_max_time,
+                smooth_mp_max_candidate_plans=smooth_mp_max_candidate_plans,
+            )
 
     # Create variables for lifted controllers
     robot = Variable("?robot", Geom3DRobotType)

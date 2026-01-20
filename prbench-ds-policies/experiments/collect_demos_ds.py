@@ -111,8 +111,6 @@ def collect_single_demo(
         actions.append(action)
         rewards.append(float(rew))
 
-        time.sleep(0.01)
-
         if done:
             terminated = True
             break
@@ -134,7 +132,7 @@ def _main(cfg: DictConfig) -> None:
 
     # Create the environment.
     prbench.register_all_environments()
-    env = prbench.make(**cfg.env.make_kwargs, render_mode="rgb_array", use_gui=True)
+    env = prbench.make(**cfg.env.make_kwargs, render_mode="rgb_array", use_gui=False)
     env_id = cfg.env.make_kwargs["id"]
 
     # Create the domain-specific policy.

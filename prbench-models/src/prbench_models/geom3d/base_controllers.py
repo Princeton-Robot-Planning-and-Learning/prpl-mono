@@ -17,12 +17,12 @@ from pybullet_helpers.geometry import Pose, SE2Pose
 from pybullet_helpers.inverse_kinematics import InverseKinematicsError
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
+    MotionPlanningHyperparameters,
     create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
     run_motion_planning,
     run_smooth_motion_planning_to_pose,
     smoothly_follow_end_effector_path,
-    MotionPlanningHyperparameters
 )
 from relational_structs import (
     Object,
@@ -43,8 +43,23 @@ class BasePlaceController(
         self,
         objects: Sequence[Object],
         sim: ObjectCentricGeom3DRobotEnv,
+        birrt_extend_num_interp: int | None = None,
+        smooth_mp_max_time: float | None = None,
+        smooth_mp_max_candidate_plans: int | None = None,
     ) -> None:
-        """Initialize the base place controller."""
+        """Initialize the base place controller.
+
+        Args:
+            objects: The objects involved in this controller.
+            sim: The simulation environment.
+            birrt_extend_num_interp: Number of interpolation steps for BiRRT extension.
+                Higher values produce smoother motion but are slower. None uses default.
+            smooth_mp_max_time: Maximum time for smooth motion planning.
+                None uses default.
+            smooth_mp_max_candidate_plans: Maximum candidate plans to consider
+                for smooth motion planning. Higher values may produce smoother
+                motion. None uses default.
+        """
         super().__init__(objects)
         self._sim = sim
         self._joint_infos = sim.robot.arm.get_arm_joint_infos()[:7]
@@ -62,6 +77,10 @@ class BasePlaceController(
         self._target_place_pose_se2: SE2Pose | None = None
         self._target_place_pose_world: Pose | None = None
         self._pre_place_pose_world: Pose | None = None
+        # Motion planning hyperparameters (None means use library defaults).
+        self._birrt_extend_num_interp = birrt_extend_num_interp
+        self._smooth_mp_max_time = smooth_mp_max_time
+        self._smooth_mp_max_candidate_plans = smooth_mp_max_candidate_plans
 
     def reset(self, x: ObjectCentricState, params: Any) -> None:
         self._current_params = params
@@ -116,6 +135,22 @@ class BasePlaceController(
             joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
 
             # First run motion planning to get to the pre-place pose.
+            # Note: run_smooth_motion_planning_to_pose requires either max_time
+            # or max_candidate_plans to be set.
+            smooth_mp_max_time = self._smooth_mp_max_time
+            smooth_mp_max_candidate_plans = self._smooth_mp_max_candidate_plans
+            if smooth_mp_max_time is None and smooth_mp_max_candidate_plans is None:
+                # Use fast defaults when neither is specified.
+                smooth_mp_max_candidate_plans = 1
+            smooth_mp_kwargs: dict[str, Any] = {}
+            if smooth_mp_max_time is not None:
+                smooth_mp_kwargs["max_time"] = smooth_mp_max_time
+            if smooth_mp_max_candidate_plans is not None:
+                smooth_mp_kwargs["max_candidate_plans"] = smooth_mp_max_candidate_plans
+            if self._birrt_extend_num_interp is not None:
+                smooth_mp_kwargs["birrt_extend_num_interp"] = (
+                    self._birrt_extend_num_interp
+                )
             try:
                 joint_plan1 = run_smooth_motion_planning_to_pose(
                     self._pre_place_pose_world,
@@ -123,11 +158,9 @@ class BasePlaceController(
                     collision_ids=collision_ids,
                     end_effector_frame_to_plan_frame=Pose.identity(),
                     seed=0,  # for determinism
-                    max_time=10,
-                    max_candidate_plans=50,
                     held_object=grasped_object_id,
                     base_link_to_held_obj=grasped_object_transform,
-                    birrt_extend_num_interp=50,
+                    **smooth_mp_kwargs,
                 )
             except InverseKinematicsError:
                 joint_plan1 = None
@@ -215,6 +248,11 @@ class BasePlaceController(
             self._sim.set_state(self._current_state)
 
             # Run motion planning to the target joint positions.
+            mp_hyperparameters = None
+            if self._birrt_extend_num_interp is not None:
+                mp_hyperparameters = MotionPlanningHyperparameters(
+                    birrt_extend_num_interp=self._birrt_extend_num_interp,
+                )
             joint_plan = run_motion_planning(  # type: ignore
                 self._sim.robot.arm,
                 initial_positions=self._sim.robot.arm.get_joint_positions(),
@@ -222,9 +260,7 @@ class BasePlaceController(
                 collision_bodies=collision_ids,
                 seed=0,  # for determinism
                 physics_client_id=self._sim.physics_client_id,
-                hyperparameters=MotionPlanningHyperparameters(
-                    birrt_extend_num_interp=50,
-                )
+                hyperparameters=mp_hyperparameters,
             )
 
             if joint_plan is None:

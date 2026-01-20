@@ -29,6 +29,11 @@ class Transport3DScriptedPolicy:
     executing and the overall progress through the task.
     """
 
+    # Hyperparameters for smoother motion (nicer videos, but slower).
+    BIRRT_EXTEND_NUM_INTERP = 50
+    SMOOTH_MP_MAX_TIME = 2.0
+    SMOOTH_MP_MAX_CANDIDATE_PLANS = 10
+
     def __init__(
         self,
         observation_space: ObjectCentricBoxSpace,
@@ -44,10 +49,13 @@ class Transport3DScriptedPolicy:
         # Create simulator for controllers.
         self._sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
 
-        # Create controllers.
+        # Create controllers with slow settings for smoother motion (nicer videos).
         self._controllers = create_lifted_controllers(
             self._action_space,
             self._sim,
+            birrt_extend_num_interp=self.BIRRT_EXTEND_NUM_INTERP,
+            smooth_mp_max_time=self.SMOOTH_MP_MAX_TIME,
+            smooth_mp_max_candidate_plans=self.SMOOTH_MP_MAX_CANDIDATE_PLANS,
         )
 
         # State tracking.
