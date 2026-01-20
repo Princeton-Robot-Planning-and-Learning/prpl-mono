@@ -126,6 +126,7 @@ class BasePlaceController(
                     max_candidate_plans=1,
                     held_object=grasped_object_id,
                     base_link_to_held_obj=grasped_object_transform,
+                    birrt_extend_num_interp=50,
                 )
             except InverseKinematicsError:
                 joint_plan1 = None
@@ -173,6 +174,7 @@ class BasePlaceController(
 
             # Store the plan (excluding the first state which is the current state).
             self._current_arm_joint_plan = joint_plan[1:]
+
         # Pop the next target joint positions from the plan.
         assert self._current_arm_joint_plan is not None
         target_joints = self._current_arm_joint_plan.pop(0)
