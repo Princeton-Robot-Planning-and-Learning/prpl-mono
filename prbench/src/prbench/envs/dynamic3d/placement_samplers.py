@@ -30,11 +30,11 @@ def sample_collision_free_positions(
         configs: Dictionary mapping entity types to dictionaries of entity configurations
                 (entity_name -> entity_config). Can be fixture or object configurations.
         np_random: Random number generator
-        entity_region_names: Dictionary mapping entity names to region names for sampling.
-                           If None, no entities will be sampled.
-        entity_pos_yaw_samplers: Dictionary mapping entity names to functions that sample
-                               positions and yaws within a region. If None, no entities
-                               will be sampled.
+        entity_region_names: Dictionary mapping entity names to region names for
+                           sampling. If None, no entities will be sampled.
+        entity_pos_yaw_samplers: Dictionary mapping entity names to functions that
+                               sample positions and yaws within a region. If None, no
+                               entities will be sampled.
 
     Returns:
         Dictionary mapping entity types to dictionaries of entity poses

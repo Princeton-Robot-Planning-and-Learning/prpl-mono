@@ -142,7 +142,7 @@ def quat_to_yaw(quat: NDArray[np.float32] | list[float]) -> float:
     Returns:
         Yaw angle in radians
     """
-    w, x, y, z = quat
+    w, _x, _y, z = quat
     # Extract yaw from quaternion using atan2
     # For a pure rotation around z-axis: yaw = 2 * atan2(z, w)
     yaw = 2.0 * np.arctan2(z, w)
@@ -332,10 +332,10 @@ def rotate_bounding_box_2d(
 
     # Rotate each corner around the center
     rotated_corners = []
-    for x, y in corners:
+    for _x, _y in corners:
         # Translate to origin
-        x_rel = x - cx
-        y_rel = y - cy
+        x_rel = _x - cx
+        y_rel = _y - cy
 
         # Rotate
         x_rot = x_rel * cos_yaw - y_rel * sin_yaw
