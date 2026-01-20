@@ -551,7 +551,7 @@ class GroundPlaceController(BasePlaceController):
 def create_lifted_controllers(
     action_space: Geom3DRobotActionSpace,
     sim: ObjectCentricTransport3DEnv,
-    birrt_extend_num_interp: int | None = None,
+    birrt_extend_num_interp: int = 10,
     smooth_mp_max_time: float = 0.1,
     smooth_mp_max_candidate_plans: int = 1,
 ) -> dict[str, LiftedParameterizedController]:
