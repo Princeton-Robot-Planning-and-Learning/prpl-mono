@@ -45,11 +45,13 @@ class Region:
             name: Name of the region
             rgba: RGBA color for visualization
             site_element: MuJoCo site XML element representing this region
-            env: Optional MujocoEnv instance for getting absolute site position from simulation
-            parent_pos: Position of the parent body [x, y, z] for coordinate transformation.
+            env: Optional MujocoEnv instance for getting absolute site position from
+                simulation
+            parent_pos: Position of the parent body [x, y, z] for coordinate
+                transformation.
                         Used when sim is not available.
             parent_yaw: Yaw angle of the parent body in radians. Used to rotate region
-                       coordinates from parent-relative to world frame when sim unavailable.
+                coordinates from parent-relative to world frame when sim unavailable.
         """
         self.name = name
         self.rgba = rgba if rgba is not None else [1.0, 0.0, 0.0, 0.0]
@@ -68,7 +70,8 @@ class Region:
         translates the relative bounding box by parent_pos and rotates by parent_yaw.
 
         Returns:
-            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max] in world coordinates
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max] in world
+            coordinates
         """
         if self.site_element is None:
             raise ValueError(
