@@ -42,10 +42,10 @@
             "target": "yellow_bowl_1",
             "ranges": [
                 [
-                    -0.05,
                     -0.15,
-                    0.05,
-                    -0.05
+                    -0.05,
+                    -0.05,
+                    0.05
                 ]
             ],
             "yaw_ranges": [
@@ -89,7 +89,7 @@
         [
             "on",
             "yellow_bowl_1",
-            "kitchen_island_shelf_2_region"
+            "kitchen_cooking_area_shelf_2_region"
         ]
     ],
     "goal_state": [

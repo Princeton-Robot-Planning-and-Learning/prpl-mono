@@ -3,6 +3,66 @@
         "tidybot"
     ],
     "scene": "lab2_kitchen",
+    "fixtures": {
+        "cupboard": {
+            "island": {
+                "length": 2.0,
+                "depth": 0.75,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [-0.333, 0.333],
+                    [-0.333, 0.333]
+                ],
+                "shelf_drawers": [
+                    [true, true, false],
+                    [false, true, false]
+                ],
+                "side_and_back_open": false
+            },
+            "cooking_area": {
+                "length": 3.25,
+                "depth": 0.75,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [],
+                    []
+                ],
+                "side_and_back_open": false
+            },
+            "left_side": {
+                "length": 2.12,
+                "depth": 0.75,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [],
+                    []
+                ],
+                "side_and_back_open": false
+            },
+            "left_corner": {
+                "length": 0.75,
+                "depth": 0.75,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [],
+                    []
+                ],
+                "side_and_back_open": false
+            }
+        }
+    },
     "regions": {
         "table_1_object_init_region": {
             "target": "table_1",
@@ -42,10 +102,10 @@
             "target": "yellow_bowl_1",
             "ranges": [
                 [
-                    -0.15,
                     -0.05,
-                    -0.05,
-                    0.05
+                    0.05,
+                    0.05,
+                    0.15
                 ]
             ],
             "yaw_ranges": [
@@ -89,7 +149,7 @@
         [
             "on",
             "yellow_bowl_1",
-            "kitchen_island_shelf_2_region"
+            "kitchen_cooking_area_shelf_2_region"
         ]
     ],
     "goal_state": [

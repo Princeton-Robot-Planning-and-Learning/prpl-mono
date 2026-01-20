@@ -38,7 +38,7 @@
                 ]
             ]
         },
-        "yellow_bowl_1_left_region": {
+        "yellow_bowl_1_region_0": {
             "target": "yellow_bowl_1",
             "ranges": [
                 [
@@ -61,7 +61,7 @@
                 0.3
             ]
         },
-        "yellow_bowl_1_right_region": {
+        "yellow_bowl_1_region_1": {
             "target": "yellow_bowl_1",
             "ranges": [
                 [
@@ -84,7 +84,7 @@
                 0.3
             ]
         },
-        "yellow_bowl_1_front_region": {
+        "yellow_bowl_1_region_2": {
             "target": "yellow_bowl_1",
             "ranges": [
                 [
@@ -107,7 +107,7 @@
                 0.3
             ]
         },
-        "yellow_bowl_1_back_region": {
+        "yellow_bowl_1_region_3": {
             "target": "yellow_bowl_1",
             "ranges": [
                 [
@@ -130,7 +130,7 @@
                 0.3
             ]
         },
-        "yellow_bowl_1_front_left_region": {
+        "yellow_bowl_1_region_4": {
             "target": "yellow_bowl_1",
             "ranges": [
                 [
@@ -153,7 +153,7 @@
                 0.3
             ]
         },
-        "yellow_bowl_1_front_right_region": {
+        "yellow_bowl_1_region_5": {
             "target": "yellow_bowl_1",
             "ranges": [
                 [
@@ -176,7 +176,7 @@
                 0.3
             ]
         },
-        "yellow_bowl_1_back_left_region": {
+        "yellow_bowl_1_region_6": {
             "target": "yellow_bowl_1",
             "ranges": [
                 [
@@ -199,7 +199,7 @@
                 0.3
             ]
         },
-        "yellow_bowl_1_back_right_region": {
+        "yellow_bowl_1_region_7": {
             "target": "yellow_bowl_1",
             "ranges": [
                 [
@@ -250,7 +250,7 @@
         [
             "on",
             "yellow_bowl_1",
-            "kitchen_island_shelf_2_region"
+            "kitchen_cooking_area_shelf_2_region"
         ]
     ],
     "goal_state": [
@@ -259,42 +259,42 @@
             [
                 "on",
                 "object_0",
-                "yellow_bowl_1_left_region"
+                "yellow_bowl_1_region_0"
             ],
             [
                 "on",
                 "object_0",
-                "yellow_bowl_1_right_region"
+                "yellow_bowl_1_region_1"
             ],
             [
                 "on",
                 "object_0",
-                "yellow_bowl_1_front_region"
+                "yellow_bowl_1_region_2"
             ],
             [
                 "on",
                 "object_0",
-                "yellow_bowl_1_back_region"
+                "yellow_bowl_1_region_3"
             ],
             [
                 "on",
                 "object_0",
-                "yellow_bowl_1_front_left_region"
+                "yellow_bowl_1_region_4"
             ],
             [
                 "on",
                 "object_0",
-                "yellow_bowl_1_front_right_region"
+                "yellow_bowl_1_region_5"
             ],
             [
                 "on",
                 "object_0",
-                "yellow_bowl_1_back_left_region"
+                "yellow_bowl_1_region_6"
             ],
             [
                 "on",
                 "object_0",
-                "yellow_bowl_1_back_right_region"
+                "yellow_bowl_1_region_7"
             ]
         ]
     ]
