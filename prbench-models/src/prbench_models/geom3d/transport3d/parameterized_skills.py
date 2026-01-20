@@ -71,8 +71,8 @@ class GroundPickController(
         objects: Sequence[Object],
         sim: ObjectCentricTransport3DEnv,
         birrt_extend_num_interp: int | None = None,
-        smooth_mp_max_time: float | None = None,
-        smooth_mp_max_candidate_plans: int | None = None,
+        smooth_mp_max_time: float = 0.1,
+        smooth_mp_max_candidate_plans: int = 1,
     ) -> None:
         super().__init__(objects)
         self._sim = sim
@@ -90,7 +90,7 @@ class GroundPickController(
         self._last_gripper_state: float = 0.0
         self._target_pick_pose_world: Pose | None = None
         self._pre_pick_pose_world: Pose | None = None
-        # Motion planning hyperparameters (None means use library defaults).
+        # Motion planning hyperparameters.
         self._birrt_extend_num_interp = birrt_extend_num_interp
         self._smooth_mp_max_time = smooth_mp_max_time
         self._smooth_mp_max_candidate_plans = smooth_mp_max_candidate_plans
@@ -199,20 +199,10 @@ class GroundPickController(
                 joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
 
                 # First run motion planning to get to the pre-pick pose.
-                # Note: run_smooth_motion_planning_to_pose requires either max_time
-                # or max_candidate_plans to be set.
-                smooth_mp_max_time = self._smooth_mp_max_time
-                smooth_mp_max_candidate_plans = self._smooth_mp_max_candidate_plans
-                if smooth_mp_max_time is None and smooth_mp_max_candidate_plans is None:
-                    # Use fast defaults when neither is specified.
-                    smooth_mp_max_candidate_plans = 1
-                smooth_mp_kwargs: dict[str, Any] = {}
-                if smooth_mp_max_time is not None:
-                    smooth_mp_kwargs["max_time"] = smooth_mp_max_time
-                if smooth_mp_max_candidate_plans is not None:
-                    smooth_mp_kwargs["max_candidate_plans"] = (
-                        smooth_mp_max_candidate_plans
-                    )
+                smooth_mp_kwargs: dict[str, Any] = {
+                    "max_time": self._smooth_mp_max_time,
+                    "max_candidate_plans": self._smooth_mp_max_candidate_plans,
+                }
                 if self._birrt_extend_num_interp is not None:
                     smooth_mp_kwargs["birrt_extend_num_interp"] = (
                         self._birrt_extend_num_interp
@@ -549,8 +539,8 @@ def create_lifted_controllers(
     action_space: Geom3DRobotActionSpace,
     sim: ObjectCentricTransport3DEnv,
     birrt_extend_num_interp: int | None = None,
-    smooth_mp_max_time: float | None = None,
-    smooth_mp_max_candidate_plans: int | None = None,
+    smooth_mp_max_time: float = 0.1,
+    smooth_mp_max_candidate_plans: int = 1,
 ) -> dict[str, LiftedParameterizedController]:
     """Create lifted parameterized controllers for Transport3D.
 
@@ -560,10 +550,8 @@ def create_lifted_controllers(
         birrt_extend_num_interp: Number of interpolation steps for BiRRT extension.
             Higher values produce smoother motion but are slower. None uses default.
         smooth_mp_max_time: Maximum time for smooth motion planning.
-            None uses default.
         smooth_mp_max_candidate_plans: Maximum candidate plans to consider
-            for smooth motion planning. Higher values may produce smoother
-            motion. None uses default.
+            for smooth motion planning. Higher values may produce smoother motion.
     """
 
     # Create partial controller classes that include the sim
