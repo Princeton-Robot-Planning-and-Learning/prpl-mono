@@ -105,7 +105,7 @@ def run_inference(
     seed: int = 123,
     save: bool = True,
     num_episodes: int = 1,
-    max_steps: int = 100,
+    max_steps: int = 200,
     policy_host: str = POLICY_SERVER_HOST,
     policy_port: int = POLICY_SERVER_PORT,
     env_name: str = "Shelf3D-o1-v0",
@@ -197,7 +197,7 @@ def run_inference(
                         state.get(target_cube, "pose_z"),
                     ]
                 )
-                if target_cube_pos[2] > 0.1:
+                if target_cube_pos[2] > 0.3:
                     successes += 1
                     break
                 current_joints = np.array(
@@ -229,6 +229,11 @@ def run_inference(
                     "wrist_image": all_images["wrist"],
                     "overview_image": all_images["overview"],
                 }
+
+                if state.get(robot, "finger_state") > 0.005:
+                    obs_dict["gripper_pos"] = np.array([0.35])
+                else:
+                    obs_dict["gripper_pos"] = np.array([0.0])
 
                 # Get action from policy
                 action_dict = policy.step(obs_dict)
@@ -311,7 +316,7 @@ def main() -> None:
         "--num-cubes", type=int, default=1, help="Number of cubes in environment"
     )
     parser.add_argument(
-        "--max-steps", type=int, default=100, help="Maximum steps per episode"
+        "--max-steps", type=int, default=400, help="Maximum steps per episode"
     )
     parser.add_argument(
         "--policy-host",
