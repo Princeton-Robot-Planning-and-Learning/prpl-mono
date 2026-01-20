@@ -23,6 +23,7 @@ from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
 from pybullet_helpers.inverse_kinematics import InverseKinematicsError
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
+    MotionPlanningHyperparameters,
     create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
     remap_se2_pose_plan_to_constant_distance,
@@ -70,9 +71,10 @@ class GroundPickController(
         self,
         objects: Sequence[Object],
         sim: ObjectCentricTransport3DEnv,
-        birrt_extend_num_interp: int | None = None,
+        birrt_extend_num_interp: int = 10,
         smooth_mp_max_time: float = 0.1,
         smooth_mp_max_candidate_plans: int = 1,
+        base_mp_birrt_smooth_amt: int = 100,
     ) -> None:
         super().__init__(objects)
         self._sim = sim
@@ -94,6 +96,7 @@ class GroundPickController(
         self._birrt_extend_num_interp = birrt_extend_num_interp
         self._smooth_mp_max_time = smooth_mp_max_time
         self._smooth_mp_max_candidate_plans = smooth_mp_max_candidate_plans
+        self._base_mp_birrt_smooth_amt = base_mp_birrt_smooth_amt
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
@@ -133,6 +136,10 @@ class GroundPickController(
                 target_base_pose,
                 collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
                 seed=0,  # for determinism
+                hyperparameters=MotionPlanningHyperparameters(
+                    birrt_extend_num_interp=self._birrt_extend_num_interp,
+                    birrt_smooth_amt=self._base_mp_birrt_smooth_amt,
+                ),
             )
 
             if base_plan is None:
@@ -202,11 +209,8 @@ class GroundPickController(
                 smooth_mp_kwargs: dict[str, Any] = {
                     "max_time": self._smooth_mp_max_time,
                     "max_candidate_plans": self._smooth_mp_max_candidate_plans,
+                    "birrt_extend_num_interp": self._birrt_extend_num_interp,
                 }
-                if self._birrt_extend_num_interp is not None:
-                    smooth_mp_kwargs["birrt_extend_num_interp"] = (
-                        self._birrt_extend_num_interp
-                    )
                 try:
                     joint_plan1 = run_smooth_motion_planning_to_pose(
                         self._pre_pick_pose_world,
@@ -508,6 +512,10 @@ class GroundPlaceController(BasePlaceController):
                 seed=0,  # for determinism
                 held_object=grasped_object_id,
                 base_link_to_held_obj=grasped_object_transform,
+                hyperparameters=MotionPlanningHyperparameters(
+                    birrt_extend_num_interp=self._birrt_extend_num_interp,
+                    birrt_smooth_amt=self._base_mp_birrt_smooth_amt,
+                ),
             )
 
             if base_plan is None:
