@@ -148,7 +148,7 @@ def sample_collision_free_position(
         # Check if it collides with any existing fixture (using 3D overlap)
         collision = False
         for existing_bbox in placed_bboxes:
-            if utils.bboxes_overlap(candidate_bbox, existing_bbox):
+            if utils.bboxes_overlap(candidate_bbox, existing_bbox, margin=0.0):
                 collision = True
                 break
 
