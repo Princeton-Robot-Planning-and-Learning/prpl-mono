@@ -133,6 +133,22 @@ def convert_yaw_to_quaternion(yaw: float) -> list[float]:
     return [np.cos(half_yaw), 0.0, 0.0, np.sin(half_yaw)]  # w, x, y, z
 
 
+def quat_to_yaw(quat: NDArray[np.float32] | list[float]) -> float:
+    """Convert quaternion to yaw angle (rotation around z-axis).
+
+    Args:
+        quat: Quaternion as [w, x, y, z]
+
+    Returns:
+        Yaw angle in radians
+    """
+    w, x, y, z = quat
+    # Extract yaw from quaternion using atan2
+    # For a pure rotation around z-axis: yaw = 2 * atan2(z, w)
+    yaw = 2.0 * np.arctan2(z, w)
+    return float(yaw)
+
+
 def compute_camera_euler(
     position: list[float], lookat: list[float]
 ) -> tuple[float, float, float]:
