@@ -368,8 +368,10 @@ class MujocoObject:
                     except Exception:
                         pass  # Use defaults if position can't be retrieved
 
+                site_name = site.get("name")
+                assert site_name is not None, "Site name must be set"
                 region = Region(
-                    name=site.get("name"),
+                    name=site_name,
                     rgba=rgba_values,
                     site_element=site,
                     env=self.env,
@@ -846,8 +848,10 @@ class MujocoGround:
                 site.set("group", "0")
 
                 # Create Region object
+                site_name = site.get("name")
+                assert site_name is not None, "Site name must be set"
                 region = Region(
-                    name=site.get("name"),
+                    name=site_name,
                     rgba=rgba_values,
                     site_element=site,
                     parent_pos=np.array(self.position, dtype=np.float32),
