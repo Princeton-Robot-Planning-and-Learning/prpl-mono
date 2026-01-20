@@ -200,6 +200,90 @@ def collect_data(
     else:
         print("Warning: Pick controller did not terminate within 400 steps")
 
+    lifted_controller = controllers["place"]
+    robot = state.get_object_from_name("robot")
+    target = state.get_object_from_name(target_object_key)
+    target_shelf = state.get_object_from_name("shelf")
+    object_parameters = (robot, target, target_shelf)
+    controller = lifted_controller.ground(object_parameters)
+
+    params = np.array([0.0, 0.0])
+
+    controller.reset(state, params)
+    for step_idx in range(400):
+        action = controller.step()
+        robot = state.get_object_from_name("robot")
+        current_joints = [
+            state.get(robot, "joint_1"),
+            state.get(robot, "joint_2"),
+            state.get(robot, "joint_3"),
+            state.get(robot, "joint_4"),
+            state.get(robot, "joint_5"),
+            state.get(robot, "joint_6"),
+            state.get(robot, "joint_7"),
+        ]
+        current_position, current_orientation = fk_solver.forward_kinematics(
+            np.array(current_joints)
+        )
+
+        target_base_pose = np.array(
+            [
+                state.get(robot, "pos_base_x") + action[0],
+                state.get(robot, "pos_base_y") + action[1],
+                state.get(robot, "pos_base_rot") + action[2],
+            ]
+        )
+        target_joints = current_joints + action[3:10]
+        target_position, target_orientation = fk_solver.forward_kinematics(
+            np.array(target_joints)
+        )
+
+        all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
+        if show_images:
+            _visualize_image_in_window(all_images["overview"], "overview")
+            _visualize_image_in_window(all_images["base"], "base")
+            _visualize_image_in_window(all_images["wrist"], "wrist")
+
+        # Record observation and action before stepping
+        if writer is not None:
+            # Create observation dict with state vector and images
+            obs_dict = {
+                "base_pose": np.array(
+                    [
+                        state.get(robot, "pos_base_x"),
+                        state.get(robot, "pos_base_y"),
+                        state.get(robot, "pos_base_rot"),
+                    ]
+                ),
+                "arm_pos": current_position,
+                "arm_quat": current_orientation,
+                "gripper_pos": np.array([state.get(robot, "finger_state")]),
+                "base_image": all_images["base"],
+                "wrist_image": all_images["wrist"],
+                "overview_image": all_images["overview"],
+            }
+            # Convert action to dict format
+            action_dict = {
+                "base_pose": target_base_pose,
+                "arm_pos": target_position,
+                "arm_quat": target_orientation,
+                "gripper_pos": np.array([action[-1]]),
+            }
+            writer.step(obs_dict, action_dict, target_object_key)
+
+        obs, reward, terminated, truncated, info = env.step(action)  # type: ignore
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if terminated or truncated:
+            print("env terminated or truncated")
+            break
+        if controller.terminated():
+            print(f"Place controller terminated after {step_idx + 1} steps")
+            break
+    else:
+        print("Warning: Place controller did not terminate within 400 steps")
+
     # Save episode data to disk
     if writer is not None and len(writer) > 0:
         writer.flush_async()
