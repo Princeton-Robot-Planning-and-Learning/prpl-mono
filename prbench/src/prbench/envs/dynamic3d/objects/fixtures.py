@@ -270,6 +270,8 @@ class Table(MujocoFixture):
                     name=site_name,
                     rgba=rgba_values,
                     site_element=site,
+                    parent_pos=np.array(self.position, dtype=np.float32),
+                    parent_yaw=self.yaw,
                 )
                 region_list.append(region)
 
@@ -366,15 +368,10 @@ class Table(MujocoFixture):
             if yaw_ranges and len(yaw_ranges) > selected_region_index:
                 yaw_range = tuple(yaw_ranges[selected_region_index])
 
-        # Sample pose from the 3D bounding box (in table-relative coordinates)
+        # Sample pose from the 3D bounding box (already in world coordinates)
         x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
 
-        # Convert to world coordinates
-        world_x = x + self.position[0]
-        world_y = y + self.position[1]
-        world_z = z + self.position[2]
-
-        return (world_x, world_y, world_z, yaw)
+        return (x, y, z, yaw)
 
     def check_in_region(
         self,
@@ -395,11 +392,9 @@ class Table(MujocoFixture):
             raise ValueError(f"Region '{region_name}' not found")
 
         # Check if position is in any of the region objects
-        # Pass fixture position as parent_pos to convert from world to local coordinates
         region_list = self.region_objects[region_name]
-        fixture_pos = np.array(self.position, dtype=np.float32)
         for region in region_list:
-            if region.check_in_region(position, fixture_pos, None, region.name):
+            if region.check_in_region(position):
                 return True
 
         return False
@@ -445,6 +440,16 @@ class Cupboard(MujocoFixture):
     default_partition_thickness: float = 0.01  # 1cm thick partitions
     default_drawer_wall_thickness: float = 0.003  # 3mm thick drawer walls
     default_drawer_damping: float = 10.0  # Damping for smooth sliding
+
+    # Default RGBA colors for cupboard and drawer components
+    default_rgba_cupboard_shelf: list[float] = [0.8, 0.6, 0.4, 1.0]
+    default_rgba_cupboard_leg: list[float] = [0.6, 0.4, 0.2, 1.0]
+    default_rgba_cupboard_partition: list[float] = [0.7, 0.5, 0.3, 1.0]
+    default_rgba_cupboard_panel: list[float] = [0.7, 0.5, 0.3, 1.0]
+    default_rgba_drawer_bottom: list[float] = [0.6, 0.5, 0.4, 0.8]
+    default_rgba_drawer_wall: list[float] = [0.5, 0.4, 0.3, 0.9]
+    default_rgba_drawer_face: list[float] = [0.4, 0.3, 0.2, 1.0]
+    default_rgba_drawer_handle: list[float] = [0.3, 0.3, 0.3, 1.0]
 
     def __init__(
         self,
@@ -813,10 +818,43 @@ class Cupboard(MujocoFixture):
                 site.set("group", "0")
 
                 # Create Region object (derived from site_element)
+                # Determine parent pose: cupboard pose + drawer pose if applicable
+                if compartment_has_drawer:
+                    if has_partitions:
+                        drawer_index = f"s{shelf+1}c{partition_idx}"
+                    else:
+                        drawer_index = f"s{shelf+1}c0"
+                    # Calculate drawer pose from compartment geometry
+                    # (this is the same calculation as in _create_drawer_body)
+                    x_min_comp, x_max_comp = self._get_drawer_compartment_bounds(
+                        shelf, partition_idx if has_partitions else 0
+                    )
+                    drawer_center_x = (x_min_comp + x_max_comp) / 2
+                    shelf_z = self._shelf_z_positions[shelf]
+                    depth_margin = (
+                        self.leg_thickness
+                        if self.side_and_back_open
+                        else self.panel_thickness
+                    )
+                    drawer_y = depth_margin / 2
+                    drawer_z = (
+                        shelf_z + self.shelf_thickness / 2 + self.drawer_wall_thickness
+                    )
+                    # Parent pose is cupboard position + drawer position
+                    drawer_pos = np.array(
+                        [drawer_center_x, drawer_y, drawer_z], dtype=np.float32
+                    )
+                    parent_pos = np.array(self.position, dtype=np.float32) + drawer_pos
+                else:
+                    # Parent pose is just the cupboard position
+                    parent_pos = np.array(self.position, dtype=np.float32)
+
                 region = Region(
                     name=site_name,
                     rgba=rgba_values,
                     site_element=site,
+                    parent_pos=parent_pos,
+                    parent_yaw=self.yaw,
                 )
                 region_list.append(region)
 
@@ -1488,15 +1526,10 @@ class Cupboard(MujocoFixture):
             if yaw_ranges and len(yaw_ranges) > selected_region_index:
                 yaw_range = tuple(yaw_ranges[selected_region_index])
 
-        # Sample pose from the 3D bounding box (in cupboard-relative coordinates)
+        # Sample pose from the 3D bounding box (already in world coordinates)
         x, y, z, yaw = utils.sample_pose_in_bbox_3d(selected_bbox, np_random, yaw_range)
 
-        # Convert to world coordinates
-        world_x = x + self.position[0]
-        world_y = y + self.position[1]
-        world_z = z + self.position[2]
-
-        return (world_x, world_y, world_z, yaw)
+        return (x, y, z, yaw)
 
     def check_in_region(
         self,
@@ -1518,11 +1551,9 @@ class Cupboard(MujocoFixture):
             raise ValueError(f"Region '{region_name}' not found")
 
         # Check if position is in any of the region objects
-        # Pass fixture position as parent_pos to convert from world to local coordinates
         region_list = self.region_objects[region_name]
-        fixture_pos = np.array(self.position, dtype=np.float32)
         for region in region_list:
-            if region.check_in_region(position, fixture_pos, None, region.name):
+            if region.check_in_region(position):
                 return True
 
         return False
