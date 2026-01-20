@@ -309,6 +309,9 @@ class GroundPickController(
                 all_collision_ids = (
                     self._sim._get_collision_object_ids()  # pylint: disable=protected-access
                 )
+                all_collision_ids -= (
+                    self._sim._get_inside_object_ids()  # pylint: disable=protected-access
+                )
                 joint_plan = run_motion_planning(  # type: ignore
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
