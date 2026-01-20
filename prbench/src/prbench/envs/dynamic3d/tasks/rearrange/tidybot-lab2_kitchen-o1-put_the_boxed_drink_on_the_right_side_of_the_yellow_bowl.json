@@ -4,40 +4,6 @@
     ],
     "scene": "lab2_kitchen",
     "regions": {
-        "table_1_object_init_region": {
-            "target": "table_1",
-            "ranges": [
-                [
-                    -0.2,
-                    -0.15,
-                    -0.05,
-                    0.15
-                ]
-            ],
-            "yaw_ranges": [
-                [
-                    0,
-                    0
-                ]
-            ]
-        },
-        "table_1_bowl_init_region": {
-            "target": "table_1",
-            "ranges": [
-                [
-                    0.1,
-                    -0.15,
-                    0.3,
-                    0.15
-                ]
-            ],
-            "yaw_ranges": [
-                [
-                    0,
-                    0
-                ]
-            ]
-        },
         "yellow_bowl_1_right_region": {
             "target": "yellow_bowl_1",
             "ranges": [
