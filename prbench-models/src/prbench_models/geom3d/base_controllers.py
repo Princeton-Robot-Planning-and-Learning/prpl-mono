@@ -43,9 +43,10 @@ class BasePlaceController(
         self,
         objects: Sequence[Object],
         sim: ObjectCentricGeom3DRobotEnv,
-        birrt_extend_num_interp: int | None = None,
+        birrt_extend_num_interp: int = 10,
         smooth_mp_max_time: float = 0.1,
         smooth_mp_max_candidate_plans: int = 1,
+        base_mp_birrt_smooth_amt: int = 100,
     ) -> None:
         """Initialize the base place controller.
 
@@ -80,6 +81,7 @@ class BasePlaceController(
         self._birrt_extend_num_interp = birrt_extend_num_interp
         self._smooth_mp_max_time = smooth_mp_max_time
         self._smooth_mp_max_candidate_plans = smooth_mp_max_candidate_plans
+        self._base_mp_birrt_smooth_amt = base_mp_birrt_smooth_amt
 
     def reset(self, x: ObjectCentricState, params: Any) -> None:
         self._current_params = params
@@ -137,11 +139,8 @@ class BasePlaceController(
             smooth_mp_kwargs: dict[str, Any] = {
                 "max_time": self._smooth_mp_max_time,
                 "max_candidate_plans": self._smooth_mp_max_candidate_plans,
+                "birrt_extend_num_interp": self._birrt_extend_num_interp,
             }
-            if self._birrt_extend_num_interp is not None:
-                smooth_mp_kwargs["birrt_extend_num_interp"] = (
-                    self._birrt_extend_num_interp
-                )
             try:
                 joint_plan1 = run_smooth_motion_planning_to_pose(
                     self._pre_place_pose_world,
@@ -239,11 +238,9 @@ class BasePlaceController(
             self._sim.set_state(self._current_state)
 
             # Run motion planning to the target joint positions.
-            mp_hyperparameters = None
-            if self._birrt_extend_num_interp is not None:
-                mp_hyperparameters = MotionPlanningHyperparameters(
-                    birrt_extend_num_interp=self._birrt_extend_num_interp,
-                )
+            mp_hyperparameters = MotionPlanningHyperparameters(
+                birrt_extend_num_interp=self._birrt_extend_num_interp,
+            )
             joint_plan = run_motion_planning(  # type: ignore
                 self._sim.robot.arm,
                 initial_positions=self._sim.robot.arm.get_joint_positions(),
