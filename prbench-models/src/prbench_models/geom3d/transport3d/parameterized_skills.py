@@ -24,6 +24,7 @@ from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
+    remap_se2_pose_plan_to_constant_distance,
     run_motion_planning,
     run_single_arm_mobile_base_motion_planning,
     smoothly_follow_end_effector_path,
@@ -36,6 +37,7 @@ from relational_structs import (
 
 from prbench_models.geom3d.base_controllers import BasePlaceController
 from prbench_models.geom3d.constants import (
+    GRIPPER_CLOSE_THRESHOLD,
     HOME_JOINT_POSITIONS,
 )
 from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
@@ -44,7 +46,7 @@ from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 GRASP_TRANSFORM_TO_OBJECT_BOX = Pose(
     (0.0, 0.15, 0.08), (0.707, 0.707, 0, 0)
 )  # side grasp
-GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.02), (0.707, 0.707, 0, 0))
+GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.02), (0.707, -0.707, 0, 0))
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.5, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
@@ -126,6 +128,12 @@ class GroundPickController(
 
             if base_plan is None:
                 raise TrajectorySamplingFailure("Base motion planning failed")
+
+            # Remap the plan to ensure we stay within action limits.
+            base_plan = remap_se2_pose_plan_to_constant_distance(
+                base_plan,
+                max_distance=self._sim.config.max_action_mag,
+            )
 
             # Store the plan (excluding the first state which is the current state).
             self._current_plan = base_plan[1:]
@@ -219,10 +227,13 @@ class GroundPickController(
             return action
 
         if self._pre_grasp and not self._closed_gripper:
-            if self._get_current_robot_gripper_pose() > 0.2 and np.isclose(
-                self._get_current_robot_gripper_pose(),
-                self._last_gripper_state,
-                atol=0.02,
+            if (
+                self._get_current_robot_gripper_pose() > GRIPPER_CLOSE_THRESHOLD
+                and np.isclose(
+                    self._get_current_robot_gripper_pose(),
+                    self._last_gripper_state,
+                    atol=0.02,
+                )
             ):
                 self._closed_gripper = True
             action_lst = [0.0] * 10 + [-1.0]
@@ -446,6 +457,12 @@ class GroundPlaceController(BasePlaceController):
 
             if base_plan is None:
                 raise TrajectorySamplingFailure("Base motion planning failed")
+
+            # Remap the plan to ensure we stay within action limits.
+            base_plan = remap_se2_pose_plan_to_constant_distance(
+                base_plan,
+                max_distance=self._sim.config.max_action_mag,
+            )
 
             # Store the plan (excluding the first state which is the current state).
             self._current_plan = base_plan[1:]

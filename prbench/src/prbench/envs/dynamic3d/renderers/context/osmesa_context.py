@@ -14,7 +14,6 @@
 # ==============================================================================
 """An OSMesa context for software-based OpenGL rendering."""
 
-
 from mujoco.osmesa import GLContext
 
 

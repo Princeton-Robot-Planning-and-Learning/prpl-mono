@@ -15,7 +15,6 @@
 # ==============================================================================
 """An EGL context for OpenGL rendering on GPU devices."""
 
-
 import atexit
 import ctypes
 import os

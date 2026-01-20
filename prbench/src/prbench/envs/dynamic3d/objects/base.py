@@ -902,7 +902,7 @@ class MujocoGround:
                 f"[x_start, y_start, x_end, y_end], got {len(selected_range)}"
             )
 
-        (x_start, y_start, x_end, y_end) = selected_range  # type: ignore[misc]
+        x_start, y_start, x_end, y_end = selected_range  # type: ignore[misc]
 
         # Validate bounds
         if x_start > x_end:
