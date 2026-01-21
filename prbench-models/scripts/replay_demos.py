@@ -213,7 +213,7 @@ def collect_data(
                 if use_delta_qpos:
                     # Convert action to dict format
                     action_dict = {
-                        "base_pose": np.array(action[:3]),
+                        "base_pose": target_base_pose,
                         "arm_qpos": np.array(action[3:10]),
                         "gripper_pos": np.array([action[-1]]),
                     }
@@ -260,7 +260,7 @@ def collect_data(
     else:
         print("Warning: Pick controller did not terminate within 400 steps")
 
-    add_place = True
+    add_place = False
     
     if add_place:
         lifted_controller = controllers["place"]
@@ -356,7 +356,7 @@ def collect_data(
                     if use_delta_qpos:
                         # Convert action to dict format
                         action_dict = {
-                            "base_pose": np.array(action[:3]),
+                            "base_pose": target_base_pose,
                             "arm_qpos": np.array(action[3:10]),
                             "gripper_pos": np.array([action[-1]]),
                         }

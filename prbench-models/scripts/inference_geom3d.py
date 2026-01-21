@@ -188,7 +188,6 @@ def run_inference(
 
             start_time = time.time()
             for step_idx in range(max_steps):
-                import ipdb; ipdb.set_trace()
                 # Enforce desired control frequency
                 step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD * 2
                 while time.time() < step_end_time:
@@ -265,7 +264,7 @@ def run_inference(
                     if use_qpos:
                         action_dict: dict[str, np.ndarray] = {  # type: ignore
                             "base_pose": obs_dict["base_pose"],
-                            "arm_qpos": obs_dict["arm_qpos"],
+                            "arm_qpos": obs_dict["arm_qpos"] - obs_dict["arm_qpos"],
                             "gripper_pos": obs_dict["gripper_pos"],
                         }
                     else:
@@ -279,18 +278,24 @@ def run_inference(
                 
 
                 if use_delta_qpos:
+                    delta_qpos = (
+                        np.mod(action_dict["arm_qpos"] + np.pi, 2 * np.pi) - np.pi
+                    )  # Unwrapped joint angles
                     action = np.concatenate(
                         [
                             action_dict["base_pose"] - obs_dict["base_pose"],
-                            action_dict["arm_qpos"],
+                            delta_qpos,
                             action_dict["gripper_pos"],
                         ]
                     )
                 elif use_qpos:
+                    delta_qpos = (
+                        np.mod(action_dict["arm_qpos"] - obs_dict["arm_qpos"] + np.pi, 2 * np.pi) - np.pi
+                    )  # Unwrapped joint angles
                     action = np.concatenate(
                         [
                             action_dict["base_pose"] - obs_dict["base_pose"],
-                            action_dict["arm_qpos"] - obs_dict["arm_qpos"],
+                            delta_qpos,
                             action_dict["gripper_pos"],
                         ]
                     )
@@ -406,6 +411,7 @@ def main() -> None:
         render=args.render,
         show_images=args.show_images,
         use_qpos=args.use_qpos,
+        use_delta_qpos=args.use_delta_qpos,
     )
 
 
