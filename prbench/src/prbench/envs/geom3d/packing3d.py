@@ -659,7 +659,7 @@ class ObjectCentricPacking3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        ids = {self.table_id}
+        ids = {self.floor_id, self.table_id}
         if self._rack_id is not None:
             ids.add(self._rack_id)
         ids |= set(self._part_ids.values())

@@ -103,6 +103,11 @@ def collect_single_demo(
     obs, _ = env.reset(seed=seed)
     observations.append(obs)
 
+    # import pybullet as p
+    # while True:
+    #     p.getMouseEvents(env.unwrapped._object_centric_env.physics_client_id)
+
+
     for _ in range(max_steps):
         action = policy(obs)
 

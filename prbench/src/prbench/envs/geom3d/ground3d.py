@@ -115,17 +115,19 @@ class ObjectCentricGround3DEnv(
     def _object_name_to_pybullet_id(self, object_name: str) -> int:
         if object_name.startswith("cube"):
             return self._cubes[object_name]
+        if object_name.startswith("floor"):
+            return self.floor_id
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        collision_ids = set(self._cubes.values())
+        collision_ids = {self.floor_id} | set(self._cubes.values())
         return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys())
 
     def _get_surface_object_names(self) -> set[str]:
-        return set(self._cubes.keys())
+        return set(self._cubes.keys()) | {"floor"}
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         if object_name.startswith("cube"):

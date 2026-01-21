@@ -307,6 +307,7 @@ class GroundPickController(
                 grasped_object_id = (
                     self._sim._grasped_object_id  # pylint: disable=protected-access
                 )
+                assert grasped_object_id is not None
                 grasped_object_transform = (
                     self._sim._grasped_object_transform  # pylint: disable=protected-access
                 )
@@ -316,23 +317,74 @@ class GroundPickController(
                 all_collision_ids -= (
                     self._sim._get_inside_object_ids()  # pylint: disable=protected-access
                 )
-                joint_plan = run_motion_planning(  # type: ignore
-                    self._sim.robot.arm,
-                    initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=all_collision_ids - {grasped_object_id},
-                    seed=0,  # for determinism
-                    physics_client_id=self._sim.physics_client_id,
-                    held_object=grasped_object_id,
-                    base_link_to_held_obj=grasped_object_transform,
+                collision_ids = all_collision_ids - {grasped_object_id}
+                surface_ids = self._sim._get_surfaces_supporting_object(  # pylint: disable=protected-access
+                    grasped_object_id
                 )
+                joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
 
-                if joint_plan is None:
+                # First move up slightly to break contact with the surface.
+                try:
+                    current_ee_pose = self._sim.robot.arm.get_end_effector_pose()
+                    broken_contact_ee_pose = Pose(
+                        (
+                            current_ee_pose.position[0],
+                            current_ee_pose.position[1],
+                            current_ee_pose.position[2] + 1e-3,
+                        ),
+                        current_ee_pose.orientation,
+                    )
+                    joint_plan1 = smoothly_follow_end_effector_path(
+                        self._sim.robot.arm,
+                        [current_ee_pose, broken_contact_ee_pose],
+                        initial_joints=self._sim.robot.arm.get_joint_positions(),
+                        collision_ids=collision_ids - surface_ids,
+                        seed=0,  # for determinism
+                        joint_distance_fn=joint_distance_fn,
+                        max_smoothing_iters_per_step=1,
+                        include_start=False,
+                        held_object=grasped_object_id,
+                        base_link_to_held_obj=grasped_object_transform,
+                    )
+                except InverseKinematicsError:
+                    joint_plan1 = None
+                    # Debugging
+                    # import pybullet as p
+                    # while True:
+                    #     p.getMouseEvents(self._sim.physics_client_id)
+
+                if joint_plan1 is None:
+                    raise TrajectorySamplingFailure("Motion planning failed")
+
+                try:
+                    self._sim.robot.arm.set_joints(joint_plan1[-1])
+                    ee_pose = self._sim.robot.arm.get_end_effector_pose()
+                    assert ee_pose.allclose(broken_contact_ee_pose, atol=1e-3)
+
+                    joint_plan2 = run_motion_planning(  # type: ignore
+                        self._sim.robot.arm,
+                        initial_positions=self._sim.robot.arm.get_joint_positions(),
+                        target_positions=HOME_JOINT_POSITIONS.tolist(),
+                        collision_bodies=collision_ids,
+                        seed=0,  # for determinism
+                        physics_client_id=self._sim.physics_client_id,
+                        held_object=grasped_object_id,
+                        base_link_to_held_obj=grasped_object_transform,
+                    )
+
+                except InverseKinematicsError:
+                    joint_plan2 = None
+                    # Debugging
+                    # import pybullet as p
+                    # while True:
+                    #     p.getMouseEvents(self._sim.physics_client_id)
+
+                if joint_plan2 is None:
                     raise TrajectorySamplingFailure("Motion planning failed")
 
                 # Remap the plan to ensure we stay within action limits.
                 joint_plan = remap_joint_position_plan_to_constant_distance(
-                    joint_plan,
+                    joint_plan1 + joint_plan2,
                     self._sim.robot.arm,
                     max_distance=self._sim.config.max_action_mag / 2,
                 )

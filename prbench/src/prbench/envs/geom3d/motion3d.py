@@ -122,7 +122,7 @@ class ObjectCentricMotion3DEnv(
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
-        return set()
+        return {self.floor_id}
 
     def _get_movable_object_names(self) -> set[str]:
         return set()

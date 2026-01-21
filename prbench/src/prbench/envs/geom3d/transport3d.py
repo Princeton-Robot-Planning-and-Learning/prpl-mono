@@ -74,9 +74,6 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         Path(__file__).parent / "assets" / "use_textures" / "blue-flower.png"
     )
 
-    # Floor.
-    floor_z: float = 0.02
-
     # Gripper.
     gripper_open_threshold: float = 0.01
 
@@ -358,11 +355,15 @@ class ObjectCentricTransport3DEnv(
             return self._cubes[object_name]
         if object_name.startswith("box"):
             return self._boxes[object_name]
+        if object_name.startswith("floor"):
+            return self.floor_id
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
         collision_ids = (
-            {self.table_id} | set(self._cubes.values()) | set(self._boxes.values())
+            {self.floor_id, self.table_id}
+            | set(self._cubes.values())
+            | set(self._boxes.values())
         )
         return collision_ids
 
@@ -370,7 +371,7 @@ class ObjectCentricTransport3DEnv(
         return set(self._cubes.keys()) | set(self._boxes.keys())
 
     def _get_surface_object_names(self) -> set[str]:
-        return {"table", "box0"}
+        return {"table", "box0", "floor"}
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         if object_name.startswith("cube"):

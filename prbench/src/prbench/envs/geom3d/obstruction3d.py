@@ -375,6 +375,7 @@ class ObjectCentricObstruction3DEnv(
         assert self._target_block_id is not None
         assert self._target_region_id is not None
         collision_ids = {
+            self.floor_id,
             self._target_block_id,
             self._target_region_id,
             self.table_id,

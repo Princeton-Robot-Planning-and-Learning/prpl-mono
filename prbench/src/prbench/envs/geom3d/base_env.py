@@ -24,6 +24,7 @@ from pybullet_helpers.inverse_kinematics import (
 from pybullet_helpers.joint import JointPositions
 from pybullet_helpers.robots import create_pybullet_mobile_robot
 from pybullet_helpers.robots.single_arm import FingeredSingleArmPyBulletRobot
+from pybullet_helpers.utils import create_pybullet_block
 from relational_structs import (
     Array,
     Object,
@@ -67,7 +68,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
         robot_base_home_pose = SE2Pose(initialize_x, initialize_y, initialize_rot)
     robot_base_pose_lower_bound: SE2Pose = SE2Pose(-10.0, -10.0, -np.pi)
     robot_base_pose_upper_bound: SE2Pose = SE2Pose(10.0, 10.0, np.pi)
-    robot_base_z: float = 0.0
+    robot_base_z: float = 0.025
     initial_joints: JointPositions = field(
         # This is a retract position.
         default_factory=lambda: [
@@ -117,6 +118,11 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     realistic_bg_position: tuple[float, float, float] = (0.7, -1.5, 0.0)
     realistic_bg_euler: tuple[float, float, float] = (np.pi / 2, 0, 0.0)
     realistic_bg_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+
+    # Floor settings. The floor is a thin, wide slab that provides collision
+    # detection but is visually transparent.
+    floor_z: float = 0.02  # Top surface of floor is at this z value
+    floor_half_extents: tuple[float, float, float] = (5.0, 5.0, 0.005)
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -302,6 +308,20 @@ class ObjectCentricGeom3DRobotEnv(
                 orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),
                 scale=self.config.realistic_bg_scale,
             )
+
+        # Create floor for collision detection. The floor is visually transparent
+        # (alpha=0) but has a collision shape.
+        floor_center_z = self.config.floor_z - self.config.floor_half_extents[2]
+        self.floor_id = create_pybullet_block(
+            color=(0.5, 0.5, 0.5, 0.0),  # Transparent
+            half_extents=self.config.floor_half_extents,
+            physics_client_id=self.physics_client_id,
+        )
+        set_pose(
+            self.floor_id,
+            Pose((0.0, 0.0, floor_center_z)),
+            self.physics_client_id,
+        )
 
     @property
     @abc.abstractmethod

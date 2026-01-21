@@ -30,9 +30,9 @@ class Transport3DScriptedPolicy:
     """
 
     # Hyperparameters for smoother motion (nicer videos, but slower).
-    BIRRT_EXTEND_NUM_INTERP = 50
-    SMOOTH_MP_MAX_TIME = 2.0
-    SMOOTH_MP_MAX_CANDIDATE_PLANS = 10
+    BIRRT_EXTEND_NUM_INTERP = 50 
+    SMOOTH_MP_MAX_TIME = 0.1  # TODO 2.0
+    SMOOTH_MP_MAX_CANDIDATE_PLANS = 1  # TODO 10
 
     def __init__(
         self,
@@ -47,7 +47,7 @@ class Transport3DScriptedPolicy:
         self._rng = np.random.default_rng(seed)
 
         # Create simulator for controllers.
-        self._sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
+        self._sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=True)
 
         # Create controllers with slow settings for smoother motion (nicer videos).
         self._controllers = create_lifted_controllers(
