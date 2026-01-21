@@ -24,6 +24,7 @@ from pybullet_helpers.inverse_kinematics import (
 from pybullet_helpers.joint import JointPositions
 from pybullet_helpers.robots import create_pybullet_mobile_robot
 from pybullet_helpers.robots.single_arm import FingeredSingleArmPyBulletRobot
+from pybullet_helpers.utils import create_pybullet_block
 from relational_structs import (
     Array,
     Object,
@@ -89,6 +90,12 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     # This is used to check whether a grasped object can be placed on a surface.
     min_placement_dist: float = 5e-3
 
+    # World bounds.
+    x_lb: float = -1.5
+    x_ub: float = 1.5
+    y_lb: float = -1.5
+    y_ub: float = 1.5
+
     # For rendering.
     render_dpi: int = 300
     render_fps: int = 20
@@ -114,9 +121,17 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
 
     # Realistic background settings.
     realistic_bg: bool = True
-    realistic_bg_position: tuple[float, float, float] = (0.7, -1.5, 0.0)
+    realistic_bg_position: tuple[float, float, float] = (0.7, -1.5, -0.02)
     realistic_bg_euler: tuple[float, float, float] = (np.pi / 2, 0, 0.0)
     realistic_bg_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+
+    # Floor, which can optionally be included as an object.
+    floor_included_as_object: bool = False
+    floor_z: float = 0.0
+    floor_half_extents: tuple[float, float, float] = (x_ub - x_lb, y_ub - y_lb, 0.005)
+    floor_pose: Pose = Pose(
+        ((x_lb + x_ub) / 2, (y_lb + y_ub) / 2, floor_z - 2 * floor_half_extents[2])
+    )
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -301,6 +316,19 @@ class ObjectCentricGeom3DRobotEnv(
                 position=self.config.realistic_bg_position,
                 orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),
                 scale=self.config.realistic_bg_scale,
+            )
+
+        # Optionally create floor.
+        if self.config.floor_included_as_object:
+            self.floor_id = create_pybullet_block(
+                color=(0.5, 0.5, 0.5, 0.0),  # transparent
+                half_extents=self.config.floor_half_extents,
+                physics_client_id=self.physics_client_id,
+            )
+            set_pose(
+                self.floor_id,
+                self.config.floor_pose,
+                self.physics_client_id,
             )
 
     @property
