@@ -113,6 +113,7 @@ def run_inference(
     num_cubes: int = 1,
     show_images: bool = False,
     use_qpos: bool = False,
+    use_delta_qpos: bool = False,
 ):
     """Run policy inference in the prbench environment.
 
@@ -129,6 +130,7 @@ def run_inference(
         num_cubes: Number of cubes in the environment.
         show_images: Whether to show images in a window.
         use_qpos: Whether to use qpos for the policy.
+        use_delta_qpos: Whether to use delta qpos for the policy.
     """
     
 
@@ -186,6 +188,7 @@ def run_inference(
 
             start_time = time.time()
             for step_idx in range(max_steps):
+                import ipdb; ipdb.set_trace()
                 # Enforce desired control frequency
                 step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD * 2
                 while time.time() < step_end_time:
@@ -201,9 +204,9 @@ def run_inference(
                         state.get(target_cube, "pose_z"),
                     ]
                 )
-                if target_cube_pos[2] > 0.3:
-                    successes += 1
-                    break
+                # if target_cube_pos[2] > 0.3:
+                #     successes += 1
+                #     break
                 current_joints = np.array(
                     [state.get(robot, f"joint_{i}") for i in range(1, 8)]
                 )
@@ -275,7 +278,15 @@ def run_inference(
 
                 
 
-                if use_qpos:
+                if use_delta_qpos:
+                    action = np.concatenate(
+                        [
+                            action_dict["base_pose"] - obs_dict["base_pose"],
+                            action_dict["arm_qpos"],
+                            action_dict["gripper_pos"],
+                        ]
+                    )
+                elif use_qpos:
                     action = np.concatenate(
                         [
                             action_dict["base_pose"] - obs_dict["base_pose"],
@@ -379,6 +390,7 @@ def main() -> None:
     )
     parser.add_argument("--render", action="store_true", help="Render the environment")
     parser.add_argument("--use-qpos", action="store_true", default=False, help="Use qpos for the policy")
+    parser.add_argument("--use-delta-qpos", action="store_true", default=False, help="Use delta qpos for the policy")
     args = parser.parse_args()
 
     run_inference(

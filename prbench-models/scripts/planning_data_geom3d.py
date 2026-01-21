@@ -27,6 +27,7 @@ def collect_data(
     save: bool = True,
     show_images: bool = False,
     use_qpos: bool = False,
+    use_delta_qpos: bool = False,
 ):
     """Collect pick and place demonstration data in ground environment.
 
@@ -209,12 +210,20 @@ def collect_data(
                     "overview_image": all_images["overview"],
                 }
 
-                # Convert action to dict format
-                action_dict = {
-                    "base_pose": target_base_pose,
-                    "arm_qpos": np.array(target_joints),
-                    "gripper_pos": np.array([action[-1]]),
-                }
+                if use_delta_qpos:
+                    # Convert action to dict format
+                    action_dict = {
+                        "base_pose": target_base_pose,
+                        "arm_qpos": np.array(action[3:10]),
+                        "gripper_pos": np.array([action[-1]]),
+                    }
+                else:
+                    # Convert action to dict format
+                    action_dict = {
+                        "base_pose": target_base_pose,
+                        "arm_qpos": np.array(target_joints),
+                        "gripper_pos": np.array([action[-1]]),
+                    }
             else:
                 obs_dict = {
                     "base_pose": np.array(
@@ -251,7 +260,7 @@ def collect_data(
     else:
         print("Warning: Pick controller did not terminate within 400 steps")
 
-    add_place = True
+    add_place = False
     
     if add_place:
         lifted_controller = controllers["place"]
@@ -300,45 +309,102 @@ def collect_data(
 
             # Record observation and action before stepping
             if writer is not None:
-                # Create observation dict with state vector and images
-                obs_dict = {
-                    "base_pose": np.array(
+                target_shelf = state.get_object_from_name("shelf")
+                target_cube_list = [state.get_object_from_name(f"cube{i}") for i in range(num_cubes)]
+                target_cube_list_pose = []
+                for cube in target_cube_list:
+                    target_cube_list_pose.append(np.array(
                         [
-                            state.get(robot, "pos_base_x"),
-                            state.get(robot, "pos_base_y"),
-                            state.get(robot, "pos_base_rot"),
+                            state.get(cube, "pose_x"),
+                            state.get(cube, "pose_y"),
+                            state.get(cube, "pose_z"),
+                            state.get(cube, "pose_qx"),
+                            state.get(cube, "pose_qy"),
+                            state.get(cube, "pose_qz"),
+                            state.get(cube, "pose_qw"),
                         ]
-                    ),
-                    "arm_qpos": np.array(current_joints),
-                    "arm_pos": current_position,
-                    "arm_quat": current_orientation,
-                    "gripper_pos": np.array([state.get(robot, "finger_state")]),
-                    "base_image": all_images["base"],
-                    "wrist_image": all_images["wrist"],
-                    "overview_image": all_images["overview"],
-                }
-                # Convert action to dict format
-                action_dict = {
-                    "base_pose": target_base_pose,
-                    "arm_qpos": np.array(target_joints),
-                    "arm_pos": target_position,
-                    "arm_quat": target_orientation,
-                    "gripper_pos": np.array([action[-1]]),
-                }
+                    ))
+                target_shelf_pose = np.array(
+                    [
+                        state.get(target_shelf, "pose_x"),
+                        state.get(target_shelf, "pose_y"),
+                        state.get(target_shelf, "pose_z"),
+                        state.get(target_shelf, "pose_qx"),
+                        state.get(target_shelf, "pose_qy"),
+                        state.get(target_shelf, "pose_qz"),
+                        state.get(target_shelf, "pose_qw"),
+                    ]
+                )
+
+                # Create observation dict with state vector and images
+                if use_qpos:
+                    obs_dict = {
+                        "base_pose": np.array(
+                            [
+                                state.get(robot, "pos_base_x"),
+                                state.get(robot, "pos_base_y"),
+                                state.get(robot, "pos_base_rot"),
+                            ]
+                        ),
+                        "arm_qpos": np.array(current_joints),
+                        "gripper_pos": np.array([state.get(robot, "finger_state")]),
+                        "base_image": all_images["base"],
+                        "wrist_image": all_images["wrist"],
+                        "overview_image": all_images["overview"],
+                    }
+
+                    if use_delta_qpos:
+                        # Convert action to dict format
+                        action_dict = {
+                            "base_pose": target_base_pose,
+                            "arm_qpos": np.array(action[3:10]),
+                            "gripper_pos": np.array([action[-1]]),
+                        }
+                    else:
+                        # Convert action to dict format
+                        action_dict = {
+                            "base_pose": target_base_pose,
+                            "arm_qpos": np.array(target_joints),
+                            "gripper_pos": np.array([action[-1]]),
+                        }
+                else:
+                    obs_dict = {
+                        "base_pose": np.array(
+                            [
+                                state.get(robot, "pos_base_x"),
+                                state.get(robot, "pos_base_y"),
+                                state.get(robot, "pos_base_rot"),
+                            ]
+                        ),
+                        "arm_pos": current_position,
+                        "arm_quat": current_orientation,
+                        "gripper_pos": np.array([state.get(robot, "finger_state")]),
+                        "base_image": all_images["base"],
+                        "wrist_image": all_images["wrist"],
+                        "overview_image": all_images["overview"],
+                    }
+
+                    # Convert action to dict format
+                    action_dict = {
+                        "base_pose": target_base_pose,
+                        "arm_pos": target_position,
+                        "arm_quat": target_orientation,
+                        "gripper_pos": np.array([action[-1]]),
+                    }
                 writer.step(obs_dict, action_dict, target_object_key)
 
-            obs, reward, terminated, truncated, info = env.step(action)  # type: ignore
-            next_state = env.observation_space.devectorize(obs)
-            controller.observe(next_state)
-            state = next_state
-            if terminated or truncated:
-                print("env terminated or truncated")
-                break
-            if controller.terminated():
-                print(f"Place controller terminated after {step_idx + 1} steps")
-                break
-        else:
-            print("Warning: Place controller did not terminate within 400 steps")
+                obs, reward, terminated, truncated, info = env.step(action)  # type: ignore
+                next_state = env.observation_space.devectorize(obs)
+                controller.observe(next_state)
+                state = next_state
+                if terminated or truncated:
+                    print("env terminated or truncated")
+                    break
+                if controller.terminated():
+                    print(f"Place controller terminated after {step_idx + 1} steps")
+                    break
+            else:
+                print("Warning: Place controller did not terminate within 400 steps")
 
     # Save episode data to disk
     if writer is not None and len(writer) > 0:
@@ -365,6 +431,7 @@ def main() -> None:
         "--n-demos", type=int, default=1, help="Number of demos to collect"
     )
     parser.add_argument("--use-qpos", action="store_true", default=False)
+    parser.add_argument("--use-delta-qpos", action="store_true", default=False)
     args = parser.parse_args()
     for demo_idx in range(args.n_demos):
         collect_data(
@@ -375,6 +442,7 @@ def main() -> None:
             env_name=args.env_name,
             show_images=args.show_images,
             use_qpos=args.use_qpos,
+            use_delta_qpos=args.use_delta_qpos,
         )
 
 
