@@ -40,6 +40,7 @@ class RBY1ARobotEnv(RobotEnv):
 
     def __init__(
         self,
+        name: str,
         control_frequency: float,
         act_delta: bool = True,
         horizon: int = 1000,
@@ -51,7 +52,9 @@ class RBY1ARobotEnv(RobotEnv):
     ) -> None:
         """
         Args:
+            name: Name of the robot.
             control_frequency: Frequency at which control actions are applied (in Hz).
+            act_delta: Whether to interpret actions as deltas or absolute values.
             horizon: Maximum number of steps per episode.
             camera_names: List of camera names to use for rendering.
             camera_width: Width of camera images.
@@ -69,6 +72,7 @@ class RBY1ARobotEnv(RobotEnv):
             show_viewer=show_viewer,
         )
 
+        self.name = name
         self.act_delta = act_delta
 
         # Initialize robot state attributes
@@ -251,6 +255,16 @@ class RBY1ARobotEnv(RobotEnv):
             if part not in self.exclude_parts:  # exclude base joints from jacobian
                 self.joint_indices.extend(qvel_indices[part])
                 self.joint_indices_ctrl.extend(ctrl_indices[part])
+
+    def set_robot_base_pos_yaw(self, x: float, y: float, yaw: float) -> None:
+        """Set the robot's base position and yaw orientation.
+
+        Args:
+            x: X position of the robot base .
+            y: Y position of the robot base.
+            yaw: Yaw orientation of the robot base.
+        """
+        raise NotImplementedError
 
     def _randomize_base_pose(self) -> None:
         """Randomize the base pose of the robot within defined limits."""
