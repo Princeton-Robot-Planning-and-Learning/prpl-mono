@@ -95,7 +95,7 @@ def test_tidybot_cupboard_constrained_fitting_goals():
         scene_type="cupboard",
         num_objects=12,
         task_config_path=str(
-            tasks_root / "tidybot-cupboard-o12-ConstrainedFitting.json"
+            tasks_root / "sort" / "tidybot-lab6-o12-ConstrainedFitting.json"
         ),
     )
 
@@ -444,7 +444,7 @@ def test_tidybot3d_cupboard_mimiclabs_with_video():
     """Test MimicLabs scene with ConstrainedFitting task and video recording."""
     prbench.register_all_environments()
     env = prbench.make(
-        "prbench/TidyBot3D-cupboard-o12-ConstrainedFitting-v0",
+        "prbench/TidyBot3D-sort-lab6-o12-ConstrainedFitting-v0",
         render_mode="rgb_array",
         scene_bg=True,  # Use default mimiclabs scene (lab5 for base_motion)
         scene_render_camera="overview",

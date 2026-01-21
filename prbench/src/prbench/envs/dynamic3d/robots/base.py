@@ -175,3 +175,13 @@ class RobotEnv(MujocoEnv, abc.ABC):
         Returns:
             The computed reward value.
         """
+
+    @abc.abstractmethod
+    def set_robot_base_pos_yaw(self, x: float, y: float, yaw: float) -> None:
+        """Set the robot's base position and yaw orientation.
+
+        Args:
+            x: X position of the robot base.
+            y: Y position of the robot base.
+            yaw: Yaw orientation of the robot base.
+        """

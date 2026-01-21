@@ -317,6 +317,17 @@
                 0.0
             ],
             "yaw_ranges": [[0, 0]]
+        },
+        "robot_init_region": {
+            "target": "ground",
+            "ranges": [[-1.0, -0.75, -0.5, 0.75]],
+            "rgba": [
+                0.0,
+                1.0,
+                0.0,
+                0.3
+            ],
+            "yaw_ranges": [[0, 360]]
         }
     },
     "cameras": {

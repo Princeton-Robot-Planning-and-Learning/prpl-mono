@@ -137,10 +137,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             self.camera_names.extend(list(self.task_config["cameras"].keys()))
 
         # Initialize robot environment
+        self.robot_type = list(self.task_config["robots"].keys())[0]
+        self.robot_name = list(self.task_config["robots"][self.robot_type].keys())[0]
         robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
-            self.task_config["robots"][0]
+            self.robot_type
         ]
         self._robot_env = robot_cls(
+            name=self.robot_name,
             control_frequency=self.config.control_frequency,
             act_delta=self.config.act_delta,
             horizon=self.config.horizon,
@@ -583,6 +586,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     continue
 
                 if obj_name not in self._objects_dict:
+                    if obj_name == self.robot_name:
+                        continue
                     raise ValueError(f"Object {obj_name} not found in environment.")
 
                 region_config = self.task_config["regions"][region_name]
@@ -714,6 +719,51 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     ) -> Space[Array]:
         """Create action space for TidyBot's control interface."""
 
+    def _initialize_robot_pose(self) -> None:
+        """Initialize the robot in the environment."""
+
+        # Go through predicates, find the ones that specify the robot's initial pose
+        init_predicates = self.task_config.get("initial_state", [])
+        robot_predicates = []
+        for pred in init_predicates:
+            if len(pred) >= 3 and pred[0] == "on" and pred[1] == self.robot_name:
+                robot_predicates.append(pred)
+
+        # Assert there is exactly one predicate for the robot
+        assert len(robot_predicates) <= 1, (
+            f"Expected at most 1 predicate for robot '{self.robot_name}', "
+            f"got {len(robot_predicates)}"
+        )
+
+        if not robot_predicates:
+            # Define limits for x, y, and yaw
+            x_limit = (-1.0, 1.0)
+            y_limit = (-1.0, 1.0)
+            yaw_limit = (-np.pi, np.pi)
+            # Sample random values within the limits
+            x = self.np_random.uniform(*x_limit)
+            y = self.np_random.uniform(*y_limit)
+            yaw = self.np_random.uniform(*yaw_limit)
+        else:
+            # Extract region name
+            region_name = robot_predicates[0][2]
+            region_config = self.task_config["regions"][region_name]
+
+            # Assert that the region target is ground
+            assert region_config["target"] == "ground", (
+                f"Region '{region_name}' for robot must have target 'ground', "
+                f"got '{region_config['target']}'"
+            )
+
+            # Sample pose in region using ground fixture
+            assert self._ground_fixture is not None, "Ground fixture not initialized"
+            x, y, _, yaw = self._ground_fixture.sample_pose_in_region(
+                region_name, self.np_random
+            )
+
+        # Set robot base position and yaw orientation
+        self._robot_env.set_robot_base_pos_yaw(x, y, yaw)
+
     def reset(
         self,
         *,
@@ -739,6 +789,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Initialize object poses
         self._initialize_object_poses()
+
+        # Initialize the robot pose
+        self._initialize_robot_pose()
 
         # Get object-centric observation
         self._current_state = self._get_object_centric_state()
@@ -1072,7 +1125,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         return TidyBot3DRobotActionSpace()
 
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
-        assert self.task_config["robots"][0] == "tidybot"
+        assert self.robot_type == "tidybot"
         assert self._robot_env is not None, "Robot environment not initialized"
         robot = Object("robot", MujocoTidyBotRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
@@ -1253,7 +1306,7 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         return RBY1ARobotActionSpace()
 
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
-        assert self.task_config["robots"][0] == "rby1a"
+        assert self.robot_type == "rby1a"
         assert self._robot_env is not None, "Robot environment not initialized"
         robot = Object("robot", MujocoRBY1ARobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.

@@ -50,6 +50,7 @@ class TidyBotRobotEnv(RobotEnv):
 
     def __init__(
         self,
+        name: str,
         control_frequency: float,
         act_delta: bool = True,
         horizon: int = 1000,
@@ -63,6 +64,7 @@ class TidyBotRobotEnv(RobotEnv):
     ) -> None:
         """
         Args:
+            name: Name of the robot.
             control_frequency: Frequency at which control actions are applied (in Hz).
             act_delta: Whether to interpret actions as deltas or absolute values.
             horizon: Maximum number of steps per episode.
@@ -85,6 +87,7 @@ class TidyBotRobotEnv(RobotEnv):
             show_viewer=show_viewer,
         )
 
+        self.name = name
         self.act_delta = act_delta
 
         # Allow custom PD gains
@@ -259,31 +262,22 @@ class TidyBotRobotEnv(RobotEnv):
         # Setup references to robot state/actuator buffers
         self._setup_robot_references()
 
-        # Randomize the base pose of the robot in the sim
-        self._randomize_base_pose()
+        # Randomize the arm pose of the robot in the sim
         self._randomize_arm_pose()
 
         return self.get_obs(), {}
 
-    def _randomize_base_pose(self) -> None:
-        """Randomize the base pose of the robot within defined limits."""
+    def set_robot_base_pos_yaw(self, x: float, y: float, yaw: float) -> None:
+        """Set the base pose of the robot to the specified position and orientation."""
         assert (
             self.sim is not None
-        ), "Simulation must be initialized before randomizing base pose."
+        ), "Simulation must be initialized before setting base pose."
         assert self.qpos is not None, "Base qpos must be initialized first"
         assert self.ctrl is not None, "Base ctrl must be initialized first"
 
-        # Define limits for x, y, and theta
-        x_limit = (-1.0, 1.0)
-        y_limit = (-1.0, 1.0)
-        theta_limit = (-np.pi, np.pi)
-        # Sample random values within the limits
-        x = self.np_random.uniform(*x_limit)
-        y = self.np_random.uniform(*y_limit)
-        theta = self.np_random.uniform(*theta_limit)
         # Set the base position and orientation in the simulation
-        self.qpos["base"][:] = [x, y, theta]
-        self.ctrl["base"][:] = [x, y, theta]
+        self.qpos["base"][:] = [x, y, yaw]
+        self.ctrl["base"][:] = [x, y, yaw]
         self.sim.forward()  # Update the simulation state
 
     def _randomize_arm_pose(self) -> None:

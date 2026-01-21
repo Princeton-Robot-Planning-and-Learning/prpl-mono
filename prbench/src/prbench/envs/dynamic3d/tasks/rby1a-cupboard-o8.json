@@ -1,7 +1,9 @@
 {
-    "robots": [
-        "rby1a"
-    ],
+    "robots": {
+        "rby1a": {
+            "robot_0": {}
+        }
+    },
     "scene": {
         "simple": {
             "position": [
