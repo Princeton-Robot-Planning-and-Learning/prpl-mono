@@ -69,7 +69,7 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     )
 
     # Floor.
-    floor_included_as_object = True
+    floor_included_as_object: bool = True
 
     # Gripper.
     gripper_open_threshold: float = 0.01
@@ -361,6 +361,8 @@ class ObjectCentricTransport3DEnv(
         collision_ids = (
             {self.table_id} | set(self._cubes.values()) | set(self._boxes.values())
         )
+        if self.config.floor_included_as_object:
+            collision_ids.add(self.floor_id)
         return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:

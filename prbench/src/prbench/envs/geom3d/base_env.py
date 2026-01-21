@@ -130,7 +130,7 @@ class Geom3DEnvConfig(PRBenchEnvConfig):
     floor_z: float = 0.0
     floor_half_extents: tuple[float, float, float] = (x_ub - x_lb, y_ub - y_lb, 0.005)
     floor_pose: Pose = Pose(
-        ((x_lb + x_ub) / 2, (y_lb + y_ub) / 2, floor_z - floor_half_extents[2])
+        ((x_lb + x_ub) / 2, (y_lb + y_ub) / 2, floor_z - 2 * floor_half_extents[2])
     )
 
     def get_camera_kwargs(self) -> dict[str, Any]:
