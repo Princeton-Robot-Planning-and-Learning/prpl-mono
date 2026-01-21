@@ -757,10 +757,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
             # Sample pose in region using ground fixture
             assert self._ground_fixture is not None, "Ground fixture not initialized"
-            x, y, _, yaw_deg = self._ground_fixture.sample_pose_in_region(
+            x, y, _, yaw = self._ground_fixture.sample_pose_in_region(
                 region_name, self.np_random
             )
-            yaw = np.deg2rad(yaw_deg)
 
         # Set robot base position and yaw orientation
         self._robot_env.set_robot_base_pos_yaw(x, y, yaw)
