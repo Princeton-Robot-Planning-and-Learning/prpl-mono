@@ -1,7 +1,9 @@
 {
-    "robots": [
-        "tidybot"
-    ],
+    "robots": {
+        "tidybot": {
+            "robot_0": {}
+        }
+    },
     "scene": "lab2_kitchen",
     "regions": {
         "blocks_init_region": {
@@ -239,6 +241,11 @@
             "on",
             "cube_19",
             "blocks_init_region"
+        ],
+        [
+            "on",
+            "robot_0",
+            "robot_init_region"
         ]
     ],
     "goal_state": [

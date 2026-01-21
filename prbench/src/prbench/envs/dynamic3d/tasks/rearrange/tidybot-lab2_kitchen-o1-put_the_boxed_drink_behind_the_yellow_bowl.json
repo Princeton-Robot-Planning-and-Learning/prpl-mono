@@ -1,7 +1,9 @@
 {
-    "robots": [
-        "tidybot"
-    ],
+    "robots": {
+        "tidybot": {
+            "robot_0": {}
+        }
+    },
     "scene": "lab2_kitchen",
     "regions": {
         "yellow_bowl_1_back_region": {
@@ -56,6 +58,11 @@
             "on",
             "yellow_bowl_1",
             "kitchen_cooking_area_shelf_2_region"
+        ],
+        [
+            "on",
+            "robot_0",
+            "robot_init_region"
         ]
     ],
     "goal_state": [
