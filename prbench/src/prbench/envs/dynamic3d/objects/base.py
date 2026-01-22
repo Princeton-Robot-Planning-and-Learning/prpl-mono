@@ -794,7 +794,7 @@ class MujocoGround:
         self.regions = regions
         self.worldbody = worldbody
         self.position = np.array([0.0, 0.0, 0.0])  # Ground at origin
-        self.ground_thickness = 0.01  # Default ground thickness
+        self.ground_placement_threshold = 0.1  # Default ground placement threshold
 
         # Create regions if defined
         self.region_objects: dict[str, list[Region]] = {}
@@ -812,18 +812,34 @@ class MujocoGround:
             region_list: list[Region] = []
 
             for region_idx, region_range in enumerate(region_config["ranges"]):
-                x_start, y_start, x_end, y_end = region_range
+                # Support both 4-value (x, y bounds) and 6-value (x, y, z bounds) ranges
+                if len(region_range) == 4:
+                    x_start, y_start, x_end, y_end = region_range
+                    # ground_placement_threshold = 0.01  # 1cm tolerance
+                    z_start, z_end = (
+                        0,
+                        2 * self.ground_placement_threshold,
+                    )  # Default: ground surface with 1cm tolerance
+                elif len(region_range) == 6:
+                    x_start, y_start, z_start, x_end, y_end, z_end = region_range
+                    # ground_placement_threshold = 0.01  # 1cm tolerance
+                else:
+                    raise ValueError(
+                        f"Region range must have 4 or 6 values "
+                        f"[x_start, y_start, x_end, y_end] or "
+                        f"[x_start, y_start, z_start, x_end, y_end, z_end], "
+                        f"got {len(region_range)}"
+                    )
 
                 # Create 3D bounding box on ground surface.
-                # Sites must not go below ground (z >= 0), span from z=0 to z=2*threshold
-                ground_placement_threshold = 0.01  # 1cm tolerance
+                # Sites must not go below ground (z >= 0), span from z_start to z_end
                 bbox = [
-                    x_start - ground_placement_threshold,
-                    y_start - ground_placement_threshold,
-                    0,  # z_min at ground surface (z >= 0)
-                    x_end + ground_placement_threshold,
-                    y_end + ground_placement_threshold,
-                    2 * ground_placement_threshold,  # z_max extends above ground
+                    x_start - self.ground_placement_threshold,
+                    y_start - self.ground_placement_threshold,
+                    max(0.0, z_start - self.ground_placement_threshold),
+                    x_end + self.ground_placement_threshold,
+                    y_end + self.ground_placement_threshold,
+                    z_end + self.ground_placement_threshold,
                 ]
 
                 # Calculate center and half-sizes for MuJoCo box site
@@ -873,7 +889,9 @@ class MujocoGround:
         """Sample a pose (x, y, z, yaw) uniformly randomly from one of the provided
         regions.
 
-        For ground, this samples on the ground plane surface.
+        For ground, this samples on the ground plane surface. Note that we are not
+        using Region objects for this sampling; instead, we directly sample from the
+        ranges specified in self.regions[region_name]["ranges"].
 
         Args:
             region_name: Name of the region to sample from
@@ -894,28 +912,36 @@ class MujocoGround:
         # Randomly select one of the regions
         selected_range_index = np_random.choice(len(region_config["ranges"]))
 
-        # Validate the selected region
+        # Validate and unpack the selected region (supports 4-value and 6-value ranges)
         selected_range = region_config["ranges"][selected_range_index]
-        if len(selected_range) != 4:
+        if len(selected_range) == 4:
+            x_start, y_start, x_end, y_end = selected_range  # type: ignore[misc]
+            z_start, z_end = (
+                0,
+                2 * self.ground_placement_threshold,
+            )  # Default: ground surface
+        elif len(selected_range) == 6:
+            x_start, y_start, z_start, x_end, y_end, z_end = selected_range  # type: ignore[misc]
+        else:
             raise ValueError(
-                f"Each region must have exactly 4 values "
-                f"[x_start, y_start, x_end, y_end], got {len(selected_range)}"
+                f"Each region must have 4 or 6 values "
+                f"[x_start, y_start, x_end, y_end] or "
+                f"[x_start, y_start, x_end, y_end, z_start, z_end], "
+                f"got {len(selected_range)}"
             )
-
-        x_start, y_start, x_end, y_end = selected_range  # type: ignore[misc]
 
         # Validate bounds
         if x_start > x_end:
             raise ValueError(f"x_start ({x_start}) must be less than x_end ({x_end})")
         if y_start > y_end:
             raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
+        if z_start > z_end:
+            raise ValueError(f"z_start ({z_start}) must be less than z_end ({z_end})")
 
         # Sample uniformly within the selected region
         x = np_random.uniform(x_start, x_end)
         y = np_random.uniform(y_start, y_end)
-
-        # Sample z coordinate on the ground surface
-        z = self.ground_thickness / 2  # Slightly above ground
+        z = np_random.uniform(z_start, z_end)  # Sample z from the specified range
 
         # Sample yaw from the specified range (convert from degrees to radians)
         yaw_range = (0.0, 360.0)  # Default range
