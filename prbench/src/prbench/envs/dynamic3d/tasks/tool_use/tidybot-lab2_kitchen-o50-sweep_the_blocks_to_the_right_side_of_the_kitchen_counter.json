@@ -4,7 +4,7 @@
             "robot_0": {}
         }
     },
-    "scene": "lab2_kitchen",
+    "scene": "lab2_kitchen_gray",
     "regions": {
         "blocks_init_region": {
             "target": "ground",
@@ -141,7 +141,7 @@
         ["on", "cube_47", "blocks_init_region"],
         ["on", "cube_48", "blocks_init_region"],
         ["on", "cube_49", "blocks_init_region"],
-        ["on", "robot_0", "robot_init_region"]
+        ["on", "robot_0", "robot_living_area_init_region"]
     ],
     "goal_state": [
         ["on", "cube_0", "sweep_region"],

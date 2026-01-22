@@ -4,7 +4,7 @@
             "robot_0": {}
         }
     },
-    "scene": "lab2_kitchen",
+    "scene": "lab2_kitchen_gray",
     "regions": {
         "blocks_init_region": {
             "target": "ground",

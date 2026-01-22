@@ -4,7 +4,7 @@
             "robot_0": {}
         }
     },
-    "scene": "lab2_kitchen",
+    "scene": "lab2_kitchen_gray",
     "regions": {
         "yellow_bowl_1_back_region": {
             "target": "yellow_bowl_1",
@@ -29,7 +29,7 @@
     "initial_state": [
         ["on", "object_0", "kitchen_island_shelf_2_region"],
         ["on", "yellow_bowl_1", "kitchen_cooking_area_shelf_2_region"],
-        ["on", "robot_0", "robot_init_region"]
+        ["on", "robot_0", "robot_living_area_init_region"]
     ],
     "goal_state": [
         ["on", "object_0", "yellow_bowl_1_back_region"]
