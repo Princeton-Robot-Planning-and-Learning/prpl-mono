@@ -455,7 +455,8 @@ class Transport3DEnv(ConstantObjectPRBenchEnv):
 
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
-        return """A 3D environment where the goal is to pick up a box from the table."""
+        # pylint: disable=line-too-long
+        return """A 3D environment where the goal is to place all objects, including one or more solid cubes and a box, on a table."""
 
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
@@ -464,9 +465,9 @@ class Transport3DEnv(ConstantObjectPRBenchEnv):
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        return """The reward is a small negative reward (-0.01) per timestep to encourage exploration."""
+        return """The reward is a small negative reward (-1) per timestep until termination, which occurs when all objects are on the table."""
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
         # pylint: disable=line-too-long
-        return """This is a very common kind of environment."""
+        return """N/A."""
