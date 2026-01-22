@@ -147,8 +147,8 @@ def test_ground_region_site_creation_and_placement():
 
             # Verify site Z position is above ground (centered between 0 and 2*threshold)
             # The site is centered between 0 and ground_placement_threshold*2
-            ground_placement_threshold = 0.01
-            expected_z = ground_placement_threshold  # Center of [0, 0.02]
+            ground_placement_threshold = 0.1
+            expected_z = ground_placement_threshold  # Center of [0, 0.2]
             assert np.isclose(site_z, expected_z, atol=1e-6), (
                 f"Site Z position should be at {expected_z} "
                 f"for {region_name} region {region_idx}, got {site_z}"
@@ -159,11 +159,11 @@ def test_ground_region_site_creation_and_placement():
             z_min = site_z - size_z
             z_max = site_z + size_z
 
-            # Site should span from z=0 (surface) to z=0.02 (2*threshold above)
-            # bbox z range is [0, 0.02]
-            # z_center = (0 + 0.02) / 2 = 0.01
-            # z_size = (0.02 - 0) / 2 = 0.01
-            # So z_min = 0.01 - 0.01 = 0, z_max = 0.01 + 0.01 = 0.02
+            # Site should span from z=0 (surface) to z=0.2 (2*threshold above)
+            # bbox z range is [0, 0.2]
+            # z_center = (0 + 0.2) / 2 = 0.1
+            # z_size = (0.2 - 0) / 2 = 0.1
+            # So z_min = 0.1 - 0.1 = 0, z_max = 0.1 + 0.1 = 0.2
             expected_z_min = 0.0  # At ground surface
             expected_z_max = 2 * ground_placement_threshold  # Above ground
 
@@ -259,11 +259,16 @@ def test_ground_sample_pose_in_region():
         assert 0.0 <= x <= 1.0, f"X position {x} outside region bounds"
         assert 0.0 <= y <= 1.0, f"Y position {y} outside region bounds"
 
-        # Verify Z is at ground level (ground_thickness / 2 above ground zero)
-        expected_z = ground.ground_thickness / 2
-        assert np.isclose(
-            z, expected_z, atol=1e-6
-        ), f"Z position {z} not at ground level {expected_z}"
+        # Verify Z is within the default ground placement range
+        # For 4-value ranges (no explicit z), z is sampled from [0, 2*ground_placement_threshold]
+        # The expected z value is at the center of this range
+        expected_z = ground.ground_placement_threshold
+        z_min = 0.0
+        z_max = 2 * ground.ground_placement_threshold
+        assert z_min <= z <= z_max, (
+            f"Z position {z} outside default ground placement range "
+            f"[{z_min}, {z_max}]"
+        )
 
         # Verify yaw is in valid range
         assert 0.0 <= yaw <= 2 * np.pi, f"Yaw {yaw} outside valid range [0, 2π]"
