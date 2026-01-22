@@ -794,7 +794,7 @@ class MujocoGround:
         self.regions = regions
         self.worldbody = worldbody
         self.position = np.array([0.0, 0.0, 0.0])  # Ground at origin
-        self.ground_placement_threshold = 0.1  # Default ground placement threshold
+        self.ground_placement_threshold = 0.05  # Default ground region threshold
 
         # Create regions if defined
         self.region_objects: dict[str, list[Region]] = {}
