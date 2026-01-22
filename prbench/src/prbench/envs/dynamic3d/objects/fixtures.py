@@ -443,6 +443,7 @@ class Cupboard(MujocoFixture):
 
     # Default RGBA colors for cupboard and drawer components
     default_rgba_cupboard_shelf: list[float] = [0.8, 0.6, 0.4, 1.0]
+    default_rgba_cupboard_top_shelf: list[float] = [0.9, 0.7, 0.5, 1.0]
     default_rgba_cupboard_leg: list[float] = [0.6, 0.4, 0.2, 1.0]
     default_rgba_cupboard_partition: list[float] = [0.7, 0.5, 0.3, 1.0]
     default_rgba_cupboard_panel: list[float] = [0.7, 0.5, 0.3, 1.0]
@@ -541,6 +542,9 @@ class Cupboard(MujocoFixture):
         # Parse RGBA colors from fixture config or use class defaults
         self.rgba_cupboard_shelf: list[float] = self.fixture_config.get(
             "rgba_cupboard_shelf", Cupboard.default_rgba_cupboard_shelf
+        )  # type: ignore
+        self.rgba_cupboard_top_shelf: list[float] = self.fixture_config.get(
+            "rgba_cupboard_top_shelf", Cupboard.default_rgba_cupboard_top_shelf
         )  # type: ignore
         self.rgba_cupboard_leg: list[float] = self.fixture_config.get(
             "rgba_cupboard_leg", Cupboard.default_rgba_cupboard_leg
@@ -1327,7 +1331,10 @@ class Cupboard(MujocoFixture):
                 f"{cupboard_half_length} {cupboard_half_depth} {shelf_half_thickness}",
             )
             shelf.set("pos", f"0 0 {shelf_z}")
-            shelf.set("rgba", " ".join(map(str, self.rgba_cupboard_shelf)))
+            # Use different rgba for top shelf
+            is_top_shelf = i == len(shelf_positions) - 1
+            shelf_rgba = self.rgba_cupboard_top_shelf if is_top_shelf else self.rgba_cupboard_shelf
+            shelf.set("rgba", " ".join(map(str, shelf_rgba)))
 
             # Create vertical partitions for this shelf
             # (if we have partition data for it)
