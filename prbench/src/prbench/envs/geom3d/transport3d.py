@@ -47,12 +47,6 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         Path(__file__).parent / "assets" / "use_textures" / "light_wood_v3.png"
     )
 
-    # World bounds.
-    x_lb: float = -1.5
-    x_ub: float = 1.5
-    y_lb: float = -1.5
-    y_ub: float = 1.5
-
     # Minimum distance between objects for placement.
     min_placement_dist: float = 0.01
 
@@ -74,6 +68,9 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         Path(__file__).parent / "assets" / "use_textures" / "blue-flower.png"
     )
 
+    # Floor.
+    floor_included_as_object: bool = True
+
     # Gripper.
     gripper_open_threshold: float = 0.01
 
@@ -83,7 +80,7 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             "camera_target": (0, 0, 0),
             "camera_yaw": 90,
             "camera_distance": 2.0,
-            "camera_pitch": -20,
+            "camera_pitch": -40,
         }
 
     def sample_block_on_table_pose(
@@ -288,12 +285,21 @@ class ObjectCentricTransport3DEnv(
         # Randomly sample collision-free positions for the cubes.
         # Also ensure that they are not in collision with the robot.
         # Samples the poses of the cubes
+        box_ids = set(self._boxes.values())
         sample_collision_free_object_poses(
-            object_ids=set(self._boxes.values()),
+            object_ids=box_ids,
             table_pose=self.config.table_pose,
             table_half_extents=self.config.table_half_extents,
-            lb=(self.config.x_lb, self.config.y_lb, self.config.box_half_extents[2]),
-            ub=(self.config.x_ub, self.config.y_ub, self.config.box_half_extents[2]),
+            lb=(
+                self.config.x_lb,
+                self.config.y_lb,
+                self.config.box_half_extents[2] + self.config.floor_z,
+            ),
+            ub=(
+                self.config.x_ub,
+                self.config.y_ub,
+                self.config.box_half_extents[2] + self.config.floor_z,
+            ),
             physics_client_id=self.physics_client_id,
             rng=self.np_random,
             other_collision_ids={self.robot.base.robot_id},
@@ -306,11 +312,19 @@ class ObjectCentricTransport3DEnv(
             table_half_extents=self.config.table_half_extents,
             box_half_extents=self.config.box_half_extents,
             object_ids=set(self._cubes.values()),
-            lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2),
-            ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2),
+            lb=(
+                self.config.x_lb,
+                self.config.y_lb,
+                self.config.block_size / 2 + self.config.floor_z,
+            ),
+            ub=(
+                self.config.x_ub,
+                self.config.y_ub,
+                self.config.block_size / 2 + self.config.floor_z,
+            ),
             physics_client_id=self.physics_client_id,
             rng=self.np_random,
-            other_collision_ids={self.robot.base.robot_id},
+            other_collision_ids=box_ids | {self.robot.base.robot_id},
         )
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
@@ -338,19 +352,27 @@ class ObjectCentricTransport3DEnv(
             return self._cubes[object_name]
         if object_name.startswith("box"):
             return self._boxes[object_name]
+        if object_name.startswith("floor"):
+            assert self.config.floor_included_as_object
+            return self.floor_id
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
         collision_ids = (
             {self.table_id} | set(self._cubes.values()) | set(self._boxes.values())
         )
+        if self.config.floor_included_as_object:
+            collision_ids.add(self.floor_id)
         return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys()) | set(self._boxes.keys())
 
     def _get_surface_object_names(self) -> set[str]:
-        return {"table", "box0"}
+        surfaces = {"table", "box0"}
+        if self.config.floor_included_as_object:
+            surfaces.add("floor")
+        return surfaces
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         if object_name.startswith("cube"):

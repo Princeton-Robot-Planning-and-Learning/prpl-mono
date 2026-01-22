@@ -95,7 +95,7 @@ def test_tidybot_cupboard_constrained_fitting_goals():
         scene_type="cupboard",
         num_objects=12,
         task_config_path=str(
-            tasks_root / "tidybot-cupboard-o12-ConstrainedFitting.json"
+            tasks_root / "sort" / "tidybot-lab6-o12-ConstrainedFitting.json"
         ),
     )
 
@@ -444,7 +444,7 @@ def test_tidybot3d_cupboard_mimiclabs_with_video():
     """Test MimicLabs scene with ConstrainedFitting task and video recording."""
     prbench.register_all_environments()
     env = prbench.make(
-        "prbench/TidyBot3D-cupboard-o12-ConstrainedFitting-v0",
+        "prbench/TidyBot3D-sort-lab6-o12-ConstrainedFitting-v0",
         render_mode="rgb_array",
         scene_bg=True,  # Use default mimiclabs scene (lab5 for base_motion)
         scene_render_camera="overview",
@@ -466,3 +466,80 @@ def test_tidybot3d_cupboard_mimiclabs_with_video():
             obs, _ = env.reset(seed=456)
 
     env.close()
+
+
+def test_cupboard_custom_rgba_colors():
+    """Test that Cupboard RGBA colors can be customized via fixture_config."""
+    # Custom RGBA colors
+    custom_rgba_shelf = [0.1, 0.2, 0.3, 1.0]
+    custom_rgba_leg = [0.2, 0.3, 0.4, 1.0]
+    custom_rgba_partition = [0.3, 0.4, 0.5, 1.0]
+    custom_rgba_panel = [0.4, 0.5, 0.6, 1.0]
+    custom_rgba_drawer_bottom = [0.5, 0.6, 0.7, 0.8]
+    custom_rgba_drawer_wall = [0.6, 0.7, 0.8, 0.9]
+    custom_rgba_drawer_face = [0.7, 0.8, 0.9, 1.0]
+    custom_rgba_drawer_handle = [0.8, 0.8, 0.8, 1.0]
+
+    # Create cupboard with custom colors
+    cupboard_config = {
+        "length": 0.6,
+        "depth": 0.3,
+        "shelf_heights": [0.1, 0.2],
+        "shelf_partitions": [[], []],
+        "shelf_drawers": [[False], [False]],
+        "side_and_back_open": False,
+        "rgba_cupboard_shelf": custom_rgba_shelf,
+        "rgba_cupboard_leg": custom_rgba_leg,
+        "rgba_cupboard_partition": custom_rgba_partition,
+        "rgba_cupboard_panel": custom_rgba_panel,
+        "rgba_drawer_bottom": custom_rgba_drawer_bottom,
+        "rgba_drawer_wall": custom_rgba_drawer_wall,
+        "rgba_drawer_face": custom_rgba_drawer_face,
+        "rgba_drawer_handle": custom_rgba_drawer_handle,
+    }
+
+    cupboard = Cupboard(
+        name="test_cupboard_rgba",
+        fixture_config=cupboard_config,
+        position=[0.0, 0.0, 0.0],
+        yaw=0.0,
+    )
+
+    # Verify that the custom colors were set
+    assert cupboard.rgba_cupboard_shelf == custom_rgba_shelf
+    assert cupboard.rgba_cupboard_leg == custom_rgba_leg
+    assert cupboard.rgba_cupboard_partition == custom_rgba_partition
+    assert cupboard.rgba_cupboard_panel == custom_rgba_panel
+    assert cupboard.rgba_drawer_bottom == custom_rgba_drawer_bottom
+    assert cupboard.rgba_drawer_wall == custom_rgba_drawer_wall
+    assert cupboard.rgba_drawer_face == custom_rgba_drawer_face
+    assert cupboard.rgba_drawer_handle == custom_rgba_drawer_handle
+
+
+def test_cupboard_default_rgba_colors():
+    """Test that Cupboard uses default RGBA colors when not specified in config."""
+    cupboard_config = {
+        "length": 0.6,
+        "depth": 0.3,
+        "shelf_heights": [0.1, 0.2],
+        "shelf_partitions": [[], []],
+        "shelf_drawers": [[False], [False]],
+        "side_and_back_open": True,  # Open so we have legs
+    }
+
+    cupboard = Cupboard(
+        name="test_cupboard_default",
+        fixture_config=cupboard_config,
+        position=[0.0, 0.0, 0.0],
+        yaw=0.0,
+    )
+
+    # Verify that the default colors are used
+    assert cupboard.rgba_cupboard_shelf == Cupboard.default_rgba_cupboard_shelf
+    assert cupboard.rgba_cupboard_leg == Cupboard.default_rgba_cupboard_leg
+    assert cupboard.rgba_cupboard_partition == Cupboard.default_rgba_cupboard_partition
+    assert cupboard.rgba_cupboard_panel == Cupboard.default_rgba_cupboard_panel
+    assert cupboard.rgba_drawer_bottom == Cupboard.default_rgba_drawer_bottom
+    assert cupboard.rgba_drawer_wall == Cupboard.default_rgba_drawer_wall
+    assert cupboard.rgba_drawer_face == Cupboard.default_rgba_drawer_face
+    assert cupboard.rgba_drawer_handle == Cupboard.default_rgba_drawer_handle

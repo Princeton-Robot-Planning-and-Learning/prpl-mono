@@ -27,7 +27,7 @@ def test_packing3d_env_basic():
     for num_parts in [1, 2, 3]:
         env = Packing3DEnv(
             num_parts=num_parts, use_gui=False, realistic_bg=False
-        )  # set use_gui=True to debug
+        )  # set use_gui=False to debug
         obs, _ = env.reset(seed=123)
         assert isinstance(obs, np.ndarray)
 

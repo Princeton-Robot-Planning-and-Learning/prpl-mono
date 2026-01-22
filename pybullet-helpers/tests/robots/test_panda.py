@@ -37,7 +37,7 @@ def test_panda_pybullet_robot_initial_configuration(panda):
 def test_panda_pybullet_robot_links(panda):
     """Test link utilities on PandaPyBulletRobot."""
     # Tool link is last link in Panda URDF
-    num_links = len(panda.joint_infos)
+    num_links = len(panda._joint_infos)  # pylint: disable=protected-access
     assert panda.tool_link_id == num_links - 1
     assert panda.tool_link_name == "tool_link"
 
@@ -57,7 +57,8 @@ def test_panda_pybullet_robot_joints(panda):
 
     # Check joint infos match expected
     panda_joints = get_joints(panda.robot_id, panda.physics_client_id)
-    assert panda.joint_infos == get_joint_infos(
+    # pylint: disable-next=protected-access
+    assert panda._joint_infos == get_joint_infos(
         panda.robot_id, panda_joints, panda.physics_client_id
     )
 

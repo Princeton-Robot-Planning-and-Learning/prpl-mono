@@ -35,6 +35,9 @@ class Region:
         name: str,
         rgba: list[float] | None = None,
         site_element: ET.Element | None = None,
+        env: MujocoEnv | None = None,
+        parent_pos: NDArray[np.float32] | None = None,
+        parent_yaw: float = 0.0,
     ) -> None:
         """Initialize a Region.
 
@@ -42,109 +45,132 @@ class Region:
             name: Name of the region
             rgba: RGBA color for visualization
             site_element: MuJoCo site XML element representing this region
+            env: Optional MujocoEnv instance for getting absolute site position from
+                simulation
+            parent_pos: Position of the parent body [x, y, z] for coordinate
+                transformation.
+                        Used when sim is not available.
+            parent_yaw: Yaw angle of the parent body in radians. Used to rotate region
+                coordinates from parent-relative to world frame when sim unavailable.
         """
         self.name = name
         self.rgba = rgba if rgba is not None else [1.0, 0.0, 0.0, 0.0]
         self.site_element = site_element
+        self.env = env
+        self.parent_pos = (
+            parent_pos if parent_pos is not None else np.array([0.0, 0.0, 0.0])
+        )
+        self.parent_yaw = parent_yaw
 
     @property
     def bbox(self) -> list[float]:
-        """Compute bounding box from site element.
+        """Compute bounding box in world coordinates.
+
+        First tries to get the site position from simulation. If unavailable,
+        translates the relative bounding box by parent_pos and rotates by parent_yaw.
 
         Returns:
-            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max] in world
+            coordinates
         """
         if self.site_element is None:
             raise ValueError(
                 f"Cannot compute bbox for region '{self.name}' without site_element"
             )
 
-        # Get position and size from site element
-        pos_str = self.site_element.get("pos", "0 0 0")
+        # Get size from site element
         size_str = self.site_element.get("size", "0 0 0")
+        size = np.array([float(v) for v in size_str.split()])
 
-        pos = [float(v) for v in pos_str.split()]
-        size = [float(v) for v in size_str.split()]
+        # Try to get absolute position from simulation first
+        if (
+            self.env is not None
+            and hasattr(self.env, "sim")
+            and self.env.sim is not None
+        ):
+            site_name = self.site_element.get("name")
+            if site_name is not None:
+                try:
+                    pos = self.env.sim.data.get_site_xpos(site_name)
+                    # Compute bbox around the simulated position
+                    x_min = pos[0] - size[0]
+                    y_min = pos[1] - size[1]
+                    z_min = pos[2] - size[2]
+                    x_max = pos[0] + size[0]
+                    y_max = pos[1] + size[1]
+                    z_max = pos[2] + size[2]
+                    return [x_min, y_min, z_min, x_max, y_max, z_max]
+                except ValueError:
+                    # Fall through to XML-based computation
+                    pass
 
-        # For box sites, size is half-extents
-        x_min = pos[0] - size[0]
-        y_min = pos[1] - size[1]
-        z_min = pos[2] - size[2]
-        x_max = pos[0] + size[0]
-        y_max = pos[1] + size[1]
-        z_max = pos[2] + size[2]
+        # Use XML-based computation with parent_pos and parent_yaw
+        # Get site position from XML
+        pos_str = self.site_element.get("pos", "0 0 0")
+        relative_pos = np.array([float(v) for v in pos_str.split()])
 
-        return [x_min, y_min, z_min, x_max, y_max, z_max]
+        # Compute relative bounding box (site position +/- size)
+        relative_bbox = [
+            relative_pos[0] - size[0],  # x_min
+            relative_pos[1] - size[1],  # y_min
+            relative_pos[2] - size[2],  # z_min
+            relative_pos[0] + size[0],  # x_max
+            relative_pos[1] + size[1],  # y_max
+            relative_pos[2] + size[2],  # z_max
+        ]
+
+        # Translate bounding box by parent_pos
+        translated_bbox = utils.translate_bounding_box(relative_bbox, self.parent_pos)
+
+        # Rotate bounding box by parent_yaw around the center of the translated bbox
+        center_x = (translated_bbox[0] + translated_bbox[3]) / 2
+        center_y = (translated_bbox[1] + translated_bbox[4]) / 2
+        rotated_bbox = utils.rotate_bounding_box_2d(
+            translated_bbox, self.parent_yaw, (center_x, center_y)
+        )
+
+        return rotated_bbox
 
     def check_in_region(
         self,
         position: NDArray[np.float32],
-        parent_pos: NDArray[np.float32] | None = None,
-        sim: MujocoEnv | None = None,
-        site_name: str | None = None,
+        env: MujocoEnv | None = None,
     ) -> bool:
         """Check if a position is within this region's bounding box.
 
+        Since bbox always returns world coordinates (via simulation or transform),
+        we directly compare against the world-frame bounding box.
+
         Args:
             position: Position to check as [x, y, z] in world coordinates
-            parent_pos: Position of the parent body (for object-relative coordinates).
-                       If None, uses world coordinates directly.
-            sim: MujocoEnv instance for getting current site position from simulation.
-                 If provided with site_name, uses current site position instead of XML.
-            site_name: Name of the site in simulation. Used with sim to get current pose.
+            env: Optional MujocoEnv instance. If provided and region.env is None,
+                 temporarily uses this env for coordinate transformation.
 
         Returns:
             True if position is within the region, False otherwise
         """
-        # Get the site position: use sim if available, otherwise use XML
-        if (
-            sim is not None
-            and site_name is not None
-            and hasattr(sim, "sim")
-            and sim.sim is not None
-        ):
-            try:
-                site_pos = sim.sim.data.get_site_xpos(site_name)
-            except ValueError:
-                # Fallback to XML if site not found in sim
-                if self.site_element is not None:
-                    pos_str = self.site_element.get("pos", "0 0 0")
-                    pos_values = [float(v) for v in pos_str.split()]
-                    site_pos = np.array(pos_values)
-                else:
-                    x_min, y_min, z_min, x_max, y_max, z_max = self.bbox
-                    site_pos = np.array(
-                        [(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2]
-                    )
-        elif self.site_element is not None:
-            pos_str = self.site_element.get("pos", "0 0 0")
-            pos_values = [float(v) for v in pos_str.split()]
-            site_pos = np.array(pos_values)
-        else:
-            # Calculate from bounding box center
-            x_min, y_min, z_min, x_max, y_max, z_max = self.bbox
-            site_pos = np.array(
-                [(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2]
+        # Temporarily update env if provided and region.env is None
+        original_env = self.env
+        if env is not None and self.env is None:
+            self.env = env
+
+        try:
+            # Get the bounding box in world coordinates
+            bbox = self.bbox
+            x_min, y_min, z_min, x_max, y_max, z_max = bbox
+
+            # Check if position is within the bounds
+            return bool(
+                position[0] >= x_min
+                and position[0] <= x_max
+                and position[1] >= y_min
+                and position[1] <= y_max
+                and position[2] >= z_min
+                and position[2] <= z_max
             )
-
-        # Convert to relative coordinates if parent position is provided
-        check_pos = position.copy()
-        if parent_pos is not None:
-            check_pos = position - parent_pos
-
-        # Get the half-sizes from bbox or site
-        if self.site_element is not None:
-            size_str = self.site_element.get("size", "0 0 0")
-            half_sizes = np.array([float(v) for v in size_str.split()])
-        else:
-            x_min, y_min, z_min, x_max, y_max, z_max = self.bbox
-            half_sizes = np.array(
-                [(x_max - x_min) / 2, (y_max - y_min) / 2, (z_max - z_min) / 2]
-            )
-
-        # Check if position is within the bounds
-        site_rel_pos = check_pos - site_pos
-        return bool(np.all(np.abs(site_rel_pos) <= half_sizes))
+        finally:
+            # Restore original env
+            self.env = original_env
 
     def visualize_region(self) -> None:
         """Visualize this region (site already created, nothing to do)."""
@@ -274,8 +300,6 @@ class MujocoObject:
 
         # Create regions if defined
         self.region_objects: dict[str, list[Region]] = {}
-        if self.regions is not None:
-            self._create_regions()
 
         self.xml_element: ET.Element  # To be defined in subclasses
 
@@ -287,6 +311,9 @@ class MujocoObject:
         spans a small height above the object surface.
         """
         assert self.regions is not None, "Regions must be defined"
+        assert (
+            self.xml_element is not None
+        ), "XML element must be defined to create regions"
         placement_threshold = 0.01  # 1cm tolerance for placement
         # Note: we are currently hard-coding the z range for the bounding boxes
         # This could potentially be made configurable in the future.
@@ -330,17 +357,31 @@ class MujocoObject:
                 site.set("group", "0")
 
                 # Create Region object
-                site_name = f"{self.name}_{region_name}_region_{region_idx}"
+                # Get object position if environment is available
+                obj_pos = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+                obj_yaw = 0.0
+                if self.env is not None:
+                    try:
+                        obj_pos, obj_quat = self.env.get_joint_pos_quat(self.joint_name)
+                        obj_pos = np.array(obj_pos, dtype=np.float32)
+                        obj_yaw = utils.quat_to_yaw(obj_quat)
+                    except Exception:
+                        pass  # Use defaults if position can't be retrieved
+
+                site_name = site.get("name")
+                assert site_name is not None, "Site name must be set"
                 region = Region(
                     name=site_name,
                     rgba=rgba_values,
                     site_element=site,
+                    env=self.env,
+                    parent_pos=obj_pos,
+                    parent_yaw=obj_yaw,
                 )
                 region_list.append(region)
 
-                # Append site element to xml_element if it exists
-                if hasattr(self, "xml_element") and self.xml_element is not None:
-                    self.xml_element.append(site)
+                # Append site element to xml_element
+                self.xml_element.append(site)
 
             self.region_objects[region_name] = region_list
 
@@ -550,13 +591,10 @@ class MujocoObject:
         if region_name not in self.region_objects:
             raise ValueError(f"Region {region_name} not found in object regions")
 
-        # Get the object's current position
-        obj_pos = self.get_position()
-
         # Check if position is in any of the region objects
         region_list = self.region_objects[region_name]
         for region in region_list:
-            if region.check_in_region(position, obj_pos, self.env, region.name):
+            if region.check_in_region(position, self.env):
                 return True
 
         return False
@@ -810,11 +848,14 @@ class MujocoGround:
                 site.set("group", "0")
 
                 # Create Region object
-                site_name = f"{self.name}_{region_name}_region_{region_idx}"
+                site_name = site.get("name")
+                assert site_name is not None, "Site name must be set"
                 region = Region(
                     name=site_name,
                     rgba=rgba_values,
                     site_element=site,
+                    parent_pos=np.array(self.position, dtype=np.float32),
+                    parent_yaw=0.0,  # Ground doesn't rotate
                 )
                 region_list.append(region)
 
@@ -861,7 +902,7 @@ class MujocoGround:
                 f"[x_start, y_start, x_end, y_end], got {len(selected_range)}"
             )
 
-        (x_start, y_start, x_end, y_end) = selected_range  # type: ignore[misc]
+        x_start, y_start, x_end, y_end = selected_range  # type: ignore[misc]
 
         # Validate bounds
         if x_start > x_end:
