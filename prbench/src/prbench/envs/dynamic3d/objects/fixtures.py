@@ -1173,14 +1173,14 @@ class Cupboard(MujocoFixture):
             face_left = x_min - edge_thickness
         else:
             # Left side is at a partition, extend half partition thickness into it
-            face_left = x_min - partition_thickness / 2
+            face_left = x_min - (0.8 * partition_thickness / 2)
 
         if compartment_index == num_compartments - 1:
             # Right side is at the edge, extend by edge thickness into it
             face_right = x_max + edge_thickness
         else:
             # Right side is at a partition, extend half partition thickness into it
-            face_right = x_max + partition_thickness / 2
+            face_right = x_max + (0.8 * partition_thickness / 2)
 
         # Calculate face dimensions
         face_length = face_right - face_left
