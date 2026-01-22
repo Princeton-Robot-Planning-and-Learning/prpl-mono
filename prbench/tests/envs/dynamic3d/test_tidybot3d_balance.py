@@ -300,8 +300,10 @@ def test_tidybot3d_balance_unbalanced_blocks_creates_tilt():
     initial_tilt = seesaw.get_beam_tilt_angle_degrees()
 
     # Get seesaw position and dimensions
-    seesaw_pos, _ = env._robot_env.get_joint_pos_quat(  # pylint: disable=protected-access
-        seesaw.joint_name
+    seesaw_pos, _ = (
+        env._robot_env.get_joint_pos_quat(  # pylint: disable=protected-access
+            seesaw.joint_name
+        )
     )
     beam_half_length = seesaw.beam_length / 2
     beam_height = seesaw.pivot_height + seesaw.beam_clearance + seesaw.beam_thickness
