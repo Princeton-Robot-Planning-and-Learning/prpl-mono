@@ -584,8 +584,8 @@ def remap_kinematic_state_plan_to_constant_distance(
     max_distance: float = 0.1,
     distance_fn: Callable[[KinematicState, KinematicState], float] | None = None,
 ) -> list[KinematicState]:
-    """Re-interpolate a plan of KinematicState so that the points are separated
-    by a constant distance (bounded by `max_distance`)."""
+    """Re-interpolate a plan of KinematicState so that the points are separated by a
+    constant distance (bounded by `max_distance`)."""
 
     # 1) Prepare joint info for interpolation of the robot_joints.
     joint_infos = get_joint_infos(
@@ -598,8 +598,7 @@ def remap_kinematic_state_plan_to_constant_distance(
     ) -> KinematicState:
         """Interpolate the robot joints (and optionally the base pose).
 
-        For object poses and attachments, either interpolate or hold
-        them fixed.
+        For object poses and attachments, either interpolate or hold them fixed.
         """
         # Interpolate the robot joint positions.
         new_robot_joints = interpolate_joints(

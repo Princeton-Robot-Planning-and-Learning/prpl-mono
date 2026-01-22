@@ -175,6 +175,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         env_md = self._create_env_markdown_description()
         reward_md = self._create_reward_markdown_description()
         references_md = self._create_references_markdown_description()
+        variant_md = self._create_variant_markdown_description()
         # Update the metadata. Note that we need to define the render_modes in the class
         # rather than in the instance because gym.make() extracts render_modes from cls.
         self.metadata = self.metadata.copy()
@@ -185,6 +186,7 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
                 "action_space_description": act_md,
                 "reward_description": reward_md,
                 "references": references_md,
+                "variant_description": variant_md,
                 "render_fps": self._object_centric_env.metadata.get("render_fps", 20),
             }
         )
@@ -203,6 +205,12 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
     @abc.abstractmethod
     def _create_env_markdown_description(self) -> str:
         """Create a markdown description of the overall environment."""
+
+    def _create_variant_markdown_description(self) -> str:
+        """Create a markdown description of what differs between variations."""
+        # NOTE: this will be filled in gradually as we audit environments, and then we
+        # can remove it once all are finished.
+        return "Variant description not defined"
 
     @abc.abstractmethod
     def _create_reward_markdown_description(self) -> str:
@@ -232,6 +240,30 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, info
 
+    def reset_with_images(
+        self, *args, **kwargs
+    ) -> tuple[NDArray[Any], dict, dict[str, Any]]:
+        """Reset the environment and return object-centric observation and raw
+        observation."""
+        super().reset(*args, **kwargs)  # necessary to reset RNG if seed is given
+        if (kwargs.get("options") is not None) and (
+            "init_state" in kwargs.get("options", {})
+        ):
+            # NOTE: From user perspective, they might just pass in a state
+            # that is similar to the observation array for resetting,
+            # not an ObjectCentricState.
+            if not isinstance(kwargs["options"]["init_state"], ObjectCentricState):
+                assert isinstance(kwargs["options"]["init_state"], np.ndarray)
+                assert isinstance(self.observation_space, ObjectCentricBoxSpace)
+                obj_centric_state = self.observation_space.devectorize(
+                    kwargs["options"]["init_state"]
+                )
+                kwargs["options"]["init_state"] = obj_centric_state
+        obs, info, raw_obs = self._object_centric_env.reset_with_images(*args, **kwargs)  # type: ignore # pylint: disable=line-too-long
+        assert isinstance(self.observation_space, ObjectCentricBoxSpace)
+        vec_obs = self.observation_space.vectorize(obs)
+        return vec_obs, info, raw_obs
+
     def step(self, *args, **kwargs) -> tuple[NDArray[Any], float, bool, bool, dict]:
         obs, reward, terminated, truncated, done = self._object_centric_env.step(
             *args, **kwargs
@@ -239,6 +271,18 @@ class ConstantObjectPRBenchEnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         assert isinstance(self.observation_space, ObjectCentricBoxSpace)
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, reward, terminated, truncated, done
+
+    def step_with_images(
+        self, *args, **kwargs
+    ) -> tuple[NDArray[Any], float, bool, bool, dict, dict[str, Any]]:
+        """Step the environment and return object-centric observation and raw
+        observation."""
+        obs, reward, terminated, truncated, done, raw_obs = (
+            self._object_centric_env.step_with_images(*args, **kwargs)  # type: ignore
+        )
+        assert isinstance(self.observation_space, ObjectCentricBoxSpace)
+        vec_obs = self.observation_space.vectorize(obs)
+        return vec_obs, reward, terminated, truncated, done, raw_obs
 
     def render(self):
         return self._object_centric_env.render()

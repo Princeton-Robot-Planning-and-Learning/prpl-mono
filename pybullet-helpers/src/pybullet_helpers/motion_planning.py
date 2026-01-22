@@ -12,6 +12,7 @@ from prpl_utils.motion_planning import RRT, BiRRT
 
 from pybullet_helpers.geometry import (
     Pose,
+    SE2Pose,
     get_pose,
     iter_between_poses,
     multiply_poses,
@@ -34,6 +35,7 @@ from pybullet_helpers.joint import (
     iter_between_joint_positions,
 )
 from pybullet_helpers.math_utils import geometric_sequence
+from pybullet_helpers.robots.mobile import SingleArmPyBulletMobileManipulator
 from pybullet_helpers.robots.single_arm import (
     FingeredSingleArmPyBulletRobot,
     SingleArmPyBulletRobot,
@@ -74,14 +76,13 @@ def run_motion_planning(
 
     Note that this function changes the state of the robot.
 
-    If additional_state_constraint_fn is provided, the collision
-    checking is augmented so that additional_state_constraint_fn() =
-    False behaves as if a collision check failed. For example, if you
-    want to make sure that a held object is not rotated beyond some
-    threshold, you could use additional_state_constraint_fn to enforce
-    that. The additional state constraint function can assume that the
-    robot is already in the given joint positions because it will be
-    called right after collision checking, which sets the robot state.
+    If additional_state_constraint_fn is provided, the collision checking is augmented
+    so that additional_state_constraint_fn() = False behaves as if a collision check
+    failed. For example, if you want to make sure that a held object is not rotated
+    beyond some threshold, you could use additional_state_constraint_fn to enforce that.
+    The additional state constraint function can assume that the robot is already in the
+    given joint positions because it will be called right after collision checking,
+    which sets the robot state.
 
     If sampling_fn is not provided, defaults to uniform joint space.
     """
@@ -191,14 +192,15 @@ def run_smooth_motion_planning_to_pose(
     max_time: float = np.inf,
     max_candidate_plans: int | None = None,
     joint_geometric_scalar: float = 0.9,
+    birrt_extend_num_interp: int = 10,
     birrt_num_attempts: int = 10,
     birrt_num_iters: int = 100,
     sampling_fn: Callable[[JointPositions], JointPositions] | None = None,
     distance_threshold: float = 1e-6,
 ) -> Optional[list[JointPositions]]:
-    """A naive smooth motion planner that reruns motion planning multiple times
-    and then picks the "smoothest" result according to a geometric weighting of
-    the joints (so the lowest joint should move the least)."""
+    """A naive smooth motion planner that reruns motion planning multiple times and then
+    picks the "smoothest" result according to a geometric weighting of the joints (so
+    the lowest joint should move the least)."""
     assert (
         not np.isinf(max_time) or max_candidate_plans is not None
     ), "Must specify either max_time or max_candidate_plans"
@@ -263,6 +265,7 @@ def run_smooth_motion_planning_to_pose(
                 base_link_to_held_obj=base_link_to_held_obj,
                 sampling_fn=sampling_fn,
                 hyperparameters=MotionPlanningHyperparameters(
+                    birrt_extend_num_interp=birrt_extend_num_interp,
                     birrt_num_attempts=birrt_num_attempts,
                     birrt_num_iters=birrt_num_iters,
                 ),
@@ -293,8 +296,8 @@ def smoothly_follow_end_effector_path(
     allow_skipping_intermediates: bool = True,
     seed: int = 0,
 ) -> list[JointPositions]:
-    """Find a smooth (short) joint trajectory that follows the given end
-    effector path while avoiding collisions.
+    """Find a smooth (short) joint trajectory that follows the given end effector path
+    while avoiding collisions.
 
     NOTE: if allow_skipping_intermediates is True, then some intermediate
     waypoints may be skipped if inverse kinematics fails.
@@ -433,8 +436,8 @@ def remap_joint_position_plan_to_constant_distance(
     max_distance: float = 0.1,
     distance_fn: Callable[[JointPositions, JointPositions], float] | None = None,
 ) -> list[JointPositions]:
-    """Re-interpolate a joint position plan so that it has constant distance
-    with a max distance specified."""
+    """Re-interpolate a joint position plan so that it has constant distance with a max
+    distance specified."""
 
     joint_infos = get_joint_infos(
         robot.robot_id, robot.arm_joints, robot.physics_client_id
@@ -469,6 +472,50 @@ def remap_joint_position_plan_to_constant_distance(
     return remapped_plan
 
 
+def remap_se2_pose_plan_to_constant_distance(
+    plan: list[SE2Pose],
+    max_distance: float,
+) -> list[SE2Pose]:
+    """Re-interpolate an SE2Pose plan to have constant distance between steps.
+
+    Args:
+        plan: List of SE2Pose waypoints.
+        max_distance: Maximum allowed distance between consecutive waypoints,
+            measured as the maximum of |delta_x|, |delta_y|, |delta_rot|.
+
+    Returns:
+        A new list of SE2Pose waypoints resampled at constant distance
+        intervals (at most max_distance apart).
+    """
+    if len(plan) < 2:
+        return plan
+
+    def _interpolate_fn(p1: SE2Pose, p2: SE2Pose, t: float) -> SE2Pose:
+        return SE2Pose(
+            p1.x + t * (p2.x - p1.x),
+            p1.y + t * (p2.y - p1.y),
+            p1.rot + t * (p2.rot - p1.rot),
+        )
+
+    def _distance_fn(p1: SE2Pose, p2: SE2Pose) -> float:
+        return max(abs(p2.x - p1.x), abs(p2.y - p1.y), abs(p2.rot - p1.rot))
+
+    distances = [_distance_fn(p1, p2) for p1, p2 in zip(plan[:-1], plan[1:])]
+
+    segments = [
+        TrajectorySegment(
+            plan[i],
+            plan[i + 1],
+            distances[i],
+            interpolate_fn=_interpolate_fn,
+            distance_fn=_distance_fn,
+        )
+        for i in range(len(plan) - 1)
+    ]
+    continuous_trajectory = concatenate_trajectories(segments)
+    return list(iter_traj_with_max_distance(continuous_trajectory, max_distance))
+
+
 def run_base_motion_planning(
     robot: SingleArmPyBulletRobot,
     initial_pose: Pose,
@@ -499,6 +546,7 @@ def run_base_motion_planning(
     # The joint positions and z position of the robot won't change.
     base_z = robot.get_base_pose().position[2]
     joint_state = robot.get_joint_positions()
+    assert np.isclose(base_z, initial_pose.position[2])
 
     def _set_robot(pt: Pose) -> None:
         robot.set_base(pt)
@@ -573,3 +621,60 @@ def run_base_motion_planning(
     )
 
     return rrt.query_to_goal_fn(initial_pose, goal)
+
+
+def run_single_arm_mobile_base_motion_planning(
+    robot: SingleArmPyBulletMobileManipulator,
+    initial_pose: SE2Pose,
+    goal: SE2Pose | Callable[[SE2Pose], bool],
+    collision_bodies: Collection[int],
+    seed: int,
+    held_object: int | None = None,
+    base_link_to_held_obj: Pose | None = None,
+    hyperparameters: MotionPlanningHyperparameters | None = None,
+) -> Optional[list[SE2Pose]]:
+    """Run motion planning for a SingleArmPyBulletMobileManipulator()."""
+    # Convert mobile base SE2 poses to arm base SE3 poses
+    initial_se3_pose = multiply_poses(
+        initial_pose.to_se3(robot.base.z), robot.base_to_arm_transform
+    )
+    se3_goal: Pose | Callable[[Pose], bool]
+    if isinstance(goal, SE2Pose):
+        se3_goal = multiply_poses(
+            goal.to_se3(robot.base.z), robot.base_to_arm_transform
+        )
+    else:
+
+        def se3_goal(se3_pose: Pose) -> bool:
+            """Goal check in SE3."""
+            # Convert arm base SE3 pose back to mobile base SE2 pose
+            base_se3_pose = multiply_poses(
+                se3_pose, robot.base_to_arm_transform.invert()
+            )
+            return goal(base_se3_pose.to_se2())
+
+    pos_lower_bounds = (robot.base.pose_lower_bound.x, robot.base.pose_lower_bound.y)
+    pos_upper_bounds = (robot.base.pose_upper_bound.x, robot.base.pose_upper_bound.y)
+
+    se3_plan = run_base_motion_planning(
+        robot.arm,
+        initial_pose=initial_se3_pose,
+        goal=se3_goal,
+        position_lower_bounds=pos_lower_bounds,
+        position_upper_bounds=pos_upper_bounds,
+        collision_bodies=collision_bodies,
+        seed=seed,
+        physics_client_id=robot.physics_client_id,
+        held_object=held_object,
+        base_link_to_held_obj=base_link_to_held_obj,
+        platform=robot.base.robot_id,
+        hyperparameters=hyperparameters,
+    )
+    if se3_plan is None:
+        return None
+
+    # Convert arm base SE3 poses back to mobile base SE2 poses
+    return [
+        multiply_poses(se3_pose, robot.base_to_arm_transform.invert()).to_se2()
+        for se3_pose in se3_plan
+    ]

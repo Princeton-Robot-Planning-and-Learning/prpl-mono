@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from typing import Type as TypingType
 
 import numpy as np
 import pybullet as p
-from pybullet_helpers.geometry import Pose, set_pose
+from pybullet_helpers.geometry import Pose, SE2Pose, set_pose
 from pybullet_helpers.inverse_kinematics import check_body_collisions
 from pybullet_helpers.utils import create_pybullet_block
 from relational_structs import Object, ObjectCentricState
@@ -32,10 +33,17 @@ from prbench.envs.utils import PURPLE
 class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Obstruction3DEnv()."""
 
+    # Robot.
+    robot_base_home_pose: SE2Pose = SE2Pose(-0.12, 0, 0)
+    robot_base_z: float = -0.4
+
     # Table.
     table_pose: Pose = Pose((0.3, 0.0, -0.175))
-    table_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
+    table_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     table_half_extents: tuple[float, float, float] = (0.2, 0.4, 0.25)
+    table_texture: Path = (
+        Path(__file__).parent / "assets" / "use_textures" / "light_wood_v3.png"
+    )
 
     # Target region.
     target_region_half_extents_lb: tuple[float, float, float] = (0.02, 0.02, 0.005)
@@ -59,92 +67,11 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
         return {
-            "camera_target": self.robot_base_pose.position,
+            "camera_target": (0, 0, 0),
             "camera_yaw": 90,
             "camera_distance": 1.0,
             "camera_pitch": -20,
         }
-
-    def _sample_block_on_block_pose(
-        self,
-        top_block_half_extents: tuple[float, float, float],
-        bottom_block_half_extents: tuple[float, float, float],
-        bottom_block_pose: Pose,
-        rng: np.random.Generator,
-    ) -> Pose:
-        """Sample one block pose on top of another one, with no hanging allowed."""
-        assert np.allclose(
-            bottom_block_pose.orientation, (0, 0, 0, 1)
-        ), "Not implemented"
-
-        lb = (
-            bottom_block_pose.position[0]
-            - bottom_block_half_extents[0]
-            + top_block_half_extents[0],
-            bottom_block_pose.position[1]
-            - bottom_block_half_extents[1]
-            + top_block_half_extents[1],
-            bottom_block_pose.position[2]
-            + bottom_block_half_extents[2]
-            + top_block_half_extents[2],
-        )
-
-        ub = (
-            bottom_block_pose.position[0]
-            + bottom_block_half_extents[0]
-            - top_block_half_extents[0],
-            bottom_block_pose.position[1]
-            + bottom_block_half_extents[1]
-            - top_block_half_extents[1],
-            bottom_block_pose.position[2]
-            + bottom_block_half_extents[2]
-            + top_block_half_extents[2],
-        )
-
-        x, y, z = rng.uniform(lb, ub)
-
-        return Pose((x, y, z))
-
-    def _sample_block_on_block_pose_with_overhang(
-        self,
-        top_block_half_extents: tuple[float, float, float],
-        bottom_block_half_extents: tuple[float, float, float],
-        bottom_block_pose: Pose,
-        rng: np.random.Generator,
-        allowed_overhang_fraction: float = 0.25,
-    ) -> Pose:
-        """Sample one block pose on top of another one, where hanging is allowed."""
-        assert np.allclose(
-            bottom_block_pose.orientation, (0, 0, 0, 1)
-        ), "Not implemented"
-
-        lb = (
-            bottom_block_pose.position[0]
-            - bottom_block_half_extents[0]
-            - top_block_half_extents[0] * allowed_overhang_fraction,
-            bottom_block_pose.position[1]
-            - bottom_block_half_extents[1]
-            - top_block_half_extents[1] * allowed_overhang_fraction,
-            bottom_block_pose.position[2]
-            + bottom_block_half_extents[2]
-            + top_block_half_extents[2],
-        )
-
-        ub = (
-            bottom_block_pose.position[0]
-            + bottom_block_half_extents[0]
-            + top_block_half_extents[0] * allowed_overhang_fraction,
-            bottom_block_pose.position[1]
-            + bottom_block_half_extents[1]
-            + top_block_half_extents[1] * allowed_overhang_fraction,
-            bottom_block_pose.position[2]
-            + bottom_block_half_extents[2]
-            + top_block_half_extents[2],
-        )
-
-        x, y, z = rng.uniform(lb, ub)
-
-        return Pose((x, y, z))
 
     def sample_block_on_table_pose(
         self, block_half_extents: tuple[float, float, float], rng: np.random.Generator
@@ -187,50 +114,25 @@ class Obstruction3DObjectCentricState(Geom3DObjectCentricState):
     Adds convenience methods on top of Geom3DObjectCentricState().
     """
 
-    def get_cuboid_half_extents(self, name: str) -> tuple[float, float, float]:
-        """The half extents of the cuboid."""
-        obj = self.get_object_from_name(name)
-        return (
-            self.get(obj, "half_extent_x"),
-            self.get(obj, "half_extent_y"),
-            self.get(obj, "half_extent_z"),
-        )
-
-    def get_cuboid_pose(self, name: str) -> Pose:
-        """The pose of the cuboid."""
-        obj = self.get_object_from_name(name)
-        position = (
-            self.get(obj, "pose_x"),
-            self.get(obj, "pose_y"),
-            self.get(obj, "pose_z"),
-        )
-        orientation = (
-            self.get(obj, "pose_qx"),
-            self.get(obj, "pose_qy"),
-            self.get(obj, "pose_qz"),
-            self.get(obj, "pose_qw"),
-        )
-        return Pose(position, orientation)
-
     @property
     def target_region_half_extents(self) -> tuple[float, float, float]:
         """The half extents of the target region, assuming the name "target_region"."""
-        return self.get_cuboid_half_extents("target_region")
+        return self.get_object_half_extents("target_region")
 
     @property
     def target_block_half_extents(self) -> tuple[float, float, float]:
         """The half extents of the target block, assuming the name "target_block"."""
-        return self.get_cuboid_half_extents("target_block")
+        return self.get_object_half_extents("target_block")
 
     @property
     def target_region_pose(self) -> Pose:
         """The pose of the target region, assuming the name "target_region"."""
-        return self.get_cuboid_pose("target_region")
+        return self.get_object_pose("target_region")
 
     @property
     def target_block_pose(self) -> Pose:
         """The pose of the target block, assuming the name "target_block"."""
-        return self.get_cuboid_pose("target_block")
+        return self.get_object_pose("target_block")
 
 
 class ObjectCentricObstruction3DEnv(
@@ -252,6 +154,15 @@ class ObjectCentricObstruction3DEnv(
             self.config.table_rgba,
             half_extents=self.config.table_half_extents,
             physics_client_id=self.physics_client_id,
+        )
+        table_texture_id = p.loadTexture(
+            str(self.config.table_texture), self.physics_client_id
+        )
+        p.changeVisualShape(
+            self.table_id,
+            -1,
+            textureUniqueId=table_texture_id,
+            physicsClientId=self.physics_client_id,
         )
         set_pose(self.table_id, self.config.table_pose, self.physics_client_id)
 
@@ -417,8 +328,8 @@ class ObjectCentricObstruction3DEnv(
         # Handle obstructions.
         for obstruction_idx in range(self._num_obstructions):
             obstruction_name = f"obstruction{obstruction_idx}"
-            obstruction_half_extents = obs.get_cuboid_half_extents(obstruction_name)
-            obstruction_pose = obs.get_cuboid_pose(obstruction_name)
+            obstruction_half_extents = obs.get_object_half_extents(obstruction_name)
+            obstruction_pose = obs.get_object_pose(obstruction_name)
             # Check if the block needs to be recreated.
             need_recreate = False
             need_destroy = False
@@ -463,9 +374,12 @@ class ObjectCentricObstruction3DEnv(
     def _get_collision_object_ids(self) -> set[int]:
         assert self._target_block_id is not None
         assert self._target_region_id is not None
-        return {self._target_block_id, self._target_region_id, self.table_id} | set(
-            self._obstruction_ids.values()
-        )
+        collision_ids = {
+            self._target_block_id,
+            self._target_region_id,
+            self.table_id,
+        } | set(self._obstruction_ids.values())
+        return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return {"target_block"} | set(self._obstruction_ids)
@@ -500,7 +414,7 @@ class ObjectCentricObstruction3DEnv(
         assert isinstance(state, Obstruction3DObjectCentricState)
         return state
 
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         if self._grasped_object is not None:
             return False
         assert self._target_block_id is not None
@@ -543,27 +457,9 @@ Obstructions have random dimensions between {config.obstruction_half_extents_lb}
 The task requires planning to grasp and move obstructions out of the way, then place the target block on the target region.
 """
 
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
+    def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        config = self._object_centric_env.config
-        assert isinstance(config, Obstruction3DEnvConfig)
-        return f"""Observations consist of:
-- **joint_positions**: Current joint positions of the {len(config.initial_joints)}-DOF robot arm (list of floats)
-- **grasped_object**: Name of currently grasped object, or None if not grasping anything (string or None)
-- **grasped_object_transform**: Relative transform of grasped object to gripper, or None if not grasping (transform or None)
-- **target_region**: State of the target region including:
-  - pose: 3D position and orientation (Pose object)
-  - geometry: Half-extents (width/2, height/2, depth/2) of the region (tuple of 3 floats)
-- **target_block**: State of the target block including:
-  - pose: 3D position and orientation (Pose object)
-  - geometry: Half-extents of the block (tuple of 3 floats)
-- **obstructions**: Dictionary of obstruction states, keyed by obstruction name (e.g., "obstruction0"), each containing:
-  - pose: 3D position and orientation (Pose object)
-  - geometry: Half-extents of the obstruction (tuple of 3 floats)
-
-The observation is returned as an Obstruction3DState dataclass with these fields.
-"""
+        return "The number of obstructions differs between environment variants. For example, Obstruction3D-o0 has no obstructions, while Obstruction3D-o4 has 4 obstructions."
 
     def _create_action_space_markdown_description(self) -> str:
         """Create action space description."""

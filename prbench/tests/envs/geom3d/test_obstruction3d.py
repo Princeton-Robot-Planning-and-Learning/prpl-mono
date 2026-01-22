@@ -1,10 +1,11 @@
 """Tests for obstruction3d.py."""
 
 import numpy as np
-from conftest import MAKE_VIDEOS
+import pytest
 from gymnasium.wrappers import RecordVideo
 from prpl_utils.utils import wrap_angle
 from pybullet_helpers.geometry import Pose, multiply_poses
+from pybullet_helpers.inverse_kinematics import inverse_kinematics
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
@@ -16,14 +17,31 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench.envs.geom3d.obstruction3d import (
     ObjectCentricObstruction3DEnv,
     Obstruction3DEnv,
+    Obstruction3DEnvConfig,
     Obstruction3DObjectCentricState,
 )
+from tests.conftest import MAKE_VIDEOS
 
 
-def test_obstruction3d_env():
+@pytest.fixture(scope="module")
+def env():
+    """Create a shared environment for all tests in this module."""
+    config = Obstruction3DEnvConfig(target_block_height=0.01)
+    environment = Obstruction3DEnv(
+        num_obstructions=0,
+        config=config,
+        use_gui=False,
+        render_mode="rgb_array",
+        realistic_bg=False,
+    )
+    if MAKE_VIDEOS:
+        environment = RecordVideo(environment, "unit_test_videos")
+    yield environment
+    environment.close()
+
+
+def test_obstruction3d_env(env):  # pylint: disable=redefined-outer-name
     """Tests for basic methods in obstruction3d env."""
-
-    env = Obstruction3DEnv(use_gui=False)  # set use_gui=True to debug
     obs, _ = env.reset(seed=123)
     assert isinstance(obs, np.ndarray)
 
@@ -35,17 +53,15 @@ def test_obstruction3d_env():
     # Uncomment to debug.
     # import pybullet as p
     # while True:
-    #     p.getMouseEvents(env.physics_client_id)
+    #     p.getMouseEvents(env.unwrapped._object_centric_env.physics_client_id)
 
 
-def test_pick_place_no_obstructions():
+def test_pick_place_no_obstructions(env):  # pylint: disable=redefined-outer-name
     """Test that picking and placing succeeds when there are no obstructions."""
-    # Create the real environment.
-    env = Obstruction3DEnv(num_obstructions=0, use_gui=False, render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
-    config = env._object_centric_env.config  # pylint: disable=protected-access
-    if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos")
+    config = (
+        env.unwrapped._object_centric_env.config  # pylint: disable=protected-access
+    )
 
     vec_obs, _ = env.reset(seed=123)
     # NOTE: we should soon make this smoother.
@@ -53,7 +69,9 @@ def test_pick_place_no_obstructions():
     obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricObstruction3DEnv(num_obstructions=0, config=config)
+    sim = ObjectCentricObstruction3DEnv(
+        num_obstructions=0, config=config, realistic_bg=False
+    )
     sim.set_state(obs)
 
     # Run motion planning.
@@ -64,11 +82,11 @@ def test_pick_place_no_obstructions():
 
     # First, move to pre-grasp pose (top-down).
     x, y, z = obs.target_block_pose.position
-    dz = 0.025
+    dz = 0.035
     pre_grasp_pose = Pose.from_rpy((x, y, z + dz), (np.pi, 0, np.pi / 2))
     joint_plan = run_smooth_motion_planning_to_pose(
         pre_grasp_pose,
-        sim.robot,
+        sim.robot.arm,
         collision_ids=sim._get_collision_object_ids(),  # pylint: disable=protected-access
         end_effector_frame_to_plan_frame=Pose.identity(),
         seed=123,
@@ -78,13 +96,13 @@ def test_pick_place_no_obstructions():
 
     # Make sure we stay below the required max_action_mag by a fair amount.
     joint_plan = remap_joint_position_plan_to_constant_distance(
-        joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+        joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
 
     for target_joints in joint_plan[1:]:
         delta = np.subtract(target_joints[:7], obs.joint_positions)
         delta_lst = [wrap_angle(a) for a in delta]
-        action_lst = delta_lst + [0.0]
+        action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
         vec_obs, _, _, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.
@@ -92,7 +110,7 @@ def test_pick_place_no_obstructions():
         obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Close the gripper to grasp.
-    action = np.array([0.0] * 7 + [-1.0], dtype=np.float32)
+    action = np.array([0.0] * 3 + [0.0] * 7 + [-1.0], dtype=np.float32)
     vec_obs, _, _, _, _ = env.step(action)
     # NOTE: we should soon make this smoother.
     oc_obs = env.observation_space.devectorize(vec_obs)
@@ -103,7 +121,7 @@ def test_pick_place_no_obstructions():
 
     # Move up slightly to break contact with the table.
     sim.set_state(obs)
-    current_end_effector_pose = sim.robot.get_end_effector_pose()
+    current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
     post_grasp_pose = Pose(
         (
             current_end_effector_pose.position[0],
@@ -112,24 +130,24 @@ def test_pick_place_no_obstructions():
         ),
         current_end_effector_pose.orientation,
     )
-    joint_distance_fn = create_joint_distance_fn(sim.robot)
+    joint_distance_fn = create_joint_distance_fn(sim.robot.arm)
     joint_plan = smoothly_follow_end_effector_path(
-        sim.robot,
+        sim.robot.arm,
         [current_end_effector_pose, post_grasp_pose],
-        sim.robot.get_joint_positions(),
+        sim.robot.arm.get_joint_positions(),
         collision_ids=set(),
         joint_distance_fn=joint_distance_fn,
         max_smoothing_iters_per_step=max_candidate_plans,
     )
 
     joint_plan = remap_joint_position_plan_to_constant_distance(
-        joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+        joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
 
     for target_joints in joint_plan[1:]:
         delta = np.subtract(target_joints[:7], obs.joint_positions)
         delta_lst = [wrap_angle(a) for a in delta]
-        action_lst = delta_lst + [0.0]
+        action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
         vec_obs, _, _, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.
@@ -166,27 +184,27 @@ def test_pick_place_no_obstructions():
     # We don't really have to motion plan here because there are no other objects, but
     # in general we would motion plan.
     sim.set_state(obs)
-    current_end_effector_pose = sim.robot.get_end_effector_pose()
+    current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
     joint_plan = smoothly_follow_end_effector_path(
-        sim.robot,
+        sim.robot.arm,
         [
             current_end_effector_pose,
             end_effector_pre_placement_pose,
             end_effector_placement_pose,
         ],
-        sim.robot.get_joint_positions(),
+        sim.robot.arm.get_joint_positions(),
         collision_ids=set(),
         joint_distance_fn=joint_distance_fn,
         max_smoothing_iters_per_step=max_candidate_plans,
     )
     joint_plan = remap_joint_position_plan_to_constant_distance(
-        joint_plan, sim.robot, max_distance=config.max_action_mag / 2
+        joint_plan, sim.robot.arm, max_distance=config.max_action_mag / 2
     )
 
     for target_joints in joint_plan[1:]:
         delta = np.subtract(target_joints[:7], obs.joint_positions)
         delta_lst = [wrap_angle(a) for a in delta]
-        action_lst = delta_lst + [0.0]
+        action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
         vec_obs, _, _, _, _ = env.step(action)
         # NOTE: we should soon make this smoother.
@@ -194,7 +212,7 @@ def test_pick_place_no_obstructions():
         obs = Obstruction3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Open the gripper to finish the placement. Should trigger "done" (goal reached).
-    action = np.array([0.0] * 7 + [1.0], dtype=np.float32)
+    action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
     vec_obs, _, done, _, _ = env.step(action)
     # NOTE: we should soon make this smoother.
     oc_obs = env.observation_space.devectorize(vec_obs)
@@ -209,4 +227,42 @@ def test_pick_place_no_obstructions():
     # while True:
     #     p.getMouseEvents(env.physics_client_id)
 
-    env.close()
+
+def test_grasp_fails_when_fingers_collide_with_table():
+    """Test that grasping fails when fingers collide with table during grasp."""
+    # Create environment with no obstructions.
+    config = Obstruction3DEnvConfig(
+        target_block_height=0.015, target_block_size_scale=0.5
+    )
+    oc_env = ObjectCentricObstruction3DEnv(
+        num_obstructions=0, config=config, realistic_bg=False
+    )
+
+    obs, _ = oc_env.reset(seed=456)
+
+    # Position the gripper very low (close to the table surface) around the block.
+    x, y, _ = obs.target_block_pose.position
+    # Position gripper very close to table surface - when fingers close, they'll
+    # collide with the table.
+    grasp_z = 0.11  # Just barely above table surface
+    low_grasp_pose = Pose.from_rpy((x, y, grasp_z), (np.pi, 0, np.pi / 2))
+
+    # Use IK to get joint positions for this pose, then directly set the state.
+    target_joints = inverse_kinematics(
+        oc_env._robot_arm,  # pylint: disable=protected-access
+        low_grasp_pose,
+        validate=False,
+    )
+    assert target_joints is not None
+
+    # Directly set robot state to this configuration.
+    oc_env.robot.arm.set_joints(target_joints)
+    oc_env._robot_arm.open_fingers()  # pylint: disable=protected-access
+
+    # Attempt to grasp. This should fail because the fingers will collide with
+    # the table when they close.
+    close_action = np.array([0.0] * 3 + [0.0] * 7 + [-1.0], dtype=np.float32)
+    obs, _, _, _, _ = oc_env.step(close_action)
+
+    # The grasp should have failed - grasped_object should be None.
+    assert obs.grasped_object is None, "Grasp should have failed due to table collision"

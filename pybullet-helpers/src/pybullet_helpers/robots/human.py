@@ -116,8 +116,8 @@ class LeftLegHumanPyBulletRobot(SingleArmPyBulletRobot):
 class Human:
     """A wrapper around the four limbs that also includes the head and torso.
 
-    A typical use case would be to create this human and then access
-    just one of the limbs to manipulate.
+    A typical use case would be to create this human and then access just one of the
+    limbs to manipulate.
     """
 
     def __init__(

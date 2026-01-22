@@ -1,5 +1,4 @@
-"""Abstract class for single armed manipulators with PyBullet helper
-functions."""
+"""Abstract class for single armed manipulators with PyBullet helper functions."""
 
 import abc
 from functools import cached_property
@@ -34,7 +33,7 @@ class SingleArmPyBulletRobot(abc.ABC):
         self,
         physics_client_id: int,
         base_pose: Pose = Pose.identity(),
-        control_mode: str = "position",
+        control_mode: str = "reset",
         home_joint_positions: JointPositions | None = None,
         fixed_base: bool = True,
         custom_urdf_path: Path | None = None,
@@ -165,11 +164,11 @@ class SingleArmPyBulletRobot(abc.ABC):
 
     @cached_property
     def arm_joints(self) -> list[int]:
-        """The PyBullet joint IDs of the joints of the robot arm as determined
-        by the kinematic chain.
+        """The PyBullet joint IDs of the joints of the robot arm as determined by the
+        kinematic chain.
 
-        Note these are joint indices not body IDs, and that the arm
-        joints may be a subset of all the robot joints.
+        Note these are joint indices not body IDs, and that the arm joints may be a
+        subset of all the robot joints.
         """
         joint_ids = get_kinematic_chain(
             self.robot_id, self.end_effector_id, self.physics_client_id
@@ -203,7 +202,7 @@ class SingleArmPyBulletRobot(abc.ABC):
         ]
 
     @cached_property
-    def joint_infos(self) -> list[JointInfo]:
+    def _joint_infos(self) -> list[JointInfo]:
         """Get the joint info for each joint of the robot.
 
         This may be a superset of the arm joints.
@@ -211,10 +210,14 @@ class SingleArmPyBulletRobot(abc.ABC):
         all_joint_ids = get_joints(self.robot_id, self.physics_client_id)
         return get_joint_infos(self.robot_id, all_joint_ids, self.physics_client_id)
 
+    def get_arm_joint_infos(self) -> list[JointInfo]:
+        """Get joint infos for the arm joints."""
+        return get_joint_infos(self.robot_id, self.arm_joints, self.physics_client_id)
+
     @cached_property
     def joint_names(self) -> list[str]:
         """Get the names of all the joints in the robot."""
-        joint_names = [info.jointName for info in self.joint_infos]
+        joint_names = [info.jointName for info in self._joint_infos]
         return joint_names
 
     def joint_from_name(self, joint_name: str) -> int:
@@ -223,7 +226,7 @@ class SingleArmPyBulletRobot(abc.ABC):
 
     def joint_info_from_name(self, joint_name: str) -> JointInfo:
         """Get the joint info for a joint name."""
-        return self.joint_infos[self.joint_from_name(joint_name)]
+        return self._joint_infos[self.joint_from_name(joint_name)]
 
     def link_from_name(self, link_name: str) -> int:
         """Get the link index for a given link name."""
@@ -231,7 +234,7 @@ class SingleArmPyBulletRobot(abc.ABC):
             return BASE_LINK
 
         # In PyBullet, each joint has an associated link.
-        for joint_info in self.joint_infos:
+        for joint_info in self._joint_infos:
             if joint_info.linkName == link_name:
                 return joint_info.jointIndex
         raise ValueError(f"Could not find link {link_name}")
@@ -242,7 +245,7 @@ class SingleArmPyBulletRobot(abc.ABC):
             return self.base_link_name
 
         # In PyBullet, each joint has an associated link.
-        for joint_info in self.joint_infos:
+        for joint_info in self._joint_infos:
             if joint_info.jointIndex == link:
                 return joint_info.linkName
         raise ValueError(f"Could not find link {link}")
@@ -284,10 +287,9 @@ class SingleArmPyBulletRobot(abc.ABC):
     ) -> None:
         """Directly set the joint positions.
 
-        Outside of resetting to an initial state, this should not be
-        used with the robot that uses stepSimulation(); it should only
-        be used for motion planning, collision checks, etc., in a robot
-        that does not maintain state.
+        Outside of resetting to an initial state, this should not be used with the robot
+        that uses stepSimulation(); it should only be used for motion planning,
+        collision checks, etc., in a robot that does not maintain state.
         """
         if joint_velocities is None:
             joint_velocities = [0] * len(joint_positions)
@@ -321,8 +323,7 @@ class SingleArmPyBulletRobot(abc.ABC):
         )
 
     def get_end_effector_pose(self) -> Pose:
-        """Get the robot end-effector pose based on the current PyBullet
-        state."""
+        """Get the robot end-effector pose based on the current PyBullet state."""
         ee_link_state = get_link_state(
             self.robot_id,
             self.end_effector_id,
@@ -390,8 +391,8 @@ class SingleArmPyBulletRobot(abc.ABC):
         self.set_motors(self.default_home_joint_positions)
 
     def forward_kinematics(self, joint_positions: JointPositions) -> Pose:
-        """Compute the end effector pose that would result if the robot arm
-        joint positions was equal to the input joint_positions.
+        """Compute the end effector pose that would result if the robot arm joint
+        positions was equal to the input joint_positions.
 
         WARNING: This method will make use of resetJointState(), and so it
         should NOT be used during simulation.
@@ -488,8 +489,8 @@ class FingeredSingleArmPyBulletRobot(SingleArmPyBulletRobot, Generic[FingerState
     def finger_joint_idxs(self) -> list[int]:
         """The indices into the joints corresponding to the fingers.
 
-        Note this is not the joint ID, but the index of the joint within
-        the list of arm joints.
+        Note this is not the joint ID, but the index of the joint within the list of arm
+        joints.
         """
         return [self.arm_joints.index(i) for i in self.finger_ids]
 

@@ -62,16 +62,20 @@ class BaseRLAgent(Agent[_O, _U]):
     def _get_action(self) -> _U:
         """Produce an action to execute now."""
 
-    def train(self, render: bool = False) -> dict[str, Any]:  # type: ignore
-        """Switch to train mode."""
-        del render
-        self._train_or_eval = "train"
-        return {}
+    def train(  # type: ignore[override]
+        self, eval_episodes: int = 10, render_eval_video: bool = False
+    ) -> dict[str, Any]:
+        """Train the agent and evaluate on the training environment.
 
-    def evaluate(self, eval_episodes: int, render: bool = False) -> dict[str, Any]:
-        """Switch to evaluation mode."""
-        del eval_episodes, render
-        self._train_or_eval = "eval"
+        Args:
+            eval_episodes: Number of episodes to evaluate after training.
+
+        Returns:
+            Dictionary with keys 'train' and 'eval' containing training and
+            evaluation metrics respectively.
+        """
+        del eval_episodes
+        del render_eval_video
         return {}
 
     def save(self, filepath: str) -> None:

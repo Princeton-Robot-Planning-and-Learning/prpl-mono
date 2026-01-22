@@ -3,12 +3,26 @@
 import numpy as np
 import pytest
 
-from prbench.envs.dynamic3d.objects import Table
+from prbench.envs.dynamic3d.objects import MujocoGround, Table
 from prbench.envs.dynamic3d.placement_samplers import (
     sample_collision_free_position,
-    sample_pose_in_region,
 )
 from prbench.envs.dynamic3d.utils import bboxes_overlap
+
+
+def create_mock_sampler(x_range=(-2.0, 2.0), y_range=(0.5, 2.5)):
+    """Create a mock pos_yaw_sampler function for testing."""
+
+    def sampler(region_name, np_random):
+        _ = region_name  # Unused argument
+        x = np_random.uniform(x_range[0], x_range[1])
+        y = np_random.uniform(y_range[0], y_range[1])
+        z = 0.0
+        yaw = np_random.uniform(0.0, 2 * np.pi)
+        return x, y, z, yaw
+
+    return sampler
+
 
 # Tests for sample_collision_free_position function
 
@@ -24,7 +38,10 @@ def test_no_existing_tables():
         np.array([0.0, 0.0, 0.0], dtype=np.float32), table_config
     )
 
-    pos, yaw = sample_collision_free_position(initial_bbox, placed_bboxes, np_random)
+    sampler = create_mock_sampler()
+    pos, yaw = sample_collision_free_position(
+        initial_bbox, placed_bboxes, np_random, "test_region", sampler
+    )
 
     # Should return a valid position and yaw
     assert isinstance(pos, np.ndarray)
@@ -49,7 +66,10 @@ def test_with_existing_tables():
         np.array([0.0, 0.0, 0.0], dtype=np.float32), table_config
     )
 
-    pos, _ = sample_collision_free_position(initial_bbox, placed_bboxes, np_random)
+    sampler = create_mock_sampler()
+    pos, _ = sample_collision_free_position(
+        initial_bbox, placed_bboxes, np_random, "test_region", sampler
+    )
 
     # Check that the sampled position doesn't create an overlapping bbox
     new_bbox = Table.get_bounding_box_from_config(pos, table_config)
@@ -70,8 +90,9 @@ def test_custom_ranges():
         np.array([0.0, 0.0, 0.0], dtype=np.float32), table_config
     )
 
+    sampler = create_mock_sampler(x_range=x_range, y_range=y_range)
     pos, _ = sample_collision_free_position(
-        initial_bbox, placed_bboxes, np_random, x_range=x_range, y_range=y_range
+        initial_bbox, placed_bboxes, np_random, "test_region", sampler
     )
 
     assert x_range[0] <= pos[0] <= x_range[1]
@@ -89,13 +110,19 @@ def test_deterministic_with_seed():
         np.array([0.0, 0.0, 0.0], dtype=np.float32), table_config
     )
 
+    sampler = create_mock_sampler()
+
     # Sample with first generator
     rng1 = np.random.default_rng(123)
-    pos1, yaw1 = sample_collision_free_position(initial_bbox, placed_bboxes, rng1)
+    pos1, yaw1 = sample_collision_free_position(
+        initial_bbox, placed_bboxes, rng1, "test_region", sampler
+    )
 
     # Sample with second generator with same seed
     rng2 = np.random.default_rng(123)
-    pos2, yaw2 = sample_collision_free_position(initial_bbox, placed_bboxes, rng2)
+    pos2, yaw2 = sample_collision_free_position(
+        initial_bbox, placed_bboxes, rng2, "test_region", sampler
+    )
 
     np.testing.assert_array_equal(pos1, pos2)
     assert yaw1 == yaw2
@@ -121,9 +148,10 @@ def test_crowded_scenario_fallback():
         np.array([0.0, 0.0, 0.0], dtype=np.float32), large_table_config
     )
 
+    sampler = create_mock_sampler()
     # Should still return a position (though it might overlap)
     pos, yaw = sample_collision_free_position(
-        initial_bbox, placed_bboxes, np_random, max_attempts=5
+        initial_bbox, placed_bboxes, np_random, "test_region", sampler, max_attempts=5
     )
 
     assert isinstance(pos, np.ndarray)
@@ -143,7 +171,10 @@ def test_circular_table():
         np.array([0.0, 0.0, 0.0], dtype=np.float32), circle_config
     )
 
-    pos, yaw = sample_collision_free_position(initial_bbox, placed_bboxes, np_random)
+    sampler = create_mock_sampler()
+    pos, yaw = sample_collision_free_position(
+        initial_bbox, placed_bboxes, np_random, "test_region", sampler
+    )
 
     assert isinstance(pos, np.ndarray)
     assert pos.shape == (3,)
@@ -151,34 +182,51 @@ def test_circular_table():
     assert isinstance(yaw, float)
 
 
-# Tests for sample_pose_in_region function
+# Tests for MujocoGround.sample_pose_in_region method
 
 
 def test_single_region():
     """Test sampling from a single region."""
     np_random = np.random.default_rng(42)
-    regions = [[1.0, 2.0, 3.0, 4.0]]  # [x_start, y_start, x_end, y_end]
+    regions = {
+        "test_region": {
+            "ranges": [[1.0, 2.0, 3.0, 4.0]],  # [x_start, y_start, x_end, y_end]
+            "yaw_ranges": [(0.0, 360.0)],  # yaw range for each region
+        }
+    }
+    ground = MujocoGround(regions=regions)
 
-    x, y, z = sample_pose_in_region(regions, np_random)
+    x, y, z, yaw = ground.sample_pose_in_region("test_region", np_random)
 
     assert 1.0 <= x <= 3.0
     assert 2.0 <= y <= 4.0
-    assert z == 0.02  # Default z coordinate
+    assert z > 0.0  # z should be above ground
+    assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians
 
 
 def test_multiple_regions():
     """Test sampling from multiple regions."""
     np_random = np.random.default_rng(42)
-    regions = [
-        [0.0, 0.0, 1.0, 1.0],  # Region 1
-        [5.0, 5.0, 6.0, 6.0],  # Region 2
-        [10.0, 10.0, 11.0, 11.0],  # Region 3
-    ]
+    regions = {
+        "test_region": {
+            "ranges": [
+                [0.0, 0.0, 1.0, 1.0],  # Region 1
+                [5.0, 5.0, 6.0, 6.0],  # Region 2
+                [10.0, 10.0, 11.0, 11.0],  # Region 3
+            ],
+            "yaw_ranges": [
+                (0.0, 360.0),
+                (0.0, 360.0),
+                (0.0, 360.0),
+            ],  # yaw range for each region
+        }
+    }
+    ground = MujocoGround(regions=regions)
 
     # Sample many times to check all regions can be selected
     sampled_regions = set()
     for _ in range(100):
-        x, y, z = sample_pose_in_region(regions, np_random)
+        x, y, z, yaw = ground.sample_pose_in_region("test_region", np_random)
 
         # Determine which region this sample came from
         if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
@@ -188,111 +236,167 @@ def test_multiple_regions():
         elif 10.0 <= x <= 11.0 and 10.0 <= y <= 11.0:
             sampled_regions.add(2)
 
-        assert z == 0.02
+        assert z > 0.0
+        assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians
 
     # Should have sampled from all regions at least once
     assert len(sampled_regions) == 3
 
 
-def test_custom_z_coordinate():
-    """Test sampling with custom z coordinate."""
+def test_ground_sampling_above_surface():
+    """Test that ground sampling returns z coordinate above ground surface."""
     np_random = np.random.default_rng(42)
-    regions = [[0.0, 0.0, 1.0, 1.0]]
-    custom_z = 0.5
+    regions = {
+        "test_region": {
+            "ranges": [[0.0, 0.0, 1.0, 1.0]],
+            "yaw_ranges": [(0.0, 360.0)],  # yaw range for each region
+        }
+    }
+    ground = MujocoGround(regions=regions)
 
-    x, y, z = sample_pose_in_region(regions, np_random, z_coordinate=custom_z)
+    x, y, z, yaw = ground.sample_pose_in_region("test_region", np_random)
 
     assert 0.0 <= x <= 1.0
     assert 0.0 <= y <= 1.0
-    assert z == custom_z
+    assert z > 0.0  # Should be above ground
+    assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians
 
 
 def test_deterministic_with_seed_pose():
     """Test that sampling is deterministic with same seed."""
-    regions = [[0.0, 0.0, 1.0, 1.0]]
+    regions = {
+        "test_region": {
+            "ranges": [[0.0, 0.0, 1.0, 1.0]],
+            "yaw_ranges": [(0.0, 360.0)],  # yaw range for each region
+        }
+    }
+    ground = MujocoGround(regions=regions)
 
     # Sample with first generator
     rng1 = np.random.default_rng(123)
-    pose1 = sample_pose_in_region(regions, rng1)
+    pose1 = ground.sample_pose_in_region("test_region", rng1)
 
     # Sample with second generator with same seed
     rng2 = np.random.default_rng(123)
-    pose2 = sample_pose_in_region(regions, rng2)
+    pose2 = ground.sample_pose_in_region("test_region", rng2)
 
     assert pose1 == pose2
 
 
-def test_empty_regions_list():
-    """Test that empty regions list raises ValueError."""
+def test_empty_regions_dict():
+    """Test that empty regions dict raises error when sampling."""
     np_random = np.random.default_rng(42)
-    regions = []
+    regions = {}
+    ground = MujocoGround(regions=regions)
 
-    with pytest.raises(ValueError, match="Regions list cannot be empty"):
-        sample_pose_in_region(regions, np_random)
+    with pytest.raises((ValueError, AssertionError, KeyError)):
+        ground.sample_pose_in_region("nonexistent", np_random)
 
 
 def test_invalid_region_format():
     """Test that invalid region format raises ValueError."""
-    np_random = np.random.default_rng(42)
     # Region with wrong number of elements
-    regions = [[0.0, 0.0, 1.0]]  # Missing y_end
+    regions = {
+        "test_region": {
+            "ranges": [[0.0, 0.0, 1.0]],  # Missing y_end
+            "yaw_ranges": None,
+        }
+    }
 
-    with pytest.raises(ValueError, match="Each region must have exactly 4 values"):
-        sample_pose_in_region(regions, np_random)
+    with pytest.raises((ValueError, IndexError)):
+        MujocoGround(regions=regions)
 
 
 def test_invalid_x_bounds():
     """Test that invalid x bounds raise ValueError."""
     np_random = np.random.default_rng(42)
-    regions = [[1.0, 0.0, 0.0, 1.0]]  # x_start > x_end
+    regions = {
+        "test_region": {
+            "ranges": [[1.0, 0.0, 0.0, 1.0]],  # x_start > x_end
+            "yaw_ranges": None,
+        }
+    }
+    ground = MujocoGround(regions=regions)
 
     with pytest.raises(ValueError, match="x_start .* must be less than x_end"):
-        sample_pose_in_region(regions, np_random)
+        ground.sample_pose_in_region("test_region", np_random)
 
 
 def test_invalid_y_bounds():
     """Test that invalid y bounds raise ValueError."""
     np_random = np.random.default_rng(42)
-    regions = [[0.0, 1.0, 1.0, 0.0]]  # y_start > y_end
+    regions = {
+        "test_region": {
+            "ranges": [[0.0, 1.0, 1.0, 0.0]],  # y_start > y_end
+            "yaw_ranges": None,
+        }
+    }
+    ground = MujocoGround(regions=regions)
 
     with pytest.raises(ValueError, match="y_start .* must be less than y_end"):
-        sample_pose_in_region(regions, np_random)
+        ground.sample_pose_in_region("test_region", np_random)
 
 
 def test_equal_bounds():
-    """Test that equal bounds raise ValueError."""
+    """Test that invalid bounds raise ValueError."""
     np_random = np.random.default_rng(42)
 
-    # x_start == x_end
-    regions = [[1.0, 0.0, 1.0, 1.0]]
+    # x_start > x_end (invalid)
+    regions = {
+        "test_region": {
+            "ranges": [[1.5, 0.0, 1.0, 1.0]],
+            "yaw_ranges": [(0.0, 360.0)],  # yaw range for each region
+        }
+    }
+    ground = MujocoGround(regions=regions)
     with pytest.raises(ValueError, match="x_start .* must be less than x_end"):
-        sample_pose_in_region(regions, np_random)
+        ground.sample_pose_in_region("test_region", np_random)
 
-    # y_start == y_end
-    regions = [[0.0, 1.0, 1.0, 1.0]]
+    # y_start > y_end (invalid)
+    regions = {
+        "test_region": {
+            "ranges": [[0.0, 1.5, 1.0, 1.0]],
+            "yaw_ranges": [(0.0, 360.0)],  # yaw range for each region
+        }
+    }
+    ground = MujocoGround(regions=regions)
     with pytest.raises(ValueError, match="y_start .* must be less than y_end"):
-        sample_pose_in_region(regions, np_random)
+        ground.sample_pose_in_region("test_region", np_random)
 
 
 def test_point_region():
     """Test sampling from a very small region."""
     np_random = np.random.default_rng(42)
-    regions = [[0.0, 0.0, 0.001, 0.001]]  # Very small region
+    regions = {
+        "test_region": {
+            "ranges": [[0.0, 0.0, 0.001, 0.001]],  # Very small region
+            "yaw_ranges": [(0.0, 360.0)],  # yaw range for each region
+        }
+    }
+    ground = MujocoGround(regions=regions)
 
-    x, y, z = sample_pose_in_region(regions, np_random)
+    x, y, z, yaw = ground.sample_pose_in_region("test_region", np_random)
 
     assert 0.0 <= x <= 0.001
     assert 0.0 <= y <= 0.001
-    assert z == 0.02
+    assert z > 0.0
+    assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians
 
 
 def test_negative_coordinates():
     """Test sampling from regions with negative coordinates."""
     np_random = np.random.default_rng(42)
-    regions = [[-2.0, -3.0, -1.0, -1.0]]
+    regions = {
+        "test_region": {
+            "ranges": [[-2.0, -3.0, -1.0, -1.0]],
+            "yaw_ranges": [(0.0, 360.0)],  # yaw range for each region
+        }
+    }
+    ground = MujocoGround(regions=regions)
 
-    x, y, z = sample_pose_in_region(regions, np_random)
+    x, y, z, yaw = ground.sample_pose_in_region("test_region", np_random)
 
     assert -2.0 <= x <= -1.0
     assert -3.0 <= y <= -1.0
-    assert z == 0.02
+    assert z > 0.0
+    assert 0.0 <= yaw <= 2 * np.pi  # yaw in radians

@@ -112,7 +112,7 @@ def test_plot_overhead_scene():
 def test_run_base_motion_planning():
     """Tests for run_base_motion_planning()."""
 
-    env = prbench.make("prbench/TidyBot3D-cupboard-o1-real-v0", render_mode="rgb_array")
+    env = prbench.make("prbench/TidyBot3D-cupboard_real-o1-v0", render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     obs, _ = env.reset(seed=123)
     state = env.observation_space.devectorize(obs)

@@ -20,13 +20,12 @@ from relational_structs.object_centric_state import ObjectCentricState
 
 @dataclass(frozen=True, eq=False)
 class ParameterizedOption:
-    """Struct defining a parameterized option, which has a parameter space and
-    can be ground into an Option, given parameter values.
+    """Struct defining a parameterized option, which has a parameter space and can be
+    ground into an Option, given parameter values.
 
-    An option is composed of a policy, an initiation classifier, and a
-    termination condition. We will stick with deterministic termination
-    conditions. For a parameterized option, all of these are conditioned
-    on parameters.
+    An option is composed of a policy, an initiation classifier, and a termination
+    condition. We will stick with deterministic termination conditions. For a
+    parameterized option, all of these are conditioned on parameters.
     """
 
     name: str
@@ -76,8 +75,8 @@ class ParameterizedOption:
 
 @dataclass(eq=False)
 class Option:
-    """Struct defining an option, which is like a parameterized option except
-    that its components are not conditioned on parameters."""
+    """Struct defining an option, which is like a parameterized option except that its
+    components are not conditioned on parameters."""
 
     name: str
     # A policy maps a state to an action.

@@ -1,12 +1,18 @@
 """Tests for deterministic demo replay across all environments."""
 
 from pathlib import Path
+from typing import Any
 
+import gymnasium
 import numpy as np
 import pytest
 
 import prbench
 from prbench.utils import find_all_demo_files, load_demo
+from tests.demo_blacklist import (
+    DETERMINISTIC_REPLAY_BLACKLIST,
+    is_demo_blacklisted,
+)
 
 
 @pytest.mark.parametrize("demo_path", find_all_demo_files())
@@ -22,11 +28,14 @@ def test_deterministic_demo_replay(demo_path: Path):
     # Register all environments
     prbench.register_all_environments()
 
+    # Check if demo is blacklisted
+    is_blacklisted, reason = is_demo_blacklisted(
+        demo_path, DETERMINISTIC_REPLAY_BLACKLIST
+    )
+    if is_blacklisted:
+        pytest.skip(f"Demo blacklisted: {reason}")
+
     # Load demo data
-    # NOTE: Skip ScoopPour for now, it is super weird, it passes
-    # on my local machine but fails on github actions....
-    if "DynScoopPour" in str(demo_path):
-        pytest.skip("Skipping DynScoopPour demos for now")
     try:
         demo_data = load_demo(demo_path)
     except Exception as e:
@@ -44,7 +53,12 @@ def test_deterministic_demo_replay(demo_path: Path):
         pytest.skip(f"Demo {demo_path} contains no actions")
 
     # Create environment
-    env = prbench.make(env_id, render_mode="rgb_array")
+    make_kwargs: dict[str, Any] = {"render_mode": "rgb_array"}
+    entrypoint = gymnasium.registry[env_id].entry_point
+    assert isinstance(entrypoint, str)
+    if "geom3d" in entrypoint:
+        make_kwargs["realistic_bg"] = False
+    env = prbench.make(env_id, **make_kwargs)
 
     # Test reproducibility: reset with seed and replay actions
     obs, _ = env.reset(seed=seed)

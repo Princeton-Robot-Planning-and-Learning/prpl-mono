@@ -78,7 +78,7 @@ class RobotEnv(MujocoEnv, abc.ABC):
         for child in list(robot_root):
             if child.tag == "worldbody":
                 # Merge worldbody content
-                input_worldbody = input_root.find(  # type:ignore[union-attr]
+                input_worldbody = input_root.find(  # type: ignore[union-attr]
                     "worldbody"
                 )
                 if input_worldbody is not None:
@@ -100,7 +100,29 @@ class RobotEnv(MujocoEnv, abc.ABC):
                 # Merge or append asset sections
                 input_section = input_root.find(child.tag)  # type: ignore[union-attr]
                 if input_section is not None:
+                    # Get existing asset names in the scene to avoid duplicates
+                    # Track per asset type since MuJoCo allows same name for
+                    # different types
+                    existing_names: dict[str, set[str]] = {}
+                    for existing_asset in input_section:
+                        asset_tag = existing_asset.tag
+                        asset_name = existing_asset.get("name")
+                        if asset_name:
+                            if asset_tag not in existing_names:
+                                existing_names[asset_tag] = set()
+                            existing_names[asset_tag].add(asset_name)
+
                     for sub_child in list(child):
+                        # Skip if this asset name already exists in the scene (same type)
+                        asset_tag = sub_child.tag
+                        asset_name = sub_child.get("name")
+                        if (
+                            asset_name
+                            and asset_tag in existing_names
+                            and asset_name in existing_names[asset_tag]
+                        ):
+                            continue
+
                         # Check if the asset element has a "file" attribute
                         # and make it absolute
                         if sub_child.get("file") is not None:
@@ -113,8 +135,28 @@ class RobotEnv(MujocoEnv, abc.ABC):
                         input_section.append(sub_child)
                 else:
                     input_root.append(child)  # type: ignore[union-attr]
+            elif child.tag == "compiler":
+                # Merge compiler sections - preserve scene's meshdir if it exists
+                input_compiler = input_root.find(child.tag)  # type: ignore[union-attr]
+                if input_compiler is not None:
+                    # Scene already has compiler - merge attributes from robot
+                    # but DON'T override meshdir/texturedir if scene has them
+                    scene_meshdir = input_compiler.get("meshdir")
+                    scene_texturedir = input_compiler.get("texturedir")
+
+                    # Merge all robot compiler attributes
+                    for key, value in child.attrib.items():
+                        # Skip meshdir/texturedir if scene already defined them
+                        if key == "meshdir" and scene_meshdir:
+                            continue
+                        if key == "texturedir" and scene_texturedir:
+                            continue
+                        input_compiler.set(key, value)
+                else:
+                    # No compiler in scene, just append robot's compiler
+                    input_root.append(child)  # type: ignore[union-attr]
             else:
-                # For other sections (compiler, actuator, contact, etc.), just append
+                # For other sections (actuator, contact, etc.), just append
                 input_root.append(child)  # type: ignore[union-attr]
 
         if input_root is None:
@@ -132,4 +174,14 @@ class RobotEnv(MujocoEnv, abc.ABC):
 
         Returns:
             The computed reward value.
+        """
+
+    @abc.abstractmethod
+    def set_robot_base_pos_yaw(self, x: float, y: float, yaw: float) -> None:
+        """Set the robot's base position and yaw orientation.
+
+        Args:
+            x: X position of the robot base.
+            y: Y position of the robot base.
+            yaw: Yaw orientation of the robot base.
         """

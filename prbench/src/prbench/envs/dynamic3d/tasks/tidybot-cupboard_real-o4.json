@@ -1,0 +1,220 @@
+{
+    "robots": {
+        "tidybot": {
+            "robot_0": {}
+        }
+    },
+    "scene": {
+        "simple": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab6": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        }
+    },
+    "fixtures": {
+        "cupboard": {
+            "cupboard_1": {
+                "length": 0.60198,
+                "depth": 0.254,
+                "shelf_heights": [
+                    0.254,
+                    0.254,
+                    0.254
+                ],
+                "shelf_partitions": [
+                    [],
+                    [],
+                    []
+                ],
+                "shelf_thickness": 0.0127,
+                "side_and_back_open": false
+            }
+        }
+    },
+    "regions": {
+        "ground_cupboard_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    1.5,
+                    0.0,
+                    1.5,
+                    0.0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    90,
+                    90
+                ]
+            ]
+        },
+        "ground_1_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    -0.1,
+                    0.7,
+                    0.1,
+                    1.0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        },
+        "ground_2_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.1,
+                    0.7,
+                    0.3,
+                    1.0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        },
+        "ground_3_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    -0.1,
+                    -0.8,
+                    0.1,
+                    -0.6
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        },
+        "ground_4_object_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.1,
+                    -0.8,
+                    0.3,
+                    -0.6
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        }
+    },
+    "objects": {
+        "cube": {
+            "cube1": {
+                "size": 0.02,
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
+                "mass": 0.01
+            },
+            "cube2": {
+                "size": 0.02,
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
+                "mass": 0.01
+            },
+            "cube3": {
+                "size": 0.02,
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
+                "mass": 0.01
+            },
+            "cube4": {
+                "size": 0.02,
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
+                "mass": 0.01
+            }
+        }
+    },
+    "cameras": {
+        "agentview_1": {
+            "position": [
+                1,
+                1,
+                2
+            ],
+            "lookat": [
+                0,
+                0,
+                0
+            ],
+            "fovy": 42,
+            "resolution": [
+                640,
+                480
+            ]
+        }
+    },
+    "initial_state": [
+        [
+            "on",
+            "cupboard_1",
+            "ground_cupboard_init_region"
+        ],
+        [
+            "on",
+            "cube1",
+            "ground_1_object_init_region"
+        ],
+        [
+            "on",
+            "cube2",
+            "ground_2_object_init_region"
+        ],
+        [
+            "on",
+            "cube3",
+            "ground_3_object_init_region"
+        ],
+        [
+            "on",
+            "cube4",
+            "ground_4_object_init_region"
+        ]
+    ]
+}

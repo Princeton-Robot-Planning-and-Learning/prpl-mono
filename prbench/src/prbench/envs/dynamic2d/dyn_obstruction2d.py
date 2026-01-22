@@ -1,6 +1,5 @@
 """Dynamic Obstruction 2D env using PyMunk physics."""
 
-import inspect
 from dataclasses import dataclass
 
 import numpy as np
@@ -57,6 +56,7 @@ class DynObstruction2DEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMe
     robot_arm_length_max: float = 2 * robot_base_radius
     gripper_base_width: float = 0.06
     gripper_base_height: float = 0.32
+    finger_gap_max = 0.32
     gripper_finger_width: float = 0.2
     gripper_finger_height: float = 0.06
 
@@ -613,63 +613,23 @@ class DynObstruction2DEnv(ConstantObjectPRBenchEnv):
         return constant_objects
 
     def _create_env_markdown_description(self) -> str:
-        # Count obstruction objects (exclude target_surface, target_block, and robot)
-        num_obstructions = len(
-            [obj for obj in self._constant_objects if obj.name.startswith("obstruct")]
-        )
         # pylint: disable=line-too-long
-        if num_obstructions > 0:
-            obstruction_sentence = f"\nThe target surface may be initially obstructed. In this environment, there are always {num_obstructions} obstacle blocks.\n"
-        else:
-            obstruction_sentence = ""
+        return """A 2D physics-based environment where the goal is to place a target block onto a target surface using a two-fingered robot with PyMunk physics simulation. The block must be completely on the surface. The target surface may be initially obstructed.
 
-        return f"""A 2D physics-based environment where the goal is to place a target block onto a target surface using a fingered robot with PyMunk physics simulation. The block must be completely on the surface.
-{obstruction_sentence}
 The robot has a movable circular base and an extendable arm with gripper fingers. Objects can be grasped and released through gripper actions. All objects follow realistic physics including gravity, friction, and collisions.
-
-**Observation Space**: The observation is a fixed-size vector containing the state of all objects:
-- **Robot**: position (x,y), orientation (θ), velocities (vx,vy,ω), arm extension, gripper gap
-- **Target Block**: position, orientation, velocities, dimensions (dynamic physics object)
-- **Target Surface**: position, orientation, dimensions (kinematic physics object)
-{f"- **Obstruction Blocks** ({num_obstructions}): position, orientation, velocities, dimensions (dynamic physics objects)" if num_obstructions > 0 else ""}
 
 Each object includes physics properties like mass, moment of inertia (for dynamic objects), and color information for rendering.
 """
 
+    def _create_variant_markdown_description(self) -> str:
+        # pylint: disable=line-too-long
+        return "The number of obstructions differs between environment variants. For example, DynObstruction2D-o0 has no obstructions, while DynObstruction2D-o3 has 3 obstructions."
+
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return f"""A penalty of -1.0 is given at every time step until termination, which occurs when the target block is completely "on" the target surface.
-
-**Termination Condition**: The episode terminates when the target block is successfully placed on the target surface. The "on" condition requires that the bottom vertices of the target block are within the bounds of the target surface, accounting for physics-based positioning.
-
-The definition of "on" is implemented using geometric collision detection:
-```python
-{inspect.getsource(is_on)}```
-
-**Physics Integration**: Since this environment uses PyMunk physics simulation, objects have realistic dynamics including:
-- Gravity (objects fall if not supported)
-- Friction between surfaces
-- Collision response and momentum transfer
-- Realistic grasping and manipulation dynamics
+        return """A penalty of -1.0 is given at every time step until termination, which occurs when the target block is completely "on" the target surface. The "on" condition requires that the bottom vertices of the target block are within the bounds of the target surface.
 """
 
     def _create_references_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return """This is a physics-based version of manipulation environments commonly used in robotics research. It extends the geometric obstruction environment to include realistic physics simulation using PyMunk.
-
-**Key Features**:
-- **PyMunk Physics Engine**: Provides realistic 2D rigid body dynamics
-- **Dynamic Objects**: Target and obstruction blocks have mass, inertia, and respond to forces
-- **Kinematic Robot**: Multi-DOF robot with base movement, arm extension, and gripper control
-- **Collision Detection**: Physics-based collision handling for grasping and object interactions
-- **Gravity Simulation**: Objects fall and settle naturally under gravitational forces
-
-**Research Applications**:
-- Robot manipulation learning with realistic physics
-- Grasping and placement strategy development  
-- Multi-object interaction scenarios
-- Physics-aware motion planning validation
-- Comparative studies between geometric and physics-based environments
-
-This environment enables more realistic evaluation of manipulation policies compared to purely geometric versions, as agents must account for momentum, friction, and gravitational effects.
-"""
+        return """This is a dynamic version of Obstruction2D."""

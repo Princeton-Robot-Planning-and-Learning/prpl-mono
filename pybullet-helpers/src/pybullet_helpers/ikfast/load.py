@@ -1,8 +1,9 @@
-"""This module installs and loads the IKFast module for a given robot specified
-by its IKFastInfo."""
+"""This module installs and loads the IKFast module for a given robot specified by its
+IKFastInfo."""
 
 import glob
 import importlib
+import importlib.util
 import logging
 import os
 import sys
@@ -17,9 +18,8 @@ from pybullet_helpers.utils import get_third_party_path
 def install_ikfast_module(ikfast_dir: Path) -> None:
     """One-time install an IKFast module for a specific robot.
 
-    Assumes there is a subdirectory in envs/assets/ikfast with a
-    setup.py file for the robot. See the panda_arm subdirectory for an
-    example.
+    Assumes there is a subdirectory in envs/assets/ikfast with a setup.py file for the
+    robot. See the panda_arm subdirectory for an example.
     """
     cmds = [
         # Go to the subdirectory with the setup.py file.
@@ -41,11 +41,10 @@ def install_ikfast_module(ikfast_dir: Path) -> None:
 
 
 def install_ikfast_if_required(ikfast_info: IKFastInfo) -> str:
-    """If IKFast has been previously installed, there should be a file with
-    extension .so, starting with name module_name, in the ikfast_dir.
+    """If IKFast has been previously installed, there should be a file with extension
+    .so, starting with name module_name, in the ikfast_dir.
 
-    We check if this file exists, if not we install IKFast by compiling
-    it.
+    We check if this file exists, if not we install IKFast by compiling it.
     """
     ikfast_dir = get_third_party_path() / "ikfast" / ikfast_info.module_dir
     glob_pattern = str(ikfast_dir / f"{ikfast_info.module_name}*.so")
@@ -70,8 +69,8 @@ def install_ikfast_if_required(ikfast_info: IKFastInfo) -> str:
 def import_ikfast(ikfast_info: IKFastInfo) -> ModuleType:
     """Imports the MoveIt IKFast solver for the given robot.
 
-    If the solver is not already installed, it will be installed
-    automatically when this function is called for the first time.
+    If the solver is not already installed, it will be installed automatically when this
+    function is called for the first time.
     """
     if ikfast_info.module_name in sys.modules:
         # IKFast already imported for robot so just return it.

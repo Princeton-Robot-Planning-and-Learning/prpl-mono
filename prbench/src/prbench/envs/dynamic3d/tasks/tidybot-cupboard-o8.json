@@ -1,15 +1,50 @@
 {
-    "robots": [
-        "tidybot"
-    ],
+    "robots": {
+        "tidybot": {
+            "robot_0": {}
+        }
+    },
+    "scene": {
+        "simple": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab6": {
+            "position": [
+                0,
+                0.4,
+                0
+            ]
+        }
+    },
     "fixtures": {
         "cupboard": {
             "cupboard_1": {
                 "length": 0.6,
                 "depth": 0.3,
-                "shelf_heights": [0.1, 0.2, 0.5],
-                "shelf_partitions": [[0.1], [], [0.2]],
-                "side_and_back_open": true
+                "shelf_heights": [
+                    0.1,
+                    0.2,
+                    0.5
+                ],
+                "shelf_partitions": [
+                    [
+                        0.1
+                    ],
+                    [],
+                    [
+                        0.1, 0.25
+                    ]
+                ],
+                "shelf_drawers": [
+                    [true, true],
+                    [true],
+                    [false, true, false]
+                ],
+                "side_and_back_open": false
             }
         }
     },
@@ -18,10 +53,13 @@
             "target": "ground",
             "ranges": [
                 [
-                    -2,
-                    -0.5,
-                    2,
-                    2.5
+                    0,0,0,0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    180,
+                    180
                 ]
             ]
         },
@@ -29,11 +67,130 @@
             "target": "ground",
             "ranges": [
                 [
+                    -1.2,
                     -2,
-                    -2,
-                    2,
+                    1.2,
                     2
                 ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        },
+        "cupboard_1_shelf_0_partition_0_region": {
+            "target": "cupboard_1",
+            "shelf": 0,
+            "partition": 0,
+            "ranges": [
+                [
+                    -0.20,
+                    -0.13,
+                    0.20,
+                    0.13
+                ]
+            ],
+            "rgba": [
+                1.0,
+                0.0,
+                0.0,
+                0.3
+            ]
+        },
+        "cupboard_1_shelf_0_partition_1_region": {
+            "target": "cupboard_1",
+            "shelf": 0,
+            "partition": 1,
+            "ranges": [
+                [
+                    -0.1,
+                    -0.13,
+                    0.1,
+                    0.13
+                ]
+            ],
+            "rgba": [
+                0.0,
+                1.0,
+                0.0,
+                0.3
+            ]
+        },
+        "cupboard_1_shelf_1_region": {
+            "target": "cupboard_1",
+            "shelf": 1,
+            "ranges": [
+                [
+                    -0.25,
+                    -0.13,
+                    0.25,
+                    0.13
+                ]
+            ],
+            "rgba": [
+                0.0,
+                0.0,
+                1.0,
+                0.3
+            ]
+        },
+        "cupboard_1_shelf_2_partition_0_region": {
+            "target": "cupboard_1",
+            "shelf": 2,
+            "partition": 0,
+            "ranges": [
+                [
+                    -0.2,
+                    -0.13,
+                    0.2,
+                    0.13
+                ]
+            ],
+            "rgba": [
+                1.0,
+                1.0,
+                0.0,
+                0.3
+            ]
+        },
+        "cupboard_1_shelf_2_partition_1_region": {
+            "target": "cupboard_1",
+            "shelf": 2,
+            "partition": 1,
+            "ranges": [
+                [
+                    -0.075,
+                    -0.13,
+                    0.075,
+                    0.13
+                ]
+            ],
+            "rgba": [
+                0.0,
+                1.0,
+                1.0,
+                0.3
+            ]
+        },
+        "cupboard_1_shelf_2_partition_2_region": {
+            "target": "cupboard_1",
+            "shelf": 2,
+            "partition": 2,
+            "ranges": [
+                [
+                    -0.025,
+                    -0.13,
+                    0.025,
+                    0.13
+                ]
+            ],
+            "rgba": [
+                1.0,
+                0.0,
+                1.0,
+                0.3
             ]
         }
     },
@@ -41,44 +198,103 @@
         "cube": {
             "cube1": {
                 "size": 0.02,
-                "rgba": [0.5, 0.1, 0.1, 1],
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
                 "mass": 0.1
             },
             "cube2": {
                 "size": 0.02,
-                "rgba": [0.5, 0.1, 0.1, 1],
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
                 "mass": 0.1
             },
             "cube3": {
                 "size": 0.02,
-                "rgba": [0.5, 0.1, 0.1, 1],
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
                 "mass": 0.1
             },
             "cube4": {
                 "size": 0.02,
-                "rgba": [0.5, 0.1, 0.1, 1],
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
                 "mass": 0.1
             },
             "cube5": {
                 "size": 0.02,
-                "rgba": [0.5, 0.1, 0.1, 1],
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
                 "mass": 0.1
             },
             "cube6": {
                 "size": 0.02,
-                "rgba": [0.5, 0.1, 0.1, 1],
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
                 "mass": 0.1
             },
             "cube7": {
                 "size": 0.02,
-                "rgba": [0.5, 0.1, 0.1, 1],
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
                 "mass": 0.1
             },
             "cube8": {
                 "size": 0.02,
-                "rgba": [0.5, 0.1, 0.1, 1],
+                "rgba": [
+                    0.5,
+                    0.1,
+                    0.1,
+                    1
+                ],
                 "mass": 0.1
             }
+        }
+    },
+    "cameras": {
+        "agentview_1": {
+            "position": [
+                1,
+                1,
+                2
+            ],
+            "lookat": [
+                0,
+                0,
+                0
+            ],
+            "fovy": 42,
+            "resolution": [
+                640,
+                480
+            ]
         }
     },
     "initial_state": [

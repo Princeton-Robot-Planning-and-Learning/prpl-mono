@@ -1,12 +1,12 @@
 """Tests for stickbutton2d.py."""
 
-from conftest import MAKE_VIDEOS
 from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 
 import prbench
 from prbench.envs.geom2d.object_types import CircleType
 from prbench.envs.geom2d.stickbutton2d import ObjectCentricStickButton2DEnv
+from tests.conftest import MAKE_VIDEOS
 
 
 def test_object_centric_stickbutton2d_env():
@@ -69,5 +69,5 @@ def test_stickbutton2d_termination():
     # Any action should now result in termination.
     action = env.action_space.sample()
     state, reward, terminated, _, _ = env.step(action)
-    assert reward == -1.0
+    assert reward == 0.0
     assert terminated

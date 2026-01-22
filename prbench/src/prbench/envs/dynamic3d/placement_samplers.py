@@ -1,81 +1,99 @@
 """Placement sampling utilities for dynamic3d environments."""
 
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 from numpy.typing import NDArray
 
 from prbench.envs.dynamic3d import utils
-from prbench.envs.dynamic3d.objects import get_fixture_class
+from prbench.envs.dynamic3d.objects import (
+    MujocoFixture,
+    MujocoObject,
+    get_fixture_class,
+    get_object_class,
+)
+
+# Default yaw range in degrees (full rotation)
+DEFAULT_YAW_RANGE = (0.0, 360.0)
 
 
 def sample_collision_free_positions(
-    fixtures: dict[str, dict[str, dict[str, Any]]],
+    configs: dict[str, dict[str, dict[str, Any]]],
     np_random: np.random.Generator,
-    fixture_ranges: dict[str, tuple[float, float, float, float]] | None = None,
+    entity_region_names: dict[str, str] | None = None,
+    entity_pos_yaw_samplers: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, dict[str, Any]]]:
-    """Sample collision-free positions and yaws for multiple fixtures.
+    """Sample collision-free positions and yaws for multiple entities (fixtures or
+    objects).
 
     Args:
-        fixtures: Dictionary mapping fixture types to dictionaries of fixture
-                 configurations (fixture_name -> fixture_config)
+        configs: Dictionary mapping entity types to dictionaries of entity configurations
+                (entity_name -> entity_config). Can be fixture or object configurations.
         np_random: Random number generator
-        fixture_ranges: Dictionary mapping fixture names to sampling ranges as
-                       (x_min, y_min, x_max, y_max). If None, uses default range
-                       (-2.0, 0.5, 2.0, 2.5) for all fixtures.
+        entity_region_names: Dictionary mapping entity names to region names for
+                           sampling. If None, no entities will be sampled.
+        entity_pos_yaw_samplers: Dictionary mapping entity names to functions that
+                               sample positions and yaws within a region. If None, no
+                               entities will be sampled.
 
     Returns:
-        Dictionary mapping fixture types to dictionaries of fixture poses
-        (fixture_name -> {"position": position, "yaw": yaw})
+        Dictionary mapping entity types to dictionaries of entity poses
+        (entity_name -> {"position": position, "yaw": yaw})
     """
-    fixture_poses: dict[str, dict[str, dict[str, Any]]] = {}
+    if entity_region_names is None:
+        entity_region_names = {}
+    if entity_pos_yaw_samplers is None:
+        entity_pos_yaw_samplers = {}
+
+    entity_poses: dict[str, dict[str, dict[str, Any]]] = {}
     placed_bboxes: list[list[float]] = []
 
-    # Default range if none provided
-    default_range = (-2.0, 0.5, 2.0, 2.5)
+    for entity_type, entity_configs in configs.items():
+        entity_poses[entity_type] = {}
+        for entity_name, entity_config in entity_configs.items():
 
-    for fixture_type, fixture_configs in fixtures.items():
-        fixture_poses[fixture_type] = {}
-        for fixture_name, fixture_config in fixture_configs.items():
-            # Get the range for this fixture
-            if fixture_ranges and fixture_name in fixture_ranges:
-                x_min, y_min, x_max, y_max = fixture_ranges[fixture_name]
-                x_range = (x_min, x_max)
-                y_range = (y_min, y_max)
-            else:
-                x_min, y_min, x_max, y_max = default_range
-                x_range = (x_min, x_max)
-                y_range = (y_min, y_max)
-
-            init_bbox = get_fixture_class(fixture_type).get_bounding_box_from_config(
-                np.array([0.0, 0.0, 0.0], dtype=np.float32), fixture_config
+            if entity_name not in entity_pos_yaw_samplers:
+                continue
+            assert entity_name in entity_region_names, (
+                f"Entity '{entity_name}' must have a region name specified in "
+                f"entity_region_names if a pos_yaw_sampler is provided."
             )
-            # Sample a collision-free position and yaw for each fixture
+
+            # Try to get the entity class (fixture or object)
+            entity_class: Union[type[MujocoFixture], type[MujocoObject]]
+            try:
+                entity_class = get_fixture_class(entity_type)
+            except ValueError:
+                # If not a fixture, try as an object
+                entity_class = get_object_class(entity_type)
+
+            init_bbox = entity_class.get_bounding_box_from_config(
+                np.array([0.0, 0.0, 0.0], dtype=np.float32), entity_config
+            )
+            # Sample a collision-free position and yaw for each entity
             position, yaw = sample_collision_free_position(
                 list(init_bbox),
                 placed_bboxes=placed_bboxes,
                 np_random=np_random,
-                x_range=x_range,
-                y_range=y_range,
+                region_name=entity_region_names[entity_name],
+                pos_yaw_sampler=entity_pos_yaw_samplers[entity_name],
             )
-            bbox = get_fixture_class(fixture_type).get_bounding_box_from_config(
-                position, fixture_config
-            )
+            bbox = entity_class.get_bounding_box_from_config(position, entity_config)
             placed_bboxes.append(list(bbox))
-            fixture_poses[fixture_type][fixture_name] = {
+            entity_poses[entity_type][entity_name] = {
                 "position": position,
                 "yaw": yaw,
             }
-    return fixture_poses
+    return entity_poses
 
 
 def sample_collision_free_position(
     bounding_box_at_origin: list[float],
     placed_bboxes: list[list[float]],
     np_random: np.random.Generator,
+    region_name: str,
+    pos_yaw_sampler: Any,
     max_attempts: int = 100,
-    x_range: tuple[float, float] = (-2.0, 2.0),
-    y_range: tuple[float, float] = (0.5, 2.5),
 ) -> tuple[NDArray[np.float32], float]:
     """Sample a collision-free position and yaw for a fixture.
 
@@ -87,6 +105,7 @@ def sample_collision_free_position(
         max_attempts: Maximum number of sampling attempts
         x_range: Range for x coordinate sampling as (min, max)
         y_range: Range for y coordinate sampling as (min, max)
+        yaw_range: Range for yaw rotation sampling as (min, max) in degrees
 
     Returns:
         Tuple of (position, yaw) where position is [x, y, z] array (z is always 0.0)
@@ -98,23 +117,22 @@ def sample_collision_free_position(
     # Get the center of the original bounding box for rotation
     bbox_center_x = (bounding_box_at_origin[0] + bounding_box_at_origin[3]) / 2
     bbox_center_y = (bounding_box_at_origin[1] + bounding_box_at_origin[4]) / 2
+    bbox_center_z = (bounding_box_at_origin[2] + bounding_box_at_origin[5]) / 2
 
     for _ in range(max_attempts):
-        # Sample a candidate position
-        candidate_pos = np.array(
-            [
-                np_random.uniform(x_range[0], x_range[1]),  # x coordinate
-                np_random.uniform(y_range[0], y_range[1]),  # y coordinate
-                0.0,  # z coordinate (fixed at 0)
-            ]
+        # Sample a candidate pose
+        candidate_x, candidate_y, candidate_z, candidate_yaw = pos_yaw_sampler(
+            region_name, np_random
         )
 
-        # Sample a random yaw angle
-        candidate_yaw = np_random.uniform(0, 2 * np.pi)
+        candidate_pos = np.array(
+            [candidate_x, candidate_y, candidate_z], dtype=np.float32
+        )
+        # print(f"Sampled candidate position trial {i_attempt}: {candidate_pos}")
 
         # Translate the bounding box to the candidate position
         translation = candidate_pos - np.array(
-            [bbox_center_x, bbox_center_y, bounding_box_at_origin[2]]
+            [bbox_center_x, bbox_center_y, bbox_center_z]
         )
         translated_bbox = utils.translate_bounding_box(
             bounding_box_at_origin, translation
@@ -126,12 +144,10 @@ def sample_collision_free_position(
             translated_bbox, candidate_yaw, new_center
         )
 
-        # Check if it collides with any existing fixture (using 2D overlap for now)
-        candidate_bbox_2d = candidate_bbox[:4]  # [x_min, y_min, x_max, y_max]
+        # Check if it collides with any existing fixture (using 3D overlap)
         collision = False
         for existing_bbox in placed_bboxes:
-            existing_bbox_2d = existing_bbox[:4]  # [x_min, y_min, x_max, y_max]
-            if utils.bboxes_overlap(candidate_bbox_2d, existing_bbox_2d):
+            if utils.bboxes_overlap(candidate_bbox, existing_bbox, margin=0.0):
                 collision = True
                 break
 
@@ -146,59 +162,15 @@ def sample_collision_free_position(
         f"Warning: Could not find collision-free position after {max_attempts} "
         f"attempts"
     )
+    # pylint: disable=fixme
     fallback_pos = np.array(
         [
-            np_random.uniform(x_range[0], x_range[1]),
-            np_random.uniform(y_range[0], y_range[1]),
             0.0,
+            0.0,
+            0.0,  # TODO: consider ground thickness
         ]
     )
-    fallback_yaw = np_random.uniform(0, 2 * np.pi)
+    # pylint: enable=fixme
+    fallback_yaw_deg = np_random.uniform(DEFAULT_YAW_RANGE[0], DEFAULT_YAW_RANGE[1])
+    fallback_yaw = np.radians(fallback_yaw_deg)
     return fallback_pos, fallback_yaw
-
-
-def sample_pose_in_region(
-    regions: list[list[float]],
-    np_random: np.random.Generator,
-    z_coordinate: float = 0.02,
-) -> tuple[float, float, float]:
-    """Sample a pose (x, y, z) uniformly randomly from one of the provided regions.
-
-    Args:
-        regions: List of bounding boxes, where each bounding box is a list of 4
-                floats: [x_start, y_start, x_end, y_end]
-        np_random: Random number generator
-        z_coordinate: Z coordinate for the sampled pose (height above ground)
-
-    Returns:
-        Tuple of (x, y, z) coordinates sampled from one of the regions
-
-    Raises:
-        ValueError: If regions list is empty or if any region has invalid bounds
-    """
-    if not regions:
-        raise ValueError("Regions list cannot be empty")
-
-    # Randomly select one of the regions
-    selected_region = np_random.choice(regions)
-
-    # Validate the selected region
-    if len(selected_region) != 4:
-        raise ValueError(
-            f"Each region must have exactly 4 values "
-            f"[x_start, y_start, x_end, y_end], got {len(selected_region)}"
-        )
-
-    x_start, y_start, x_end, y_end = selected_region
-
-    # Validate bounds
-    if x_start >= x_end:
-        raise ValueError(f"x_start ({x_start}) must be less than x_end ({x_end})")
-    if y_start >= y_end:
-        raise ValueError(f"y_start ({y_start}) must be less than y_end ({y_end})")
-
-    # Sample uniformly within the selected region
-    x = np_random.uniform(x_start, x_end)
-    y = np_random.uniform(y_start, y_end)
-
-    return (x, y, z_coordinate)

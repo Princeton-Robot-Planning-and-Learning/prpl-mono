@@ -19,7 +19,7 @@
 
   <worldbody>
     <light pos="0 0 1.5" directional="true"/>
-    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+    <geom name="floor" size="10 10 0.05" type="plane" material="groundplane"/>
     <body name="cube1" pos="0.6 0 0.02">
       <freejoint/>
       <geom type="box" size="0.02 0.02 0.02" rgba=".5 .7 .5 1" mass="0.1"/>
@@ -34,6 +34,6 @@
     </body>
 
     <!-- Third-person overview camera for complete scene view -->
-    <camera name="overview" pos="0.8 -2.0 1.7" euler="1.0 0.0 0" fovy="42" resolution="640 480"/>
+    <camera name="overview" pos="-2.8 -1.5 1.7" euler="1 -1.0 0" fovy="42" resolution="640 480"/>
   </worldbody>
 </mujoco>

@@ -35,8 +35,8 @@ class Motion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     # Target.
     target_radius: float = 0.1
     target_color: tuple[float, float, float, float] = (1.0, 0.2, 0.2, 0.5)
-    target_lower_bound: tuple[float, float, float] = (0.0, 0.1, 0.0)
-    target_upper_bound: tuple[float, float, float] = (0.5, 0.8, 0.5)
+    target_lower_bound: tuple[float, float, float] = (0.12, 0.1, 0.4)
+    target_upper_bound: tuple[float, float, float] = (0.62, 0.9, 0.9)
 
 
 class Motion3DObjectCentricState(Geom3DObjectCentricState):
@@ -97,14 +97,16 @@ class ObjectCentricMotion3DEnv(
             )
             target_pose = Pose(tuple(target_position))
             try:
-                inverse_kinematics(self.robot, target_pose, validate=True)
+                inverse_kinematics(self._robot_arm, target_pose, validate=True)
             except InverseKinematicsError:
                 continue
             self._set_robot_and_held_object(
-                self.config.initial_joints, self.config.initial_finger_state
+                self.robot.get_base(),
+                self.config.initial_joints,
+                self.config.initial_finger_state,
             )
             # If the goal is already reached, keep sampling.
-            if not self._goal_reached():
+            if not self.goal_reached():
                 break
         if target_pose is None:
             raise RuntimeError("Failed to find reachable target position")
@@ -141,9 +143,9 @@ class ObjectCentricMotion3DEnv(
         assert isinstance(state, Motion3DObjectCentricState)
         return state
 
-    def _goal_reached(self) -> bool:
+    def goal_reached(self) -> bool:
         target = get_pose(self.target_id, self.physics_client_id).position
-        end_effector_pose = self.robot.get_end_effector_pose()
+        end_effector_pose = self._robot_arm.get_end_effector_pose()
         dist = float(np.linalg.norm(np.subtract(target, end_effector_pose.position)))
         return dist < self.config.target_radius
 
@@ -178,17 +180,9 @@ The workspace bounds are:
 Only targets that are reachable via inverse kinematics are sampled.
 """
 
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
+    def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        config = self._object_centric_env.config
-        assert isinstance(config, Motion3DEnvConfig)
-        return f"""Observations consist of:
-- **joint_positions**: Current joint positions of the {len(config.initial_joints)}-DOF robot arm (list of floats)
-- **target**: 3D position (x, y, z) of the target sphere to reach (tuple of 3 floats)
-
-The observation is returned as a Motion3DState dataclass with these two fields.
-"""
+        return "This environment has only one variant."
 
     def _create_action_space_markdown_description(self) -> str:
         """Create action space description."""

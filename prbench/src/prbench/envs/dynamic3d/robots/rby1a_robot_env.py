@@ -2,7 +2,7 @@
 robot in simulation."""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import mujoco
 import numpy as np
@@ -40,18 +40,21 @@ class RBY1ARobotEnv(RobotEnv):
 
     def __init__(
         self,
+        name: str,
         control_frequency: float,
         act_delta: bool = True,
         horizon: int = 1000,
-        camera_names: Optional[list[str]] = None,
+        camera_names: list[str] | None = None,
         camera_width: int = 640,
         camera_height: int = 480,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         show_viewer: bool = False,
     ) -> None:
         """
         Args:
+            name: Name of the robot.
             control_frequency: Frequency at which control actions are applied (in Hz).
+            act_delta: Whether to interpret actions as deltas or absolute values.
             horizon: Maximum number of steps per episode.
             camera_names: List of camera names to use for rendering.
             camera_width: Width of camera images.
@@ -69,6 +72,7 @@ class RBY1ARobotEnv(RobotEnv):
             show_viewer=show_viewer,
         )
 
+        self.name = name
         self.act_delta = act_delta
 
         # Initialize robot state attributes
@@ -252,6 +256,16 @@ class RBY1ARobotEnv(RobotEnv):
                 self.joint_indices.extend(qvel_indices[part])
                 self.joint_indices_ctrl.extend(ctrl_indices[part])
 
+    def set_robot_base_pos_yaw(self, x: float, y: float, yaw: float) -> None:
+        """Set the robot's base position and yaw orientation.
+
+        Args:
+            x: X position of the robot base .
+            y: Y position of the robot base.
+            yaw: Yaw orientation of the robot base.
+        """
+        raise NotImplementedError
+
     def _randomize_base_pose(self) -> None:
         """Randomize the base pose of the robot within defined limits."""
         assert (
@@ -341,14 +355,14 @@ class RBY1ARobotEnv(RobotEnv):
         """Returns the pos and ori jacobian for the robot joints."""
         assert self.sim is not None, "Simulation must be initialized."
         body_name = "EE_BODY_R"  # End-effector body name (using right arm only)
-        jacobian_pos = self.sim.data.get_body_jacp(
+        jacobian_pos = self.sim.data.get_body_jacp(  # type: ignore[no-untyped-call]
             body_name
-        )[  # type: ignore[no-untyped-call]
+        )[
             :, self.joint_indices
         ]  # (3, num_joints)
-        jacobian_ori = self.sim.data.get_body_jacr(
+        jacobian_ori = self.sim.data.get_body_jacr(  # type: ignore[no-untyped-call]
             body_name
-        )[  # type: ignore[no-untyped-call]
+        )[
             :, self.joint_indices
         ]  # (3, num_joints)
         jacobian = np.concatenate([jacobian_pos, jacobian_ori], 0)  # (6, num_joints)
@@ -366,9 +380,9 @@ class RBY1ARobotEnv(RobotEnv):
             dtype=np.float64,
         )
         mujoco.mj_fullM(  # pylint: disable=no-member
-            self.sim.model.mj_model,  # pylint: disable=no-member
+            self.sim.model.mj_model,
             mass_matrix,
-            self.sim.data.mj_data.qM,  # pylint: disable=no-member
+            self.sim.data.mj_data.qM,
         )
         mass_matrix = np.reshape(
             mass_matrix,
@@ -405,7 +419,7 @@ class RBY1ARobotEnv(RobotEnv):
             self.joint_indices
         ]
 
-    def _update_ctrl(self, action) -> None:
+    def _update_ctrl(self, action: Array) -> None:
         start = 0
         for part in self.ctrl:
             # if part not in self.exclude_parts:

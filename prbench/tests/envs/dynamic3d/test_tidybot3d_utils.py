@@ -4,9 +4,170 @@ import numpy as np
 
 from prbench.envs.dynamic3d.utils import (
     bboxes_overlap,
+    compute_camera_euler,
+    point_in_bbox_3d,
     rotate_bounding_box_2d,
+    sample_pose_in_bbox_3d,
     translate_bounding_box,
 )
+
+# Tests for compute_camera_euler function
+
+
+def test_compute_camera_euler_same_position():
+    """Test that camera and target at same position returns zeros."""
+    position = [0.0, 0.0, 0.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should return default angles when positions are the same
+    assert roll == 0.0
+    assert pitch == 0.0
+    assert yaw == 0.0
+
+
+def test_compute_camera_euler_looking_down():
+    """Test camera looking straight down (negative z direction)."""
+    position = [0.0, 0.0, 1.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Looking straight down should have specific angles
+    # The camera's -Z should point downward (from [0,0,1] to [0,0,0])
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_looking_forward():
+    """Test camera looking forward (positive x direction)."""
+    position = [1.0, 0.0, 0.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Camera looking forward along negative x-axis
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_looking_right():
+    """Test camera looking right (positive y direction)."""
+    position = [0.0, 1.0, 0.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Camera looking right along negative y-axis
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_at_45_degrees():
+    """Test camera at 45 degree angle."""
+    position = [1.0, 1.0, 1.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+    # Angles should be in reasonable ranges
+    assert -np.pi <= roll <= np.pi
+    assert -np.pi <= pitch <= np.pi
+    assert -np.pi <= yaw <= np.pi
+
+
+def test_compute_camera_euler_far_distance():
+    """Test camera at large distance from target."""
+    position = [100.0, 100.0, 100.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_close_distance():
+    """Test camera very close to target."""
+    position = [0.01, 0.01, 0.01]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
+
+def test_compute_camera_euler_negative_coords():
+    """Test with negative coordinates."""
+    position = [-1.0, -1.0, -1.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+    assert -np.pi <= roll <= np.pi
+    assert -np.pi <= pitch <= np.pi
+    assert -np.pi <= yaw <= np.pi
+
+
+def test_compute_camera_euler_symmetry():
+    """Test that symmetric positions produce symmetric angles."""
+    # Position along positive x
+    roll1, pitch1, yaw1 = compute_camera_euler([1.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+
+    # Position along negative x
+    roll2, pitch2, yaw2 = compute_camera_euler([-1.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+
+    # Both should be valid angles
+    assert isinstance(roll1, float) and isinstance(roll2, float)
+    assert isinstance(pitch1, float) and isinstance(pitch2, float)
+    assert isinstance(yaw1, float) and isinstance(yaw2, float)
+
+
+def test_compute_camera_euler_lookat_offset():
+    """Test camera with different lookat positions."""
+    position = [0.0, 0.0, 1.0]
+    lookat = [1.0, 1.0, 0.0]
+
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    # Should produce valid angles
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+    assert -np.pi <= roll <= np.pi
+    assert -np.pi <= pitch <= np.pi
+    assert -np.pi <= yaw <= np.pi
+
+
+def test_compute_camera_euler_list_input():
+    """Test that function accepts list input as documented."""
+    position = [1.0, 2.0, 3.0]
+    lookat = [0.0, 0.0, 0.0]
+
+    # Should work with lists (as per docstring)
+    roll, pitch, yaw = compute_camera_euler(position, lookat)
+
+    assert isinstance(roll, float)
+    assert isinstance(pitch, float)
+    assert isinstance(yaw, float)
+
 
 # Tests for bboxes_overlap function
 
@@ -258,3 +419,241 @@ def test_rotate_bounding_box_2d_full_rotation():
 
     # Should be approximately the same as original
     np.testing.assert_allclose(result, bbox, rtol=1e-10)
+
+
+# Tests for point_in_bbox_3d function
+
+
+def test_point_in_bbox_3d_inside():
+    """Test that a point clearly inside the bbox is detected."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 2.0, 2.0]
+    position = np.array([1.0, 1.0, 1.0], dtype=np.float32)
+
+    assert point_in_bbox_3d(position, bbox)
+
+
+def test_point_in_bbox_3d_outside_x():
+    """Test that a point outside the bbox in x direction is not detected."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 2.0, 2.0]
+    position = np.array([3.0, 1.0, 1.0], dtype=np.float32)
+
+    assert not point_in_bbox_3d(position, bbox)
+
+
+def test_point_in_bbox_3d_outside_y():
+    """Test that a point outside the bbox in y direction is not detected."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 2.0, 2.0]
+    position = np.array([1.0, 3.0, 1.0], dtype=np.float32)
+
+    assert not point_in_bbox_3d(position, bbox)
+
+
+def test_point_in_bbox_3d_outside_z():
+    """Test that a point outside the bbox in z direction is not detected."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 2.0, 2.0]
+    position = np.array([1.0, 1.0, 3.0], dtype=np.float32)
+
+    assert not point_in_bbox_3d(position, bbox)
+
+
+def test_point_in_bbox_3d_on_boundary():
+    """Test that a point on the boundary is detected as inside."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 2.0, 2.0]
+
+    # Test all faces
+    assert point_in_bbox_3d(
+        np.array([0.0, 1.0, 1.0], dtype=np.float32), bbox
+    )  # x_min face
+    assert point_in_bbox_3d(
+        np.array([2.0, 1.0, 1.0], dtype=np.float32), bbox
+    )  # x_max face
+    assert point_in_bbox_3d(
+        np.array([1.0, 0.0, 1.0], dtype=np.float32), bbox
+    )  # y_min face
+    assert point_in_bbox_3d(
+        np.array([1.0, 2.0, 1.0], dtype=np.float32), bbox
+    )  # y_max face
+    assert point_in_bbox_3d(
+        np.array([1.0, 1.0, 0.0], dtype=np.float32), bbox
+    )  # z_min face
+    assert point_in_bbox_3d(
+        np.array([1.0, 1.0, 2.0], dtype=np.float32), bbox
+    )  # z_max face
+
+
+def test_point_in_bbox_3d_at_corners():
+    """Test that points at all corners are detected as inside."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+
+    corners = [
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 1.0],
+        [0.0, 1.0, 1.0],
+        [1.0, 1.0, 1.0],
+    ]
+
+    for corner in corners:
+        assert point_in_bbox_3d(np.array(corner, dtype=np.float32), bbox)
+
+
+def test_point_in_bbox_3d_negative_coords():
+    """Test with negative coordinates in the bbox."""
+    bbox = [-2.0, -2.0, -2.0, 0.0, 0.0, 0.0]
+
+    # Inside
+    assert point_in_bbox_3d(np.array([-1.0, -1.0, -1.0], dtype=np.float32), bbox)
+
+    # Outside
+    assert not point_in_bbox_3d(np.array([1.0, -1.0, -1.0], dtype=np.float32), bbox)
+
+
+def test_point_in_bbox_3d_mixed_coords():
+    """Test with bbox spanning negative to positive coordinates."""
+    bbox = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]
+
+    # Inside
+    assert point_in_bbox_3d(np.array([0.0, 0.0, 0.0], dtype=np.float32), bbox)
+    assert point_in_bbox_3d(np.array([-0.5, 0.5, -0.5], dtype=np.float32), bbox)
+
+    # Outside
+    assert not point_in_bbox_3d(np.array([2.0, 0.0, 0.0], dtype=np.float32), bbox)
+
+
+# Tests for sample_pose_in_bbox_3d function
+
+
+def test_sample_pose_in_bbox_3d_within_bounds():
+    """Test that sampled poses are within the bbox bounds."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 2.0, 2.0]
+    rng = np.random.default_rng(42)
+
+    # Sample multiple poses
+    for _ in range(100):
+        x, y, z, yaw = sample_pose_in_bbox_3d(bbox, rng)
+
+        # Check position is within bounds
+        assert 0.0 <= x <= 2.0
+        assert 0.0 <= y <= 2.0
+        assert 0.0 <= z <= 2.0
+
+        # Check yaw is within default range [0, 2*pi)
+        assert 0.0 <= yaw <= 2 * np.pi
+
+
+def test_sample_pose_in_bbox_3d_custom_yaw_range():
+    """Test that sampled yaw is within custom range."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+    rng = np.random.default_rng(42)
+    yaw_range_deg = (45.0, 90.0)
+
+    # Sample multiple poses
+    for _ in range(50):
+        _, _, _, yaw = sample_pose_in_bbox_3d(bbox, rng, yaw_range_deg)
+
+        # Convert yaw back to degrees for easier checking
+        yaw_deg = np.degrees(yaw)
+
+        # Check yaw is within specified range
+        assert 45.0 <= yaw_deg <= 90.0
+
+
+def test_sample_pose_in_bbox_3d_zero_yaw_range():
+    """Test sampling with fixed yaw (zero range)."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+    rng = np.random.default_rng(42)
+    yaw_range_deg = (30.0, 30.0)
+
+    # Sample multiple poses
+    for _ in range(10):
+        _, _, _, yaw = sample_pose_in_bbox_3d(bbox, rng, yaw_range_deg)
+
+        # Yaw should always be 30 degrees (converted to radians)
+        expected_yaw = np.radians(30.0)
+        assert abs(yaw - expected_yaw) < 1e-10
+
+
+def test_sample_pose_in_bbox_3d_negative_bbox():
+    """Test sampling from bbox with negative coordinates."""
+    bbox = [-2.0, -3.0, -1.0, -1.0, -2.0, 0.0]
+    rng = np.random.default_rng(42)
+
+    # Sample multiple poses
+    for _ in range(50):
+        x, y, z, _ = sample_pose_in_bbox_3d(bbox, rng)
+
+        # Check position is within bounds
+        assert -2.0 <= x <= -1.0
+        assert -3.0 <= y <= -2.0
+        assert -1.0 <= z <= 0.0
+
+
+def test_sample_pose_in_bbox_3d_variety():
+    """Test that sampling produces variety (not always the same value)."""
+    bbox = [0.0, 0.0, 0.0, 10.0, 10.0, 10.0]
+    rng = np.random.default_rng(42)
+
+    # Sample multiple poses
+    samples = [sample_pose_in_bbox_3d(bbox, rng) for _ in range(20)]
+
+    # Extract x, y, z, yaw separately
+    x_values = [s[0] for s in samples]
+    y_values = [s[1] for s in samples]
+    z_values = [s[2] for s in samples]
+    yaw_values = [s[3] for s in samples]
+
+    # Check that we have variety (not all the same)
+    assert len(set(x_values)) > 1
+    assert len(set(y_values)) > 1
+    assert len(set(z_values)) > 1
+    assert len(set(yaw_values)) > 1
+
+
+def test_sample_pose_in_bbox_3d_deterministic():
+    """Test that sampling with the same seed produces the same results."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+
+    # Sample with same seed
+    rng1 = np.random.default_rng(123)
+    sample1 = sample_pose_in_bbox_3d(bbox, rng1)
+
+    rng2 = np.random.default_rng(123)
+    sample2 = sample_pose_in_bbox_3d(bbox, rng2)
+
+    # Should produce the same result
+    assert sample1 == sample2
+
+
+def test_sample_pose_in_bbox_3d_full_yaw_range():
+    """Test sampling with full 360-degree yaw range."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+    rng = np.random.default_rng(42)
+    yaw_range_deg = (0.0, 360.0)
+
+    # Sample many poses to cover the range
+    yaw_values = []
+    for _ in range(200):
+        _, _, _, yaw = sample_pose_in_bbox_3d(bbox, rng, yaw_range_deg)
+        yaw_values.append(np.degrees(yaw))
+
+    # Check that we get a good distribution across the range
+    assert min(yaw_values) < 90.0  # Should have samples in first quadrant
+    assert max(yaw_values) > 270.0  # Should have samples in last quadrant
+
+
+def test_sample_pose_in_bbox_3d_small_bbox():
+    """Test sampling from a very small bbox."""
+    bbox = [1.0, 1.0, 1.0, 1.01, 1.01, 1.01]
+    rng = np.random.default_rng(42)
+
+    # Sample multiple poses
+    for _ in range(20):
+        x, y, z, _ = sample_pose_in_bbox_3d(bbox, rng)
+
+        # All samples should be very close to the center
+        assert 1.0 <= x <= 1.01
+        assert 1.0 <= y <= 1.01
+        assert 1.0 <= z <= 1.01

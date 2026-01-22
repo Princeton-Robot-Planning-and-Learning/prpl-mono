@@ -24,7 +24,7 @@ from relational_structs import Array
 
 # This value is then used by the physics engine to determine how much time
 # to simulate for each step.
-SIMULATION_TIMESTEP = 0.002  # (in seconds)
+SIMULATION_TIMESTEP = 0.0005  # (in seconds)
 
 # Set macros needed for MuJoCo rendering
 _SYSTEM = platform.system()
@@ -233,14 +233,9 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
             "qvel": np.copy(self.sim.data.mj_data.qvel),
         }
 
-        # Render images and update obs_dict
-        images: dict[str, NDArray[Any]] | None = self._get_camera_images()
-        if images is not None:
-            obs_dict.update(images)
-
         return obs_dict
 
-    def _get_camera_images(self) -> dict[str, NDArray[np.uint8]] | None:
+    def get_camera_images(self) -> dict[str, NDArray[np.uint8]] | None:
         """Get images from cameras in simulation."""
         if not self.camera_names or self.sim is None:
             return None
@@ -607,6 +602,64 @@ class MjData:
         """
         jacr = self.get_body_jacr(name)
         return np.dot(jacr, self.mj_data.qvel)
+
+    def get_site_xpos(self, name: str) -> NDArray[np.float32]:
+        """Get cartesian position of a mujoco site using site name.
+
+        Args:
+            name: Name of a mujoco site
+
+        Returns:
+            xpos: Position [x, y, z] of the mujoco site in world coordinates
+        """
+        # Find site ID by name in the model
+        site_id = None
+        for i in range(self.model.mj_model.nsite):
+            if (
+                self.model.mj_model.names[
+                    self.model.mj_model.name_siteadr[
+                        i
+                    ] : self.model.mj_model.name_siteadr[i]
+                    + len(name)
+                ]
+                == name.encode()
+            ):
+                site_id = i
+                break
+
+        if site_id is None:
+            raise ValueError(f"Site '{name}' not found in model")
+
+        return self.mj_data.site_xpos[site_id]
+
+    def get_site_xmat(self, name: str) -> NDArray[np.float32]:
+        """Get rotation matrix of a mujoco site using site name.
+
+        Args:
+            name: Name of a mujoco site
+
+        Returns:
+            xmat: Rotation matrix (3x3) of the mujoco site in world coordinates
+        """
+        # Find site ID by name in the model
+        site_id = None
+        for i in range(self.model.mj_model.nsite):
+            if (
+                self.model.mj_model.names[
+                    self.model.mj_model.name_siteadr[
+                        i
+                    ] : self.model.mj_model.name_siteadr[i]
+                    + len(name)
+                ]
+                == name.encode()
+            ):
+                site_id = i
+                break
+
+        if site_id is None:
+            raise ValueError(f"Site '{name}' not found in model")
+
+        return self.mj_data.site_xmat[site_id]
 
 
 class MjSim:

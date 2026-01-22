@@ -38,8 +38,7 @@ _TypedEntityTypeVar = TypeVar("_TypedEntityTypeVar", bound=TypedEntity)
 
 @dataclass(frozen=True, repr=False, eq=False)
 class _Atom(Generic[_TypedEntityTypeVar]):
-    """Struct defining an atom (a predicate applied to either variables or
-    objects).
+    """Struct defining an atom (a predicate applied to either variables or objects).
 
     Should not be instantiated externally.
     """
@@ -62,8 +61,7 @@ class _Atom(Generic[_TypedEntityTypeVar]):
 
     @cached_property
     def pddl_str(self) -> str:
-        """Get a string representation suitable for writing out to a PDDL
-        file."""
+        """Get a string representation suitable for writing out to a PDDL file."""
         if not self.entities:
             return f"({self.predicate.name})"
         entities_str = " ".join(e.name for e in self.entities)
@@ -391,8 +389,8 @@ def _check_uses_action_costs(pddl_str: str) -> bool:
 
 
 def _remove_action_costs_from_problem_str(problem_str: str) -> str:
-    """Remove total-cost initializations and metric sections from a problem
-    string so pyperplan can parse it."""
+    """Remove total-cost initializations and metric sections from a problem string so
+    pyperplan can parse it."""
     # Remove initial total-cost assignments like (= (total-cost) 0)
     problem_str = re.sub(
         r"\(\s*=\s*\(\s*total-cost\s*\)\s*[0-9]+\s*\)",

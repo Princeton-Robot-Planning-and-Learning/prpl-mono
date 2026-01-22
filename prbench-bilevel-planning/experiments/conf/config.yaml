@@ -7,7 +7,7 @@ hydra:
 
 # General.
 seed: 0
-num_eval_episodes: 10
+num_eval_episodes: 50
 max_eval_steps: 3000
 make_videos: False
 video_folder: ${hydra:runtime.output_dir}/videos
