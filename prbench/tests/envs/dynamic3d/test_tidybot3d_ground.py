@@ -146,9 +146,11 @@ def test_ground_region_site_creation_and_placement():
             )
 
             # Verify site Z position is above ground (centered between 0 and 2*threshold)
-            # The site is centered between 0 and ground_placement_threshold*2
-            ground_placement_threshold = 0.1
-            expected_z = ground_placement_threshold  # Center of [0, 0.2]
+            # For 4-value ranges, z_start=0 and z_end=ground_placement_threshold
+            # bbox z range is [max(0, z_start-threshold), z_end+threshold] = [0, 2*threshold]
+            # The site is centered between 0 and 2*ground_placement_threshold
+            ground_placement_threshold = 0.05  # Actual threshold value
+            expected_z = ground_placement_threshold  # Center of [0, 0.1]
             assert np.isclose(site_z, expected_z, atol=1e-6), (
                 f"Site Z position should be at {expected_z} "
                 f"for {region_name} region {region_idx}, got {site_z}"
@@ -159,11 +161,11 @@ def test_ground_region_site_creation_and_placement():
             z_min = site_z - size_z
             z_max = site_z + size_z
 
-            # Site should span from z=0 (surface) to z=0.2 (2*threshold above)
-            # bbox z range is [0, 0.2]
-            # z_center = (0 + 0.2) / 2 = 0.1
-            # z_size = (0.2 - 0) / 2 = 0.1
-            # So z_min = 0.1 - 0.1 = 0, z_max = 0.1 + 0.1 = 0.2
+            # Site should span from z=0 (surface) to z=0.1 (2*threshold above)
+            # bbox z range is [0, 0.1]
+            # z_center = (0 + 0.1) / 2 = 0.05
+            # z_size = (0.1 - 0) / 2 = 0.05
+            # So z_min = 0.05 - 0.05 = 0, z_max = 0.05 + 0.05 = 0.1
             expected_z_min = 0.0  # At ground surface
             expected_z_max = 2 * ground_placement_threshold  # Above ground
 
@@ -287,7 +289,7 @@ def test_ground_check_in_region():
 
     # Position at ground level within region bounds
     # Note: region extends by ground_placement_threshold, so the actual region bounds are
-    # [-0.01, -0.01] to [1.01, 1.01] in XY
+    # [-0.1, -0.1] to [1.1, 1.1] in XY
     pos_inside = np.array([0.5, 0.5, 0.0], dtype=np.float32)
     assert ground.check_in_region(
         pos_inside, "test_region"
