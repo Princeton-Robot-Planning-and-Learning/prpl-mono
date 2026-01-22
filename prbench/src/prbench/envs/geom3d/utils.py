@@ -16,7 +16,7 @@ from shapely.geometry import Polygon
 from prbench.envs.geom3d.object_types import Geom3DCuboidType
 from prbench.envs.utils import RobotActionSpace
 
-# Path to the default realistic background PLY file
+# Path to the default realistic background OBJ file
 DEFAULT_REALISTIC_BG_PATH = (
     Path(__file__).parent / "assets" / "Stage_v3_sc1_staging.obj"
 )
@@ -29,11 +29,11 @@ def load_realistic_background(
     orientation=(0, 0, 0, 1),
     scale=(1, 1, 1),
 ) -> int:
-    """Load a PLY file as a visual-only background in PyBullet.
+    """Load an OBJ file as a visual-only background in PyBullet.
 
     Args:
         physics_client_id: PyBullet physics client ID.
-        ply_path: Path to the PLY file.
+        obj_path: Path to the OBJ file.
         position: Base position of the mesh (x, y, z).
         orientation: Base orientation as quaternion (x, y, z, w).
         scale: Mesh scale (sx, sy, sz).
@@ -170,12 +170,27 @@ class Geom3DRobotActionSpace(RobotActionSpace):
         super().__init__(low, high)
 
     def create_markdown_description(self) -> str:
-        """Create a human-readable markdown description of this space."""
-        return """An action space for a 7 DOF robot that can open and close its gripper.
+        """Create a markdown description with a table of action space entries."""
+        # pylint: disable=line-too-long
+        return """An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+Actions are bounded relative base position, rotation, and joint positions, and open / close.
 
-    The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
+| **Index** | **Description** |
+| --- | --- |
+| 0 | delta base x |
+| 1 | delta base y |
+| 2 | delta base rotation |
+| 3 | delta joint 1 |
+| 4 | delta joint 2 |
+| 5 | delta joint 3 |
+| 6 | delta joint 4 |
+| 7 | delta joint 5 |
+| 8 | delta joint 6 |
+| 9 | delta joint 7 |
+| 10 | gripper open/close |
+
+The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
 """
 
 

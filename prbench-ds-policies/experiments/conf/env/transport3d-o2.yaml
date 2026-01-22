@@ -1,0 +1,10 @@
+# Used to refer to the family of environments, e.g., with different numbers of objects.
+env_name: "transport3d"
+
+# Passed into prbench.make() to create the environment.
+make_kwargs:
+  id: "prbench/Transport3D-o2-v0"
+
+# Passed into create_domain_specific_policy() to create the policy.
+policy_kwargs:
+  num_cubes: 2

@@ -26,8 +26,8 @@ def test_packing3d_env_basic():
 
     for num_parts in [1, 2, 3]:
         env = Packing3DEnv(
-            num_parts=num_parts, use_gui=False
-        )  # set use_gui=True to debug
+            num_parts=num_parts, use_gui=False, realistic_bg=False
+        )  # set use_gui=False to debug
         obs, _ = env.reset(seed=123)
         assert isinstance(obs, np.ndarray)
 
@@ -56,7 +56,9 @@ def test_pick_place_on_rack():
     # Create the real environment.
 
     num_parts = 2
-    env = Packing3DEnv(num_parts=num_parts, use_gui=False, render_mode="rgb_array")
+    env = Packing3DEnv(
+        num_parts=num_parts, use_gui=False, render_mode="rgb_array", realistic_bg=False
+    )
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = (
         env.unwrapped._object_centric_env.config  # pylint: disable=protected-access
@@ -69,7 +71,9 @@ def test_pick_place_on_rack():
     oc_obs = env.observation_space.devectorize(vec_obs)
     obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
-    sim = ObjectCentricPacking3DEnv(num_parts=num_parts, config=config)
+    sim = ObjectCentricPacking3DEnv(
+        num_parts=num_parts, config=config, realistic_bg=False
+    )
     sim.reset()
     sim.set_state(obs)
 

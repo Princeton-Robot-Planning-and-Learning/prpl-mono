@@ -1084,7 +1084,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_arm_joint_plan[0]
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
+            joint_infos = self._pybullet_sim.robot._joint_infos  # type: ignore  # pylint: disable=protected-access
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -1118,7 +1118,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_retract_plan[0]  # type: ignore
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
+            joint_infos = self._pybullet_sim.robot._joint_infos  # type: ignore  # pylint: disable=protected-access
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -1408,7 +1408,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_arm_joint_plan[0]
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
+            joint_infos = self._pybullet_sim.robot._joint_infos  # type: ignore  # pylint: disable=protected-access
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -1438,7 +1438,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_retract_plan[0]  # type: ignore
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot.joint_infos  # type: ignore
+            joint_infos = self._pybullet_sim.robot._joint_infos  # type: ignore  # pylint: disable=protected-access
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]

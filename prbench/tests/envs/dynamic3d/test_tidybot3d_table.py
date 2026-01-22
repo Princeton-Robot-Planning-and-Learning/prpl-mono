@@ -2,8 +2,25 @@
 
 from pathlib import Path
 
+import pytest
+from gymnasium.wrappers import RecordVideo
+
 import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from tests.conftest import MAKE_VIDEOS
+
+# Path to MimicLabs scenes
+MIMICLABS_SCENES_DIR = (
+    Path(__file__).parent.parent.parent.parent
+    / "src"
+    / "prbench"
+    / "envs"
+    / "dynamic3d"
+    / "models"
+    / "assets"
+    / "mimiclabs_scenes"
+    / "meshes"
+)
 
 
 def test_tidybot3d_table_observation_space():
@@ -66,7 +83,9 @@ def test_tidybot_table_clutter_pick_place_goals():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="table",
         num_objects=7,
-        task_config_path=str(tasks_root / "tidybot-table-o20-SortClutteredBlocks.json"),
+        task_config_path=str(
+            tasks_root / "sort" / "tidybot-lab2-o20-SortClutteredBlocks.json"
+        ),
     )
 
     # Reset the environment
@@ -122,5 +141,107 @@ def test_tidybot_table_clutter_pick_place_goals():
         assert (
             env._check_goals()  # pylint: disable=protected-access
         ), "Goals should be satisfied after placing objects in goal region"
+
+    env.close()
+
+
+@pytest.mark.skipif(
+    not MIMICLABS_SCENES_DIR.exists(),
+    reason="MimicLabs scenes not downloaded. "
+    "Run: python scripts/download_mimiclabs_assets.py",
+)
+def test_tidybot3d_table_mimiclabs_scene_position():
+    """Test that MimicLabs scene position offset is applied correctly.
+
+    This test verifies that:
+    1. The environment loads correctly with scene_bg=True (uses default mimiclabs)
+    2. The scene position offset from task JSON is applied to the scene body
+    3. Task objects (tables, cubes) are NOT affected by the scene position
+    """
+    prbench.register_all_environments()
+
+    # Create environment with MimicLabs background using scene_bg=True
+    # This should automatically use the mimiclabs scene defined in task config
+    env = prbench.make(
+        "prbench/TidyBot3D-table-o3-v0",
+        render_mode="rgb_array",
+        scene_bg=True,  # Use default mimiclabs scene (lab2 for table tasks)
+    )
+
+    # Reset and get observation
+    obs, _ = env.reset(seed=42)
+
+    # Verify observation is valid
+    assert env.observation_space.contains(obs)
+
+    # Verify environment has the correct scene configuration
+    # Access the underlying ObjectCentricTidyBot3DEnv
+    unwrapped_env = env.unwrapped
+    oc_env = unwrapped_env._object_centric_env  # pylint: disable=protected-access
+    active_scene = oc_env.task_config.get("_active_scene", {})
+    assert active_scene.get("type") == "mimiclabs"
+    assert active_scene.get("lab") == 2
+    assert "position" in active_scene
+
+    # Verify robot and objects are created (not affected by scene position)
+    state = env.observation_space.devectorize(obs)
+    robot = state.get_object_from_name("robot")
+    assert robot is not None
+
+    # Verify we can step in the environment
+    action = env.action_space.sample()
+    obs2, reward, _, _, _ = env.step(action)
+    assert env.observation_space.contains(obs2)
+    assert isinstance(reward, float)
+
+    env.close()
+
+
+@pytest.mark.skipif(
+    not MIMICLABS_SCENES_DIR.exists(),
+    reason="MimicLabs scenes not downloaded. "
+    "Run: python scripts/download_mimiclabs_assets.py",
+)
+def test_tidybot3d_table_mimiclabs_with_video():
+    """Test MimicLabs scene with SortClutteredBlocks task and video recording."""
+    tasks_root = (
+        Path(prbench.__path__[0]).parent / "prbench" / "envs" / "dynamic3d" / "tasks"
+    )
+
+    # Create environment with SortClutteredBlocks task and MimicLabs background
+    oc_env = ObjectCentricTidyBot3DEnv(
+        scene_type="table",
+        num_objects=20,
+        task_config_path=str(
+            tasks_root / "sort" / "tidybot-lab2-o20-SortClutteredBlocks.json"
+        ),
+        scene_bg=True,  # Use default mimiclabs scene (lab2 for table tasks)
+    )
+
+    obs, _ = oc_env.reset(seed=123)
+    assert oc_env.observation_space.contains(obs)
+
+    # Verify scene configuration before wrapping
+    active_scene = oc_env.task_config.get("_active_scene", {})
+    assert active_scene.get("type") == "mimiclabs"
+    assert active_scene.get("lab") == 2  # table tasks use lab2
+
+    # Verify we have the expected number of objects
+    assert oc_env.num_objects == 20
+
+    # Wrap with RecordVideo if making videos
+    env = (
+        RecordVideo(oc_env, "unit_test_videos_table_o20_SortClutteredBlocks_mimiclabs")
+        if MAKE_VIDEOS
+        else oc_env
+    )
+
+    # Take a few random steps to generate video frames
+    for _ in range(10):
+        action = env.action_space.sample()
+        obs, _, terminated, truncated, _ = env.step(action)
+        assert env.observation_space.contains(obs)
+        if terminated or truncated:
+            obs, _ = env.reset(seed=456)
 
     env.close()

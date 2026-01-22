@@ -70,6 +70,9 @@ class GeneratedBowl(MujocoObject):
         # Create the XML element
         self.xml_element = self._create_xml_element()
 
+        if self.regions is not None:
+            self._create_regions()
+
     def _generate_and_save_mesh(self) -> str:
         """Generate bowl mesh and save to a temporary OBJ file.
 
@@ -385,6 +388,9 @@ class GeneratedSeesaw(MujocoObject):
 
         # Create the XML element
         self.xml_element = self._create_xml_element()
+
+        if self.regions is not None:
+            self._create_regions()
 
     def _generate_and_save_pivot_mesh(self) -> str:
         """Generate triangular prism pivot mesh and save to a temporary OBJ file.

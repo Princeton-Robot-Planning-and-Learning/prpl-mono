@@ -1,5 +1,6 @@
 """Scene loader utilities for loading different types of MuJoCo scene XMLs."""
 
+import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
@@ -69,10 +70,13 @@ class MimicLabsSceneLoader:
             scene_config: Scene configuration with keys:
                 - lab: lab number (2-8), or
                 - xml_path: relative path to scene XML
+                - position: (optional) [x, y, z] position offset for the scene
 
         Returns:
             XML string with absolute paths for assets
         """
+        # Get position offset (default to [0, 0, 0])
+        position = scene_config.get("position", [0, 0, 0])
         # Resolve mimiclabs assets directory
         # Path(__file__) is at: prbench/src/prbench/envs/dynamic3d/scene_loader.py
         # MimicLabs scenes are stored in models/assets/mimiclabs_scenes/
@@ -155,4 +159,39 @@ class MimicLabsSceneLoader:
             for asset_elem in assets_to_remove:
                 asset_section.remove(asset_elem)
 
+        # Apply position offset to the scene
+        MimicLabsSceneLoader._apply_position_offset(tree, position)
+
         return ET.tostring(tree, encoding="unicode")
+
+    @staticmethod
+    def _apply_position_offset(tree: ET.Element, position: list[float]) -> None:
+        """Apply position offset to scene by updating the scene body position.
+
+        MimicLabs XMLs have all scene elements wrapped in a <body name="scene">
+        element. This method updates that body's position to offset the entire
+        scene while keeping task-specific objects (fixtures, robots) at their
+        original positions.
+
+        Args:
+            tree: Root XML element
+            position: [x, y, z] position offset
+        """
+        if position == [0, 0, 0]:
+            return  # No offset needed
+
+        worldbody = tree.find("worldbody")
+        if worldbody is None:
+            return
+
+        # Find the scene body and update its position
+        for body in worldbody.findall("body"):
+            if body.get("name") == "scene":
+                body.set("pos", f"{position[0]} {position[1]} {position[2]}")
+                return
+
+        # If no scene body found, log a warning (shouldn't happen with proper XMLs)
+        logging.warning(
+            "No <body name='scene'> found in MimicLabs XML. "
+            "Position offset will not be applied."
+        )

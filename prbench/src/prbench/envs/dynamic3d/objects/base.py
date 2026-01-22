@@ -21,6 +21,162 @@ from prbench.envs.dynamic3d.object_types import (
 FixtureT = TypeVar("FixtureT", bound="MujocoFixture")
 ObjectT = TypeVar("ObjectT", bound="MujocoObject")
 
+
+class Region:
+    """Represents a region in MuJoCo with site-based bounding box.
+
+    The bounding box is always derived from the site element's pos and size attributes,
+    ensuring consistency between the region's geometric definition and its XML
+    representation.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        rgba: list[float] | None = None,
+        site_element: ET.Element | None = None,
+        env: MujocoEnv | None = None,
+        parent_pos: NDArray[np.float32] | None = None,
+        parent_yaw: float = 0.0,
+    ) -> None:
+        """Initialize a Region.
+
+        Args:
+            name: Name of the region
+            rgba: RGBA color for visualization
+            site_element: MuJoCo site XML element representing this region
+            env: Optional MujocoEnv instance for getting absolute site position from
+                simulation
+            parent_pos: Position of the parent body [x, y, z] for coordinate
+                transformation.
+                        Used when sim is not available.
+            parent_yaw: Yaw angle of the parent body in radians. Used to rotate region
+                coordinates from parent-relative to world frame when sim unavailable.
+        """
+        self.name = name
+        self.rgba = rgba if rgba is not None else [1.0, 0.0, 0.0, 0.0]
+        self.site_element = site_element
+        self.env = env
+        self.parent_pos = (
+            parent_pos if parent_pos is not None else np.array([0.0, 0.0, 0.0])
+        )
+        self.parent_yaw = parent_yaw
+
+    @property
+    def bbox(self) -> list[float]:
+        """Compute bounding box in world coordinates.
+
+        First tries to get the site position from simulation. If unavailable,
+        translates the relative bounding box by parent_pos and rotates by parent_yaw.
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max] in world
+            coordinates
+        """
+        if self.site_element is None:
+            raise ValueError(
+                f"Cannot compute bbox for region '{self.name}' without site_element"
+            )
+
+        # Get size from site element
+        size_str = self.site_element.get("size", "0 0 0")
+        size = np.array([float(v) for v in size_str.split()])
+
+        # Try to get absolute position from simulation first
+        if (
+            self.env is not None
+            and hasattr(self.env, "sim")
+            and self.env.sim is not None
+        ):
+            site_name = self.site_element.get("name")
+            if site_name is not None:
+                try:
+                    pos = self.env.sim.data.get_site_xpos(site_name)
+                    # Compute bbox around the simulated position
+                    x_min = pos[0] - size[0]
+                    y_min = pos[1] - size[1]
+                    z_min = pos[2] - size[2]
+                    x_max = pos[0] + size[0]
+                    y_max = pos[1] + size[1]
+                    z_max = pos[2] + size[2]
+                    return [x_min, y_min, z_min, x_max, y_max, z_max]
+                except ValueError:
+                    # Fall through to XML-based computation
+                    pass
+
+        # Use XML-based computation with parent_pos and parent_yaw
+        # Get site position from XML
+        pos_str = self.site_element.get("pos", "0 0 0")
+        relative_pos = np.array([float(v) for v in pos_str.split()])
+
+        # Compute relative bounding box (site position +/- size)
+        relative_bbox = [
+            relative_pos[0] - size[0],  # x_min
+            relative_pos[1] - size[1],  # y_min
+            relative_pos[2] - size[2],  # z_min
+            relative_pos[0] + size[0],  # x_max
+            relative_pos[1] + size[1],  # y_max
+            relative_pos[2] + size[2],  # z_max
+        ]
+
+        # Translate bounding box by parent_pos
+        translated_bbox = utils.translate_bounding_box(relative_bbox, self.parent_pos)
+
+        # Rotate bounding box by parent_yaw around the center of the translated bbox
+        center_x = (translated_bbox[0] + translated_bbox[3]) / 2
+        center_y = (translated_bbox[1] + translated_bbox[4]) / 2
+        rotated_bbox = utils.rotate_bounding_box_2d(
+            translated_bbox, self.parent_yaw, (center_x, center_y)
+        )
+
+        return rotated_bbox
+
+    def check_in_region(
+        self,
+        position: NDArray[np.float32],
+        env: MujocoEnv | None = None,
+    ) -> bool:
+        """Check if a position is within this region's bounding box.
+
+        Since bbox always returns world coordinates (via simulation or transform),
+        we directly compare against the world-frame bounding box.
+
+        Args:
+            position: Position to check as [x, y, z] in world coordinates
+            env: Optional MujocoEnv instance. If provided and region.env is None,
+                 temporarily uses this env for coordinate transformation.
+
+        Returns:
+            True if position is within the region, False otherwise
+        """
+        # Temporarily update env if provided and region.env is None
+        original_env = self.env
+        if env is not None and self.env is None:
+            self.env = env
+
+        try:
+            # Get the bounding box in world coordinates
+            bbox = self.bbox
+            x_min, y_min, z_min, x_max, y_max, z_max = bbox
+
+            # Check if position is within the bounds
+            return bool(
+                position[0] >= x_min
+                and position[0] <= x_max
+                and position[1] >= y_min
+                and position[1] <= y_max
+                and position[2] >= z_min
+                and position[2] <= z_max
+            )
+        finally:
+            # Restore original env
+            self.env = original_env
+
+    def visualize_region(self) -> None:
+        """Visualize this region (site already created, nothing to do)."""
+        # Visualization is handled at creation time via site element
+
+
 REGISTERED_FIXTURES: dict[str, type[MujocoFixture]] = {}
 REGISTERED_OBJECTS: dict[str, type[MujocoObject]] = {}
 
@@ -142,29 +298,30 @@ class MujocoObject:
         # Create the corresponding Object for state representation key
         self.symbolic_object = Object(self.name, MujocoMovableObjectType)
 
-        # Create region bounding boxes if regions are defined
-        self.region_bboxes: dict[str, list[list[float]]] = {}
-        if self.regions is not None:
-            self._create_region_bboxes()
+        # Create regions if defined
+        self.region_objects: dict[str, list[Region]] = {}
 
         self.xml_element: ET.Element  # To be defined in subclasses
 
-    def _create_region_bboxes(self) -> None:
-        """Create 3D bounding boxes for each region.
+    def _create_regions(self) -> None:
+        """Create Region objects with site elements for each region.
 
         Each region's 2D ranges [x_start, y_start, x_end, y_end] are converted to 3D
         bounding boxes [x_min, y_min, z_min, x_max, y_max, z_max] where the z dimension
         spans a small height above the object surface.
         """
         assert self.regions is not None, "Regions must be defined"
+        assert (
+            self.xml_element is not None
+        ), "XML element must be defined to create regions"
         placement_threshold = 0.01  # 1cm tolerance for placement
         # Note: we are currently hard-coding the z range for the bounding boxes
         # This could potentially be made configurable in the future.
 
         for region_name, region_config in self.regions.items():
-            region_bboxes = []
+            region_list: list[Region] = []
 
-            for region_range in region_config["ranges"]:
+            for region_idx, region_range in enumerate(region_config["ranges"]):
                 x_start, y_start, x_end, y_end = region_range
 
                 # Create 3D bounding box with z range and tolerance on x/y bounds
@@ -177,9 +334,56 @@ class MujocoObject:
                     y_end + placement_threshold,
                     placement_threshold,
                 ]
-                region_bboxes.append(bbox)
 
-            self.region_bboxes[region_name] = region_bboxes
+                # Calculate center and half-sizes for MuJoCo box site
+                x_min, y_min, z_min, x_max, y_max, z_max = bbox
+                region_center_x = (x_min + x_max) / 2
+                region_center_y = (y_min + y_max) / 2
+                region_center_z = (z_min + z_max) / 2
+                region_size_x = (x_max - x_min) / 2
+                region_size_y = (y_max - y_min) / 2
+                region_size_z = (z_max - z_min) / 2
+
+                # Create site element for the region
+                site = ET.Element("site")
+                site.set("name", f"{self.name}_{region_name}_region_{region_idx}")
+                site.set("type", "box")
+                site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
+                site.set(
+                    "pos", f"{region_center_x} {region_center_y} {region_center_z}"
+                )
+                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
+                site.set("rgba", " ".join(map(str, rgba_values)))
+                site.set("group", "0")
+
+                # Create Region object
+                # Get object position if environment is available
+                obj_pos = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+                obj_yaw = 0.0
+                if self.env is not None:
+                    try:
+                        obj_pos, obj_quat = self.env.get_joint_pos_quat(self.joint_name)
+                        obj_pos = np.array(obj_pos, dtype=np.float32)
+                        obj_yaw = utils.quat_to_yaw(obj_quat)
+                    except Exception:
+                        pass  # Use defaults if position can't be retrieved
+
+                site_name = site.get("name")
+                assert site_name is not None, "Site name must be set"
+                region = Region(
+                    name=site_name,
+                    rgba=rgba_values,
+                    site_element=site,
+                    env=self.env,
+                    parent_pos=obj_pos,
+                    parent_yaw=obj_yaw,
+                )
+                region_list.append(region)
+
+                # Append site element to xml_element
+                self.xml_element.append(site)
+
+            self.region_objects[region_name] = region_list
 
     def get_position(self) -> NDArray[np.float32]:
         """Get the object's current position.
@@ -384,25 +588,13 @@ class MujocoObject:
         """
         if self.regions is None:
             raise ValueError("Regions must be defined for this object")
-        if region_name not in self.region_bboxes:
+        if region_name not in self.region_objects:
             raise ValueError(f"Region {region_name} not found in object regions")
 
-        # Get the object's current position
-        obj_pos = self.get_position()
-
-        # Convert world coordinates to object-relative coordinates
-        object_relative_pos = np.array(
-            [
-                position[0] - obj_pos[0],
-                position[1] - obj_pos[1],
-                position[2] - obj_pos[2],
-            ]
-        )
-
-        # Check if position is in any of the region's bounding boxes
-        region_bboxes = self.region_bboxes[region_name]
-        for bbox in region_bboxes:
-            if utils.point_in_bbox_3d(object_relative_pos, bbox):
+        # Check if position is in any of the region objects
+        region_list = self.region_objects[region_name]
+        for region in region_list:
+            if region.check_in_region(position, self.env):
                 return True
 
         return False
@@ -410,44 +602,15 @@ class MujocoObject:
     def visualize_regions(self) -> None:
         """Visualize the object's regions in the MuJoCo environment.
 
-        This method adds visual elements to the MuJoCo XML to represent the regions
-        defined for this object in object-relative coordinates.
+        This method is a no-op since regions are now added to the XML during
+        _create_regions().
         """
         if self.regions is None:
             return
 
-        for region_name, region_config in self.regions.items():
-            # Get the bounding boxes for this region
-            region_bboxes = self.region_bboxes.get(region_name, [])
-
-            for i_region, bbox in enumerate(region_bboxes):
-                # bbox is [x_min, y_min, z_min, x_max, y_max, z_max]
-                x_min, y_min, z_min, x_max, y_max, z_max = bbox
-
-                # Calculate center and half-sizes for MuJoCo box geom
-                region_center_x = (x_min + x_max) / 2
-                region_center_y = (y_min + y_max) / 2
-                region_center_z = (z_min + z_max) / 2
-
-                region_size_x = (x_max - x_min) / 2
-                region_size_y = (y_max - y_min) / 2
-                region_size_z = (z_max - z_min) / 2
-
-                # Create site element for the region visualization
-                region_site = ET.SubElement(self.xml_element, "site")
-                region_site.set("name", f"{self.name}_{region_name}_region_{i_region}")
-                region_site.set("type", "box")
-                region_site.set(
-                    "size",
-                    f"{region_size_x} {region_size_y} {region_size_z}",
-                )
-                region_site.set(
-                    "pos",
-                    f"{region_center_x} {region_center_y} {region_center_z}",
-                )
-                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
-                region_site.set("rgba", " ".join(map(str, rgba_values)))
-                region_site.set("group", "0")
+        for region_list in self.region_objects.values():
+            for region in region_list:
+                region.visualize_region()
 
 
 class MujocoFixture(abc.ABC):
@@ -482,7 +645,19 @@ class MujocoFixture(abc.ABC):
         # Create the corresponding Object for state representation key
         self.symbolic_object = Object(self.name, MujocoFixtureObjectType)
 
+        # Create regions if defined (to be called by subclasses after initialization)
+        self.region_objects: dict[str, list[Region]] = {}
+
         self.xml_element: ET.Element  # To be defined in subclasses
+
+    def _create_regions(self) -> None:
+        """Create Region objects with site elements for each region.
+
+        To be implemented by subclasses.
+        """
+        raise NotImplementedError(
+            f"Subclass {self.__class__.__name__} must implement _create_regions()"
+        )
 
     def get_position(self) -> NDArray[np.float32]:
         """Get the fixture's position.
@@ -585,13 +760,20 @@ class MujocoFixture(abc.ABC):
             True if the position is within the specified region, False otherwise
         """
 
-    @abc.abstractmethod
     def visualize_regions(self) -> None:
         """Visualize the fixture's regions in the MuJoCo environment.
 
         This method adds visual elements to the MuJoCo XML to represent the regions
         defined for this fixture.
         """
+        if self.regions is None:
+            return
+
+        for region_list in self.region_objects.values():
+            for region in region_list:
+                region.visualize_region()
+                if region.site_element is not None:
+                    self.xml_element.append(region.site_element)
 
 
 class MujocoGround:
@@ -600,23 +782,88 @@ class MujocoGround:
     def __init__(
         self,
         regions: dict | None = None,
+        worldbody: ET.Element | None = None,
     ) -> None:
         """Initialize a Ground object.
 
         Args:
-            name: Name of the ground body in the XML
-            fixture_config: Dictionary containing ground configuration with keys:
-                - "length": Total ground length in meters
-                - "width": Total ground width in meters
-            position: Position of the ground as [x, y, z]
-            yaw: Yaw orientation of the ground in radians
             regions: Dictionary of regions defined on the ground plane
+            worldbody: The MuJoCo worldbody XML element to add sites to
         """
         self.name = "ground"
         self.regions = regions
+        self.worldbody = worldbody
         self.position = np.array([0.0, 0.0, 0.0])  # Ground at origin
         self.ground_thickness = 0.01  # Default ground thickness
-        self.xml_element = ET.Element("body", name=self.name)  # Empty body element
+
+        # Create regions if defined
+        self.region_objects: dict[str, list[Region]] = {}
+        if self.regions is not None:
+            self._create_regions()
+
+    def _create_regions(self) -> None:
+        """Create Region objects with site elements for ground regions.
+
+        Sites are added directly to the worldbody if it was provided during init.
+        """
+        assert self.regions is not None, "Regions must be defined"
+
+        for region_name, region_config in self.regions.items():
+            region_list: list[Region] = []
+
+            for region_idx, region_range in enumerate(region_config["ranges"]):
+                x_start, y_start, x_end, y_end = region_range
+
+                # Create 3D bounding box on ground surface.
+                # Sites must not go below ground (z >= 0), span from z=0 to z=2*threshold
+                ground_placement_threshold = 0.01  # 1cm tolerance
+                bbox = [
+                    x_start - ground_placement_threshold,
+                    y_start - ground_placement_threshold,
+                    0,  # z_min at ground surface (z >= 0)
+                    x_end + ground_placement_threshold,
+                    y_end + ground_placement_threshold,
+                    2 * ground_placement_threshold,  # z_max extends above ground
+                ]
+
+                # Calculate center and half-sizes for MuJoCo box site
+                x_min, y_min, z_min, x_max, y_max, z_max = bbox
+                region_center_x = (x_min + x_max) / 2
+                region_center_y = (y_min + y_max) / 2
+                region_center_z = (z_min + z_max) / 2
+                region_size_x = (x_max - x_min) / 2
+                region_size_y = (y_max - y_min) / 2
+                region_size_z = (z_max - z_min) / 2
+
+                # Create site element for the region (in worldbody)
+                site = ET.Element("site")
+                site.set("name", f"{self.name}_{region_name}_region_{region_idx}")
+                site.set("type", "box")
+                site.set("size", f"{region_size_x} {region_size_y} {region_size_z}")
+                site.set(
+                    "pos", f"{region_center_x} {region_center_y} {region_center_z}"
+                )
+                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
+                site.set("rgba", " ".join(map(str, rgba_values)))
+                site.set("group", "0")
+
+                # Create Region object
+                site_name = site.get("name")
+                assert site_name is not None, "Site name must be set"
+                region = Region(
+                    name=site_name,
+                    rgba=rgba_values,
+                    site_element=site,
+                    parent_pos=np.array(self.position, dtype=np.float32),
+                    parent_yaw=0.0,  # Ground doesn't rotate
+                )
+                region_list.append(region)
+
+                # Add site element to worldbody if provided
+                if self.worldbody is not None:
+                    self.worldbody.append(site)
+
+            self.region_objects[region_name] = region_list
 
     def sample_pose_in_region(
         self,
@@ -655,7 +902,7 @@ class MujocoGround:
                 f"[x_start, y_start, x_end, y_end], got {len(selected_range)}"
             )
 
-        (x_start, y_start, x_end, y_end) = selected_range  # type: ignore[misc]
+        x_start, y_start, x_end, y_end = selected_range  # type: ignore[misc]
 
         # Validate bounds
         if x_start > x_end:
@@ -698,71 +945,23 @@ class MujocoGround:
         Returns:
             True if the position is within the specified region, False otherwise
         """
-        # Convert world coordinates to ground-relative coordinates
-        ground_x = position[0] - self.position[0]
-        ground_y = position[1] - self.position[1]
-
-        ground_placement_threshold = 0.01  # 1cm tolerance for placement
-
-        # Get the bounding box for the specified region
-        assert self.regions is not None, "Regions must be defined"
-        if region_name not in self.regions:
+        if region_name not in self.region_objects:
             raise ValueError(f"Region {region_name} not found in ground regions")
 
-        region_ranges = self.regions[region_name]["ranges"]
-
-        for region_range in region_ranges:
-            x_start, y_start, x_end, y_end = region_range
-            # Check if position is within this region (with tolerance)
-            if (
-                x_start - ground_placement_threshold
-                <= ground_x
-                <= x_end + ground_placement_threshold
-            ) and (
-                y_start - ground_placement_threshold
-                <= ground_y
-                <= y_end + ground_placement_threshold
-            ):
+        # Check if position is in any of the region objects
+        region_list = self.region_objects[region_name]
+        for region in region_list:
+            if region.check_in_region(position):
                 return True
 
         return False
 
     def visualize_regions(self) -> None:
-        """Visualize the ground's regions in the MuJoCo environment.
+        """Visualize the ground's regions.
 
-        This method adds visual elements to the MuJoCo XML to represent the regions
-        defined for this ground.
+        This is now a no-op since sites are added directly to the worldbody during
+        _create_regions().
         """
-        if self.regions is None:
-            return
-
-        for region_name, region_config in self.regions.items():
-            for i_region, region_range in enumerate(region_config["ranges"]):
-                x_start, y_start, x_end, y_end = region_range
-
-                # Calculate region center and size
-                region_center_x = (x_start + x_end) / 2
-                region_center_y = (y_start + y_end) / 2
-                region_center_z = 0.001  # Just above ground
-                region_size_x = (x_end - x_start) / 2
-                region_size_y = (y_end - y_start) / 2
-                region_size_z = 0.001  # Very thin box for visualization
-
-                # Create site element for the region visualization
-                region_site = ET.SubElement(self.xml_element, "site")
-                region_site.set("name", f"{self.name}_{region_name}_region_{i_region}")
-                region_site.set("type", "box")
-                region_site.set(
-                    "size",
-                    f"{region_size_x} {region_size_y} {region_size_z}",
-                )
-                region_site.set(
-                    "pos",
-                    f"{region_center_x} {region_center_y} {region_center_z}",
-                )
-                rgba_values = region_config.get("rgba", [1.0, 0.0, 0.0, 0.0])
-                region_site.set("rgba", " ".join(map(str, rgba_values)))
-                region_site.set("group", "1")
 
     def __str__(self) -> str:
         """String representation of the ground."""

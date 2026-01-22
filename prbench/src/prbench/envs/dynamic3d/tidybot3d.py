@@ -77,7 +77,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         num_objects: int = 3,
         task_config_path: str | None = None,
         show_images: bool = False,
-        scene_bg: str | None = None,
+        scene_bg: bool | str | None = None,
         scene_render_camera: str | None = "overview",
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
@@ -104,20 +104,46 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
 
-        # Override scene configuration if scene_bg is provided
-        if scene_bg is not None:
-            self._apply_scene_bg(scene_bg)
+        # Check if scene key is a string (scene reference) and load the scene config
+        scene_value = self.task_config.get("scene")
+        if isinstance(scene_value, str):
+            scene_path = str(Path(__file__).parent / "scenes" / f"{scene_value}.json")
+            assert os.path.exists(
+                scene_path
+            ), f"Scene config file {scene_path} does not exist."
+            with open(scene_path, "r", encoding="utf-8") as f:
+                scene_config = json.load(f)
+            # Merge scene_config into task_config recursively for nested dicts
+            self._merge_configs(self.task_config, scene_config)
+
+        # Apply scene configuration based on scene_bg parameter
+        # scene_bg can be:
+        #   - True: Use the mimiclabs scene defined in task config
+        #   - False/None: Use "simple" scene
+        #   - str: Use the explicit scene name (for backwards compatibility)
+        self._scene_bg = scene_bg
+        self._apply_scene_bg(scene_bg)
 
         # Set camera names from config
         self.camera_names = config.camera_names.copy()
+
+        # Update camera names based on scene type
+        scene_config = self.task_config.get("_active_scene", {})
+        if scene_config.get("type") == "mimiclabs":
+            # MimicLabs scenes define: frontview, birdview, agentview, sideview
+            self.camera_names = ["frontview", "birdview", "agentview", "sideview"]
+
         if "cameras" in self.task_config:
             self.camera_names.extend(list(self.task_config["cameras"].keys()))
 
         # Initialize robot environment
+        self.robot_type = list(self.task_config["robots"].keys())[0]
+        self.robot_name = list(self.task_config["robots"][self.robot_type].keys())[0]
         robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
-            self.task_config["robots"][0]
+            self.robot_type
         ]
         self._robot_env = robot_cls(
+            name=self.robot_name,
             control_frequency=self.config.control_frequency,
             act_delta=self.config.act_delta,
             horizon=self.config.horizon,
@@ -144,43 +170,114 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Store current state
         self._current_state: ObjectCentricState | None = None
 
-    def _apply_scene_bg(self, scene_bg: str) -> None:
-        """Apply scene background configuration to task_config.
+    def _merge_configs(
+        self, base_config: dict[str, Any], update_config: dict[str, Any]
+    ) -> None:
+        """Recursively merge update_config into base_config.
+
+        For nested dictionaries (like "fixtures", "objects", "regions"), merge the
+        contents rather than replacing. For lists, append values from update_config
+        to base_config. For other values, the update_config value takes precedence.
 
         Args:
-            scene_bg: Scene background identifier. Supports:
+            base_config: Dictionary to merge into (modified in-place)
+            update_config: Dictionary to merge from
+
+        Raises:
+            AssertionError: If "goal_state" is present in update_config
+        """
+        assert "goal_state" not in update_config, (
+            "Merging goal_state from scene config is not supported. "
+            "goal_state should only be defined in the task config."
+        )
+
+        for key, update_value in update_config.items():
+            if key in base_config:
+                if isinstance(base_config[key], dict) and isinstance(
+                    update_value, dict
+                ):
+                    # Both are dicts - recursively merge them
+                    self._merge_configs(base_config[key], update_value)
+                elif isinstance(base_config[key], list) and isinstance(
+                    update_value, list
+                ):
+                    # Both are lists - append update values to base
+                    base_config[key].extend(update_value)
+                else:
+                    # Otherwise, use the update value
+                    base_config[key] = update_value
+            else:
+                # Key not in base_config, add it
+                base_config[key] = update_value
+
+    def _apply_scene_bg(self, scene_bg: bool | str | None) -> None:
+        """Apply scene background configuration based on scene_bg parameter.
+
+        Looks up the scene configuration (including position) from the task JSON's
+        scene dict, and stores it in task_config["_active_scene"] for use by
+        the scene loader.
+
+        Args:
+            scene_bg: Scene background setting. Supports:
+                - True: Use the mimiclabs scene defined in task config
+                - False/None: Use "simple" scene
                 - "simple": Use default ground scene
                 - "mimiclabs-labN": Use MimicLabs labN scene (N=2-8)
         """
-        if scene_bg == "simple":
-            # Use simple ground scene (default)
-            self.task_config["scene"] = {"type": "simple"}
-        elif scene_bg.startswith("mimiclabs-lab"):
-            # Extract lab number from scene_bg (e.g., "mimiclabs-lab2" -> 2)
-            # Split by "-lab" and take the last part
-            lab_str = scene_bg.split("-lab")[-1]
+        # Get scene configs from task JSON (format: dict of scene_name -> config)
+        scene_configs = self.task_config.get("scene", {})
+
+        # Convert bool/None to scene name
+        if scene_bg is None or scene_bg is False:
+            scene_bg_name = "simple"
+        elif scene_bg is True:
+            # Find the mimiclabs scene in task config
+            mimiclabs_scenes = [k for k in scene_configs if k.startswith("mimiclabs-")]
+            if not mimiclabs_scenes:
+                raise ValueError(
+                    "scene_bg=True but no mimiclabs scene found in task config. "
+                    f"Available scenes: {list(scene_configs.keys())}"
+                )
+            scene_bg_name = mimiclabs_scenes[0]  # Use the first (and only) mimiclabs
+        else:
+            scene_bg_name = scene_bg  # It's already a string
+
+        # Look up the scene config for the requested scene_bg
+        if scene_bg_name not in scene_configs:
+            raise ValueError(
+                f"Scene '{scene_bg_name}' not found in task config. "
+                f"Available scenes: {list(scene_configs.keys())}"
+            )
+
+        scene_config = scene_configs[scene_bg_name]
+        position = scene_config.get("position", [0, 0, 0])
+
+        # Build the active scene config
+        if scene_bg_name == "simple":
+            self.task_config["_active_scene"] = {
+                "type": "simple",
+                "position": position,
+            }
+        elif scene_bg_name.startswith("mimiclabs-lab"):
+            # Extract lab number from scene_bg_name (e.g., "mimiclabs-lab2" -> 2)
+            lab_str = scene_bg_name.split("-lab")[-1]
             try:
                 lab_num = int(lab_str)
             except ValueError as e:
                 raise ValueError(
-                    f"Could not parse lab number from {scene_bg}. "
+                    f"Could not parse lab number from {scene_bg_name}. "
                     f"Expected format: 'mimiclabs-lab2' through 'mimiclabs-lab8'"
                 ) from e
             if not 2 <= lab_num <= 8:
-                raise ValueError(
-                    f"MimicLabs lab number must be 2-8, got {lab_num} from {scene_bg}"
-                )
-            self.task_config["scene"] = {"type": "mimiclabs", "lab": lab_num}
-
-            # Update camera names to match MimicLabs scene cameras
-            # MimicLabs scenes define: frontview, birdview, agentview, sideview
-            # If current camera_names contains 'overview', replace with 'frontview'
-            # Replace overview with frontview (default camera in MimicLabs)
-            self.camera_names = ["frontview", "birdview", "agentview", "sideview"]
-
+                raise ValueError(f"MimicLabs lab number must be 2-8, got {lab_num}")
+            self.task_config["_active_scene"] = {
+                "type": "mimiclabs",
+                "lab": lab_num,
+                "position": position,
+            }
         else:
             raise ValueError(
-                f"Unknown scene_bg: {scene_bg}. "
+                f"Unknown scene_bg: {scene_bg_name}. "
                 f"Supported values: 'simple', 'mimiclabs-lab2' through 'mimiclabs-lab8'"
             )
 
@@ -270,7 +367,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         model_base_path = Path(__file__).parent / "models" / "stanford_tidybot"
 
         # Load scene XML using SceneLoader
-        scene_config = self.task_config.get("scene", {"type": "simple"})
+        # Use _active_scene which is set by _apply_scene_bg() based on scene_bg param
+        scene_config = self.task_config.get("_active_scene", {"type": "simple"})
         xml_string = SceneLoader.load_scene(scene_config, model_base_path)
 
         # Insert objects in scene
@@ -315,7 +413,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 # Create ground fixture for region sampling
                 self._ground_fixture = MujocoGround(
                     regions=regions_on_ground,
+                    worldbody=worldbody,
                 )
+                self._ground_fixture.visualize_regions()
 
                 # Create fixture region names and pos/yaw samplers dicts
                 entity_region_names: dict[str, str] = {}
@@ -486,6 +586,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     continue
 
                 if obj_name not in self._objects_dict:
+                    if obj_name == self.robot_name:
+                        continue
                     raise ValueError(f"Object {obj_name} not found in environment.")
 
                 region_config = self.task_config["regions"][region_name]
@@ -617,6 +719,51 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
     ) -> Space[Array]:
         """Create action space for TidyBot's control interface."""
 
+    def _initialize_robot_pose(self) -> None:
+        """Initialize the robot in the environment."""
+
+        # Go through predicates, find the ones that specify the robot's initial pose
+        init_predicates = self.task_config.get("initial_state", [])
+        robot_predicates = []
+        for pred in init_predicates:
+            if len(pred) >= 3 and pred[0] == "on" and pred[1] == self.robot_name:
+                robot_predicates.append(pred)
+
+        # Assert there is exactly one predicate for the robot
+        assert len(robot_predicates) <= 1, (
+            f"Expected at most 1 predicate for robot '{self.robot_name}', "
+            f"got {len(robot_predicates)}"
+        )
+
+        if not robot_predicates:
+            # Define limits for x, y, and yaw
+            x_limit = (-1.0, 1.0)
+            y_limit = (-1.0, 1.0)
+            yaw_limit = (-np.pi, np.pi)
+            # Sample random values within the limits
+            x = self.np_random.uniform(*x_limit)
+            y = self.np_random.uniform(*y_limit)
+            yaw = self.np_random.uniform(*yaw_limit)
+        else:
+            # Extract region name
+            region_name = robot_predicates[0][2]
+            region_config = self.task_config["regions"][region_name]
+
+            # Assert that the region target is ground
+            assert region_config["target"] == "ground", (
+                f"Region '{region_name}' for robot must have target 'ground', "
+                f"got '{region_config['target']}'"
+            )
+
+            # Sample pose in region using ground fixture
+            assert self._ground_fixture is not None, "Ground fixture not initialized"
+            x, y, _, yaw = self._ground_fixture.sample_pose_in_region(
+                region_name, self.np_random
+            )
+
+        # Set robot base position and yaw orientation
+        self._robot_env.set_robot_base_pos_yaw(x, y, yaw)
+
     def reset(
         self,
         *,
@@ -642,6 +789,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Initialize object poses
         self._initialize_object_poses()
+
+        # Initialize the robot pose
+        self._initialize_robot_pose()
 
         # Get object-centric observation
         self._current_state = self._get_object_centric_state()
@@ -975,7 +1125,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         return TidyBot3DRobotActionSpace()
 
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
-        assert self.task_config["robots"][0] == "tidybot"
+        assert self.robot_type == "tidybot"
         assert self._robot_env is not None, "Robot environment not initialized"
         robot = Object("robot", MujocoTidyBotRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
@@ -1156,7 +1306,7 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         return RBY1ARobotActionSpace()
 
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
-        assert self.task_config["robots"][0] == "rby1a"
+        assert self.robot_type == "rby1a"
         assert self._robot_env is not None, "Robot environment not initialized"
         robot = Object("robot", MujocoRBY1ARobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.

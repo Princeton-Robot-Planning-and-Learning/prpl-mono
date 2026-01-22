@@ -70,6 +70,9 @@ class RoboCasaObject(MujocoObject):
         # Calculate bounding box from sites in the model
         self.bounding_box = self._calculate_bounding_box()
 
+        if self.regions is not None:
+            self._create_regions()
+
     def _extract_assets(self) -> ET.Element:
         """Extract asset elements from the model.xml.
 

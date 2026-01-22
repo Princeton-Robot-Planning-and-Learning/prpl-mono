@@ -52,10 +52,16 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     shelf_texture: Path = Path(__file__).parent / "assets" / "dark-wood-texture.png"
 
     # World bounds.
-    x_lb: float = -1
-    x_ub: float = 1
-    y_lb: float = -1
-    y_ub: float = 1
+    specific_range: bool = False
+    x_lb: float = -1.0
+    x_ub: float = 1.0
+    y_lb: float = -1.0
+    y_ub: float = 1.0
+    if specific_range:
+        x_lb = 0.4
+        x_ub = 0.5
+        y_lb = -0.1
+        y_ub = 0.1
 
     # Blocks.
     block_half_extents: tuple[float, float, float] = (0.05, 0.025, 0.025)
@@ -63,6 +69,11 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Gripper.
     gripper_open_threshold: float = 0.01
+
+    # Goal checking: tolerance below the first shelf layer for determining if an
+    # object is "on the shelf". Objects must be above (shelf_pose.z + shelf_spacing
+    # - on_shelf_z_tolerance) to count as placed.
+    on_shelf_z_tolerance: float = 0.05
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -210,8 +221,6 @@ class ObjectCentricShelf3DEnv(
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         if object_name.startswith("cube"):
             return self.config.block_half_extents
-        if object_name == "shelf":
-            raise NotImplementedError("TODO")
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_obs(self) -> Shelf3DObjectCentricState:
@@ -230,9 +239,15 @@ class ObjectCentricShelf3DEnv(
         robot_gripper_pose = self._robot_arm.get_finger_state()
         if robot_gripper_pose > self.config.gripper_open_threshold:
             return False
+        # Check that all cubes are above the first shelf layer (with tolerance).
+        min_on_shelf_z = (
+            self.config.shelf_pose.position[2]
+            + self.config.shelf_spacing
+            - self.config.on_shelf_z_tolerance
+        )
         for _, cube_id in self._cubes.items():
             cube_pose = get_pose(cube_id, self.physics_client_id)
-            if cube_pose.position[2] < 0.3:
+            if cube_pose.position[2] < min_on_shelf_z:
                 return False
 
         return True
@@ -258,26 +273,18 @@ class Shelf3DEnv(ConstantObjectPRBenchEnv):
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
         # pylint: disable=line-too-long
-        return """A 3D environment where the goal is to pick up a cube from the ground and place it on a shelf."""
+        return """A 3D environment where the goal is to pick up objects from the ground and place them onto a shelf."""
 
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return "The number of cubes differs between environment variants. For example, Shelf3D-o1 has 1 cube, while Shelf3D-o10 has 10 cubes."
-
-    def _create_observation_space_markdown_description(self) -> str:
-        """Create observation space description."""
-        return """Observations consist of:
-- **robot**: The pose of the robot.
-- **shelf**: The pose of the shelf.
-- **cubes**: The poses of the cubes.
-"""
+        return "The number of objects differs between environment variants. For example, Shelf3D-o1 has 1 object, while Shelf3D-o10 has 10 objects."
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        return """The reward is a small negative reward (-0.01) per timestep to encourage exploration."""
+        return """The reward is -1 per timestep to encourage efficient task completion. The episode terminates successfully when all objects are placed on the shelf (i.e., above the first shelf layer) and the gripper is closed. The gripper must be closed to prevent accidental "success" while an object is still being held above the shelf."""
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
         # pylint: disable=line-too-long
-        return """This is a very common kind of environment."""
+        return """This is a very common kind of environment. The background is adapted from the [Replica dataset](https://arxiv.org/abs/1906.05797) (Straub et al., 2019)."""

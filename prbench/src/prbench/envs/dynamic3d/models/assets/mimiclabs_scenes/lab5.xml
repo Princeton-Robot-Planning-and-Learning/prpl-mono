@@ -1,10 +1,10 @@
 <mujoco model="lab5">
   <default>
     <default class="visual">
-      <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+      <geom group="2" type="mesh" contype="0" conaffinity="0" />
     </default>
     <default class="collision">
-      <geom group="3" type="mesh"/>
+      <geom group="3" type="mesh" />
     </default>
   </default>
   <asset>
@@ -225,113 +225,105 @@
     <!-- <mesh name="scene4_72" file="meshes/lab5/scene4_72.obj"/> -->
   </asset>
   <worldbody>
-    <body name="scene4">
-      <!-- <geom mesh="scene4_0" material="book28" class="visual"/>
-      <geom mesh="scene4_1" material="book24" class="visual"/>
-      <geom mesh="scene4_2" material="book23" class="visual"/>
-      <geom mesh="scene4_3" material="book22" class="visual"/>
-      <geom mesh="scene4_4" material="book19" class="visual"/>
-      <geom mesh="scene4_5" material="book14" class="visual"/>
-      <geom mesh="scene4_6" material="book13" class="visual"/>
-      <geom mesh="scene4_7" material="book12" class="visual"/>
-      <geom mesh="scene4_8" material="book11" class="visual"/>
-      <geom mesh="scene4_9" material="book9" class="visual"/>
-      <geom mesh="scene4_10" material="book7" class="visual"/>
-      <geom mesh="scene4_11" material="book_4" class="visual"/>
-      <geom mesh="scene4_12" material="book3" class="visual"/>
-      <geom mesh="scene4_13" material="book1" class="visual"/>
-      <geom mesh="scene4_14" material="book10" class="visual"/>
-      <geom mesh="scene4_15" material="book6" class="visual"/>
-      <geom mesh="scene4_16" material="book8" class="visual"/>
-      <geom mesh="scene4_17" material="book18" class="visual"/>
-      <geom mesh="scene4_18" material="book17" class="visual"/>
-      <geom mesh="scene4_19" material="book16" class="visual"/>
-      <geom mesh="scene4_20" material="book21" class="visual"/>
-      <geom mesh="scene4_21" material="book20" class="visual"/>
-      <geom mesh="scene4_22" material="book25" class="visual"/>
-      <geom mesh="scene4_23" material="book15" class="visual"/>
-      <geom mesh="scene4_24" material="book5" class="visual"/>
-      <geom mesh="scene4_25" material="book_2" class="visual"/>
-      <geom mesh="scene4_26" material="book26" class="visual"/>
-      <geom mesh="scene4_27" material="book27" class="visual"/> -->
-      <geom mesh="scene4_28" material="paper_book_" class="visual"/>
-      <geom mesh="scene4_29" material="jar_" class="visual"/>
-      <geom mesh="scene4_30" material="still" class="visual"/>
-      <geom mesh="scene4_31" material="Material.004" class="visual"/>
-      <geom mesh="scene4_32" material="wiski_3" class="visual"/>
-      <geom mesh="scene4_33" material="WATER2_" class="visual"/>
-      <geom mesh="scene4_34" material="PAPER_4" class="visual"/>
-      <geom mesh="scene4_35" material="wiski5" class="visual"/>
-      <geom mesh="scene4_36" material="WATER_1" class="visual"/>
-      <geom mesh="scene4_37" material="paper3" class="visual"/>
-      <geom mesh="scene4_38" material="wiski_4" class="visual"/>
-      <geom mesh="scene4_39" material="paper2" class="visual"/>
-      <geom mesh="scene4_40" material="paper1" class="visual"/>
-      <geom mesh="scene4_41" material="wiski_2" class="visual"/>
-      <geom mesh="scene4_42" material="glass-1" class="visual"/>
-      <geom mesh="scene4_43" material="wiski_1" class="visual"/>
-      <geom mesh="scene4_44" material="glass" class="visual"/>
-      <geom mesh="scene4_45" material="lighte_" class="visual"/>
-      <!-- <geom mesh="scene4_46" material="stone_" class="visual"/> -->
-      <geom mesh="scene4_47" material="cabinet" class="visual"/>
-      <geom mesh="scene4_48" material="steel_body" class="visual"/>
-      <geom mesh="scene4_49" material="wood_2" class="visual"/>
-      <geom mesh="scene4_50" material="wood_wall" class="visual"/>
-      <geom mesh="scene4_51" material="Cake" class="visual"/>
-      <geom mesh="scene4_52" material="Chocolate" class="visual"/>
-      <geom mesh="scene4_53" material="dosh_" class="visual"/>
-      <!-- <geom mesh="scene4_54" material="picture" class="visual"/>
-      <geom mesh="scene4_55" material="Soil" class="visual"/>
-      <geom mesh="scene4_56" material="flower_pot" class="visual"/>
-      <geom mesh="scene4_57" material="pampas006" class="visual"/>
-      <geom mesh="scene4_58" material="leaf_.006" class="visual"/>
-      <geom mesh="scene4_59" material="leaf006" class="visual"/>
-      <geom mesh="scene4_60" material="leaf_Mat.008" class="visual"/> -->
-      <geom mesh="scene4_61" material="FABRIC_1_FRONT_1333.003" class="visual"/>
-      <geom mesh="scene4_62" material="pillow" class="visual"/>
-      <geom mesh="scene4_63" material="Carpet" class="visual"/>
-      <geom mesh="scene4_64" material="metal_" class="visual"/>
-      <geom mesh="scene4_65" material="Glass" class="visual"/>
-      <geom mesh="scene4_66" material="Wall" class="visual"/>
-      <!-- <geom mesh="scene4_67" material="Wall" class="visual"/> -->
-      <!-- <geom mesh="scene4_68" material="floor_" class="visual"/> -->
-      <geom mesh="scene4_69" material="back" class="visual"/>
-      <geom mesh="scene4_70" material="Faucet" class="visual"/>
-      <geom mesh="scene4_71" material="metal_black_" class="visual"/>
-      <!-- <geom mesh="scene4_72" material="roof_" class="visual"/> -->
-    </body>
-    <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false"/>
-    <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="10 10 .125" type="plane"/>
+    <body name="scene" pos="0 0 0">
+      <body name="scene4">
+        <!-- <geom mesh="scene4_0" material="book28" class="visual"/>
+        <geom mesh="scene4_1" material="book24" class="visual"/>
+        <geom mesh="scene4_2" material="book23" class="visual"/>
+        <geom mesh="scene4_3" material="book22" class="visual"/>
+        <geom mesh="scene4_4" material="book19" class="visual"/>
+        <geom mesh="scene4_5" material="book14" class="visual"/>
+        <geom mesh="scene4_6" material="book13" class="visual"/>
+        <geom mesh="scene4_7" material="book12" class="visual"/>
+        <geom mesh="scene4_8" material="book11" class="visual"/>
+        <geom mesh="scene4_9" material="book9" class="visual"/>
+        <geom mesh="scene4_10" material="book7" class="visual"/>
+        <geom mesh="scene4_11" material="book_4" class="visual"/>
+        <geom mesh="scene4_12" material="book3" class="visual"/>
+        <geom mesh="scene4_13" material="book1" class="visual"/>
+        <geom mesh="scene4_14" material="book10" class="visual"/>
+        <geom mesh="scene4_15" material="book6" class="visual"/>
+        <geom mesh="scene4_16" material="book8" class="visual"/>
+        <geom mesh="scene4_17" material="book18" class="visual"/>
+        <geom mesh="scene4_18" material="book17" class="visual"/>
+        <geom mesh="scene4_19" material="book16" class="visual"/>
+        <geom mesh="scene4_20" material="book21" class="visual"/>
+        <geom mesh="scene4_21" material="book20" class="visual"/>
+        <geom mesh="scene4_22" material="book25" class="visual"/>
+        <geom mesh="scene4_23" material="book15" class="visual"/>
+        <geom mesh="scene4_24" material="book5" class="visual"/>
+        <geom mesh="scene4_25" material="book_2" class="visual"/>
+        <geom mesh="scene4_26" material="book26" class="visual"/>
+        <geom mesh="scene4_27" material="book27" class="visual"/> -->
+        <geom mesh="scene4_28" material="paper_book_" class="visual"/>
+        <geom mesh="scene4_29" material="jar_" class="visual"/>
+        <geom mesh="scene4_30" material="still" class="visual"/>
+        <geom mesh="scene4_31" material="Material.004" class="visual"/>
+        <geom mesh="scene4_32" material="wiski_3" class="visual"/>
+        <geom mesh="scene4_33" material="WATER2_" class="visual"/>
+        <geom mesh="scene4_34" material="PAPER_4" class="visual"/>
+        <geom mesh="scene4_35" material="wiski5" class="visual"/>
+        <geom mesh="scene4_36" material="WATER_1" class="visual"/>
+        <geom mesh="scene4_37" material="paper3" class="visual"/>
+        <geom mesh="scene4_38" material="wiski_4" class="visual"/>
+        <geom mesh="scene4_39" material="paper2" class="visual"/>
+        <geom mesh="scene4_40" material="paper1" class="visual"/>
+        <geom mesh="scene4_41" material="wiski_2" class="visual"/>
+        <geom mesh="scene4_42" material="glass-1" class="visual"/>
+        <geom mesh="scene4_43" material="wiski_1" class="visual"/>
+        <geom mesh="scene4_44" material="glass" class="visual"/>
+        <geom mesh="scene4_45" material="lighte_" class="visual"/>
+        <!-- <geom mesh="scene4_46" material="stone_" class="visual"/> -->
+        <geom mesh="scene4_47" material="cabinet" class="visual"/>
+        <geom mesh="scene4_48" material="steel_body" class="visual"/>
+        <geom mesh="scene4_49" material="wood_2" class="visual"/>
+        <geom mesh="scene4_50" material="wood_wall" class="visual"/>
+        <geom mesh="scene4_51" material="Cake" class="visual"/>
+        <geom mesh="scene4_52" material="Chocolate" class="visual"/>
+        <geom mesh="scene4_53" material="dosh_" class="visual"/>
+        <!-- <geom mesh="scene4_54" material="picture" class="visual"/>
+        <geom mesh="scene4_55" material="Soil" class="visual"/>
+        <geom mesh="scene4_56" material="flower_pot" class="visual"/>
+        <geom mesh="scene4_57" material="pampas006" class="visual"/>
+        <geom mesh="scene4_58" material="leaf_.006" class="visual"/>
+        <geom mesh="scene4_59" material="leaf006" class="visual"/>
+        <geom mesh="scene4_60" material="leaf_Mat.008" class="visual"/> -->
+        <geom mesh="scene4_61" material="FABRIC_1_FRONT_1333.003" class="visual"/>
+        <geom mesh="scene4_62" material="pillow" class="visual"/>
+        <geom mesh="scene4_63" material="Carpet" class="visual"/>
+        <geom mesh="scene4_64" material="metal_" class="visual"/>
+        <geom mesh="scene4_65" material="Glass" class="visual"/>
+        <geom mesh="scene4_66" material="Wall" class="visual"/>
+        <!-- <geom mesh="scene4_67" material="Wall" class="visual"/> -->
+        <!-- <geom mesh="scene4_68" material="floor_" class="visual"/> -->
+        <geom mesh="scene4_69" material="back" class="visual"/>
+        <geom mesh="scene4_70" material="Faucet" class="visual"/>
+        <geom mesh="scene4_71" material="metal_black_" class="visual"/>
+        <!-- <geom mesh="scene4_72" material="roof_" class="visual"/> -->
+      </body>
+      <light name="light_kitchen" diffuse=".8 .8 .8" dir="0 0 -1" directional="true" pos="-1.75 0 1.6" specular="0.8 0.8 0.8" castshadow="false"/>
+      <geom condim="3" group="1" material="floorplane" name="floor" pos="0 0 0" size="10 10 .125" type="plane"/>
+      
+
+      <geom pos="0.5 8.5 1.5" quat="0.7071 0.7071 0 0" size="10.5 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_left_visual" material="walls_mat"/>
+      <geom pos="0.5 -2.2 1.5" quat="0.7071 -0.7071 0 0" size="10.5 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_right_visual" material="walls_mat"/>
+      <geom pos="-6.15 0 1.5" quat="0.5 0.5 0.5 0.5" size="10 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_rear_visual" material="walls_mat"/>
+      <geom pos="2 0 1.5" quat="0.5 0.5 -0.5 -0.5" size="10 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_front_visual" material="walls_mat"/>
+
+
+      <light name="light1" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="1 1 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+      <light name="light2" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="-3. -3. 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
+
+      <!-- front view -->
+      <camera mode="fixed" name="frontview" pos="1.0 0 1.45" quat="0.56 0.43 0.43 0.56"/>
+      <!-- bird view -->
+      <camera mode="fixed" name="birdview" pos="-0.2 0 3.0" quat="0.7071 0 0 0.7071"/>
+      <!-- agent view -->
+      <camera mode="fixed" name="agentview" pos="0.5 0 1.35" quat="0.653 0.271 0.271 0.653"/>
+
+      <!-- side view -->
+      <camera mode="fixed" name="sideview" pos="-0.05651774593317116 1.2761224129427358 -1.4879572214102434" quat="0.009905065491771751 0.006877963156909582 0.5912228352893879 0.806418094001364" />
     
-
-    <geom pos="0.5 8.5 1.5" quat="0.7071 0.7071 0 0" size="10.5 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_left_visual" material="walls_mat"/>
-    <geom pos="0.5 -2.2 1.5" quat="0.7071 -0.7071 0 0" size="10.5 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_right_visual" material="walls_mat"/>
-    <geom pos="-6.15 0 1.5" quat="0.5 0.5 0.5 0.5" size="10 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_rear_visual" material="walls_mat"/>
-    <geom pos="2 0 1.5" quat="0.5 0.5 -0.5 -0.5" size="10 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_front_visual" material="walls_mat"/>
- 
-    <body name="table" pos="0 0 0.4">
-      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" group="0" name="table_collision" friction="1 0.005 0.0001"/>
-      <geom pos="0 0 0" size="0.4 0.4 0.4" type="box" conaffinity="0" contype="0" group="1" name="table_visual" material="table_texture"/>
-      <site pos="0 0 0.4" name="table_top" size="0.001 0.001 0.001" rgba="0 0 0 0"/>
-      <!-- Legs (visual only) -->
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg1_visual" material="table_legs"/>
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg2_visual" material="table_legs"/>
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg3_visual" material="table_legs"/>
-      <geom pos="0 0 0" size="0.05 0.1" type="cylinder" conaffinity="0" contype="0" group="1" name="table_leg4_visual" material="table_legs"/>
     </body>
-
-    <light name="light1" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="1 1 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
-    <light name="light2" diffuse=".8 .8 .8" dir="0 -.15 -1" directional="false" pos="-3. -3. 4.0" specular="0.3 0.3 0.3" castshadow="false"/>
-
-    <!-- front view -->
-    <camera mode="fixed" name="frontview" pos="1.0 0 1.45" quat="0.56 0.43 0.43 0.56"/>
-    <!-- bird view -->
-    <camera mode="fixed" name="birdview" pos="-0.2 0 3.0" quat="0.7071 0 0 0.7071"/>
-    <!-- agent view -->
-    <camera mode="fixed" name="agentview" pos="0.5 0 1.35" quat="0.653 0.271 0.271 0.653"/>
-
-    <!-- side view -->
-    <camera mode="fixed" name="sideview" pos="-0.05651774593317116 1.2761224129427358 -1.4879572214102434" quat="0.009905065491771751 0.006877963156909582 0.5912228352893879 0.806418094001364" />
-    
   </worldbody>
 </mujoco>

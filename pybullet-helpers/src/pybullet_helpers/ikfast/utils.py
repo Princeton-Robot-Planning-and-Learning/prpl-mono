@@ -72,7 +72,8 @@ def get_ordered_ancestors(robot: SingleArmPyBulletRobot, link: int) -> list[int]
 
     # Mapping of link ID to parent link ID for each link in the robot
     link_to_parent_link: dict[int, int] = {
-        info.jointIndex: info.parentIndex for info in robot.joint_infos
+        info.jointIndex: info.parentIndex
+        for info in robot._joint_infos  # pylint: disable=protected-access
     }
     # Note: it is important to recognize we use the IKFastInfo base and
     # end-effector link information as that was how IKFast was compiled.
@@ -146,7 +147,7 @@ def get_ikfast_joints(
     # Prune out the fixed joints.
     ik_joints = [
         joint_info
-        for joint_info in robot.joint_infos
+        for joint_info in robot._joint_infos  # pylint: disable=protected-access
         if joint_info.jointIndex in ee_ancestors and not joint_info.is_fixed
     ]
     free_joints = [
