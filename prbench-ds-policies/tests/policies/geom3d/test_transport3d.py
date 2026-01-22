@@ -20,6 +20,9 @@ def test_transport3d_policy_returns_valid_action():
         env.observation_space,
         num_cubes=1,
         action_space=env.action_space,
+        birrt_extend_num_interp=10,
+        smooth_mp_max_time=1.0,
+        smooth_mp_max_candidate_plans=1,
     )
     obs, _ = env.reset(seed=123)
 
@@ -41,6 +44,9 @@ def test_transport3d_dynamic_loader():
         observation_space=env.observation_space,
         action_space=env.action_space,
         num_cubes=1,
+        birrt_extend_num_interp=10,
+        smooth_mp_max_time=1.0,
+        smooth_mp_max_candidate_plans=1,
     )
     obs, _ = env.reset(seed=123)
 
@@ -74,6 +80,9 @@ def test_transport3d_o1_policy_solves_task(seed):
         num_cubes=1,
         action_space=env.action_space,
         seed=seed,
+        birrt_extend_num_interp=10,
+        smooth_mp_max_time=1.0,
+        smooth_mp_max_candidate_plans=1,
     )
     obs, _ = env.reset(seed=seed)
 
@@ -112,6 +121,9 @@ def test_transport3d_o2_policy_solves_task(seed):
         num_cubes=2,
         action_space=env.action_space,
         seed=seed,
+        birrt_extend_num_interp=10,
+        smooth_mp_max_time=1.0,
+        smooth_mp_max_candidate_plans=1,
     )
     obs, _ = env.reset(seed=seed)
 
