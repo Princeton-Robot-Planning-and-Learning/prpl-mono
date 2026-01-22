@@ -815,14 +815,9 @@ class MujocoGround:
                 # Support both 4-value (x, y bounds) and 6-value (x, y, z bounds) ranges
                 if len(region_range) == 4:
                     x_start, y_start, x_end, y_end = region_range
-                    # ground_placement_threshold = 0.01  # 1cm tolerance
-                    z_start, z_end = (
-                        0,
-                        2 * self.ground_placement_threshold,
-                    )  # Default: ground surface with 1cm tolerance
+                    z_start, z_end = 0.0, self.ground_placement_threshold
                 elif len(region_range) == 6:
                     x_start, y_start, z_start, x_end, y_end, z_end = region_range
-                    # ground_placement_threshold = 0.01  # 1cm tolerance
                 else:
                     raise ValueError(
                         f"Region range must have 4 or 6 values "
