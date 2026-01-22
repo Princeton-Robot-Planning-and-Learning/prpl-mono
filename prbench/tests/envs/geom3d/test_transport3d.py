@@ -268,6 +268,30 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
 
         obs = _execute_joint_plan(env, joint_plan, obs)
 
+<<<<<<< HEAD
+||||||| 45669506
+    # Debug: Check if box is close to table
+    sim.set_state(obs)
+    box_id = sim._boxes["box0"]  # pylint: disable=protected-access
+    # fmt: off
+    surface_supports = sim._get_surfaces_supporting_object(  # pylint: disable=protected-access
+        box_id
+    )
+    # fmt: on
+    print(f"Surface supports: {surface_supports}")  # Should not be empty!
+
+=======
+    # Debug: Check if box is close to table
+    sim.set_state(obs)
+    box_id = sim._boxes["box0"]  # pylint: disable=protected-access
+    # fmt: off
+    surface_supports = sim._get_surfaces_supporting_object(  # pylint: disable=protected-access
+        box_id
+    )
+    # fmt: on
+    print(f"Surface supports: {surface_supports}")
+
+>>>>>>> 3ea572f6fef89a7028052a06e0620027aa55a570
     # Step 8: Open the gripper to place the box
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
