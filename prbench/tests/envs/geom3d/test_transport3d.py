@@ -276,7 +276,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         box_id
     )
     # fmt: on
-    print(f"Surface supports: {surface_supports}")  # Should not be empty!
+    print(f"Surface supports: {surface_supports}")
 
     # Step 8: Open the gripper to place the box
     for _ in range(5):
@@ -285,4 +285,4 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Transport3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
-    # assert obs.grasped_object is None, "Object not released"
+    assert obs.grasped_object is None, "Object not released"

@@ -74,6 +74,10 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     # Gripper.
     gripper_open_threshold: float = 0.01
 
+    # Goal thresholds.
+    goal_height_threshold: float = 0.3
+    goal_distance_threshold: float = 0.2
+
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
         return {
@@ -369,7 +373,7 @@ class ObjectCentricTransport3DEnv(
         return set(self._cubes.keys()) | set(self._boxes.keys())
 
     def _get_surface_object_names(self) -> set[str]:
-        surfaces = {"table", "box0"}
+        surfaces = {"table"} | set(self._boxes.keys())
         if self.config.floor_included_as_object:
             surfaces.add("floor")
         return surfaces
@@ -415,10 +419,10 @@ class ObjectCentricTransport3DEnv(
                 np.linalg.norm(
                     np.subtract(robot_end_effector_pose.position, cube_pose.position)
                 )
-                < 0.2
+                < self.config.goal_distance_threshold
             ):
                 return False
-            if cube_pose.position[2] < 0.3:
+            if cube_pose.position[2] < self.config.goal_height_threshold:
                 return False
         for _, box_id in self._boxes.items():
             box_pose = get_pose(box_id, self.physics_client_id)
@@ -426,10 +430,10 @@ class ObjectCentricTransport3DEnv(
                 np.linalg.norm(
                     np.subtract(robot_end_effector_pose.position, box_pose.position)
                 )
-                < 0.2
+                < self.config.goal_distance_threshold
             ):
                 return False
-            if box_pose.position[2] < 0.3:
+            if box_pose.position[2] < self.config.goal_height_threshold:
                 return False
         return True
 
