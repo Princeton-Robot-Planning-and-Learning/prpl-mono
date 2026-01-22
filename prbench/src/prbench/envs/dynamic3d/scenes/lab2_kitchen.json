@@ -59,6 +59,25 @@
                 "rgba_drawer_wall": [0.8, 0.6, 0.4, 1.0],
                 "rgba_drawer_face": [0.8, 0.6, 0.4, 1.0]
             },
+            "kitchen_cooking_area_upper": {
+                "length": 3.25,
+                "depth": 0.5,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [],
+                    []
+                ],
+                "side_and_back_open": false,
+                "rgba_cupboard_shelf": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_panel": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_partition": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_bottom": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_wall": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_face": [0.8, 0.6, 0.4, 1.0]
+            },
             "kitchen_left_side": {
                 "length": 2.12,
                 "depth": 0.75,
@@ -106,7 +125,9 @@
                 [
                     0.5,
                     0,
+                    0,
                     0.5,
+                    0,
                     0
                 ]
             ],
@@ -123,8 +144,29 @@
                 [
                     2.62,
                     0.625,
+                    0,
                     2.62,
-                    0.625
+                    0.625,
+                    0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    90,
+                    90
+                ]
+            ]
+        },
+        "kitchen_cooking_area_upper_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    2.745,
+                    0.625,
+                    1.5,
+                    2.745,
+                    0.625,
+                    1.5
                 ]
             ],
             "yaw_ranges": [
@@ -140,8 +182,10 @@
                 [
                     1.185,
                     2.625,
+                    0,
                     1.185,
-                    2.625
+                    2.625,
+                    0
                 ]
             ],
             "yaw_ranges": [
@@ -157,8 +201,10 @@
                 [
                     2.62,
                     2.625,
+                    0,
                     2.62,
-                    2.625
+                    2.625,
+                    0
                 ]
             ],
             "yaw_ranges": [
@@ -294,6 +340,42 @@
             ],
             "yaw_ranges": [[0, 0]]
         },
+        "kitchen_cooking_area_upper_shelf_0_region": {
+            "target": "kitchen_cooking_area_upper",
+            "shelf": 0,
+            "ranges": [[-1.575, -0.2, 1.575, 0.2]],
+            "rgba": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_upper_shelf_1_region": {
+            "target": "kitchen_cooking_area_upper",
+            "shelf": 1,
+            "ranges": [[-1.575, -0.2, 1.575, 0.2]],
+            "rgba": [
+                0.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_upper_shelf_2_region": {
+            "target": "kitchen_cooking_area_upper",
+            "shelf": 2,
+            "ranges": [[-1.575, -0.2, 1.575, 0.2]],
+            "rgba": [
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
         "kitchen_left_side_shelf_0_region": {
             "target": "kitchen_left_side",
             "shelf": 0,
@@ -325,7 +407,7 @@
                 0.0,
                 1.0,
                 0.0,
-                0.3
+                0.0
             ],
             "yaw_ranges": [[0, 360]]
         }
@@ -359,6 +441,11 @@
             "on",
             "kitchen_cooking_area",
             "kitchen_cooking_area_init_region"
+        ],
+        [
+            "on",
+            "kitchen_cooking_area_upper",
+            "kitchen_cooking_area_upper_init_region"
         ],
         [
             "on",
