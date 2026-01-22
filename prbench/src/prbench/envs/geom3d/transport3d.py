@@ -1,7 +1,4 @@
-"""PyBullet environment where a box must be picked from the table.
-
-There may be other obstructing objects in the environment.
-"""
+"""PyBullet environment where cubes and boxes must be transported onto a table."""
 
 from __future__ import annotations
 
@@ -49,6 +46,9 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
 
     # Minimum distance between objects for placement.
     min_placement_dist: float = 0.01
+
+    # Maximum sampling attempts for placing blocks on ground.
+    max_ground_sampling_attempts: int = 100
 
     # Blocks.
     block_size: float = 0.05  # cubes (height = width = length)
@@ -113,7 +113,7 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             block_half_extents[2],
         )
 
-        for _ in range(100):
+        for _ in range(self.max_ground_sampling_attempts):
             x, y, z = rng.uniform(lb, ub)
             if (
                 np.abs(x - self.table_pose.position[0]) > self.table_half_extents[0]
@@ -121,7 +121,10 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             ):
                 break
         else:
-            raise RuntimeError("Failed to sample collision-free block pose on ground")
+            raise RuntimeError(
+                f"Failed to sample collision-free block pose on ground after "
+                f"{self.max_ground_sampling_attempts} attempts"
+            )
 
         return Pose((x, y, z))
 
@@ -154,53 +157,22 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         return Pose((x, y, z))
 
     def get_cube_texture(self, idx: int) -> Path:
-        """Get a texture to wrap a cube given the index."""
-        if idx == 0:
-            return self.block_texture_1
-        if idx == 1:
-            return self.block_texture_2
-        raise ValueError(f"Invalid index: {idx}")
+        """Get a texture to wrap a cube given the index.
+
+        Cycles through available textures if idx exceeds the number of textures.
+        """
+        textures = [self.block_texture_1, self.block_texture_2]
+        return textures[idx % len(textures)]
 
 
 class Transport3DObjectCentricState(Geom3DObjectCentricState):
-    """A state in the Transport3DEnv().
-
-    Adds convenience methods on top of Geom3DObjectCentricState().
-    """
-
-    def get_cuboid_half_extents(self, name: str) -> tuple[float, float, float]:
-        """The half extents of the cuboid."""
-        obj = self.get_object_from_name(name)
-        return (
-            self.get(obj, "half_extent_x"),
-            self.get(obj, "half_extent_y"),
-            self.get(obj, "half_extent_z"),
-        )
-
-    def get_cuboid_pose(self, name: str) -> Pose:
-        """The pose of the cuboid."""
-        obj = self.get_object_from_name(name)
-        position = (
-            self.get(obj, "pose_x"),
-            self.get(obj, "pose_y"),
-            self.get(obj, "pose_z"),
-        )
-        orientation = (
-            self.get(obj, "pose_qx"),
-            self.get(obj, "pose_qy"),
-            self.get(obj, "pose_qz"),
-            self.get(obj, "pose_qw"),
-        )
-        return Pose(position, orientation)
+    """A state in the Transport3DEnv()."""
 
 
 class ObjectCentricTransport3DEnv(
     ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Transport3DEnvConfig]
 ):
-    """PyBullet environment where a box must be picked from the table.
-
-    There may be other obstructing objects in the environment.
-    """
+    """PyBullet environment where cubes and boxes must be transported onto a table."""
 
     def __init__(
         self,
