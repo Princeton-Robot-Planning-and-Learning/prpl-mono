@@ -12,7 +12,12 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from prbench_models.policy_constants import POLICY_CONTROL_PERIOD
-from prbench_models.teleop_utils import TeleopPolicy, QuestPolicy, QuestImageViewer, _visualize_image_in_window
+from prbench_models.teleop_utils import (
+    QuestImageViewer,
+    QuestPolicy,
+    TeleopPolicy,
+    _visualize_image_in_window,
+)
 
 prbench.register_all_environments()
 
@@ -110,7 +115,7 @@ def run_teleop(
                 image_viewer.show_image(
                     env.unwrapped._object_centric_env.render_teleop_camera(
                         base_camera_offset=(2.0, 0.0, 1.5),
-                        base_camera_euler=(0, np.pi / 3, np.pi / 2)
+                        base_camera_euler=(0, np.pi / 3, np.pi / 2),
                     )
                 )
 

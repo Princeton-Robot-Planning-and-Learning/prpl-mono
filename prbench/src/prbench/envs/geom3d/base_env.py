@@ -674,12 +674,12 @@ class ObjectCentricGeom3DRobotEnv(
             image_height=self.config.ee_camera_image_height,
             fov=self.config.ee_camera_fov,
         )
-    
+
     def render_teleop_camera(
-            self, 
-            base_camera_offset: tuple[float, float, float],
-            base_camera_euler: tuple[float, float, float],
-        ) -> NDArray[np.uint8]:
+        self,
+        base_camera_offset: tuple[float, float, float],
+        base_camera_euler: tuple[float, float, float],
+    ) -> NDArray[np.uint8]:
         """Render from the teleoperation camera view.
 
         This view is controlled by the user when using GUI teleoperation.
@@ -688,9 +688,7 @@ class ObjectCentricGeom3DRobotEnv(
         base_pose = self.robot.get_base()
 
         base_pose_se3 = base_pose.to_se3(0.0)
-        rot = Rotation.from_euler(
-            "zyx", base_camera_euler
-        )  # MuJoCo convention
+        rot = Rotation.from_euler("zyx", base_camera_euler)  # MuJoCo convention
         camera_to_base_transform = Pose(
             position=base_camera_offset,
             orientation=tuple(rot.as_quat()[[1, 2, 3, 0]]),  # (w,x,y,z) -> (x,y,z,w)

@@ -244,7 +244,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         for camera_name in self.camera_names:
             images[f"{camera_name}_image"] = self._get_camera_image(camera_name)
         return images
-    
+
     def _get_camera_image(self, camera_name: str) -> NDArray[np.uint8]:
         """Get image from a specific camera in simulation."""
         assert self.sim is not None, "Simulation must be initialized."

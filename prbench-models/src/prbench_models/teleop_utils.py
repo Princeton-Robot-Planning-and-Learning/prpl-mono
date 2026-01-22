@@ -380,9 +380,12 @@ class TeleopPolicy(Policy):
         """Clean up resources."""
         # No explicit cleanup needed for teleop policy
 
+
 class QuestImageViewer:
     """Utility class to display images in OpenCV windows.
-    Image can be updated dynamically"""
+
+    Image can be updated dynamically
+    """
 
     def __init__(self, window_name: str) -> None:
         import cv2
@@ -395,6 +398,7 @@ class QuestImageViewer:
 
         cv2.imshow(self.window_name, image)
         cv2.waitKey(1)
+
 
 class QuestController:
     """Controller that processes Quest VR input to generate robot commands."""
@@ -469,7 +473,7 @@ class QuestController:
 
     def set_constant_controller_offset(self, inverted: bool = False) -> None:
         """Set the controller rotation offset from the robot base frame.
-        
+
         Args:
             inverted: If True, use inverted (upside down) configuration.
         """
@@ -482,18 +486,20 @@ class QuestController:
             self.controller_offset = np.array(
                 [[0, 0, -1], [1, 0, 0], [0, -1, 0]]  # robot_T_invertedHeadset
             )
-        
+
         if self.verbose:
             print(f"Controller offset set to:\n{self.controller_offset}")
 
     def calibrate_controller(self) -> bool:
         """Calibrate the controller axes to the robot frame.
-        
+
         Returns:
             bool: True if calibration was successful, False otherwise.
         """
         print("\n=== Controller Calibration ===")
-        print("Press and hold the A button while moving the RIGHT controller along the robot's X-axis")
+        print(
+            "Press and hold the A button while moving the RIGHT controller along the robot's X-axis"
+        )
         print("(forward direction)...")
 
         # Wait until the button is pressed for the first time
@@ -501,7 +507,7 @@ class QuestController:
         while not controller_data or not controller_data[1].get("A", False):
             time.sleep(0.01)
             controller_data = self.device.get_transformations_and_buttons()
-        
+
         ori_tf = controller_data[0].get("r")
         if ori_tf is None:
             print("ERROR: Right controller not detected")
@@ -516,7 +522,7 @@ class QuestController:
             if controller_data:
                 buttons_data = controller_data[1]
             time.sleep(0.01)
-        
+
         end_tf = controller_data[0].get("r")
         if end_tf is None:
             print("ERROR: Right controller not detected")
@@ -531,7 +537,9 @@ class QuestController:
         x_axis[kx] = np.sign(delta[kx])
 
         print(f"X-axis mapped to controller axis {kx} with sign {np.sign(delta[kx])}")
-        print("\nNow press and hold the A button while moving the RIGHT controller along the robot's Y-axis")
+        print(
+            "\nNow press and hold the A button while moving the RIGHT controller along the robot's Y-axis"
+        )
         print("(left direction)...")
 
         # Wait until the button is pressed for the first time
@@ -539,7 +547,7 @@ class QuestController:
         while not controller_data or not controller_data[1].get("A", False):
             time.sleep(0.01)
             controller_data = self.device.get_transformations_and_buttons()
-        
+
         ori_tf = controller_data[0].get("r")
         if ori_tf is None:
             print("ERROR: Right controller not detected")
@@ -554,7 +562,7 @@ class QuestController:
             if controller_data:
                 buttons_data = controller_data[1]
             time.sleep(0.01)
-        
+
         end_tf = controller_data[0].get("r")
         if end_tf is None:
             print("ERROR: Right controller not detected")
@@ -651,9 +659,7 @@ class QuestController:
             right_transform = transforms_data["r"]
             self.right_grip_pressed = buttons_data.get("RG", False)
             if self.verbose:
-                print(
-                    f"Right grip pressed: {self.right_grip_pressed}"
-                )
+                print(f"Right grip pressed: {self.right_grip_pressed}")
             self._process_right_controller(right_transform)
         else:
             self.right_trigger_pressed = False
@@ -707,7 +713,9 @@ class QuestController:
         if self.initialize_right_pose:
             # Initialize reference pose
             self.right_controller_init_pos = controller_curr_pos.copy()
-            self.right_controller_init_rot = self.controller_offset @ controller_curr_ori
+            self.right_controller_init_rot = (
+                self.controller_offset @ controller_curr_ori
+            )
             self.arm_ref_pos = self.arm_target_pos.copy()
             self.arm_ref_rot = self.arm_target_rot
             self.arm_ref_base_pose = self.base_pose.copy()
@@ -719,9 +727,7 @@ class QuestController:
         # Rotations around z-axis: global frame (base) <-> local frame (arm)
         z_rot = R.from_rotvec(np.array([0.0, 0.0, 1.0]) * self.base_pose[2])
         z_rot_inv = z_rot.inv()
-        ref_z_rot = R.from_rotvec(
-            np.array([0.0, 0.0, 1.0]) * self.arm_ref_base_pose[2]
-        )
+        ref_z_rot = R.from_rotvec(np.array([0.0, 0.0, 1.0]) * self.arm_ref_base_pose[2])
 
         # Compute position delta in robot frame
         dpos_controller = self.controller_offset @ (
@@ -742,9 +748,7 @@ class QuestController:
 
         # Convert to scipy Rotation and apply
         rot_delta_R = R.from_matrix(rot_delta)
-        self.arm_target_rot = (
-            z_rot_inv * rot_delta_R * ref_z_rot
-        ) * self.arm_ref_rot
+        self.arm_target_rot = (z_rot_inv * rot_delta_R * ref_z_rot) * self.arm_ref_rot
 
         if self.right_grip_pressed:
             # Close gripper when grip button is pressed
