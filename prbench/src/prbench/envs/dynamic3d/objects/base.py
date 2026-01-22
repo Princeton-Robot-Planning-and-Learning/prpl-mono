@@ -122,9 +122,9 @@ class Region:
         # Translate bounding box by parent_pos
         translated_bbox = utils.translate_bounding_box(relative_bbox, self.parent_pos)
 
-        # Rotate bounding box by parent_yaw around the center of the translated bbox
-        center_x = (translated_bbox[0] + translated_bbox[3]) / 2
-        center_y = (translated_bbox[1] + translated_bbox[4]) / 2
+        # Rotate bounding box by parent_yaw around the center of the parent's position
+        center_x = self.parent_pos[0]
+        center_y = self.parent_pos[1]
         rotated_bbox = utils.rotate_bounding_box_2d(
             translated_bbox, self.parent_yaw, (center_x, center_y)
         )
