@@ -78,7 +78,16 @@
     },
     "objects": {
         "robocasa_boxed_drink_0": {
-            "object_0": {}
+            "boxed_drink_0": {}
+        },
+        "robocasa_bowl_0": {
+            "bowl_0": {}
+        },
+        "robocasa_carrot_0": {
+            "carrot_0": {}
+        },
+        "robocasa_avocado_0": {
+            "avocado_0": {}
         },
         "generated_bowl": {
             "yellow_bowl_1": {
@@ -127,11 +136,9 @@
         }
     },
     "initial_state": [
-        [
-            "on",
-            "object_0",
-            "kitchen_island_shelf_2_region"
-        ],
+        ["on", "boxed_drink_0", "kitchen_island_shelf_2_region"],
+        ["on", "carrot_0", "kitchen_island_shelf_2_region"],
+        ["on", "avocado_0", "kitchen_island_shelf_2_region"],
         [
             "on",
             "yellow_bowl_1",
@@ -251,7 +258,7 @@
     "goal_state": [
         [
             "on",
-            "object_0",
+            "boxed_drink_0",
             "yellow_bowl_1_back_region"
         ],
         [
