@@ -921,7 +921,14 @@ class MujocoGround:
                 2 * self.ground_placement_threshold,
             )  # Default: ground surface
         elif len(selected_range) == 6:
-            x_start, y_start, z_start, x_end, y_end, z_end = selected_range  # type: ignore[misc]
+            (
+                x_start,
+                y_start,
+                z_start,
+                x_end,
+                y_end,
+                z_end,
+            ) = selected_range  # type: ignore[misc]
         else:
             raise ValueError(
                 f"Each region must have 4 or 6 values "

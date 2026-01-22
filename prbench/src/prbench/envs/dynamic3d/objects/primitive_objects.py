@@ -603,10 +603,13 @@ class Wiper(MujocoObject):
         head_length = float(object_config.get("head_length", 0.15))
         head_height = float(object_config.get("head_height", 0.01))
 
-        # Head geom: size=[head_length/2, handle_width/2, head_height/2], pos=[0, 0, head_height/2]
+        # Head geom: size=[head_length/2, handle_width/2, head_height/2],
+        # pos=[0, 0, head_height/2]
         #   Extends x: ±head_length/2, y: ±handle_width/2, z: [0, head_height]
-        # Handle geom: size=[handle_width/2, handle_width/2, handle_height/2], pos=[0, 0, head_height + handle_height/2]
-        #   Extends x: ±handle_width/2, y: ±handle_width/2, z: [head_height, head_height + handle_height]
+        # Handle geom: size=[handle_width/2, handle_width/2, handle_height/2],
+        # pos=[0, 0, head_height + handle_height/2]
+        #   Extends x: ±handle_width/2, y: ±handle_width/2,
+        #   z: [head_height, head_height + handle_height]
 
         # Overall bounds relative to body origin:
         # x: [-head_length/2, head_length/2] (head is longer)

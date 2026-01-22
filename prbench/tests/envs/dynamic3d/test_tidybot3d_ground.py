@@ -260,7 +260,8 @@ def test_ground_sample_pose_in_region():
         assert 0.0 <= y <= 1.0, f"Y position {y} outside region bounds"
 
         # Verify Z is within the default ground placement range
-        # For 4-value ranges (no explicit z), z is sampled from [0, 2*ground_placement_threshold]
+        # For 4-value ranges (no explicit z), z is sampled from
+        # [0, 2*ground_placement_threshold]
         # The expected z value is at the center of this range
         expected_z = ground.ground_placement_threshold
         z_min = 0.0
