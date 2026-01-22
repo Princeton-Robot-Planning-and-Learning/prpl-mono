@@ -69,7 +69,7 @@ def test_with_existing_tables():
     )
 
     sampler = create_mock_sampler()
-    pos, _, bbox = sample_collision_free_position(
+    _, _, bbox = sample_collision_free_position(
         initial_bbox, placed_bboxes, np_random, "test_region", sampler
     )
 

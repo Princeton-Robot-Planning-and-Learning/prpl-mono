@@ -24,23 +24,23 @@ def sample_collision_free_positions(
     entity_pos_yaw_samplers: dict[str, Any] | None = None,
     entity_check_in_region: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, dict[str, Any]]]:
-    """Sample collision-free positions and yaws for multiple entities (fixtures or
-    objects).
+    """Sample collision-free positions and yaws for multiple entities.
 
     Args:
-        configs: Dictionary mapping entity types to dictionaries of entity configurations
-                (entity_name -> entity_config). Can be fixture or object configurations,
-                based on what we want to place in the environment.
+        configs: Dictionary mapping entity types to entity configurations
+                (entity_name -> entity_config). Can be fixture or object
+                configurations based on what to place in the environment.
         np_random: Random number generator
-        entity_region_names: Dictionary mapping entity names to region names for
-                           sampling. If None, no entities will be sampled.
-        entity_pos_yaw_samplers: Dictionary mapping entity names to functions that
-                               sample positions and yaws within a region. If None, no
-                               entities will be sampled.
-        entity_check_in_region: Dictionary mapping entity names to functions that
-                              check if a position is within a region. This is used to ensure
-                              that the bottom face of the bounding box of the placed entity
-                              is within the region. If None, no region checks will be performed.
+        entity_region_names: Dictionary mapping entity names to region names
+                           for sampling. If None, no entities will be sampled.
+        entity_pos_yaw_samplers: Dictionary mapping entity names to functions
+                               that sample positions and yaws within a region.
+                               If None, no entities will be sampled.
+        entity_check_in_region: Dictionary mapping entity names to functions
+                              that check if a position is within a region. Used
+                              to ensure the bottom face of the bounding box is
+                              within the region. If None, no region checks will
+                              be performed.
 
     Returns:
         Dictionary mapping entity types to dictionaries of entity poses

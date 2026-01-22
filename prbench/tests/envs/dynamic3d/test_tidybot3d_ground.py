@@ -263,7 +263,6 @@ def test_ground_sample_pose_in_region():
         # For 4-value ranges (no explicit z), z is sampled from
         # [0, 2*ground_placement_threshold]
         # The expected z value is at the center of this range
-        expected_z = ground.ground_placement_threshold
         z_min = 0.0
         z_max = 2 * ground.ground_placement_threshold
         assert z_min <= z <= z_max, (
