@@ -66,6 +66,9 @@ def main(
                     # Append extracted observation
                     if k not in observations:
                         observations[k] = []
+                    if args.obs_discrete_gripper:
+                        if k == 'gripper_pos' and v[0] > 0.01:
+                            v[0] = 1.0
                     observations[k].append(v)
 
             # Extract actions
@@ -234,6 +237,7 @@ if __name__ == "__main__":
     parser.add_argument("--follow_obs", type=bool, default=False)
     parser.add_argument("--high_resolution", type=bool, default=False)
     parser.add_argument("--discrete_gripper", type=bool, default=False)
+    parser.add_argument("--obs_discrete_gripper", type=bool, default=False)
     parser.add_argument("--max_episodes", type=int, default=1000000)
     parser.add_argument("--start_episode", type=int, default=0)
     parser.add_argument("--navigation_only", type=bool, default=False)

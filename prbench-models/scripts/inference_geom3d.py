@@ -253,7 +253,7 @@ def run_inference(
                     }
 
                 if state.get(robot, "finger_state") > 0.005:
-                    obs_dict["gripper_pos"] = np.array([0.35])
+                    obs_dict["gripper_pos"] = np.array([1.0])
                 else:
                     obs_dict["gripper_pos"] = np.array([0.0])
 
@@ -283,7 +283,7 @@ def run_inference(
                     )  # Unwrapped joint angles
                     action = np.concatenate(
                         [
-                            action_dict["base_pose"] - obs_dict["base_pose"],
+                            action_dict["base_pose"],
                             delta_qpos,
                             action_dict["gripper_pos"],
                         ]
