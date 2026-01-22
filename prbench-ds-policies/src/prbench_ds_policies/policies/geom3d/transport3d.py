@@ -30,9 +30,9 @@ class Transport3DScriptedPolicy:
     """
 
     # Hyperparameters for smoother motion (nicer videos, but slower).
-    BIRRT_EXTEND_NUM_INTERP = 50
-    SMOOTH_MP_MAX_TIME = 2.0
-    SMOOTH_MP_MAX_CANDIDATE_PLANS = 10
+    BIRRT_EXTEND_NUM_INTERP = 25
+    SMOOTH_MP_MAX_TIME = 100.0
+    SMOOTH_MP_MAX_CANDIDATE_PLANS = 5
 
     def __init__(
         self,
