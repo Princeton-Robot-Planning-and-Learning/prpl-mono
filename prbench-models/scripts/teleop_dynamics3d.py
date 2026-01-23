@@ -43,6 +43,7 @@ def run_teleop(
     env = prbench.make(
         f"prbench/{env_name}",
         render_mode="rgb_array",
+        scene_bg=True,
     )
 
     # Create FK/IK solvers for computing end-effector pose
