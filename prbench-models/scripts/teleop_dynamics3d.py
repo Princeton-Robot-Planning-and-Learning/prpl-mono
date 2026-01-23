@@ -23,10 +23,10 @@ def run_teleop(
     save: bool = True,
     num_episodes: int = 1,
     max_steps: int = 1000,
-    num_cubes: int = 2,
     enable_web_server: bool = True,
     port: int = 5000,
     show_images: bool = False,
+    env_name: str = "TidyBot3D-cupboard_real-o2-v0",
 ) -> None:
     """Run teleoperation in the prbench environment.
 
@@ -36,13 +36,12 @@ def run_teleop(
         save: Whether to save the episode data to disk.
         num_episodes: Number of episodes to run.
         max_steps: Maximum steps per episode.
-        num_cubes: Number of cubes in the environment.
         enable_web_server: Whether to enable the WebXR web server.
         port: Port for the WebXR web server.
     """
     # Create the environment
     env = prbench.make(
-        f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0",
+        f"prbench/{env_name}",
         render_mode="rgb_array",
     )
 
@@ -63,7 +62,7 @@ def run_teleop(
 
             # Reset the environment
             episode_seed = seed + episode_idx
-            obs, _, raw_obs = env.reset_with_images(seed=episode_seed)  # type: ignore
+            obs, _ = env.reset(seed=episode_seed)  # type: ignore
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
@@ -158,7 +157,7 @@ def run_teleop(
                     writer.step(obs_dict, action_dict, target_object_key)  # type: ignore
 
                 # Execute action in environment
-                obs, reward, terminated, truncated, _, raw_obs = env.step_with_images(  # type: ignore # pylint: disable=line-too-long
+                obs, reward, terminated, truncated, _ = env.step(  # type: ignore # pylint: disable=line-too-long
                     action
                 )
                 next_state = env.observation_space.devectorize(obs)
@@ -209,9 +208,6 @@ def main() -> None:
         "--max-steps", type=int, default=1000, help="Maximum steps per episode"
     )
     parser.add_argument(
-        "--num-cubes", type=int, default=2, help="Number of cubes in environment"
-    )
-    parser.add_argument(
         "--no-web-server",
         dest="enable_web_server",
         action="store_false",
@@ -227,6 +223,9 @@ def main() -> None:
     parser.add_argument(
         "--show-images", action="store_true", default=False, help="Show images in OpenCV windows"
     )
+    parser.add_argument(
+        "--env-name", type=str, default="TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0", help="Name of the environment"
+    )
 
     args = parser.parse_args()
 
@@ -236,7 +235,7 @@ def main() -> None:
         save=args.save,
         num_episodes=args.num_episodes,
         max_steps=args.max_steps,
-        num_cubes=args.num_cubes,
+        env_name=args.env_name,
         enable_web_server=args.enable_web_server,
         port=args.port,
         show_images=args.show_images,

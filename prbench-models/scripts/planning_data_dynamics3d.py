@@ -43,7 +43,7 @@ def collect_data(
     writer = EpisodeWriter(output_dir) if save else None
 
     # Reset the environment and get the initial state.
-    obs, _, raw_obs = env.reset_with_images(seed=seed)  # type: ignore
+    obs, _ = env.reset(seed=seed)  # type: ignore
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
@@ -138,7 +138,7 @@ def collect_data(
             }
             writer.step(obs_dict, action_dict, target_object_key)
 
-        obs, _, _, _, _, raw_obs = env.step_with_images(action)  # type: ignore
+        obs, _, _, _, _, _ = env.step_with_images(action)  # type: ignore
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
         state = next_state
@@ -226,7 +226,7 @@ def collect_data(
                 }
                 writer.step(obs_dict, action_dict, target_object_key)
 
-            obs, _, _, _, _, raw_obs = env.step_with_images(action)  # type: ignore
+            obs, _, _, _, _ = env.step(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
