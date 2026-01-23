@@ -271,7 +271,6 @@ class RBY1ARobotEnv(RobotEnv):
             y: Y position of the robot base.
             yaw: Yaw orientation of the robot base.
         """
-        pass
 
     def _randomize_base_pose(self) -> None:
         """Randomize the base pose of the robot within defined limits."""
