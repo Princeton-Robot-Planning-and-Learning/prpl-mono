@@ -420,6 +420,7 @@ def create_lifted_controllers(
     sim: ObjectCentricShelf3DEnv,
 ) -> dict[str, LiftedParameterizedController]:
     """Create lifted parameterized controllers for Shelf3D."""
+    del action_space
 
     # Create partial controller classes that include the sim
     class PickController(GroundPickController):
@@ -443,8 +444,14 @@ def create_lifted_controllers(
         [robot, target],
         PickController,
         Box(
-            low=np.array([MOVE_TO_TARGET_DISTANCE_BOUNDS[0], MOVE_TO_TARGET_ROT_BOUNDS[0]]),
-            high=np.array([MOVE_TO_TARGET_DISTANCE_BOUNDS[1], MOVE_TO_TARGET_ROT_BOUNDS[1]]),
+            low=np.array([
+                MOVE_TO_TARGET_DISTANCE_BOUNDS[0],
+                MOVE_TO_TARGET_ROT_BOUNDS[0],
+            ]),
+            high=np.array([
+                MOVE_TO_TARGET_DISTANCE_BOUNDS[1],
+                MOVE_TO_TARGET_ROT_BOUNDS[1],
+            ),
         ),
     )
 

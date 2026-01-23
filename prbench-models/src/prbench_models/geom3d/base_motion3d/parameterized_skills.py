@@ -113,6 +113,7 @@ def create_lifted_controllers(
     sim: ObjectCentricBaseMotion3DEnv,
 ) -> dict[str, LiftedParameterizedController]:
     """Create lifted parameterized controllers for BaseMotion3D."""
+    del action_space
 
     # Create partial controller classes that include the sim
     class MoveBaseToTargetController(GroundMoveBaseToTargetController):

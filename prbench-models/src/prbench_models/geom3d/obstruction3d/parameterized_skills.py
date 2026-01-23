@@ -494,6 +494,7 @@ def create_lifted_controllers(
     sim: ObjectCentricObstruction3DEnv,
 ) -> dict[str, LiftedParameterizedController]:
     """Create lifted parameterized controllers for Obstruction3D."""
+    del action_space
 
     # Create partial controller classes that include the sim
     class PickController(GroundPickController):
