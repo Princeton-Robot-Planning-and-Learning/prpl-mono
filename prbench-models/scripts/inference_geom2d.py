@@ -242,6 +242,7 @@ def run_inference(
                     print(
                         f"  Reward: {reward}, Terminated: {terminated}, Truncated: {truncated}"  # pylint: disable=line-too-long
                     )
+                    successes += 1
                     break
 
             else:
