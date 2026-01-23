@@ -121,7 +121,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     # Step 2: Move arm to pre-grasp pose and then to grasp pose
     sim.set_state(obs)
     x, y, z = obs.get_object_pose("box0").position
-    _, extent_y, extent_z = obs.get_cuboid_half_extents("box0")
+    _, extent_y, extent_z = obs.get_object_half_extents("box0")
     dz = 0.05
     pre_grasp_pose = Pose.from_rpy(
         (x, y + extent_y, z + dz + extent_z / 2 + 0.1), (np.pi, 0, np.pi / 2)
@@ -243,9 +243,9 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         (
             config.table_pose.position[0],
             config.table_pose.position[1],
-            obs.get_cuboid_pose("table").position[2]
+            obs.get_object_pose("table").position[2]
             + config.table_half_extents[2]
-            + obs.get_cuboid_half_extents("box0")[2]
+            + obs.get_object_half_extents("box0")[2]
             + config.box_wall_thickness
             + 0.03,
         ),
@@ -268,16 +268,6 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
 
         obs = _execute_joint_plan(env, joint_plan, obs)
 
-    # Debug: Check if box is close to table
-    sim.set_state(obs)
-    box_id = sim._boxes["box0"]  # pylint: disable=protected-access
-    # fmt: off
-    surface_supports = sim._get_surfaces_supporting_object(  # pylint: disable=protected-access
-        box_id
-    )
-    # fmt: on
-    print(f"Surface supports: {surface_supports}")  # Should not be empty!
-
     # Step 8: Open the gripper to place the box
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
@@ -285,4 +275,4 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Transport3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
-    # assert obs.grasped_object is None, "Object not released"
+    assert obs.grasped_object is None, "Object not released"

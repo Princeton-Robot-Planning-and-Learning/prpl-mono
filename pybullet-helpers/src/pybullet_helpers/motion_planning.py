@@ -476,7 +476,7 @@ def remap_se2_pose_plan_to_constant_distance(
     plan: list[SE2Pose],
     max_distance: float,
 ) -> list[SE2Pose]:
-    """Re-interpolate an SE2Pose plan so that no step exceeds max_distance.
+    """Re-interpolate an SE2Pose plan to have constant distance between steps.
 
     Args:
         plan: List of SE2Pose waypoints.
@@ -484,32 +484,36 @@ def remap_se2_pose_plan_to_constant_distance(
             measured as the maximum of |delta_x|, |delta_y|, |delta_rot|.
 
     Returns:
-        A new list of SE2Pose waypoints with additional interpolated points
-        where needed to ensure no step exceeds max_distance.
+        A new list of SE2Pose waypoints resampled at constant distance
+        intervals (at most max_distance apart).
     """
     if len(plan) < 2:
         return plan
 
-    result = [plan[0]]
-    for i in range(len(plan) - 1):
-        p1, p2 = plan[i], plan[i + 1]
-        delta = p2 - p1
-        dist = max(abs(delta.x), abs(delta.y), abs(delta.rot))
+    def _interpolate_fn(p1: SE2Pose, p2: SE2Pose, t: float) -> SE2Pose:
+        return SE2Pose(
+            p1.x + t * (p2.x - p1.x),
+            p1.y + t * (p2.y - p1.y),
+            p1.rot + t * (p2.rot - p1.rot),
+        )
 
-        if dist <= max_distance:
-            result.append(p2)
-        else:
-            num_segments = int(np.ceil(dist / max_distance))
-            for j in range(1, num_segments + 1):
-                t = j / num_segments
-                interp = SE2Pose(
-                    p1.x + t * delta.x,
-                    p1.y + t * delta.y,
-                    p1.rot + t * delta.rot,
-                )
-                result.append(interp)
+    def _distance_fn(p1: SE2Pose, p2: SE2Pose) -> float:
+        return max(abs(p2.x - p1.x), abs(p2.y - p1.y), abs(p2.rot - p1.rot))
 
-    return result
+    distances = [_distance_fn(p1, p2) for p1, p2 in zip(plan[:-1], plan[1:])]
+
+    segments = [
+        TrajectorySegment(
+            plan[i],
+            plan[i + 1],
+            distances[i],
+            interpolate_fn=_interpolate_fn,
+            distance_fn=_distance_fn,
+        )
+        for i in range(len(plan) - 1)
+    ]
+    continuous_trajectory = concatenate_trajectories(segments)
+    return list(iter_traj_with_max_distance(continuous_trajectory, max_distance))
 
 
 def run_base_motion_planning(
