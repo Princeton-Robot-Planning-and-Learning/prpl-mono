@@ -10,6 +10,7 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
+from gymnasium.spaces import Box
 from prbench.envs.geom3d.ground3d import (
     Geom3DRobotType,
     Ground3DObjectCentricState,
@@ -590,7 +591,10 @@ def create_lifted_controllers(
     pick_controller: LiftedParameterizedController = LiftedParameterizedController(
         [robot, target],
         PickController,
-        action_space,
+        Box(
+            low=np.array([MOVE_TO_TARGET_DISTANCE_BOUNDS[0], MOVE_TO_TARGET_ROT_BOUNDS[0]]),
+            high=np.array([MOVE_TO_TARGET_DISTANCE_BOUNDS[1], MOVE_TO_TARGET_ROT_BOUNDS[1]]),
+        ),
     )
 
     # Create variables for lifted controllers
@@ -601,7 +605,10 @@ def create_lifted_controllers(
     place_controller: LiftedParameterizedController = LiftedParameterizedController(
         [robot, target],
         PlaceController,
-        action_space,
+        Box(
+            low=np.array([PLACE_X_OFFSET_BOUNDS[0], PLACE_Y_OFFSET_BOUNDS[0]]),
+            high=np.array([PLACE_X_OFFSET_BOUNDS[1], PLACE_Y_OFFSET_BOUNDS[1]]),
+        ),
     )
 
     return {
