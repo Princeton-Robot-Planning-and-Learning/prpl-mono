@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Script to analyze experimental results from multi-run Hydra experiments.
+"""Script to analyze experimental results from multi-run Hydra experiments.
 
 Usage:
     python analyze_results.py <log_dir>
@@ -10,11 +9,12 @@ Example:
 """
 
 import argparse
-import pandas as pd
-import yaml
+import sys
 from pathlib import Path
 from typing import Dict, Optional
-import sys
+
+import pandas as pd
+import yaml  # type: ignore[import-untyped]
 
 
 def load_run_data(run_dir: Path) -> Optional[Dict]:
@@ -26,19 +26,19 @@ def load_run_data(run_dir: Path) -> Optional[Dict]:
         return None
 
     # Load config
-    with open(config_path, 'r') as f:
+    with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     # Load results
     results_df = pd.read_csv(results_path)
 
     return {
-        'env': config['env'],
-        'seed': config['seed'],
-        'rgb_observation': config['rgb_observation'],
-        'vlm_model': config.get('vlm_model', 'unknown'),
-        'temperature': config.get('temperature', 'unknown'),
-        'results': results_df
+        "env": config["env"],
+        "seed": config["seed"],
+        "rgb_observation": config["rgb_observation"],
+        "vlm_model": config.get("vlm_model", "unknown"),
+        "temperature": config.get("temperature", "unknown"),
+        "results": results_df,
     }
 
 
@@ -63,17 +63,19 @@ def analyze_results(log_dir: Path) -> pd.DataFrame:
             continue
 
         # Extract metrics from results
-        results = data['results']
+        results = data["results"]
         for _, row in results.iterrows():
-            all_data.append({
-                'env': data['env'],
-                'rgb_observation': data['rgb_observation'],
-                'seed': data['seed'],
-                'eval_episode': row['eval_episode'],
-                'success': row['success'],
-                'planning_time': row['planning_time'],
-                'steps': row['steps']
-            })
+            all_data.append(
+                {
+                    "env": data["env"],
+                    "rgb_observation": data["rgb_observation"],
+                    "seed": data["seed"],
+                    "eval_episode": row["eval_episode"],
+                    "success": row["success"],
+                    "planning_time": row["planning_time"],
+                    "steps": row["steps"],
+                }
+            )
 
     if not all_data:
         print("No data loaded from runs")
@@ -83,18 +85,34 @@ def analyze_results(log_dir: Path) -> pd.DataFrame:
     df = pd.DataFrame(all_data)
 
     # Group by env and rgb_observation, compute averages
-    grouped = df.groupby(['env', 'rgb_observation']).agg({
-        'success': ['mean', 'std', 'count'],
-        'planning_time': ['mean', 'std'],
-        'steps': 'mean'
-    }).reset_index()
+    grouped = (
+        df.groupby(["env", "rgb_observation"])
+        .agg(
+            {
+                "success": ["mean", "std", "count"],
+                "planning_time": ["mean", "std"],
+                "steps": "mean",
+            }
+        )
+        .reset_index()
+    )
 
     # Flatten column names
-    grouped.columns = pd.Index(['env', 'rgb_observation', 'solve_rate', 'solve_rate_std',
-                                 'num_runs', 'avg_planning_time', 'planning_time_std', 'avg_steps'])
+    grouped.columns = pd.Index(
+        [
+            "env",
+            "rgb_observation",
+            "solve_rate",
+            "solve_rate_std",
+            "num_runs",
+            "avg_planning_time",
+            "planning_time_std",
+            "avg_steps",
+        ]
+    )
 
     # Sort by environment and rgb_observation
-    grouped = grouped.sort_values(['env', 'rgb_observation'], ascending=[True, False])
+    grouped = grouped.sort_values(["env", "rgb_observation"], ascending=[True, False])
 
     return grouped
 
@@ -107,18 +125,27 @@ def format_table(df: pd.DataFrame) -> str:
     # Create a formatted table
     lines = []
     lines.append("=" * 130)
-    lines.append(f"{'Environment':<25} {'Method':<15} {'Solve Rate (mean±std)':<25} {'Planning Time/s (mean±std)':<30} {'Avg Steps':<15}")
+    lines.append(
+        f"{'Environment':<25} {'Method':<15} "
+        f"{'Solve Rate (mean±std)':<25} "
+        f"{'Planning Time/s (mean±std)':<30} {'Avg Steps':<15}"
+    )
     lines.append("=" * 130)
 
     for _, row in df.iterrows():
-        env = row['env']
-        method = "With Image" if row['rgb_observation'] else "Without Image"
+        env = row["env"]
+        method = "With Image" if row["rgb_observation"] else "Without Image"
         # Format with mean ± std explicitly
         solve_rate = f"{row['solve_rate']:.1%} ± {row['solve_rate_std']:.1%}"
-        planning_time = f"{row['avg_planning_time']:.4f} ± {row['planning_time_std']:.4f}"
+        planning_time = (
+            f"{row['avg_planning_time']:.4f} ± {row['planning_time_std']:.4f}"
+        )
         avg_steps = f"{row['avg_steps']:.1f}"
 
-        lines.append(f"{env:<25} {method:<15} {solve_rate:<25} {planning_time:<30} {avg_steps:<15}")
+        lines.append(
+            f"{env:<25} {method:<15} {solve_rate:<25} "
+            f"{planning_time:<30} {avg_steps:<15}"
+        )
 
     lines.append("=" * 130)
     lines.append(f"\nTotal configurations: {len(df)}")
@@ -127,20 +154,16 @@ def format_table(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def main():
+def main() -> None:
+    """Main function to analyze experimental results."""
     parser = argparse.ArgumentParser(
-        description='Analyze experimental results from Hydra multi-run experiments'
+        description="Analyze experimental results from Hydra multi-run experiments"
     )
     parser.add_argument(
-        'log_dir',
-        type=str,
-        help='Path to the log directory containing run results'
+        "log_dir", type=str, help="Path to the log directory containing run results"
     )
     parser.add_argument(
-        '--csv',
-        type=str,
-        default=None,
-        help='Optional: Save results to CSV file'
+        "--csv", type=str, default=None, help="Optional: Save results to CSV file"
     )
 
     args = parser.parse_args()
@@ -171,4 +194,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main()  # type: ignore[no-untyped-call]

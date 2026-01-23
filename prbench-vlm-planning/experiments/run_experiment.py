@@ -9,7 +9,10 @@ Examples:
 
 - Running on multiple environments and multiple seeds:
     python experiments/run_experiment.py -m seed='range(0,3)' \
-        env=Motion2D-p0-v0,Motion2D-p2-v0,StickButton2D-b1-v0,StickButton2D-b3-v0 \
+        env=Motion2D-p0-v0,StickButton2D-b1-v0 \
+        vlm_model=gpt-5 rgb_observation=true,false temperature=1
+    python experiments/run_experiment.py -m seed='range(0,3)' \
+        env=BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0 \
         vlm_model=gpt-5 rgb_observation=true,false temperature=1
 """
 
@@ -163,10 +166,26 @@ def _run_single_episode_evaluation(
         reward = float(rew)
         assert not truncated
 
+        # Log the resulting state and done status
+        logging.info(f"[ENV STEP DEBUG] Done: {done}")
+        # Devectorize to get readable state
+        state_obs_for_log = obs if not agent.rgb_observation else obs
+        try:
+            obs_space = env.observation_space
+            state = obs_space.devectorize(state_obs_for_log)  # type: ignore
+            logging.info(f"[ENV STEP DEBUG] Resulting state:\n{state.pretty_str()}")
+        except Exception as e:
+            logging.info(f"[ENV STEP DEBUG] Could not devectorize state: {e}")
+
         # Wrap observation with rendered image if using RGB observations
         if agent.rgb_observation:
             rendered_img = env.render()  # type: ignore[assignment]
             obs = {"state": obs, "img": rendered_img}
+
+        if done:
+            success = True
+            break
+        steps += 1
 
         with timer() as result:
             try:
@@ -175,11 +194,6 @@ def _run_single_episode_evaluation(
                 logging.info(f"Agent failed during update: {e}")
                 break
         planning_time += result["time"]
-
-        if done:
-            success = True
-            break
-        steps += 1
 
     logging.info(f"Success result: {success}")
     return {"success": success, "steps": steps, "planning_time": planning_time}

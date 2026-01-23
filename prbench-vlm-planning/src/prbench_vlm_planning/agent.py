@@ -105,10 +105,13 @@ class VLMPlanningAgent(Agent[_O, _U]):
         self._plan_step = 0
 
         try:
+            logging.info("[AGENT DEBUG] Generating initial plan")
             self._current_policy = self._generate_plan(obs, info)
             # Extract state from dict if using RGB observations
             state_obs = obs["state"] if self._rgb_observation else obs  # type: ignore
+            logging.info("[AGENT DEBUG] Calling policy for initial action")
             self._next_action = self._current_policy(state_obs)
+            logging.info(f"[AGENT DEBUG] Initial action obtained: {self._next_action}")
         except Exception as e:
             logging.exception("Failed to generate initial plan")
             raise VLMPlanningAgentFailure(
@@ -117,6 +120,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
 
     def _get_action(self) -> _U:
         """Get the next action from the current plan."""
+        logging.info(f"[AGENT DEBUG] _get_action called (plan_step={self._plan_step})")
         if not self._current_policy:
             raise VLMPlanningAgentFailure("No current plan available")
 
@@ -127,15 +131,22 @@ class VLMPlanningAgent(Agent[_O, _U]):
             raise VLMPlanningAgentFailure("No next action available")
 
         self._plan_step += 1
+        logging.info(f"[AGENT DEBUG] Returning action: {self._next_action}")
         return self._next_action
 
     def update(self, obs: _O, reward: float, done: bool, info: dict[str, Any]) -> None:
         """Update the agent with the latest observation and reward."""
+        logging.info(
+            f"[AGENT DEBUG] update called "
+            f"(plan_step={self._plan_step}, reward={reward}, done={done})"
+        )
         super().update(obs, reward, done, info)
         assert self._current_policy is not None
         try:
             state_obs = obs["state"] if self._rgb_observation else obs  # type: ignore
+            logging.info("[AGENT DEBUG] Calling policy for next action")
             self._next_action = self._current_policy(state_obs)
+            logging.info(f"[AGENT DEBUG] Next action obtained: {self._next_action}")
         except Exception as e:
             logging.exception("Failed to execute policy during update")
             raise VLMPlanningAgentFailure(
@@ -207,6 +218,11 @@ class VLMPlanningAgent(Agent[_O, _U]):
                 parsable_plan_prediction = plan_prediction_txt[start_index:]
             except ValueError:
                 raise ValueError("VLM output is badly formatted; cannot parse plan!")
+            logging.info(f"[AGENT DEBUG] VLM response text:\n{plan_prediction_txt}")
+            logging.info(
+                f"[AGENT DEBUG] Parsable plan prediction:\n{parsable_plan_prediction}"
+            )
+
             parsed_controller_plan = parse_model_output_into_option_plan(
                 parsable_plan_prediction,
                 set(state.data),
@@ -214,17 +230,26 @@ class VLMPlanningAgent(Agent[_O, _U]):
                 self._controllers,
                 parse_continuous_params=True,
             )
+
+            logging.info(
+                f"[AGENT DEBUG] Parsed {len(parsed_controller_plan)} "
+                f"controllers from VLM output"
+            )
             controller_and_params_plan: list[
                 tuple[GroundParameterizedController, Sequence[float]]
             ] = []
-            for controller, objs, params in parsed_controller_plan:
+            for i, (controller, objs, params) in enumerate(parsed_controller_plan):
                 logging.info(
-                    f"Parsed option: {controller} with objects "
+                    f"Parsed option {i}: {controller} with objects "
                     f"{objs} and params {params}\n"
                 )
                 grounded_controller = controller.ground(objs)
                 controller_and_params_plan.append((grounded_controller, tuple(params)))
 
+            logging.info(
+                f"[AGENT DEBUG] Creating policy with "
+                f"{len(controller_and_params_plan)} grounded controllers"
+            )
             policy = controller_and_param_plan_to_policy(
                 controller_and_params_plan,
                 self._max_planning_horizon,

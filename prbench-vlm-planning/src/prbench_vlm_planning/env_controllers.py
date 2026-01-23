@@ -27,15 +27,18 @@ def get_controllers_for_environment(
             f"prbench_models.{env_class_name}.envs.{env_name}.parameterized_skills"
         )
     else:
-        module_path = (
-            f"prbench_models.{env_class_name}.{env_name}.parameterized_skills"
-        )
+        module_path = f"prbench_models.{env_class_name}.{env_name}.parameterized_skills"
 
-    return _import_lifted_controllers(module_path, env_name, env_class_name, action_space)
+    return _import_lifted_controllers(
+        module_path, env_name, env_class_name, action_space
+    )
 
 
 def _import_lifted_controllers(
-    module_path: str, env_name: str, env_class_name: str, action_space: Optional[Any] = None
+    module_path: str,
+    env_name: str,
+    env_class_name: str,
+    action_space: Optional[Any] = None,
 ) -> Optional[dict[str, LiftedParameterizedController]]:
     """Import LiftedParameterizedControllers using create_lifted_controllers method.
 
@@ -62,7 +65,8 @@ def _import_lifted_controllers(
         # Get the create_lifted_controllers function
         create_lifted_controllers = getattr(module, "create_lifted_controllers")
 
-        # Call create_lifted_controllers with appropriate parameters based on env_class_name
+        # Call create_lifted_controllers with appropriate parameters
+        # based on env_class_name
         if env_class_name == "geom3d":
             # For geom3d environments, we need to create a sim object
             # Import the environment class dynamically
@@ -83,7 +87,9 @@ def _import_lifted_controllers(
             sim_class_name = f"ObjectCentric{env_class_name_camel}Env"
 
             if not hasattr(env_module, sim_class_name):
-                raise ImportError(f"Could not find class {sim_class_name} in {env_module_path}")
+                raise ImportError(
+                    f"Could not find class {sim_class_name} in {env_module_path}"
+                )
 
             sim_class = getattr(env_module, sim_class_name)
             sim = sim_class()
