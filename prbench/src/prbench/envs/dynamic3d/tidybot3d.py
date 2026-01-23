@@ -1006,7 +1006,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         self._ground_fixture is not None
                     ), "Ground fixture not initialized"
                     in_region = self._ground_fixture.check_in_region(
-                        position, region_name
+                        position, region_name, self._robot_env
                     )
                 else:
                     # Check first in fixtures, then in objects
@@ -1020,7 +1020,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         raise ValueError(
                             f"Target '{target}' not found in fixtures or objects"
                         )
-                    in_region = entity.check_in_region(position, region_name)
+                    in_region = entity.check_in_region(
+                        position, region_name, self._robot_env
+                    )
 
                 successes.append(in_region)
             elif pred[0] == "balanced":
@@ -1047,6 +1049,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 raise NotImplementedError(
                     f"Goal predicate {pred[0]} not implemented in _check_goals"
                 )
+        print(f"DEBUG: Goal conjunction {goal_conjunction}, successes {successes}")
         if goal_conjunction == "and":
             return all(successes)
         if goal_conjunction == "or":

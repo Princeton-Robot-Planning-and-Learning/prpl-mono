@@ -10,6 +10,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from prbench.envs.dynamic3d import utils
+from prbench.envs.dynamic3d.mujoco_utils import MujocoEnv
 from prbench.envs.dynamic3d.objects.base import (
     MujocoFixture,
     Region,
@@ -377,12 +378,14 @@ class Table(MujocoFixture):
         self,
         position: NDArray[np.float32],
         region_name: str,
+        env: MujocoEnv | None = None,
     ) -> bool:
         """Check if a given position is within the specified region.
 
         Args:
             position: Position as [x, y, z] array in world coordinates
             region_name: Name of the region to check
+            env: Optional MujocoEnv instance for computing absolute site positions.
         Returns:
             True if the position is within the specified region, False otherwise
         """
@@ -394,7 +397,7 @@ class Table(MujocoFixture):
         # Check if position is in any of the region objects
         region_list = self.region_objects[region_name]
         for region in region_list:
-            if region.check_in_region(position):
+            if region.check_in_region(position, env):
                 return True
 
         return False
@@ -1542,6 +1545,7 @@ class Cupboard(MujocoFixture):
         self,
         position: NDArray[np.float32],
         region_name: str,
+        env: MujocoEnv | None = None,
     ) -> bool:
         """Check if a given position is within the specified region.
 
@@ -1549,6 +1553,7 @@ class Cupboard(MujocoFixture):
         Args:
             position: Position as [x, y, z] array in world coordinates
             region_name: Name of the region to check
+            env: Optional MujocoEnv instance for computing absolute site positions.
         Returns:
             True if the position is within the specified region, False otherwise
         """
@@ -1560,7 +1565,7 @@ class Cupboard(MujocoFixture):
         # Check if position is in any of the region objects
         region_list = self.region_objects[region_name]
         for region in region_list:
-            if region.check_in_region(position):
+            if region.check_in_region(position, env):
                 return True
 
         return False

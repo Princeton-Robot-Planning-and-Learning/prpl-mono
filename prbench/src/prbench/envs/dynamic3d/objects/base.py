@@ -143,15 +143,16 @@ class Region:
 
         Args:
             position: Position to check as [x, y, z] in world coordinates
-            env: Optional MujocoEnv instance. If provided and region.env is None,
-                 temporarily uses this env for coordinate transformation.
+            env: Optional MujocoEnv instance. If provided, uses env's simulation
+                 to compute the absolute site position. Otherwise uses parent_pos
+                 and parent_yaw for coordinate transformation.
 
         Returns:
             True if position is within the region, False otherwise
         """
-        # Temporarily update env if provided and region.env is None
+        # Temporarily update env if provided
         original_env = self.env
-        if env is not None and self.env is None:
+        if env is not None:
             self.env = env
 
         try:
@@ -572,29 +573,34 @@ class MujocoObject:
         self,
         position: NDArray[np.float32],
         region_name: str,
+        env: MujocoEnv | None = None,
     ) -> bool:
         """Check if a given position is within the specified region.
 
         Args:
             position: Position as [x, y, z] array in world coordinates
             region_name: Name of the region to check
+            env: Optional MujocoEnv instance for computing absolute site positions.
+                 If not provided, uses object's env or falls back to parent_pos/yaw.
 
         Returns:
             True if the position is within the specified region, False otherwise
 
         Raises:
             ValueError: If regions are not defined or region not found
-            ValueError: If environment is not set (needed to get object position)
         """
         if self.regions is None:
             raise ValueError("Regions must be defined for this object")
         if region_name not in self.region_objects:
             raise ValueError(f"Region {region_name} not found in object regions")
 
+        # Use provided env, otherwise fall back to object's env
+        check_env = env if env is not None else self.env
+
         # Check if position is in any of the region objects
         region_list = self.region_objects[region_name]
         for region in region_list:
-            if region.check_in_region(position, self.env):
+            if region.check_in_region(position, check_env):
                 return True
 
         return False
@@ -750,12 +756,14 @@ class MujocoFixture(abc.ABC):
         self,
         position: NDArray[np.float32],
         region_name: str,
+        env: MujocoEnv | None = None,
     ) -> bool:
         """Check if a given position is within the specified region.
 
         Args:
             position: Position as [x, y, z] array in world coordinates
             region_name: Name of the region to check
+            env: Optional MujocoEnv instance for computing absolute site positions.
         Returns:
             True if the position is within the specified region, False otherwise
         """
@@ -964,12 +972,14 @@ class MujocoGround:
         self,
         position: NDArray[np.float32],
         region_name: str,
+        env: MujocoEnv | None = None,
     ) -> bool:
         """Check if a given position is within the specified region on the ground.
 
         Args:
             position: Position as [x, y, z] array in world coordinates
             region_name: Name of the region to check
+            env: Optional MujocoEnv instance for computing absolute site positions.
         Returns:
             True if the position is within the specified region, False otherwise
         """
@@ -979,7 +989,7 @@ class MujocoGround:
         # Check if position is in any of the region objects
         region_list = self.region_objects[region_name]
         for region in region_list:
-            if region.check_in_region(position):
+            if region.check_in_region(position, env):
                 return True
 
         return False
