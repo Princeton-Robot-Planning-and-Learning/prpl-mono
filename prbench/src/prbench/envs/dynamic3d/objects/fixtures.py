@@ -557,7 +557,9 @@ class Cupboard(MujocoFixture):
             self.fixture_config.get("drawer_damping", Cupboard.default_drawer_damping)
         )
         self.drawer_handle_depth: float = float(
-            self.fixture_config.get("drawer_handle_depth", Cupboard.default_drawer_handle_depth)
+            self.fixture_config.get(
+                "drawer_handle_depth", Cupboard.default_drawer_handle_depth
+            )
         )
         self.drawer_wall_thickness: float = float(
             self.fixture_config.get(
@@ -1366,7 +1368,11 @@ class Cupboard(MujocoFixture):
             shelf.set("pos", f"0 0 {shelf_z}")
             # Use different rgba for top shelf
             is_top_shelf = i == len(shelf_positions) - 1
-            shelf_rgba = self.rgba_cupboard_top_shelf if is_top_shelf else self.rgba_cupboard_shelf
+            shelf_rgba = (
+                self.rgba_cupboard_top_shelf
+                if is_top_shelf
+                else self.rgba_cupboard_shelf
+            )
             shelf.set("rgba", " ".join(map(str, shelf_rgba)))
 
             # Create vertical partitions for this shelf
