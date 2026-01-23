@@ -147,7 +147,8 @@ def test_ground_region_site_creation_and_placement():
 
             # Verify site Z position is above ground (centered between 0 and 2*threshold)
             # For 4-value ranges, z_start=0 and z_end=ground_placement_threshold
-            # bbox z range is [max(0, z_start-threshold), z_end+threshold] = [0, 2*threshold]
+            # bbox z range is [max(0, z_start-threshold), z_end+threshold]
+            # = [0, 2*threshold]
             # The site is centered between 0 and 2*ground_placement_threshold
             ground_placement_threshold = 0.05  # Actual threshold value
             expected_z = ground_placement_threshold  # Center of [0, 0.1]

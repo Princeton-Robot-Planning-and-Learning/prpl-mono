@@ -542,7 +542,9 @@ class Wiper(MujocoObject):
             # Upright orientation: handle extends in z, head extends in x
             # Handle: a box with square cross-section in x-y plane
             # MuJoCo box size is half-extent in each direction
-            handle_size = f"{self.handle_width / 2} {self.handle_width / 2} {self.handle_height / 2}"
+            hw = self.handle_width / 2
+            hh = self.handle_height / 2
+            handle_size = f"{hw} {hw} {hh}"
             handle_pos_z = self.handle_height / 2 + self.head_height
             ET.SubElement(
                 body,
@@ -558,9 +560,10 @@ class Wiper(MujocoObject):
             # Position: at the end of the handle along x-axis
             head_pos = f"0 0 {self.head_height / 2}"
             # Size: head_length in x, width in y, and head_height in z
-            head_size = (
-                f"{self.head_length / 2} {self.handle_width / 2} {self.head_height / 2}"
-            )
+            hl = self.head_length / 2
+            hw = self.handle_width / 2
+            hh = self.head_height / 2
+            head_size = f"{hl} {hw} {hh}"
             ET.SubElement(
                 body,
                 "geom",
@@ -575,8 +578,11 @@ class Wiper(MujocoObject):
             # Handle: rod extending along x-axis
             # size = [handle_height/2, handle_width/2, handle_width/2]
             # pos = [handle_height/2, 0, handle_width/2]
-            handle_size = f"{self.handle_height / 2} {self.handle_width / 2} {self.handle_width / 2}"
-            handle_pos = f"{self.head_height / 2} 0 {self.handle_width / 2}"
+            hh = self.handle_height / 2
+            hw = self.handle_width / 2
+            hd = self.head_height / 2
+            handle_size = f"{hh} {hw} {hw}"
+            handle_pos = f"{hd} 0 {hw}"
             ET.SubElement(
                 body,
                 "geom",
@@ -588,12 +594,14 @@ class Wiper(MujocoObject):
             )
 
             # Blade head: box extending along y-axis at end of handle
-            # size = [handle_width/2, head_length/2, head_height/2]
-            # pos = [handle_height, head_length/2, head_height/2]
-            head_size = (
-                f"{self.head_height / 2} {self.head_length / 2} {self.handle_width / 2}"
-            )
-            head_pos = f"{-self.handle_height / 2} 0 {self.handle_width / 2}"
+            # size = [head_height/2, head_length/2, handle_width/2]
+            # pos = [-handle_height/2, 0, handle_width/2]
+            hd = self.head_height / 2
+            hl = self.head_length / 2
+            hw = self.handle_width / 2
+            hh = self.handle_height / 2
+            head_size = f"{hd} {hl} {hw}"
+            head_pos = f"{-hh} 0 {hw}"
             ET.SubElement(
                 body,
                 "geom",
@@ -641,7 +649,8 @@ class Wiper(MujocoObject):
                 - "handle_height": Height of the handle in z dimension
                 - "head_length": Length of the blade head in x dimension
                 - "head_height": Height of the blade head in z dimension
-                - "upright": Boolean indicating orientation (True = upright, False = horizontal)
+                - "upright": Boolean indicating orientation
+                  (True = upright, False = horizontal)
 
         Returns:
             Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
@@ -680,15 +689,18 @@ class Wiper(MujocoObject):
             # Horizontal orientation: handle extends in x, head extends in y
             # Handle geom: size=[handle_height/2, handle_width/2, handle_width/2],
             # pos=[head_height/2, 0, handle_width/2]
-            #   Extends x: [head_height/2 - handle_height/2, head_height/2 + handle_height/2],
+            #   Extends x: [head_height/2 - handle_height/2,
+            #              head_height/2 + handle_height/2],
             #   y: ±handle_width/2, z: [0, handle_width]
             # Head geom: size=[head_height/2, head_length/2, handle_width/2],
             # pos=[-handle_height/2, 0, handle_width/2]
-            #   Extends x: [-handle_height/2 - head_height/2, -handle_height/2 + head_height/2],
+            #   Extends x: [-handle_height/2 - head_height/2,
+            #              -handle_height/2 + head_height/2],
             #   y: ±head_length/2, z: [0, handle_width]
 
             # Overall bounds relative to body origin:
-            # x: [-(handle_height + head_height)/2, (handle_height + head_height)/2]
+            # x: [-(handle_height + head_height)/2,
+            #     (handle_height + head_height)/2]
             # y: [-head_length/2, head_length/2]
             # z: [0, handle_width]
 
