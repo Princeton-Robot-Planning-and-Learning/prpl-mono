@@ -303,13 +303,22 @@ class GeneratedSeesaw(MujocoObject):
                 - beam_length: Length of the beam (default: 0.4m)
                 - beam_width: Width of the beam (default: 0.06m)
                 - beam_thickness: Thickness of the beam (default: 0.01m)
+                - beam_clearance: Gap between pivot apex and beam center (
+                    default: 0.002m)
                 - pivot_height: Height of the pivot/fulcrum (default: 0.04m)
                 - pivot_width: Width of the pivot base (default: 0.04m)
                 - beam_rgba: Color of the beam (default: "0.6 0.4 0.2 1")
                 - pivot_rgba: Color of the pivot (default: "0.4 0.4 0.4 1")
+                - beam_friction: Contact friction tuple/string for the beam
+                  (default: [1.4, 0.02, 0.002])
+                - pivot_friction: Contact friction tuple/string for the pivot
+                  (default: [1.2, 0.02, 0.002])
                 - beam_mass: Mass of the beam (default: 0.1)
                 - pivot_mass: Mass of the pivot (default: 0.2)
-                - damping: Joint damping coefficient (default: 0.01)
+                - damping: Joint damping coefficient (default: 0.015)
+                - hinge_frictionloss: Coulomb friction at hinge (default: 0.02)
+                - hinge_stiffness: Torsional spring around 0 deg (default: 1.0)
+                - hinge_range: Optional angular limits [min, max] in radians
         """
         # Initialize base class
         super().__init__(name, env, options)
@@ -321,6 +330,7 @@ class GeneratedSeesaw(MujocoObject):
         self.beam_length: float = float(self.options.get("beam_length", 0.4))
         self.beam_width: float = float(self.options.get("beam_width", 0.06))
         self.beam_thickness: float = float(self.options.get("beam_thickness", 0.01))
+        self.beam_clearance: float = float(self.options.get("beam_clearance", 0.002))
 
         # Pivot (fulcrum) parameters
         self.pivot_height: float = float(self.options.get("pivot_height", 0.04))
@@ -340,9 +350,37 @@ class GeneratedSeesaw(MujocoObject):
         else:
             self.pivot_rgba = " ".join(str(x) for x in pivot_rgba)
 
+        # Contact/friction parameters for beam and pivot
+        default_beam_friction = [1.4, 0.02, 0.002]
+        beam_friction = self.options.get("beam_friction", default_beam_friction)
+        if isinstance(beam_friction, str):
+            self.beam_friction = beam_friction
+        else:
+            self.beam_friction = " ".join(str(x) for x in beam_friction)
+
+        default_pivot_friction = [1.2, 0.02, 0.002]
+        pivot_friction = self.options.get("pivot_friction", default_pivot_friction)
+        if isinstance(pivot_friction, str):
+            self.pivot_friction = pivot_friction
+        else:
+            self.pivot_friction = " ".join(str(x) for x in pivot_friction)
+
         self.beam_mass: float = float(self.options.get("beam_mass", 0.1))
         self.pivot_mass: float = float(self.options.get("pivot_mass", 0.2))
-        self.damping: float = float(self.options.get("damping", 0.01))
+        self.damping: float = float(self.options.get("damping", 0.015))
+
+        # Hinge stability parameters (make balancing less twitchy)
+        self.hinge_frictionloss: float = float(
+            self.options.get("hinge_frictionloss", 0.02)
+        )
+        self.hinge_stiffness: float = float(self.options.get("hinge_stiffness", 1.0))
+        hinge_range = self.options.get("hinge_range", [-0.8, 0.8])
+        if hinge_range is None:
+            self.hinge_range: tuple[float, float] | None = None
+        else:
+            if len(hinge_range) != 2:
+                raise ValueError("hinge_range must be a 2-element sequence [min, max]")
+            self.hinge_range = (float(hinge_range[0]), float(hinge_range[1]))
 
         # Generate mesh for pivot and save to temporary OBJ file
         self.pivot_mesh_file = self._generate_and_save_pivot_mesh()
@@ -458,6 +496,7 @@ class GeneratedSeesaw(MujocoObject):
             mesh=self.pivot_mesh_name,
             rgba=self.pivot_rgba,
             mass=str(self.pivot_mass),
+            friction=self.pivot_friction,
         )
 
         # Create beam as a child body with hinge joint
@@ -466,18 +505,21 @@ class GeneratedSeesaw(MujocoObject):
             body,
             "body",
             name=f"{self.name}_beam",
-            pos=f"0 0 {self.pivot_height}",
+            pos=f"0 0 {self.pivot_height + self.beam_clearance}",
         )
 
         # Add hinge joint for beam rotation around Y-axis (tilt left-right)
-        ET.SubElement(
-            beam_body,
-            "joint",
-            name=f"{self.name}_hinge",
-            type="hinge",
-            axis="0 1 0",  # Rotate around Y-axis
-            damping=str(self.damping),
-        )
+        joint_kwargs: dict[str, str] = {
+            "name": f"{self.name}_hinge",
+            "type": "hinge",
+            "axis": "0 1 0",  # Rotate around Y-axis
+            "damping": str(self.damping),
+            "frictionloss": str(self.hinge_frictionloss),
+            "stiffness": str(self.hinge_stiffness),
+        }
+        if self.hinge_range is not None:
+            joint_kwargs["range"] = f"{self.hinge_range[0]} {self.hinge_range[1]}"
+        ET.SubElement(beam_body, "joint", joint_kwargs)
 
         # Add beam geom (box shape)
         # Beam is centered at the hinge point
@@ -493,6 +535,7 @@ class GeneratedSeesaw(MujocoObject):
             size=f"{beam_half_length} {beam_half_width} {beam_half_thickness}",
             rgba=self.beam_rgba,
             mass=str(self.beam_mass),
+            friction=self.beam_friction,
         )
 
         return body
@@ -503,8 +546,9 @@ class GeneratedSeesaw(MujocoObject):
         Returns:
             Tuple of (width, depth, height) for the bounding box
         """
-        # Seesaw dimensions: beam_length x beam_width x (pivot_height + beam_thickness)
-        total_height = self.pivot_height + self.beam_thickness
+        # Seesaw dimensions: beam_length x beam_width x (pivot_height +
+        # clearance + beam_thickness)
+        total_height = self.pivot_height + self.beam_clearance + self.beam_thickness
         return (self.beam_length, self.beam_width, total_height)
 
     @staticmethod
@@ -524,12 +568,13 @@ class GeneratedSeesaw(MujocoObject):
         beam_length = float(object_config.get("beam_length", 0.4))
         beam_width = float(object_config.get("beam_width", 0.06))
         beam_thickness = float(object_config.get("beam_thickness", 0.01))
+        beam_clearance = float(object_config.get("beam_clearance", 0.002))
         pivot_height = float(object_config.get("pivot_height", 0.04))
 
         # Half-extents
         half_length = beam_length / 2
         half_width = beam_width / 2
-        total_height = pivot_height + beam_thickness
+        total_height = pivot_height + beam_clearance + beam_thickness
 
         return [
             float(pos[0]) - half_length,  # x_min
@@ -607,3 +652,50 @@ class GeneratedSeesaw(MujocoObject):
         """
         angle_degrees = abs(self.get_beam_tilt_angle_degrees())
         return angle_degrees <= tolerance_degrees
+
+    def is_object_on_beam(
+        self,
+        object_position: NDArray[np.float32],
+        tolerance: float = 0.02,
+    ) -> bool:
+        """Check if an object is on the seesaw beam.
+
+        Args:
+            object_position: The object's position [x, y, z] in world coordinates.
+            tolerance: Extra tolerance for position checks (default 0.02m).
+
+        Returns:
+            True if the object is on the seesaw beam, False otherwise.
+
+        Raises:
+            ValueError: If environment is not set.
+        """
+        if self.env is None:
+            raise ValueError("Environment must be set to check object position")
+
+        # Get seesaw position
+        seesaw_pos, _ = self.env.get_joint_pos_quat(self.joint_name)
+
+        obj_x, obj_y, obj_z = object_position[0], object_position[1], object_position[2]
+
+        beam_half_length = self.beam_length / 2
+        beam_half_width = self.beam_width / 2
+        min_height = seesaw_pos[2] + self.pivot_height * 0.5
+
+        # Check X is within beam length
+        x_offset = obj_x - seesaw_pos[0]
+        if not (
+            -beam_half_length - tolerance < x_offset < beam_half_length + tolerance
+        ):
+            return False
+
+        # Check Y is within beam width
+        y_offset = abs(obj_y - seesaw_pos[1])
+        if not y_offset < beam_half_width + tolerance:
+            return False
+
+        # Check Z is above pivot (object is resting on beam)
+        if not obj_z > min_height:
+            return False
+
+        return True
