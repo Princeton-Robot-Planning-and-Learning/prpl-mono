@@ -1,0 +1,32 @@
+{
+    "robots": {
+        "tidybot": {
+            "robot_0": {}
+        }
+    },
+    "scene": "lab2_kitchen_gray",
+    "regions": {
+        "bowl_0_region": {
+            "target": "bowl_0",
+            "ranges": [[-0.05, 0.05, 0.05, 0.15]],
+            "yaw_ranges": [[0, 360]],
+            "rgba": [1, 0, 0, 0.3]
+        }
+    },
+    "objects": {
+        "robocasa_boxed_drink_0": {
+            "boxed_drink_0": {}
+        },
+        "robocasa_bowl_0": {
+            "bowl_0": {}
+        }
+    },
+    "initial_state": [
+        ["on", "boxed_drink_0", "kitchen_island_shelf_2_region"],
+        ["on", "bowl_0", "kitchen_cooking_area_shelf_2_region"],
+        ["on", "robot_0", "robot_living_area_init_region"]
+    ],
+    "goal_state": [
+        ["on", "boxed_drink_0", "bowl_0_region"]
+    ]
+}
