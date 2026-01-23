@@ -263,7 +263,7 @@ def run_inference(
                 if action_dict is None:
                     if use_qpos:
                         action_dict: dict[str, np.ndarray] = {  # type: ignore
-                            "base_pose": obs_dict["base_pose"] - obs_dict["arm_qpos"],
+                            "base_pose": obs_dict["base_pose"] - obs_dict["base_pose"],
                             "arm_qpos": obs_dict["arm_qpos"] - obs_dict["arm_qpos"],
                             "gripper_pos": obs_dict["gripper_pos"],
                         }

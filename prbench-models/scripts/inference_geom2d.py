@@ -164,7 +164,7 @@ def run_inference(
             state = env.observation_space.devectorize(obs)
 
             # Target object for this episode (can be detected or specified)
-            if "Motion2D" in env_name or "StickButton2D" in env_name:
+            if "DynObstruction2D" in env_name or "Motion2D" in env_name or "StickButton2D" in env_name:
                 target_object_key = "target_agent"
             elif "Shelf3D" in env_name or "Ground3D" in env_name:
                 target_object_key = f"cube{num_cubes - 1}"
@@ -198,16 +198,29 @@ def run_inference(
 
                 # Create observation dict for policy
                 if use_env_state:
-                    obs_dict = {
-                        "robot_state": obs[:9],
-                        "env_state": obs[9:],
-                        "image": image,
-                    }
+                    if "DynObstruction2D" in env_name:
+                        obs_dict = {
+                            "robot_state": obs[-24:],
+                            "env_state": obs[:-24],
+                            "image": image,
+                        }
+                    elif "Motion2D" in env_name or "StickButton2D" in env_name:
+                        obs_dict = {
+                            "robot_state": obs[:9],
+                            "env_state": obs[9:],
+                            "image": image,
+                        }
                 else:
-                    obs_dict = {
-                        "robot_state": obs[:9],
-                        "image": image,
-                    }
+                    if "DynObstruction2D" in env_name:
+                        obs_dict = {
+                            "robot_state": obs[-24:],
+                            "image": image,
+                        }
+                    elif "Motion2D" in env_name or "StickButton2D" in env_name:
+                        obs_dict = {
+                            "robot_state": obs[:9],
+                            "image": image,
+                        }
                 
                 
                 # Get action from policy
@@ -220,8 +233,14 @@ def run_inference(
                     }
                 
                 action = action_dict["robot_actions"]
-                action_min = np.array([-0.05, -0.05, -0.196, -0.10, 0.000], dtype=np.float32)
-                action_max = np.array([0.05, 0.05, 0.196, 0.10, 1.000], dtype=np.float32)
+                if "DynObstruction2D" in env_name:
+                    action_min = np.array([-0.0499, -0.0499, -0.065, -0.10, -0.02], dtype=np.float32)
+                    action_max = np.array([0.0499, 0.0499, 0.065, 0.10, 0.02], dtype=np.float32)
+                elif "Motion2D" in env_name or "StickButton2D" in env_name:
+                    action_min = np.array([-0.05, -0.05, -0.196, -0.10, 0.000], dtype=np.float32)
+                    action_max = np.array([0.05, 0.05, 0.196, 0.10, 1.000], dtype=np.float32)
+                else:
+                    raise ValueError(f"Environment {env_name} not supported")
                 action = np.clip(action, action_min, action_max)
                 print('action', action)
 

@@ -47,6 +47,7 @@ def convert(
     teleop_data_dir: Path | None = None,
     output_path: Path | None = None,
     render_images: bool = False,
+    use_dynamic2d: bool = False,
 ) -> None:
     """Convert expert or teleoperated data to HDF5 format.
 
@@ -99,8 +100,12 @@ def convert(
             images = []
 
             for fr in ep_frames:
-                robot_observation = np.array(fr["observation.state"][:9], dtype=np.float32)
-                env_observations = np.array(fr["observation.state"][9:], dtype=np.float32)
+                if use_dynamic2d:
+                    robot_observation = np.array(fr["observation.state"][-24:], dtype=np.float32)
+                    env_observations = np.array(fr["observation.state"][:-24], dtype=np.float32)
+                else:
+                    robot_observation = np.array(fr["observation.state"][:9], dtype=np.float32)
+                    env_observations = np.array(fr["observation.state"][9:], dtype=np.float32)
                 action = np.array(fr["action"], dtype=np.float32)
                 env_states.append(env_observations)
                 robot_states.append(robot_observation)
@@ -182,6 +187,11 @@ def main() -> None:
         help="For teleoperated demos: render images by "
         "replaying in environment (requires prbench)",
     )
+    parser.add_argument(
+        "--use_dynamic2d",
+        action="store_true",
+        help="Use dynamic2d environment",
+    )
     args = parser.parse_args()
 
     # Validate inputs
@@ -213,6 +223,7 @@ def main() -> None:
         teleop_data_dir=teleop_dir,
         output_path=out_path,
         render_images=args.render_images,
+        use_dynamic2d=args.use_dynamic2d,
     )
 
 
