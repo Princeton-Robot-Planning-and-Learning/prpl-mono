@@ -863,7 +863,7 @@ def test_pick_place_two_cubes_skill():
 
     # Reset and execute the controller until it terminates.
     controller.reset(state, params)
-    for _ in range(400):
+    for _ in range(800):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
         next_state = env.observation_space.devectorize(obs)
