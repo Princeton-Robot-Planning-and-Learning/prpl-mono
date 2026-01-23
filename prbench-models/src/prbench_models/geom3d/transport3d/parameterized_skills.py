@@ -610,7 +610,7 @@ def create_lifted_controllers(
             high=np.array([
                 MOVE_TO_TARGET_DISTANCE_BOUNDS[1],
                 MOVE_TO_TARGET_ROT_BOUNDS[1],
-            ),
+            ]),
         ),
     )
 
