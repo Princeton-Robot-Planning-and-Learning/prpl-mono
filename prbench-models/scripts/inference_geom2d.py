@@ -10,8 +10,6 @@ import zmq
 from episode_storage import EpisodeWriter
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
-from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from prbench_models.policy_constants import (
     POLICY_CONTROL_PERIOD,
     POLICY_IMAGE_HEIGHT,
@@ -114,6 +112,7 @@ def run_inference(
     show_images: bool = False,
     use_qpos: bool = False,
     use_delta_qpos: bool = False,
+    use_env_state: bool = False,
 ):
     """Run policy inference in the prbench environment.
 
@@ -131,6 +130,7 @@ def run_inference(
         show_images: Whether to show images in a window.
         use_qpos: Whether to use qpos for the policy.
         use_delta_qpos: Whether to use delta qpos for the policy.
+        use_env_state: Whether to use env state for the policy.
     """
     
 
@@ -142,13 +142,7 @@ def run_inference(
             env = prbench.make(
                 f"prbench/{env_name}",
                 render_mode=render_mode,
-                use_gui=False,
-                realistic_bg=True,
             )
-
-            # Create FK solver for computing end-effector pose
-            fk_solver = TidybotFKSolver(ee_offset=0.12)
-            ik_solver = TidybotIKSolver(ee_offset=0.12)
 
             # Create remote policy
             policy = RemotePolicy(host=policy_host, port=policy_port)
@@ -170,7 +164,9 @@ def run_inference(
             state = env.observation_space.devectorize(obs)
 
             # Target object for this episode (can be detected or specified)
-            if "Shelf3D" in env_name or "Ground3D" in env_name:
+            if "Motion2D" in env_name or "StickButton2D" in env_name:
+                target_object_key = "target_agent"
+            elif "Shelf3D" in env_name or "Ground3D" in env_name:
                 target_object_key = f"cube{num_cubes - 1}"
             elif "Transport3D" in env_name:
                 target_object_key = "box0"
@@ -189,130 +185,45 @@ def run_inference(
             start_time = time.time()
             for step_idx in range(max_steps):
                 # Enforce desired control frequency
-                step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD * 2
+                step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD
                 while time.time() < step_end_time:
                     time.sleep(0.0001)
 
                 # Get robot state
                 robot = state.get_object_from_name("robot")
-                target_cube = state.get_object_from_name(target_object_key)
-                target_cube_pos = np.array(
-                    [
-                        state.get(target_cube, "pose_x"),
-                        state.get(target_cube, "pose_y"),
-                        state.get(target_cube, "pose_z"),
-                    ]
-                )
-                # if target_cube_pos[2] > 0.3:
-                #     successes += 1
-                #     break
-                current_joints = np.array(
-                    [state.get(robot, f"joint_{i}") for i in range(1, 8)]
-                )
-                current_position, current_orientation = fk_solver.forward_kinematics(
-                    current_joints
-                )
 
-                all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
+                image = env.unwrapped._object_centric_env.render()
                 if show_images:
-                    _visualize_image_in_window(all_images["overview"], "overview")
-                    _visualize_image_in_window(all_images["base"], "base")
-                    _visualize_image_in_window(all_images["wrist"], "wrist")
+                    _visualize_image_in_window(image, "overview")
 
                 # Create observation dict for policy
-                if use_qpos:
+                if use_env_state:
                     obs_dict = {
-                        "base_pose": np.array(
-                            [
-                                state.get(robot, "pos_base_x"),
-                                state.get(robot, "pos_base_y"),
-                                state.get(robot, "pos_base_rot"),
-                            ]
-                        ),
-                        "arm_qpos": np.array(current_joints),
-                        "gripper_pos": np.array([state.get(robot, "finger_state")]),
-                        "base_image": all_images["base"],
-                        "wrist_image": all_images["wrist"],
-                        "overview_image": all_images["overview"],
+                        "robot_state": obs[:9],
+                        "env_state": obs[9:],
+                        "image": image,
                     }
                 else:
                     obs_dict = {
-                        "base_pose": np.array(
-                            [
-                                state.get(robot, "pos_base_x"),
-                                state.get(robot, "pos_base_y"),
-                                state.get(robot, "pos_base_rot"),
-                            ]
-                        ),
-                        "arm_pos": current_position,
-                        "arm_quat": current_orientation,
-                        "gripper_pos": np.array([state.get(robot, "finger_state")]),
-                        "base_image": all_images["base"],
-                        "wrist_image": all_images["wrist"],
-                        "overview_image": all_images["overview"],
+                        "robot_state": obs[:9],
+                        "image": image,
                     }
-
-                if state.get(robot, "finger_state") > 0.005:
-                    obs_dict["gripper_pos"] = np.array([1.0])
-                else:
-                    obs_dict["gripper_pos"] = np.array([0.0])
-
+                
+                
                 # Get action from policy
                 action_dict = policy.step(obs_dict)
 
-                if action_dict is None:
-                    if use_qpos:
-                        action_dict: dict[str, np.ndarray] = {  # type: ignore
-                            "base_pose": obs_dict["base_pose"] - obs_dict["arm_qpos"],
-                            "arm_qpos": obs_dict["arm_qpos"] - obs_dict["arm_qpos"],
-                            "gripper_pos": obs_dict["gripper_pos"],
-                        }
-                    else:
-                        action_dict: dict[str, np.ndarray] = {  # type: ignore
-                            "base_pose": obs_dict["base_pose"],
-                            "arm_pos": obs_dict["arm_pos"],
-                            "arm_quat": obs_dict["arm_quat"],
-                            "gripper_pos": obs_dict["gripper_pos"],
-                        }
-
                 
-
-                if use_delta_qpos:
-                    delta_qpos = (
-                        np.mod(action_dict["arm_qpos"] + np.pi, 2 * np.pi) - np.pi
-                    )  # Unwrapped joint angles
-                    action = np.concatenate(
-                        [
-                            action_dict["base_pose"],
-                            delta_qpos,
-                            action_dict["gripper_pos"],
-                        ]
-                    )
-                elif use_qpos:
-                    delta_qpos = (
-                        np.mod(action_dict["arm_qpos"] - obs_dict["arm_qpos"] + np.pi, 2 * np.pi) - np.pi
-                    )  # Unwrapped joint angles
-                    action = np.concatenate(
-                        [
-                            action_dict["base_pose"] - obs_dict["base_pose"],
-                            delta_qpos,
-                            action_dict["gripper_pos"],
-                        ]
-                    )
-                else:
-                    qpos = ik_solver.solve(
-                        action_dict["arm_pos"], action_dict["arm_quat"], current_joints
-                    )
-                    delta_qpos = (
-                        np.mod((qpos - current_joints) + np.pi, 2 * np.pi) - np.pi
-                    )  # Unwrapped joint angles
-                    action = np.concatenate(
-                        [
-                            action_dict["base_pose"] - obs_dict["base_pose"],
-                            delta_qpos,
-                            action_dict["gripper_pos"],
-                        ]
-                    )
+                if action_dict is None:
+                    action_dict = {
+                        "robot_actions": np.zeros(5, dtype=np.float32)
+                    }
+                
+                action = action_dict["robot_actions"]
+                action_min = np.array([-0.05, -0.05, -0.196, -0.10, 0.000], dtype=np.float32)
+                action_max = np.array([0.05, 0.05, 0.196, 0.10, 1.000], dtype=np.float32)
+                action = np.clip(action, action_min, action_max)
+                print('action', action)
 
                 # Record observation and action before stepping
                 if writer is not None:
@@ -396,6 +307,7 @@ def main() -> None:
     parser.add_argument("--render", action="store_true", help="Render the environment")
     parser.add_argument("--use-qpos", action="store_true", default=False, help="Use qpos for the policy")
     parser.add_argument("--use-delta-qpos", action="store_true", default=False, help="Use delta qpos for the policy")
+    parser.add_argument("--use-env-state", type=bool, default=True, help="Use env state for the policy")
     args = parser.parse_args()
 
     run_inference(
@@ -412,6 +324,7 @@ def main() -> None:
         show_images=args.show_images,
         use_qpos=args.use_qpos,
         use_delta_qpos=args.use_delta_qpos,
+        use_env_state=args.use_env_state,
     )
 
 
