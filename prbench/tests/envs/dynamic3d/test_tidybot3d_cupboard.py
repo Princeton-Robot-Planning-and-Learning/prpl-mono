@@ -148,7 +148,7 @@ def test_tidybot_cupboard_constrained_fitting_goals():
         region = cupboard.region_objects[red_cuboid_goal_region][0]
         # Get the bbox of the region
         bbox = region.bbox
-        # Compute the center of the bbox: (x_min + x_max)/2, (y_min + y_max)/2, (z_min + z_max)/2
+        # Compute center: (x_min + x_max)/2, (y_min + y_max)/2, (z_min + z_max)/2
         goal_pos_red = (
             (bbox[0] + bbox[3]) / 2.0,
             (bbox[1] + bbox[4]) / 2.0,
@@ -174,7 +174,7 @@ def test_tidybot_cupboard_constrained_fitting_goals():
         region = cupboard.region_objects[green_cuboid_goal_region][0]
         # Get the bbox of the region
         bbox = region.bbox
-        # Compute the center of the bbox: (x_min + x_max)/2, (y_min + y_max)/2, (z_min + z_max)/2
+        # Compute center: (x_min + x_max)/2, (y_min + y_max)/2, (z_min + z_max)/2
         goal_pos_green = (
             (bbox[0] + bbox[3]) / 2.0,
             (bbox[1] + bbox[4]) / 2.0,
@@ -200,7 +200,7 @@ def test_tidybot_cupboard_constrained_fitting_goals():
         region = cupboard.region_objects[blue_cuboid_goal_region][0]
         # Get the bbox of the region
         bbox = region.bbox
-        # Compute the center of the bbox: (x_min + x_max)/2, (y_min + y_max)/2, (z_min + z_max)/2
+        # Compute center: (x_min + x_max)/2, (y_min + y_max)/2, (z_min + z_max)/2
         goal_pos_blue = (
             (bbox[0] + bbox[3]) / 2.0,
             (bbox[1] + bbox[4]) / 2.0,
