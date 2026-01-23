@@ -1049,7 +1049,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 raise NotImplementedError(
                     f"Goal predicate {pred[0]} not implemented in _check_goals"
                 )
-        print(f"DEBUG: Goal conjunction {goal_conjunction}, successes {successes}")
+
         if goal_conjunction == "and":
             return all(successes)
         if goal_conjunction == "or":
