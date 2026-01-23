@@ -43,7 +43,7 @@ def run_teleop(
     env = prbench.make(
         f"prbench/{env_name}",
         render_mode="rgb_array",
-        scene_bg=False,
+        scene_bg=True,
     )
 
     # Create FK/IK solvers for computing end-effector pose
@@ -91,11 +91,13 @@ def run_teleop(
                 )
 
                 camera_names = env.unwrapped._object_centric_env.camera_names  # type: ignore # pylint: disable=protected-access
+                print('camera_names: ', camera_names)
+                robot_name = env.unwrapped._object_centric_env.robot_name
                 env.unwrapped._object_centric_env.set_render_camera("overview")
                 overview_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera("base")
+                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
                 base_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera("wrist")
+                env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
                 wrist_image = env.unwrapped._object_centric_env.render()
                 env.unwrapped._object_centric_env.set_render_camera("agentview_1")
                 agent_image = env.unwrapped._object_centric_env.render()
