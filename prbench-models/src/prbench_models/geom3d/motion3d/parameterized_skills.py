@@ -10,6 +10,7 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
+from gymnasium.spaces import Box
 from prbench.envs.geom3d.motion3d import (
     Geom3DPointType,
     Geom3DRobotType,
@@ -166,7 +167,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, target],
             MoveToTargetController,
-            action_space,
+            Box(-np.inf, np.inf, (7,)),
         )
     )
     return {
