@@ -297,18 +297,18 @@ def test_tidybot_cupboard_constrained_fitting_goals():
         qx = state_after.get(cuboid.symbolic_object, "qx")
         qy = state_after.get(cuboid.symbolic_object, "qy")
         qz = state_after.get(cuboid.symbolic_object, "qz")
-        assert np.isclose(qw, qw_90x, atol=0.01), (
-            f"{cuboid_name} qw={qw} not close to expected {qw_90x}"
-        )
-        assert np.isclose(qx, qx_90x, atol=0.01), (
-            f"{cuboid_name} qx={qx} not close to expected {qx_90x}"
-        )
-        assert np.isclose(qy, qy_90x, atol=0.01), (
-            f"{cuboid_name} qy={qy} not close to expected {qy_90x}"
-        )
-        assert np.isclose(qz, qz_90x, atol=0.01), (
-            f"{cuboid_name} qz={qz} not close to expected {qz_90x}"
-        )
+        assert np.isclose(
+            qw, qw_90x, atol=0.01
+        ), f"{cuboid_name} qw={qw} not close to expected {qw_90x}"
+        assert np.isclose(
+            qx, qx_90x, atol=0.01
+        ), f"{cuboid_name} qx={qx} not close to expected {qx_90x}"
+        assert np.isclose(
+            qy, qy_90x, atol=0.01
+        ), f"{cuboid_name} qy={qy} not close to expected {qy_90x}"
+        assert np.isclose(
+            qz, qz_90x, atol=0.01
+        ), f"{cuboid_name} qz={qz} not close to expected {qz_90x}"
 
     env.close()
 
@@ -560,8 +560,8 @@ def test_tidybot3d_cupboard_mimiclabs_with_video():
     env = prbench.make(
         "prbench/TidyBot3D-sort-lab6-o12-ConstrainedFitting-v0",
         render_mode="rgb_array",
-        scene_bg=True,  # Use default mimiclabs scene (lab5 for base_motion)
-        scene_render_camera="overview",
+        scene_bg=True,
+        scene_render_camera="agentview_1",
     )
 
     # Wrap with RecordVideo if making videos
