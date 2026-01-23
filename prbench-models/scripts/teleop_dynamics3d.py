@@ -12,6 +12,7 @@ from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from prbench_models.policy_constants import POLICY_CONTROL_PERIOD
 from prbench_models.teleop_utils import TeleopPolicy
+from prbench_models.teleop_utils import _visualize_image_in_window
 
 prbench.register_all_environments()
 
@@ -25,6 +26,7 @@ def run_teleop(
     num_cubes: int = 2,
     enable_web_server: bool = True,
     port: int = 5000,
+    show_images: bool = False,
 ) -> None:
     """Run teleoperation in the prbench environment.
 
@@ -88,6 +90,18 @@ def run_teleop(
                     current_joints
                 )
 
+                camera_names = env.unwrapped._object_centric_env.camera_names  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera("overview")
+                overview_image = env.unwrapped._object_centric_env.render()
+                env.unwrapped._object_centric_env.set_render_camera("base")
+                base_image = env.unwrapped._object_centric_env.render()
+                env.unwrapped._object_centric_env.set_render_camera("wrist")
+                wrist_image = env.unwrapped._object_centric_env.render()
+                if show_images:
+                    _visualize_image_in_window(overview_image, "overview")
+                    _visualize_image_in_window(base_image, "base")
+                    _visualize_image_in_window(wrist_image, "wrist")
+
                 # Create observation dict for policy
                 obs_dict = {
                     "base_pose": np.array(
@@ -100,9 +114,9 @@ def run_teleop(
                     "arm_pos": current_position,
                     "arm_quat": current_orientation,
                     "gripper_pos": np.array([state.get(robot, "pos_gripper")]),
-                    "base_image": raw_obs["raw_obs"]["base_image"].copy(),
-                    "wrist_image": raw_obs["raw_obs"]["wrist_image"].copy(),
-                    "overview_image": raw_obs["raw_obs"]["overview_image"].copy(),
+                    "base_image": base_image,
+                    "wrist_image": wrist_image,
+                    "overview_image": overview_image,
                 }
 
                 # Get action from policy
@@ -210,6 +224,9 @@ def main() -> None:
         default=5000,
         help="Port for WebXR web server (default: 5000)",
     )
+    parser.add_argument(
+        "--show-images", action="store_true", default=False, help="Show images in OpenCV windows"
+    )
 
     args = parser.parse_args()
 
@@ -222,6 +239,7 @@ def main() -> None:
         num_cubes=args.num_cubes,
         enable_web_server=args.enable_web_server,
         port=args.port,
+        show_images=args.show_images,
     )
 
 
