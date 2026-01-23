@@ -603,14 +603,18 @@ def create_lifted_controllers(
         [robot, target],
         PickController,
         Box(
-            low=np.array([
-                MOVE_TO_TARGET_DISTANCE_BOUNDS[0],
-                MOVE_TO_TARGET_ROT_BOUNDS[0],
-            ]),
-            high=np.array([
-                MOVE_TO_TARGET_DISTANCE_BOUNDS[1],
-                MOVE_TO_TARGET_ROT_BOUNDS[1],
-            ]),
+            low=np.array(
+                [
+                    MOVE_TO_TARGET_DISTANCE_BOUNDS[0],
+                    MOVE_TO_TARGET_ROT_BOUNDS[0],
+                ]
+            ),
+            high=np.array(
+                [
+                    MOVE_TO_TARGET_DISTANCE_BOUNDS[1],
+                    MOVE_TO_TARGET_ROT_BOUNDS[1],
+                ]
+            ),
         ),
     )
 
