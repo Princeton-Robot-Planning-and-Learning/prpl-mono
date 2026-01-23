@@ -96,11 +96,13 @@ def run_teleop(
                 base_image = env.unwrapped._object_centric_env.render()
                 env.unwrapped._object_centric_env.set_render_camera("wrist")
                 wrist_image = env.unwrapped._object_centric_env.render()
+                env.unwrapped._object_centric_env.set_render_camera("agentview_1")
+                agent_image = env.unwrapped._object_centric_env.render()
                 if show_images:
                     _visualize_image_in_window(overview_image, "overview")
                     _visualize_image_in_window(base_image, "base")
                     _visualize_image_in_window(wrist_image, "wrist")
-
+                    _visualize_image_in_window(agent_image, "agentview_1")
                 # Create observation dict for policy
                 obs_dict = {
                     "base_pose": np.array(
