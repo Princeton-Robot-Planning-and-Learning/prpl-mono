@@ -46,10 +46,10 @@ class RobotEnv(MujocoEnv, abc.ABC):
         """
         if self.name is not None:
             # Append robot name prefix to the name attribute if it exists
-            if element.get("name") is not None:
-                current_name = element.get("name")
-                self._renamed_names.append(current_name)
-                element.set("name", f"{self.name}_{current_name}")
+            name_attr = element.get("name")
+            if name_attr is not None:
+                self._renamed_names.append(name_attr)
+                element.set("name", f"{self.name}_{name_attr}")
 
             # Recursively process all child elements
             for child_elem in element:
