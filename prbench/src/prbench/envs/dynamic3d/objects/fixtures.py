@@ -442,6 +442,7 @@ class Cupboard(MujocoFixture):
     default_shelf_thickness: float = 0.02  # 2cm thick shelves
     default_partition_thickness: float = 0.01  # 1cm thick partitions
     default_drawer_damping: float = 10.0  # Damping for smooth sliding
+    default_drawer_handle_depth: float = 0.04  # 4cm deep drawer handles
     default_drawer_wall_thickness: float = 0.003  # 3mm thick drawer walls
     default_drawer_bottom_thickness: float = 0.03  # 3cm thick drawer bottom
     # NOTE(VS): drawer bottom thickness less than 3cm was causing items to fall
@@ -552,6 +553,12 @@ class Cupboard(MujocoFixture):
                 )
 
         # Drawer parameters
+        self.drawer_damping: float = float(
+            self.fixture_config.get("drawer_damping", Cupboard.default_drawer_damping)
+        )
+        self.drawer_handle_depth: float = float(
+            self.fixture_config.get("drawer_handle_depth", Cupboard.default_drawer_handle_depth)
+        )
         self.drawer_wall_thickness: float = float(
             self.fixture_config.get(
                 "drawer_wall_thickness", Cupboard.default_drawer_wall_thickness
@@ -561,9 +568,6 @@ class Cupboard(MujocoFixture):
             self.fixture_config.get(
                 "drawer_bottom_thickness", Cupboard.default_drawer_bottom_thickness
             )
-        )
-        self.drawer_damping: float = float(
-            self.fixture_config.get("drawer_damping", Cupboard.default_drawer_damping)
         )
 
         # Parse RGBA colors from fixture config or use class defaults
@@ -1020,7 +1024,7 @@ class Cupboard(MujocoFixture):
         boxes end at y=0 (extending from y=-handle_depth to y=0).
 
         Example handle layout (top view):
-                        (x=0 ➡️, y=0 ⬇️) <-- Origin at center of main box
+                        (x=0 ⬅️, y=0 ⬇️) <-- Origin at center of main box
                                ^
                                |
                                |
@@ -1273,7 +1277,7 @@ class Cupboard(MujocoFixture):
         # 40% of drawer width
         handle_length = (drawer_half_length - wall_half_t) * 0.4
         # total protrusion of handle body
-        handle_depth = face_thickness_half * 2
+        handle_depth = self.drawer_handle_depth
         handle_body = self._create_drawer_handle(handle_length, handle_depth)
 
         # Set handle body properties and position at center of face geom
