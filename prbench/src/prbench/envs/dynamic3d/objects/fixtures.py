@@ -441,7 +441,7 @@ class Cupboard(MujocoFixture):
     default_open_cupboard_leg_thickness: float = 0.03  # 3cm thick legs when open
     default_shelf_thickness: float = 0.02  # 2cm thick shelves
     default_partition_thickness: float = 0.01  # 1cm thick partitions
-    default_drawer_damping: float = 0.0  # Damping for smooth sliding
+    default_drawer_damping: float = 50.0  # Damping for smooth sliding
     default_drawer_handle_depth: float = 0.04  # 4cm deep drawer handles
     default_drawer_wall_thickness: float = 0.003  # 3mm thick drawer walls
     default_drawer_bottom_thickness: float = 0.03  # 3cm thick drawer bottom
