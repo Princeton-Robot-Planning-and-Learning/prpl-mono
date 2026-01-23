@@ -567,6 +567,7 @@ def create_lifted_controllers(
         smooth_mp_max_candidate_plans: Maximum candidate plans to consider
             for smooth motion planning. Higher values may produce smoother motion.
     """
+    del action_space
 
     # Create partial controller classes that include the sim
     class PickController(GroundPickController):
@@ -602,8 +603,18 @@ def create_lifted_controllers(
         [robot, target],
         PickController,
         Box(
-            low=np.array([MOVE_TO_TARGET_DISTANCE_BOUNDS[0], MOVE_TO_TARGET_ROT_BOUNDS[0]]),
-            high=np.array([MOVE_TO_TARGET_DISTANCE_BOUNDS[1], MOVE_TO_TARGET_ROT_BOUNDS[1]]),
+            low=np.array(
+                [
+                    MOVE_TO_TARGET_DISTANCE_BOUNDS[0],
+                    MOVE_TO_TARGET_ROT_BOUNDS[0],
+                ]
+            ),
+            high=np.array(
+                [
+                    MOVE_TO_TARGET_DISTANCE_BOUNDS[1],
+                    MOVE_TO_TARGET_ROT_BOUNDS[1],
+                ]
+            ),
         ),
     )
 
