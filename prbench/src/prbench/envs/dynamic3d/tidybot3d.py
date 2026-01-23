@@ -55,9 +55,7 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
 
     control_frequency: int = 10
     horizon: int = 1000
-    camera_names: list[str] = field(
-        default_factory=lambda: ["overview", "base", "wrist"]
-    )
+    camera_names: list[str] = field(default_factory=lambda: ["overview"])
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
@@ -78,7 +76,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         task_config_path: str | None = None,
         show_images: bool = False,
         scene_bg: bool | str | None = None,
-        scene_render_camera: str | None = "overview",
+        scene_render_camera: str | None = None,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
         super().__init__(config)
@@ -154,8 +152,18 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             show_viewer=self.config.show_viewer,
         )
 
+        # Update camera names since robot may have added its own cameras.
+        self.camera_names = self._robot_env.camera_names.copy()
+
         # This camera's render will be returned by default.
         self._render_camera_name: str | None = scene_render_camera
+        assert (
+            self._render_camera_name is None
+            or self._render_camera_name in self.camera_names
+        ), (
+            f"Render camera '{self._render_camera_name}' not in available "
+            f"cameras: {self.camera_names}"
+        )
 
         # Initialize empty object and fixture lists, and ground fixture.
         # These will be populated based on the task configuration
