@@ -4,7 +4,7 @@
             "robot_0": {}
         }
     },
-    "scene": "lab2_kitchen",
+    "scene": "lab2_kitchen_gray",
     "regions": {
         "blocks_init_region": {
             "target": "ground",
@@ -26,17 +26,17 @@
                 0.8,
                 0.8,
                 0.2,
-                0.3
+                0.0
             ]
         },
         "wiper_init_region": {
             "target": "ground",
             "ranges": [
                 [
-                    -1.0,
-                    -1.0,
-                    -0.5,
-                    -0.5
+                    2.0,
+                    -2.5,
+                    2.5,
+                    -2.0
                 ]
             ],
             "yaw_ranges": [
@@ -78,7 +78,16 @@
     },
     "objects": {
         "robocasa_boxed_drink_0": {
-            "object_0": {}
+            "boxed_drink_0": {}
+        },
+        "robocasa_bowl_0": {
+            "bowl_0": {}
+        },
+        "robocasa_carrot_0": {
+            "carrot_0": {}
+        },
+        "robocasa_avocado_0": {
+            "avocado_0": {}
         },
         "generated_bowl": {
             "yellow_bowl_1": {
@@ -104,7 +113,7 @@
             }
         },
         "cube": {
-            "cube_0": {"size": 0.02, "rgba": [1.0, 0.0, 0.0, 1.0]},
+            "cube_0": {"size": 0.02, "rgba": [0.5, 0.1, 0.1, 1.0]},
             "cube_1": {"size": 0.02, "rgba": [0.0, 1.0, 0.0, 1.0]},
             "cube_2": {"size": 0.02, "rgba": [0.0, 0.0, 1.0, 1.0]},
             "cube_3": {"size": 0.02, "rgba": [1.0, 1.0, 0.0, 1.0]},
@@ -127,11 +136,9 @@
         }
     },
     "initial_state": [
-        [
-            "on",
-            "object_0",
-            "kitchen_island_shelf_2_region"
-        ],
+        ["on", "boxed_drink_0", "kitchen_island_shelf_2_region"],
+        ["on", "carrot_0", "kitchen_island_shelf_2_region"],
+        ["on", "avocado_0", "kitchen_island_shelf_2_region"],
         [
             "on",
             "yellow_bowl_1",
@@ -245,13 +252,13 @@
         [
             "on",
             "robot_0",
-            "robot_init_region"
+            "robot_living_area_init_region"
         ]
     ],
     "goal_state": [
         [
             "on",
-            "object_0",
+            "boxed_drink_0",
             "yellow_bowl_1_back_region"
         ],
         [

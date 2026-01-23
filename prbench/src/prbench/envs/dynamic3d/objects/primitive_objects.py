@@ -455,6 +455,7 @@ class Wiper(MujocoObject):
     default_handle_height: float = 0.01  # Default handle height in meters
     default_head_length: float = 0.15  # Default head length in meters
     default_head_height: float = 0.01  # Default head height in meters
+    default_upright: bool = True  # If True, wiper is standing upright
 
     def __init__(
         self,
@@ -489,6 +490,7 @@ class Wiper(MujocoObject):
         # Blade head parameters
         self.head_length = float(self.options.get("head_length", 0.15))
         self.head_height = float(self.options.get("head_height", 0.01))
+        self.upright = bool(self.options.get("upright", Wiper.default_upright))
 
         # Handle rgba parameter - can be string or list of values
         handle_rgba = self.options.get("handle_rgba", [0.5, 0.5, 0.5, 1])
@@ -521,6 +523,9 @@ class Wiper(MujocoObject):
         - A blade head: a box with head_length x width x head_height (in x, y, z)
           positioned at the end of the handle
 
+        When upright=True: handle extends in z, head extends in x
+        When upright=False: handle extends in x, head extends in y
+
         Returns:
             ET.Element representing the wiper body with both geoms
         """
@@ -533,38 +538,79 @@ class Wiper(MujocoObject):
         # Mass distribution (divide between handle and head)
         component_mass = self.mass / 2.0
 
-        # Handle: a box with square cross-section in x-y plane
-        # MuJoCo box size is half-extent in each direction
-        handle_size = (
-            f"{self.handle_width / 2} {self.handle_width / 2} {self.handle_height / 2}"
-        )
-        handle_pos_z = self.handle_height / 2 + self.head_height
-        ET.SubElement(
-            body,
-            "geom",
-            type="box",
-            size=handle_size,
-            pos=f"0 0 {handle_pos_z}",
-            rgba=self.handle_rgba,
-            mass=str(component_mass),
-        )
+        if self.upright:
+            # Upright orientation: handle extends in z, head extends in x
+            # Handle: a box with square cross-section in x-y plane
+            # MuJoCo box size is half-extent in each direction
+            hw = self.handle_width / 2
+            hh = self.handle_height / 2
+            handle_size = f"{hw} {hw} {hh}"
+            handle_pos_z = self.handle_height / 2 + self.head_height
+            ET.SubElement(
+                body,
+                "geom",
+                type="box",
+                size=handle_size,
+                pos=f"0 0 {handle_pos_z}",
+                rgba=self.handle_rgba,
+                mass=str(component_mass),
+            )
 
-        # Blade head: box at the end of the handle
-        # Position: at the end of the handle along x-axis
-        head_pos = f"0 0 {self.head_height / 2}"
-        # Size: head_length in x, width in y, and head_height in z
-        head_size = (
-            f"{self.head_length / 2} {self.handle_width / 2} {self.head_height / 2}"
-        )
-        ET.SubElement(
-            body,
-            "geom",
-            type="box",
-            size=head_size,
-            pos=head_pos,
-            rgba=self.head_rgba,
-            mass=str(component_mass),
-        )
+            # Blade head: box at the end of the handle
+            # Position: at the end of the handle along x-axis
+            head_pos = f"0 0 {self.head_height / 2}"
+            # Size: head_length in x, width in y, and head_height in z
+            hl = self.head_length / 2
+            hw = self.handle_width / 2
+            hh = self.head_height / 2
+            head_size = f"{hl} {hw} {hh}"
+            ET.SubElement(
+                body,
+                "geom",
+                type="box",
+                size=head_size,
+                pos=head_pos,
+                rgba=self.head_rgba,
+                mass=str(component_mass),
+            )
+        else:
+            # Horizontal orientation: handle extends in x, head extends in y
+            # Handle: rod extending along x-axis
+            # size = [handle_height/2, handle_width/2, handle_width/2]
+            # pos = [handle_height/2, 0, handle_width/2]
+            hh = self.handle_height / 2
+            hw = self.handle_width / 2
+            hd = self.head_height / 2
+            handle_size = f"{hh} {hw} {hw}"
+            handle_pos = f"{hd} 0 {hw}"
+            ET.SubElement(
+                body,
+                "geom",
+                type="box",
+                size=handle_size,
+                pos=handle_pos,
+                rgba=self.handle_rgba,
+                mass=str(component_mass),
+            )
+
+            # Blade head: box extending along y-axis at end of handle
+            # size = [head_height/2, head_length/2, handle_width/2]
+            # pos = [-handle_height/2, 0, handle_width/2]
+            hd = self.head_height / 2
+            hl = self.head_length / 2
+            hw = self.handle_width / 2
+            hh = self.handle_height / 2
+            head_size = f"{hd} {hl} {hw}"
+            head_pos = f"{-hh} 0 {hw}"
+            ET.SubElement(
+                body,
+                "geom",
+                type="box",
+                size=head_size,
+                pos=head_pos,
+                rgba=self.head_rgba,
+                mass=str(component_mass),
+            )
 
         return body
 
@@ -574,10 +620,20 @@ class Wiper(MujocoObject):
         Returns:
             Tuple of (length, width, height) encompassing both handle and blade
         """
-        # Total length is handle_width + head_length
-        total_length = self.handle_width + self.head_length
-        total_width = self.handle_width
-        total_height = self.handle_width
+        if self.upright:
+            # Upright: handle extends in z, head extends in x
+            total_length = self.head_length
+            total_width = self.handle_width
+            total_height = self.head_height + self.handle_height
+        else:
+            # Horizontal: handle extends in x, head extends in y
+            # Total x is handle_height + head_height (from handle to head)
+            # Total y is head_length
+            # Total z is handle_width
+            total_length = self.handle_height + self.head_height
+            total_width = self.head_length
+            total_height = self.handle_width
+
         return (total_length, total_width, total_height)
 
     @staticmethod
@@ -593,6 +649,8 @@ class Wiper(MujocoObject):
                 - "handle_height": Height of the handle in z dimension
                 - "head_length": Length of the blade head in x dimension
                 - "head_height": Height of the blade head in z dimension
+                - "upright": Boolean indicating orientation
+                  (True = upright, False = horizontal)
 
         Returns:
             Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
@@ -602,19 +660,58 @@ class Wiper(MujocoObject):
         handle_height = float(object_config.get("handle_height", 0.01))
         head_length = float(object_config.get("head_length", 0.15))
         head_height = float(object_config.get("head_height", 0.01))
+        upright = bool(object_config.get("upright", Wiper.default_upright))
 
-        # Calculate bounds
-        # Handle: extends ±handle_width/2 in x and y
-        # Head: extends from 0 to head_length along x
-        x_min = pos[0] - handle_width / 2
-        x_max = pos[0] + handle_width / 2 + head_length
+        if upright:
+            # Upright orientation: handle extends in z, head extends in x
+            # Head geom: size=[head_length/2, handle_width/2, head_height/2],
+            # pos=[0, 0, head_height/2]
+            #   Extends x: ±head_length/2, y: ±handle_width/2, z: [0, head_height]
+            # Handle geom: size=[handle_width/2, handle_width/2, handle_height/2],
+            # pos=[0, 0, head_height + handle_height/2]
+            #   Extends x: ±handle_width/2, y: ±handle_width/2,
+            #   z: [head_height, head_height + handle_height]
 
-        y_min = pos[1] - handle_width / 2
-        y_max = pos[1] + handle_width / 2
+            # Overall bounds relative to body origin:
+            # x: [-head_length/2, head_length/2] (head is longer)
+            # y: [-handle_width/2, handle_width/2]
+            # z: [0, head_height + handle_height]
 
-        # Z bounds: handle goes up, head height can be different
-        z_min = pos[2] - handle_width / 2
-        z_max = pos[2] + max(handle_height, head_height)
+            x_min = pos[0] - head_length / 2
+            x_max = pos[0] + head_length / 2
+
+            y_min = pos[1] - handle_width / 2
+            y_max = pos[1] + handle_width / 2
+
+            z_min = pos[2]
+            z_max = pos[2] + head_height + handle_height
+        else:
+            # Horizontal orientation: handle extends in x, head extends in y
+            # Handle geom: size=[handle_height/2, handle_width/2, handle_width/2],
+            # pos=[head_height/2, 0, handle_width/2]
+            #   Extends x: [head_height/2 - handle_height/2,
+            #              head_height/2 + handle_height/2],
+            #   y: ±handle_width/2, z: [0, handle_width]
+            # Head geom: size=[head_height/2, head_length/2, handle_width/2],
+            # pos=[-handle_height/2, 0, handle_width/2]
+            #   Extends x: [-handle_height/2 - head_height/2,
+            #              -handle_height/2 + head_height/2],
+            #   y: ±head_length/2, z: [0, handle_width]
+
+            # Overall bounds relative to body origin:
+            # x: [-(handle_height + head_height)/2,
+            #     (handle_height + head_height)/2]
+            # y: [-head_length/2, head_length/2]
+            # z: [0, handle_width]
+
+            x_min = pos[0] - (handle_height + head_height) / 2
+            x_max = pos[0] + (handle_height + head_height) / 2
+
+            y_min = pos[1] - head_length / 2
+            y_max = pos[1] + head_length / 2
+
+            z_min = pos[2]
+            z_max = pos[2] + handle_width
 
         return [x_min, y_min, z_min, x_max, y_max, z_max]
 
