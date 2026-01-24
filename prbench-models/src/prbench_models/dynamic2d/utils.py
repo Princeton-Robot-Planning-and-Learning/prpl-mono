@@ -334,8 +334,15 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
                 )
                 remaining_delta -= step_delta
 
+            # Add waiting step to allow physics to update
+            gripper_plan.append(np.array([0, 0, 0, 0, 0], dtype=np.float32))
+            gripper_plan.append(np.array([0, 0, 0, 0, 0], dtype=np.float32))
             return waypoint_plan + gripper_plan
 
         # Single phase: move with gripper action without final gripper adjustment
         waypoint_plan = self._waypoints_to_plan(x, waypoints, gripper_delta_during_plan)
+
+        # Add waiting step to allow physics to update
+        waypoint_plan.append(np.array([0, 0, 0, 0, 0], dtype=np.float32))
+        waypoint_plan.append(np.array([0, 0, 0, 0, 0], dtype=np.float32))
         return waypoint_plan
