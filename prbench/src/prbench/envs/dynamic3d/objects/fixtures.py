@@ -1171,7 +1171,7 @@ class Cupboard(MujocoFixture):
 
         # Vertical clearance: reduce wall height to avoid collision with shelf above
         vertical_clearance = 4 * wall_t
-        wall_height = shelf_height - vertical_clearance
+        wall_height = shelf_height - bottom_t - vertical_clearance
         wall_half_height = wall_height / 2
         wall_pos_z = bottom_half_t + wall_half_height  # Position above the bottom geom
 
