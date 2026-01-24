@@ -132,8 +132,8 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
 
     # Goal should not be satisfied initially
     assert (
-        not oc_env._check_goals()
-    ), "Goal should not be satisfied after reset"  # pylint: disable=protected-access
+        not oc_env._check_goals() # pylint: disable=protected-access
+    ), "Goal should not be satisfied after reset"
 
     # Get current state
     current_state = oc_env._get_current_state()  # pylint: disable=protected-access
