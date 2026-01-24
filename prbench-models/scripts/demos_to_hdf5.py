@@ -12,9 +12,6 @@ This script will create an HDF5 file with the following structure:
 
 Usage:
   # For expert data (with images):
-  python scripts/demos_to_hdf5.py \
-      --expert_data_dir expert_data/motion2d_p0_20251008_105219 \
-      --output_path datasets/demos.hdf5
 
   # For teleoperated demonstrations (with rendered images):
   python scripts/demos_to_hdf5.py \
@@ -36,71 +33,69 @@ import numpy as np
 import cv2 as cv
 
 from prbench_imitation_learning.dataset import (
-    group_by_episode,
-    load_expert_pickle,
-    load_teleop_demonstrations,
+    iter_teleop_episodes,
 )
 
 
 def convert(
-    expert_data_dir: Path | None = None,
     teleop_data_dir: Path | None = None,
     output_path: Path | None = None,
     render_images: bool = False,
     use_dynamic2d: bool = False,
+    use_pushpull2d: bool = False,
 ) -> None:
     """Convert expert or teleoperated data to HDF5 format.
 
+    Memory-efficient implementation: processes one episode at a time using a generator,
+    writes directly to HDF5, then discards the episode data before loading the next.
+
     Args:
-        expert_data_dir: Path to expert data directory (with images)
         teleop_data_dir: Path to teleoperated demo directory
         output_path: Output HDF5 file path
         render_images: If True, render images for teleoperated demos
+        use_dynamic2d: If True, use dynamic2d environment
+        use_pushpull2d: If True, use pushpull2d environment
     """
-    # Load data based on input type
-    if expert_data_dir is not None:
-        metadata, frames = load_expert_pickle(expert_data_dir)
-        has_images = True
-    elif teleop_data_dir is not None:
-        metadata, frames = load_teleop_demonstrations(
-            teleop_data_dir, render_images=render_images
-        )
-        has_images = render_images
-    else:
-        raise ValueError("Either expert_data_dir or teleop_data_dir must be provided")
+    if teleop_data_dir is None:
+        raise ValueError("teleop_data_dir must be provided")
 
-    # Map frames by episode
-    episodes = group_by_episode(frames)
-
-    # Create HDF5 file
     assert output_path is not None
+    has_images = render_images
+
+    # Create HDF5 file and write incrementally
     with h5py.File(output_path, "w") as f:
-        # Create data group
         data_group = f.create_group("data")
 
-        # Store metadata as attributes
-        for key, value in metadata.items():
-            if isinstance(value, str):
-                data_group.attrs[key] = value
-            elif isinstance(value, (int, float)):
-                data_group.attrs[key] = value
-
         total_frames = 0
+        total_episodes = 0
+        metadata_written = False
 
-        # Write episodes
-        for ep_idx, ep_frames in episodes.items():
+        # Iterate over episodes one at a time (memory-efficient)
+        for ep_idx, ep_frames, metadata in iter_teleop_episodes(
+            teleop_data_dir, render_images=render_images
+        ):
+            # Write metadata once (from first episode)
+            if not metadata_written:
+                for key, value in metadata.items():
+                    if isinstance(value, (str, int, float)):
+                        data_group.attrs[key] = value
+                metadata_written = True
+
+            # Create episode group
             episode_key = f"demo_{ep_idx}"
             episode_group = data_group.create_group(episode_key)
 
-            # Collect all observations, actions, and images for this episode
-            
+            # Process frames for this episode
             env_states = []
             robot_states = []
             actions = []
             images = []
 
             for fr in ep_frames:
-                if use_dynamic2d:
+                if use_pushpull2d:
+                    robot_observation = np.array(fr["observation.state"][:24], dtype=np.float32)
+                    env_observations = np.array(fr["observation.state"][24:], dtype=np.float32)
+                elif use_dynamic2d:
                     robot_observation = np.array(fr["observation.state"][-24:], dtype=np.float32)
                     env_observations = np.array(fr["observation.state"][:-24], dtype=np.float32)
                 else:
@@ -138,22 +133,27 @@ def convert(
             # Store episode length as attribute
             episode_group.attrs["num_frames"] = len(ep_frames)
             total_frames += len(ep_frames)
+            total_episodes += 1
+
+            # Clear episode data to free memory immediately
+            del env_states, robot_states, actions, images, ep_frames
 
         # Store total counts as attributes
-        data_group.attrs["total_episodes"] = len(episodes)
+        data_group.attrs["total_episodes"] = total_episodes
         data_group.attrs["total_frames"] = total_frames
 
     print("\nConversion complete!")
     print(f"Output file: {output_path}")
-    print(f"Total episodes: {len(episodes)}")
+    print(f"Total episodes: {total_episodes}")
     print(f"Total frames: {total_frames}")
     print("\nHDF5 structure:")
     print("  data/")
     print("    demo_0/")
-    print("      observation  (N, state_dim)")
-    print("      action       (N, action_dim)")
+    print("      obs/robot_state  (N, robot_state_dim)")
+    print("      obs/env_state    (N, env_state_dim)")
+    print("      actions          (N, action_dim)")
     if has_images:
-        print("      image        (N, H, W, C)")
+        print("      obs/image        (N, H, W, C)")
     print("    demo_1/")
     print("      ...")
 
@@ -162,12 +162,6 @@ def main() -> None:
     """Main function to convert expert demos to HDF5 format."""
     parser = argparse.ArgumentParser(
         description="Convert expert pickle or teleoperated demos to HDF5 format"
-    )
-    parser.add_argument(
-        "--expert_data_dir",
-        type=str,
-        default=None,
-        help="Directory containing expert dataset.pkl (with images)",
     )
     parser.add_argument(
         "--teleop_data_dir",
@@ -192,22 +186,17 @@ def main() -> None:
         action="store_true",
         help="Use dynamic2d environment",
     )
+    parser.add_argument(
+        "--use_pushpull2d",
+        action="store_true",
+        help="Use dynamicpushpull2d environment",
+    )
     args = parser.parse_args()
 
     # Validate inputs
-    if args.expert_data_dir is None and args.teleop_data_dir is None:
-        parser.error("Either --expert_data_dir or --teleop_data_dir must be provided")
+    if args.teleop_data_dir is None:
+        parser.error("--teleop_data_dir must be provided")
 
-    if args.expert_data_dir is not None and args.teleop_data_dir is not None:
-        parser.error("Cannot specify both --expert_data_dir and --teleop_data_dir")
-
-    if args.render_images and args.expert_data_dir is not None:
-        print(
-            "Warning: --render_images has no effect for "
-            "expert data (images already included)"
-        )
-
-    expert_dir = Path(args.expert_data_dir) if args.expert_data_dir else None
     teleop_dir = Path(args.teleop_data_dir) if args.teleop_data_dir else None
     out_path = Path(args.output_path)
 
@@ -219,11 +208,11 @@ def main() -> None:
         print("Overwriting...")
 
     convert(
-        expert_data_dir=expert_dir,
         teleop_data_dir=teleop_dir,
         output_path=out_path,
         render_images=args.render_images,
         use_dynamic2d=args.use_dynamic2d,
+        use_pushpull2d=args.use_pushpull2d,
     )
 
 
