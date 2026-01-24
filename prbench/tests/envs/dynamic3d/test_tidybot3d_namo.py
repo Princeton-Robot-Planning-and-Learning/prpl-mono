@@ -4,8 +4,11 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from gymnasium.wrappers import RecordVideo
 
+import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from tests.conftest import MAKE_VIDEOS
 
 # Path to tasks directory
 TASKS_DIR = (
@@ -36,7 +39,7 @@ def test_namo_env_loads():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
     )
 
     obs, info = env.reset(seed=42)
@@ -55,7 +58,7 @@ def test_namo_goal_not_satisfied_initially():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
     )
 
     env.reset(seed=42)
@@ -75,16 +78,21 @@ def test_namo_goal_satisfied_when_robot_in_region():
     In this NAMO task, the goal is for the robot (tidybot) to navigate to the goal
     region, potentially by pushing the obstacle out of the way.
     """
-    env = ObjectCentricTidyBot3DEnv(
-        scene_type="namo",
-        num_objects=1,
-        task_config_path=str(TASKS_DIR / "tidybot-namo-o1.json"),
+    prbench.register_all_environments()
+    env = prbench.make(
+        "prbench/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array"
     )
+
+    if MAKE_VIDEOS:
+        env = RecordVideo(env, "unit_test_videos_namo_goal_satisfied")
 
     env.reset(seed=42)
 
+    # Access the underlying object-centric environment
+    oc_env = env.unwrapped._object_centric_env  # pylint: disable=protected-access
+
     # Get current state
-    current_state = env._get_current_state()  # pylint: disable=protected-access
+    current_state = oc_env._get_current_state()  # pylint: disable=protected-access
 
     # Get the robot object
     robot = current_state.get_object_from_name("robot")
@@ -95,73 +103,144 @@ def test_namo_goal_satisfied_when_robot_in_region():
     modified_state.set(robot, "pos_base_y", 0.0)
 
     # Set the modified state
-    env.set_state(modified_state)
+    oc_env.set_state(modified_state)
 
     # Now goal should be satisfied (robot is in the goal region)
     assert (
-        env._check_goals()  # pylint: disable=protected-access
+        oc_env._check_goals()  # pylint: disable=protected-access
     ), "Goal should be satisfied after moving robot to goal region"
 
     env.close()
 
 
-def test_namo_robot_can_navigate_to_goal():
-    """Test that robot can navigate towards the goal region.
+def test_namo_goal_achieved_after_teleporting_chair_and_robot():
+    """Test that goal is achieved by teleporting chair away and robot to goal region.
 
-    This is a smoke test that verifies the environment handles robot navigation. The
-    robot should be able to move towards the goal region.
+    This test verifies the goal checking logic by:
+    1. Teleporting the obstacle chair away from the goal region
+    2. Teleporting the robot into the goal region
+    3. Checking that the goal is now satisfied
     """
-    env = ObjectCentricTidyBot3DEnv(
-        scene_type="namo",
-        num_objects=1,
-        task_config_path=str(TASKS_DIR / "tidybot-namo-o1.json"),
+    prbench.register_all_environments()
+    env = prbench.make(
+        "prbench/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array"
     )
+
+    if MAKE_VIDEOS:
+        env = RecordVideo(env, "unit_test_videos_namo_teleport_goal")
+
+    env.reset(seed=42)
+
+    # Access the underlying object-centric environment
+    oc_env = env.unwrapped._object_centric_env  # pylint: disable=protected-access
+
+    # Goal should not be satisfied initially
+    assert not oc_env._check_goals(), (  # pylint: disable=protected-access
+        "Goal should not be satisfied after reset"
+    )
+
+    # Get current state
+    current_state = oc_env._get_current_state()  # pylint: disable=protected-access
+
+    # Get the robot and obstacle chair objects
+    robot = current_state.get_object_from_name("robot")
+    obstacle_chair = current_state.get_object_from_name("obstacle_chair")
+
+    # Create modified state
+    modified_state = current_state.copy()
+
+    # Teleport the obstacle chair away from the goal region
+    # Goal region is at x=[0.8, 1.2], y=[-0.2, 0.2]
+    # Move chair to x=-1.0, y=0.0 (far from goal region)
+    modified_state.set(obstacle_chair, "x", -1.0)
+    modified_state.set(obstacle_chair, "y", 0.0)
+    modified_state.set(obstacle_chair, "z", 0.55)  # Keep it at its original height
+
+    # Teleport the robot to the center of the goal region
+    # Goal region center is at x=1.0, y=0.0
+    modified_state.set(robot, "pos_base_x", 1.0)
+    modified_state.set(robot, "pos_base_y", 0.0)
+
+    # Set the modified state
+    oc_env.set_state(modified_state)
+
+    # Verify the chair was moved
+    updated_state = oc_env._get_current_state()  # pylint: disable=protected-access
+    chair_x = updated_state.get(obstacle_chair, "x")
+    assert chair_x < 0, f"Chair should be moved to negative x, got {chair_x}"
+
+    # Verify the robot was moved to goal region
+    robot_x = updated_state.get(robot, "pos_base_x")
+    robot_y = updated_state.get(robot, "pos_base_y")
+    assert 0.8 <= robot_x <= 1.2, f"Robot x should be in [0.8, 1.2], got {robot_x}"
+    assert -0.2 <= robot_y <= 0.2, f"Robot y should be in [-0.2, 0.2], got {robot_y}"
+
+    # Now goal should be satisfied (robot is in the goal region)
+    assert oc_env._check_goals(), (  # pylint: disable=protected-access
+        "Goal should be satisfied after teleporting chair away and robot to goal region"
+    )
+
+    env.close()
+
+
+def test_namo_robot_can_navigate_to_goal():
+    """Test that robot can navigate to the goal region by moving forward.
+
+    This test verifies that:
+    1. The chair is moved out of the way (simulating a successful push)
+    2. The robot can navigate forward to the goal region
+    3. The goal is achieved when the robot reaches the goal region
+    """
+    prbench.register_all_environments()
+    env = prbench.make(
+        "prbench/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array"
+    )
+
+    if MAKE_VIDEOS:
+        env = RecordVideo(env, "unit_test_videos_namo_navigate")
 
     obs, _ = env.reset(seed=123)
 
-    # Get initial positions
-    obstacle = obs.get_object_from_name("obstacle_chair")
-    robot = obs.get_object_from_name("robot")
-    initial_obstacle_x = obs.get(obstacle, "x")
-    robot_x = obs.get(robot, "pos_base_x")
-    robot_y = obs.get(robot, "pos_base_y")
-    robot_rot = obs.get(robot, "pos_base_rot")
+    # Access the underlying object-centric environment
+    oc_env = env.unwrapped._object_centric_env  # pylint: disable=protected-access
 
-    # Verify obstacle chair exists and has valid position
-    assert obstacle is not None, "Obstacle chair should exist in the scene"
-    assert (
-        initial_obstacle_x > 0
-    ), f"Obstacle should have positive x: {initial_obstacle_x}"
+    # Get initial state
+    state = env.observation_space.devectorize(obs)
+    obstacle_chair = state.get_object_from_name("obstacle_chair")
+    robot = state.get_object_from_name("robot")
+    robot_x = state.get(robot, "pos_base_x")
+    robot_y = state.get(robot, "pos_base_y")
+
+    # Move the chair out of the way (simulating a successful push by the robot)
+    modified_state = state.copy()
+    modified_state.set(obstacle_chair, "x", -1.0)
+    modified_state.set(obstacle_chair, "y", 0.0)
+    oc_env.set_state(modified_state)
 
     # Goal region is at x=0.8 to x=1.2, y=-0.2 to 0.2
     # Move robot towards the goal region center
     goal_x = 1.0
     goal_y = 0.0
 
+    # Calculate delta per step (constant delta actions)
     max_magnitude = 1e-2
     dx = goal_x - robot_x
     dy = goal_y - robot_y
     distance = (dx**2 + dy**2) ** 0.5
-    steps = max(int(distance / max_magnitude), 1)
+    steps = int(distance / max_magnitude) + 1
 
-    for i in range(1, min(steps + 1, 50)):  # Limit steps for test speed
-        frac = i / steps
-        action = np.array(
-            [robot_x + frac * dx, robot_y + frac * dy, robot_rot] + [0.0] * 8
-        )
-        obs, _, done, _, _ = env.step(action)
-        assert env.observation_space.contains(obs)
-        if done:
-            break
+    # Normalize to get unit direction, then scale by max_magnitude
+    unit_dx = dx / distance * max_magnitude
+    unit_dy = dy / distance * max_magnitude
 
-    # Verify robot moved towards the goal
-    robot = obs.get_object_from_name("robot")
-    final_robot_x = obs.get(robot, "pos_base_x")
+    # Execute constant delta steps to reach the goal
+    for _ in range(steps):
+        action = np.array([unit_dx, unit_dy, 0.0] + [0.0] * 8)
+        env.step(action)
 
-    # Robot x should have increased (moved towards goal)
-    assert final_robot_x > robot_x, (
-        f"Robot should have moved towards goal. "
-        f"Initial x: {robot_x}, Final x: {final_robot_x}"
+    # Verify the goal is achieved
+    assert oc_env._check_goals(), (  # pylint: disable=protected-access
+        "Goal should be achieved after robot navigates to goal region"
     )
 
     env.close()
@@ -172,7 +251,7 @@ def test_namo_action_space():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
     )
 
     env.reset(seed=42)
@@ -187,7 +266,7 @@ def test_namo_step():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
     )
 
     env.reset(seed=42)
@@ -213,7 +292,7 @@ def test_namo_with_mimiclabs_scene():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
         scene_bg=True,
     )
 

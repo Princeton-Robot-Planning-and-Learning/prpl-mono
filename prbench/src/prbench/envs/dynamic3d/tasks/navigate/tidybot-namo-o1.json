@@ -1,7 +1,9 @@
 {
-    "robots": [
-        "tidybot"
-    ],
+    "robots": {
+        "tidybot": {
+            "robot": {}
+        }
+    },
     "scene": {
         "simple": {
             "position": [
