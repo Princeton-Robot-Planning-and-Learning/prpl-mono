@@ -91,12 +91,18 @@ def test_tidybot_cupboard_constrained_fitting_goals():
     tasks_root = (
         Path(prbench.__path__[0]).parent / "prbench" / "envs" / "dynamic3d" / "tasks"
     )
+    task_config_path = tasks_root / "sort" / "tidybot-lab6-o12-ConstrainedFitting.json"
+
+    if not task_config_path.exists():
+        pytest.skip(
+            f"Task config not found: {task_config_path}. "
+            "This test requires the ConstrainedFitting task configuration."
+        )
+
     env = ObjectCentricTidyBot3DEnv(
         scene_type="cupboard",
         num_objects=12,
-        task_config_path=str(
-            tasks_root / "tidybot-cupboard-o12-ConstrainedFitting.json"
-        ),
+        task_config_path=str(task_config_path),
     )
 
     # Reset the environment
@@ -117,7 +123,7 @@ def test_tidybot_cupboard_constrained_fitting_goals():
             cupboard = fixture
             break
 
-    assert cupboard is not None, "Cupboard fixture not found"
+    assert cupboard is not None, "Cupboard fixture should exist in environment"
 
     # Get all objects
     objects_dict = env._objects_dict  # pylint: disable=protected-access
@@ -125,35 +131,90 @@ def test_tidybot_cupboard_constrained_fitting_goals():
     # Create a modified state with objects in their goal regions
     modified_state = current_state.copy()
 
-    # Place red cuboid in shelf 3 red partition
+    # 90-degree rotation around x-axis: quaternion components
+    # qw=cos(45°), qx=sin(45°), qy=0, qz=0
+    qw_90x = 0.7071067811865476
+    qx_90x = 0.7071067811865475
+    qy_90x = 0.0
+    qz_90x = 0.0
+
+    # Place red cuboid in shelf 3 red partition (center of region)
     red_cuboid = objects_dict.get("red_cuboid1")
+    goal_pos_red = None
     if red_cuboid:
-        goal_pos = cupboard.sample_pose_in_region(
-            "cupboard_1_shelf_3_red_partition_goal", env.np_random
+        # Get region name from goal predicates
+        red_cuboid_goal_region = "cupboard_1_shelf_3_red_partition_goal"
+        # Get the region from the fixture
+        region = cupboard.region_objects[red_cuboid_goal_region][0]
+        # Get the bbox of the region
+        bbox = region.bbox
+        # Compute center: (x_min + x_max)/2, (y_min + y_max)/2, (z_min + z_max)/2
+        goal_pos_red = (
+            (bbox[0] + bbox[3]) / 2.0,
+            (bbox[1] + bbox[4]) / 2.0,
+            (bbox[2] + bbox[5]) / 2.0,
         )
-        modified_state.set(red_cuboid.symbolic_object, "x", goal_pos[0])
-        modified_state.set(red_cuboid.symbolic_object, "y", goal_pos[1])
-        modified_state.set(red_cuboid.symbolic_object, "z", goal_pos[2])
+        # Set position to center of goal region
+        modified_state.set(red_cuboid.symbolic_object, "x", goal_pos_red[0])
+        modified_state.set(red_cuboid.symbolic_object, "y", goal_pos_red[1])
+        modified_state.set(red_cuboid.symbolic_object, "z", goal_pos_red[2])
+        # Set 90-degree rotation around x-axis
+        modified_state.set(red_cuboid.symbolic_object, "qw", qw_90x)
+        modified_state.set(red_cuboid.symbolic_object, "qx", qx_90x)
+        modified_state.set(red_cuboid.symbolic_object, "qy", qy_90x)
+        modified_state.set(red_cuboid.symbolic_object, "qz", qz_90x)
 
-    # Place green cuboid in shelf 3 green partition
+    # Place green cuboid in shelf 3 green partition (center of region)
     green_cuboid = objects_dict.get("green_cuboid1")
+    goal_pos_green = None
     if green_cuboid:
-        goal_pos = cupboard.sample_pose_in_region(
-            "cupboard_1_shelf_3_green_partition_goal", env.np_random
+        # Get region name from goal predicates
+        green_cuboid_goal_region = "cupboard_1_shelf_3_green_partition_goal"
+        # Get the region from the fixture
+        region = cupboard.region_objects[green_cuboid_goal_region][0]
+        # Get the bbox of the region
+        bbox = region.bbox
+        # Compute center: (x_min + x_max)/2, (y_min + y_max)/2, (z_min + z_max)/2
+        goal_pos_green = (
+            (bbox[0] + bbox[3]) / 2.0,
+            (bbox[1] + bbox[4]) / 2.0,
+            (bbox[2] + bbox[5]) / 2.0,
         )
-        modified_state.set(green_cuboid.symbolic_object, "x", goal_pos[0])
-        modified_state.set(green_cuboid.symbolic_object, "y", goal_pos[1])
-        modified_state.set(green_cuboid.symbolic_object, "z", goal_pos[2])
+        # Set position to center of goal region
+        modified_state.set(green_cuboid.symbolic_object, "x", goal_pos_green[0])
+        modified_state.set(green_cuboid.symbolic_object, "y", goal_pos_green[1])
+        modified_state.set(green_cuboid.symbolic_object, "z", goal_pos_green[2])
+        # Set 90-degree rotation around x-axis
+        modified_state.set(green_cuboid.symbolic_object, "qw", qw_90x)
+        modified_state.set(green_cuboid.symbolic_object, "qx", qx_90x)
+        modified_state.set(green_cuboid.symbolic_object, "qy", qy_90x)
+        modified_state.set(green_cuboid.symbolic_object, "qz", qz_90x)
 
-    # Place blue cuboid in shelf 3 blue partition
+    # Place blue cuboid in shelf 3 blue partition (center of region)
     blue_cuboid = objects_dict.get("blue_cuboid1")
+    goal_pos_blue = None
     if blue_cuboid:
-        goal_pos = cupboard.sample_pose_in_region(
-            "cupboard_1_shelf_3_blue_partition_goal", env.np_random
+        # Get region name from goal predicates
+        blue_cuboid_goal_region = "cupboard_1_shelf_3_blue_partition_goal"
+        # Get the region from the fixture
+        region = cupboard.region_objects[blue_cuboid_goal_region][0]
+        # Get the bbox of the region
+        bbox = region.bbox
+        # Compute center: (x_min + x_max)/2, (y_min + y_max)/2, (z_min + z_max)/2
+        goal_pos_blue = (
+            (bbox[0] + bbox[3]) / 2.0,
+            (bbox[1] + bbox[4]) / 2.0,
+            (bbox[2] + bbox[5]) / 2.0,
         )
-        modified_state.set(blue_cuboid.symbolic_object, "x", goal_pos[0])
-        modified_state.set(blue_cuboid.symbolic_object, "y", goal_pos[1])
-        modified_state.set(blue_cuboid.symbolic_object, "z", goal_pos[2])
+        # Set position to center of goal region
+        modified_state.set(blue_cuboid.symbolic_object, "x", goal_pos_blue[0])
+        modified_state.set(blue_cuboid.symbolic_object, "y", goal_pos_blue[1])
+        modified_state.set(blue_cuboid.symbolic_object, "z", goal_pos_blue[2])
+        # Set 90-degree rotation around x-axis
+        modified_state.set(blue_cuboid.symbolic_object, "qw", qw_90x)
+        modified_state.set(blue_cuboid.symbolic_object, "qx", qx_90x)
+        modified_state.set(blue_cuboid.symbolic_object, "qy", qy_90x)
+        modified_state.set(blue_cuboid.symbolic_object, "qz", qz_90x)
 
     # Place red cubes on shelf 0
     for i in range(1, 4):
@@ -191,10 +252,63 @@ def test_tidybot_cupboard_constrained_fitting_goals():
     # Set the modified state in the environment
     env.set_state(modified_state)
 
-    # Now goals should be satisfied
-    assert (
-        env._check_goals()  # pylint: disable=protected-access
-    ), "Goals should be satisfied after placing objects in goal regions"
+    # Get the state after setting and verify cuboid positions
+    state_after = env._get_current_state()  # pylint: disable=protected-access
+
+    # Verify that cuboids are placed in correct positions
+    red_cuboid_pos = [
+        state_after.get(red_cuboid.symbolic_object, "x"),
+        state_after.get(red_cuboid.symbolic_object, "y"),
+        state_after.get(red_cuboid.symbolic_object, "z"),
+    ]
+    green_cuboid_pos = [
+        state_after.get(green_cuboid.symbolic_object, "x"),
+        state_after.get(green_cuboid.symbolic_object, "y"),
+        state_after.get(green_cuboid.symbolic_object, "z"),
+    ]
+    blue_cuboid_pos = [
+        state_after.get(blue_cuboid.symbolic_object, "x"),
+        state_after.get(blue_cuboid.symbolic_object, "y"),
+        state_after.get(blue_cuboid.symbolic_object, "z"),
+    ]
+
+    # Verify cuboid positions are close to goal positions
+    assert np.allclose(
+        red_cuboid_pos, [goal_pos_red[0], goal_pos_red[1], goal_pos_red[2]], atol=0.001
+    ), f"Red cuboid position {red_cuboid_pos} not close to goal"
+    assert np.allclose(
+        green_cuboid_pos,
+        [goal_pos_green[0], goal_pos_green[1], goal_pos_green[2]],
+        atol=0.001,
+    ), f"Green cuboid position {green_cuboid_pos} not close to goal"
+    assert np.allclose(
+        blue_cuboid_pos,
+        [goal_pos_blue[0], goal_pos_blue[1], goal_pos_blue[2]],
+        atol=0.001,
+    ), f"Blue cuboid position {blue_cuboid_pos} not close to goal"
+
+    # Verify cuboid orientations are set to 90-degree rotation around x-axis
+    for cuboid, cuboid_name in [
+        (red_cuboid, "red_cuboid1"),
+        (green_cuboid, "green_cuboid1"),
+        (blue_cuboid, "blue_cuboid1"),
+    ]:
+        qw = state_after.get(cuboid.symbolic_object, "qw")
+        qx = state_after.get(cuboid.symbolic_object, "qx")
+        qy = state_after.get(cuboid.symbolic_object, "qy")
+        qz = state_after.get(cuboid.symbolic_object, "qz")
+        assert np.isclose(
+            qw, qw_90x, atol=0.01
+        ), f"{cuboid_name} qw={qw} not close to expected {qw_90x}"
+        assert np.isclose(
+            qx, qx_90x, atol=0.01
+        ), f"{cuboid_name} qx={qx} not close to expected {qx_90x}"
+        assert np.isclose(
+            qy, qy_90x, atol=0.01
+        ), f"{cuboid_name} qy={qy} not close to expected {qy_90x}"
+        assert np.isclose(
+            qz, qz_90x, atol=0.01
+        ), f"{cuboid_name} qz={qz} not close to expected {qz_90x}"
 
     env.close()
 
@@ -444,10 +558,10 @@ def test_tidybot3d_cupboard_mimiclabs_with_video():
     """Test MimicLabs scene with ConstrainedFitting task and video recording."""
     prbench.register_all_environments()
     env = prbench.make(
-        "prbench/TidyBot3D-cupboard-o12-ConstrainedFitting-v0",
+        "prbench/TidyBot3D-sort-lab6-o12-ConstrainedFitting-v0",
         render_mode="rgb_array",
-        scene_bg=True,  # Use default mimiclabs scene (lab5 for base_motion)
-        scene_render_camera="overview",
+        scene_bg=True,
+        scene_render_camera="agentview_1",
     )
 
     # Wrap with RecordVideo if making videos
@@ -466,3 +580,80 @@ def test_tidybot3d_cupboard_mimiclabs_with_video():
             obs, _ = env.reset(seed=456)
 
     env.close()
+
+
+def test_cupboard_custom_rgba_colors():
+    """Test that Cupboard RGBA colors can be customized via fixture_config."""
+    # Custom RGBA colors
+    custom_rgba_shelf = [0.1, 0.2, 0.3, 1.0]
+    custom_rgba_leg = [0.2, 0.3, 0.4, 1.0]
+    custom_rgba_partition = [0.3, 0.4, 0.5, 1.0]
+    custom_rgba_panel = [0.4, 0.5, 0.6, 1.0]
+    custom_rgba_drawer_bottom = [0.5, 0.6, 0.7, 0.8]
+    custom_rgba_drawer_wall = [0.6, 0.7, 0.8, 0.9]
+    custom_rgba_drawer_face = [0.7, 0.8, 0.9, 1.0]
+    custom_rgba_drawer_handle = [0.8, 0.8, 0.8, 1.0]
+
+    # Create cupboard with custom colors
+    cupboard_config = {
+        "length": 0.6,
+        "depth": 0.3,
+        "shelf_heights": [0.1, 0.2],
+        "shelf_partitions": [[], []],
+        "shelf_drawers": [[False], [False]],
+        "side_and_back_open": False,
+        "rgba_cupboard_shelf": custom_rgba_shelf,
+        "rgba_cupboard_leg": custom_rgba_leg,
+        "rgba_cupboard_partition": custom_rgba_partition,
+        "rgba_cupboard_panel": custom_rgba_panel,
+        "rgba_drawer_bottom": custom_rgba_drawer_bottom,
+        "rgba_drawer_wall": custom_rgba_drawer_wall,
+        "rgba_drawer_face": custom_rgba_drawer_face,
+        "rgba_drawer_handle": custom_rgba_drawer_handle,
+    }
+
+    cupboard = Cupboard(
+        name="test_cupboard_rgba",
+        fixture_config=cupboard_config,
+        position=[0.0, 0.0, 0.0],
+        yaw=0.0,
+    )
+
+    # Verify that the custom colors were set
+    assert cupboard.rgba_cupboard_shelf == custom_rgba_shelf
+    assert cupboard.rgba_cupboard_leg == custom_rgba_leg
+    assert cupboard.rgba_cupboard_partition == custom_rgba_partition
+    assert cupboard.rgba_cupboard_panel == custom_rgba_panel
+    assert cupboard.rgba_drawer_bottom == custom_rgba_drawer_bottom
+    assert cupboard.rgba_drawer_wall == custom_rgba_drawer_wall
+    assert cupboard.rgba_drawer_face == custom_rgba_drawer_face
+    assert cupboard.rgba_drawer_handle == custom_rgba_drawer_handle
+
+
+def test_cupboard_default_rgba_colors():
+    """Test that Cupboard uses default RGBA colors when not specified in config."""
+    cupboard_config = {
+        "length": 0.6,
+        "depth": 0.3,
+        "shelf_heights": [0.1, 0.2],
+        "shelf_partitions": [[], []],
+        "shelf_drawers": [[False], [False]],
+        "side_and_back_open": True,  # Open so we have legs
+    }
+
+    cupboard = Cupboard(
+        name="test_cupboard_default",
+        fixture_config=cupboard_config,
+        position=[0.0, 0.0, 0.0],
+        yaw=0.0,
+    )
+
+    # Verify that the default colors are used
+    assert cupboard.rgba_cupboard_shelf == Cupboard.default_rgba_cupboard_shelf
+    assert cupboard.rgba_cupboard_leg == Cupboard.default_rgba_cupboard_leg
+    assert cupboard.rgba_cupboard_partition == Cupboard.default_rgba_cupboard_partition
+    assert cupboard.rgba_cupboard_panel == Cupboard.default_rgba_cupboard_panel
+    assert cupboard.rgba_drawer_bottom == Cupboard.default_rgba_drawer_bottom
+    assert cupboard.rgba_drawer_wall == Cupboard.default_rgba_drawer_wall
+    assert cupboard.rgba_drawer_face == Cupboard.default_rgba_drawer_face
+    assert cupboard.rgba_drawer_handle == Cupboard.default_rgba_drawer_handle

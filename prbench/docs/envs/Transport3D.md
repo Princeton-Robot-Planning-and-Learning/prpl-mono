@@ -5,7 +5,7 @@
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Description
-A 3D environment where the goal is to pick up a box from the table.
+A 3D environment where the goal is to place all objects, including one or more solid cubes and a box, on a table.
 
 ## Available Variants
 The number of cubes differs between environment variants. For example, Transport3D-o1 has 1 cube, while Transport3D-o2 has 2 cubes.
@@ -17,7 +17,9 @@ The number of cubes differs between environment variants. For example, Transport
 ![initial state GIF](assets/initial_state_gifs/Transport3D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/demo_gifs/Transport3D-o2/Transport3D-o2_1769088054.gif)
+
+**Demo Stats**: Total Reward: -692.00, Success: Yes, Steps: 692
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
@@ -93,15 +95,29 @@ The entries of an array in this Box space correspond to the following object fea
 
 
 ## Action Space
-An action space for a 7 DOF robot that can open and close its gripper.
+An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+Actions are bounded relative base position, rotation, and joint positions, and open / close.
 
-    The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
+| **Index** | **Description** |
+| --- | --- |
+| 0 | delta base x |
+| 1 | delta base y |
+| 2 | delta base rotation |
+| 3 | delta joint 1 |
+| 4 | delta joint 2 |
+| 5 | delta joint 3 |
+| 6 | delta joint 4 |
+| 7 | delta joint 5 |
+| 8 | delta joint 6 |
+| 9 | delta joint 7 |
+| 10 | gripper open/close |
+
+The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
 
 
 ## Rewards
-The reward is a small negative reward (-0.01) per timestep to encourage exploration.
+The reward is a small negative reward (-1) per timestep until termination, which occurs when all objects are on the table.
 
 ## References
 This is a very common kind of environment.

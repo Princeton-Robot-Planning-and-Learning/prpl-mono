@@ -55,9 +55,7 @@ class TidyBot3DConfig(PRBenchEnvConfig, metaclass=FinalConfigMeta):
 
     control_frequency: int = 10
     horizon: int = 1000
-    camera_names: list[str] = field(
-        default_factory=lambda: ["overview", "base", "wrist"]
-    )
+    camera_names: list[str] = field(default_factory=lambda: ["overview"])
     camera_width: int = 640
     camera_height: int = 480
     show_viewer: bool = False
@@ -78,7 +76,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         task_config_path: str | None = None,
         show_images: bool = False,
         scene_bg: bool | str | None = None,
-        scene_render_camera: str | None = "overview",
+        scene_render_camera: str | None = None,
     ) -> None:
         # Initialize ObjectCentricPRBenchEnv first
         super().__init__(config)
@@ -104,6 +102,18 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         with open(task_config_path, "r", encoding="utf-8") as f:
             self.task_config = json.load(f)
 
+        # Check if scene key is a string (scene reference) and load the scene config
+        scene_value = self.task_config.get("scene")
+        if isinstance(scene_value, str):
+            scene_path = str(Path(__file__).parent / "scenes" / f"{scene_value}.json")
+            assert os.path.exists(
+                scene_path
+            ), f"Scene config file {scene_path} does not exist."
+            with open(scene_path, "r", encoding="utf-8") as f:
+                scene_config = json.load(f)
+            # Merge scene_config into task_config recursively for nested dicts
+            self._merge_configs(self.task_config, scene_config)
+
         # Apply scene configuration based on scene_bg parameter
         # scene_bg can be:
         #   - True: Use the mimiclabs scene defined in task config
@@ -125,10 +135,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             self.camera_names.extend(list(self.task_config["cameras"].keys()))
 
         # Initialize robot environment
+        self.robot_type = list(self.task_config["robots"].keys())[0]
+        self.robot_name = list(self.task_config["robots"][self.robot_type].keys())[0]
         robot_cls = {"tidybot": TidyBotRobotEnv, "rby1a": RBY1ARobotEnv}[
-            self.task_config["robots"][0]
+            self.robot_type
         ]
         self._robot_env = robot_cls(
+            name=self.robot_name,
             control_frequency=self.config.control_frequency,
             act_delta=self.config.act_delta,
             horizon=self.config.horizon,
@@ -139,8 +152,18 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             show_viewer=self.config.show_viewer,
         )
 
+        # Update camera names since robot may have added its own cameras.
+        self.camera_names = self._robot_env.camera_names.copy()
+
         # This camera's render will be returned by default.
         self._render_camera_name: str | None = scene_render_camera
+        assert (
+            self._render_camera_name is None
+            or self._render_camera_name in self.camera_names
+        ), (
+            f"Render camera '{self._render_camera_name}' not in available "
+            f"cameras: {self.camera_names}"
+        )
 
         # Initialize empty object and fixture lists, and ground fixture.
         # These will be populated based on the task configuration
@@ -154,6 +177,46 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Store current state
         self._current_state: ObjectCentricState | None = None
+
+    def _merge_configs(
+        self, base_config: dict[str, Any], update_config: dict[str, Any]
+    ) -> None:
+        """Recursively merge update_config into base_config.
+
+        For nested dictionaries (like "fixtures", "objects", "regions"), merge the
+        contents rather than replacing. For lists, append values from update_config
+        to base_config. For other values, the update_config value takes precedence.
+
+        Args:
+            base_config: Dictionary to merge into (modified in-place)
+            update_config: Dictionary to merge from
+
+        Raises:
+            AssertionError: If "goal_state" is present in update_config
+        """
+        assert "goal_state" not in update_config, (
+            "Merging goal_state from scene config is not supported. "
+            "goal_state should only be defined in the task config."
+        )
+
+        for key, update_value in update_config.items():
+            if key in base_config:
+                if isinstance(base_config[key], dict) and isinstance(
+                    update_value, dict
+                ):
+                    # Both are dicts - recursively merge them
+                    self._merge_configs(base_config[key], update_value)
+                elif isinstance(base_config[key], list) and isinstance(
+                    update_value, list
+                ):
+                    # Both are lists - append update values to base
+                    base_config[key].extend(update_value)
+                else:
+                    # Otherwise, use the update value
+                    base_config[key] = update_value
+            else:
+                # Key not in base_config, add it
+                base_config[key] = update_value
 
     def _apply_scene_bg(self, scene_bg: bool | str | None) -> None:
         """Apply scene background configuration based on scene_bg parameter.
@@ -332,25 +395,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 root.insert(0, asset_section)
         worldbody = root.find("worldbody")
         if worldbody is not None:
-            # Remove all existing cube bodies
-            for body in list(worldbody):
-                if body.tag == "body" and body.attrib.get("name", "").startswith(
-                    "cube"
-                ):
-                    worldbody.remove(body)
-
-            # Add tables and objects based on task configuration
             if self.task_config is not None:
-                # Find and remove the existing table body
-                for body in list(worldbody):
-                    if body.tag == "body" and body.attrib.get("name") == "table":
-                        worldbody.remove(body)
-                        break
-
                 all_fixtures = self.task_config.get("fixtures", {})
                 fixtures: dict[str, dict[str, dict[str, Any]]] = {}
 
-                # Find regions on ground
+                # Find regions on ground and create ground fixture
                 regions_on_ground = {}
                 all_regions = self.task_config.get("regions", {})
                 for region_name, region_config in all_regions.items():
@@ -367,6 +416,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 entity_region_names: dict[str, str] = {}
                 entity_pos_yaw_samplers: dict[str, Any] = {}
 
+                # Go through initial_state predicates and find fixtures that
+                # need to be placed, and create pos/yaw samplers for them
                 init_predicates = self.task_config.get("initial_state", [])
                 for pred in init_predicates:
                     if pred[0] == "on" and len(pred) == 3:
@@ -397,13 +448,15 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                                 f"'{region_config['target']}'"
                             )
 
-                            # Add to region names and pos/yaw samplers dicts
+                            # Add pos/yaw samplers on ground for this fixture
                             entity_region_names[fixture_name] = region_name
                             entity_pos_yaw_samplers[fixture_name] = (
                                 self._ground_fixture.sample_pose_in_region
                             )
 
-                # Sample collision-free positions for all fixtures
+                # Sample collision-free positions for fixtures
+                # Note: we do not pass entity_check_in_region, and so only the
+                # center of the fixture is guaranteed to be within the region
                 fixture_poses = sample_collision_free_positions(
                     fixtures,
                     self.np_random,
@@ -532,6 +585,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     continue
 
                 if obj_name not in self._objects_dict:
+                    if obj_name == self.robot_name:
+                        continue
                     raise ValueError(f"Object {obj_name} not found in environment.")
 
                 region_config = self.task_config["regions"][region_name]
@@ -553,18 +608,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Process ground-placed objects with collision checking
         if ground_objects:
-            # Create ground fixture for region sampling
-            regions_on_ground = {}
-            all_regions = self.task_config.get("regions", {})
-            for region_name, region_config in all_regions.items():
-                if region_config["target"] == "ground":
-                    regions_on_ground[region_name] = region_config
-
-            ground_fixture = MujocoGround(regions=regions_on_ground)
+            # Reuse the ground fixture already created in _create_scene_xml()
+            assert self._ground_fixture is not None, "Ground fixture not initialized"
+            ground_fixture = self._ground_fixture
 
             # Prepare entity dicts for sample_collision_free_positions
             entity_region_names: dict[str, str] = {}
             entity_pos_yaw_samplers: dict[str, Any] = {}
+            entity_check_in_region: dict[str, Any] = {}
 
             # Build configs dict with only ground objects
             ground_object_configs: dict[str, dict[str, Any]] = {}
@@ -576,6 +627,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     entity_pos_yaw_samplers[obj_name] = (
                         ground_fixture.sample_pose_in_region
                     )
+                    entity_check_in_region[obj_name] = ground_fixture.check_in_region
                     # Get the object type for this object
                     obj = self._objects_dict[obj_name]
                     # pylint: disable=no-member
@@ -592,6 +644,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 self.np_random,
                 entity_region_names=entity_region_names,
                 entity_pos_yaw_samplers=entity_pos_yaw_samplers,
+                entity_check_in_region=entity_check_in_region,
             )
 
             # Set poses for ground-placed objects
@@ -607,6 +660,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Process fixture-placed objects with unified API
         fixture_entity_region_names: dict[str, str] = {}
         fixture_entity_pos_yaw_samplers: dict[str, Any] = {}
+        fixture_entity_check_in_region: dict[str, Any] = {}
         fixture_object_configs: dict[str, dict[str, Any]] = {}
 
         for obj_name, region_info in fixture_objects.items():
@@ -623,6 +677,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             fixture_entity_pos_yaw_samplers[obj_name] = (
                 target_fixture.sample_pose_in_region
             )
+            fixture_entity_check_in_region[obj_name] = target_fixture.check_in_region
 
             # Get the object type for this object
             obj = self._objects_dict[obj_name]
@@ -643,6 +698,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 self.np_random,
                 entity_region_names=fixture_entity_region_names,
                 entity_pos_yaw_samplers=fixture_entity_pos_yaw_samplers,
+                entity_check_in_region=fixture_entity_check_in_region,
             )
 
             # Set poses for fixture-placed objects
@@ -662,6 +718,51 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self, config: TidyBot3DConfig
     ) -> Space[Array]:
         """Create action space for TidyBot's control interface."""
+
+    def _initialize_robot_pose(self) -> None:
+        """Initialize the robot in the environment."""
+
+        # Go through predicates, find the ones that specify the robot's initial pose
+        init_predicates = self.task_config.get("initial_state", [])
+        robot_predicates = []
+        for pred in init_predicates:
+            if len(pred) >= 3 and pred[0] == "on" and pred[1] == self.robot_name:
+                robot_predicates.append(pred)
+
+        # Assert there is exactly one predicate for the robot
+        assert len(robot_predicates) <= 1, (
+            f"Expected at most 1 predicate for robot '{self.robot_name}', "
+            f"got {len(robot_predicates)}"
+        )
+
+        if not robot_predicates:
+            # Define limits for x, y, and yaw
+            x_limit = (-1.0, 1.0)
+            y_limit = (-1.0, 1.0)
+            yaw_limit = (-np.pi, np.pi)
+            # Sample random values within the limits
+            x = self.np_random.uniform(*x_limit)
+            y = self.np_random.uniform(*y_limit)
+            yaw = self.np_random.uniform(*yaw_limit)
+        else:
+            # Extract region name
+            region_name = robot_predicates[0][2]
+            region_config = self.task_config["regions"][region_name]
+
+            # Assert that the region target is ground
+            assert region_config["target"] == "ground", (
+                f"Region '{region_name}' for robot must have target 'ground', "
+                f"got '{region_config['target']}'"
+            )
+
+            # Sample pose in region using ground fixture
+            assert self._ground_fixture is not None, "Ground fixture not initialized"
+            x, y, _, yaw = self._ground_fixture.sample_pose_in_region(
+                region_name, self.np_random
+            )
+
+        # Set robot base position and yaw orientation
+        self._robot_env.set_robot_base_pos_yaw(x, y, yaw)
 
     def reset(
         self,
@@ -688,6 +789,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Initialize object poses
         self._initialize_object_poses()
+
+        # Initialize the robot pose
+        self._initialize_robot_pose()
 
         # Get object-centric observation
         self._current_state = self._get_object_centric_state()
@@ -924,7 +1028,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         self._ground_fixture is not None
                     ), "Ground fixture not initialized"
                     in_region = self._ground_fixture.check_in_region(
-                        position, region_name
+                        position, region_name, self._robot_env
                     )
                 else:
                     # Check first in fixtures, then in objects
@@ -938,7 +1042,9 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         raise ValueError(
                             f"Target '{target}' not found in fixtures or objects"
                         )
-                    in_region = entity.check_in_region(position, region_name)
+                    in_region = entity.check_in_region(
+                        position, region_name, self._robot_env
+                    )
 
                 successes.append(in_region)
             elif pred[0] == "balanced":
@@ -965,6 +1071,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 raise NotImplementedError(
                     f"Goal predicate {pred[0]} not implemented in _check_goals"
                 )
+
         if goal_conjunction == "and":
             return all(successes)
         if goal_conjunction == "or":
@@ -1033,7 +1140,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         return TidyBot3DRobotActionSpace()
 
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
-        assert self.task_config["robots"][0] == "tidybot"
+        assert self.robot_type == "tidybot"
         assert self._robot_env is not None, "Robot environment not initialized"
         robot = Object("robot", MujocoTidyBotRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
@@ -1214,7 +1321,7 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         return RBY1ARobotActionSpace()
 
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
-        assert self.task_config["robots"][0] == "rby1a"
+        assert self.robot_type == "rby1a"
         assert self._robot_env is not None, "Robot environment not initialized"
         robot = Object("robot", MujocoRBY1ARobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.

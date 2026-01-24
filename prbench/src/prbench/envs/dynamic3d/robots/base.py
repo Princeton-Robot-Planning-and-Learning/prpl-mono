@@ -23,10 +23,56 @@ class RobotEnv(MujocoEnv, abc.ABC):
         """
         super().__init__(*args, **kwargs)
 
+        # Robot name for namespacing XML elements
+        self.name: str | None = None
+
         # Robot state/actuator references (initialized in _setup_robot_references)
         self.qpos: dict[str, NDArray[np.float64]] = {}
         self.qvel: dict[str, NDArray[np.float64]] = {}
         self.ctrl: dict[str, NDArray[np.float64]] = {}
+
+        # Track original names that were renamed
+        self._renamed_names: list[str] = []
+
+    def _rename_elements_recursively(self, element: ET.Element) -> None:
+        """Recursively rename all 'name' attributes in XML elements.
+
+        Appends the robot name prefix (self.name_) to any existing 'name'
+        attribute values. This ensures XML elements are namespaced to avoid
+        conflicts when multiple robots are in the same scene.
+
+        Args:
+            element: The XML element to process and its children.
+        """
+        if self.name is not None:
+            # Append robot name prefix to the name attribute if it exists
+            name_attr = element.get("name")
+            if name_attr is not None:
+                self._renamed_names.append(name_attr)
+                element.set("name", f"{self.name}_{name_attr}")
+
+            # Recursively process all child elements
+            for child_elem in element:
+                self._rename_elements_recursively(child_elem)
+
+    def _update_attribute_references_recursively(self, element: ET.Element) -> None:
+        """Recursively update all attribute values that reference renamed elements.
+
+        Checks all attributes in the element and its children. If any attribute
+        value matches a name in _renamed_names, prepends the robot name prefix.
+
+        Args:
+            element: The XML element to process and its children.
+        """
+        if self.name is not None:
+            # Check all attributes of the current element
+            for key, value in element.attrib.items():
+                if value in self._renamed_names:
+                    element.set(key, f"{self.name}_{value}")
+
+        # Recursively process all child elements
+        for child_elem in element:
+            self._update_attribute_references_recursively(child_elem)
 
     def _insert_robot_into_xml(
         self, xml_string: str, models_dir: str, robot_xml_name: str, assets_dir: str
@@ -73,12 +119,17 @@ class RobotEnv(MujocoEnv, abc.ABC):
             for child_elem in element:
                 make_include_paths_absolute(child_elem)
 
+        # Rename elements in robot XML to namespace them with robot name
+        for child in list(robot_root):
+            if child.tag in ["worldbody", "tendon", "actuator", "equality"]:
+                self._rename_elements_recursively(child)
+
         # Merge the robot content into the input XML
         # Copy all children from robot root to input root (except mujoco tag itself)
         for child in list(robot_root):
             if child.tag == "worldbody":
                 # Merge worldbody content
-                input_worldbody = input_root.find(  # type:ignore[union-attr]
+                input_worldbody = input_root.find(  # type: ignore[union-attr]
                     "worldbody"
                 )
                 if input_worldbody is not None:
@@ -155,8 +206,14 @@ class RobotEnv(MujocoEnv, abc.ABC):
                 else:
                     # No compiler in scene, just append robot's compiler
                     input_root.append(child)  # type: ignore[union-attr]
+            elif child.tag == "default":
+                # Simply append default sections
+                input_root.append(child)  # type: ignore[union-attr]
             else:
-                # For other sections (actuator, contact, etc.), just append
+                # For other sections (actuator, contact, etc.), update any attribute
+                # references to renamed elements since they refer to namespaced elements
+                # in the worldbody, then append
+                self._update_attribute_references_recursively(child)
                 input_root.append(child)  # type: ignore[union-attr]
 
         if input_root is None:
@@ -174,4 +231,14 @@ class RobotEnv(MujocoEnv, abc.ABC):
 
         Returns:
             The computed reward value.
+        """
+
+    @abc.abstractmethod
+    def set_robot_base_pos_yaw(self, x: float, y: float, yaw: float) -> None:
+        """Set the robot's base position and yaw orientation.
+
+        Args:
+            x: X position of the robot base.
+            y: Y position of the robot base.
+            yaw: Yaw orientation of the robot base.
         """

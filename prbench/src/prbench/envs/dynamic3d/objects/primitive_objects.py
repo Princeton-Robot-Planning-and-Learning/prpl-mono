@@ -72,6 +72,9 @@ class Cuboid(MujocoObject):
         # Create the XML element
         self.xml_element = self._create_xml_element()
 
+        if self.regions is not None:
+            self._create_regions()
+
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this cuboid.
 
@@ -274,6 +277,9 @@ class Bin(MujocoObject):
         # Create the XML element
         self.xml_element = self._create_xml_element()
 
+        if self.regions is not None:
+            self._create_regions()
+
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this bin using multiple box geoms.
 
@@ -437,5 +443,293 @@ class Bin(MujocoObject):
             f"Bin(name='{self.name}', joint_name='{self.joint_name}', "
             f"length={self.length}, width={self.width}, height={self.height}, "
             f"wall_thickness={self.wall_thickness}, rgba='{self.rgba}', "
+            f"mass={self.mass})"
+        )
+
+
+@register_object
+class Wiper(MujocoObject):
+    """A wiper object composed of a long handle and a perpendicular blade head."""
+
+    default_handle_width: float = 0.01  # Default handle width in meters
+    default_handle_height: float = 0.01  # Default handle height in meters
+    default_head_length: float = 0.15  # Default head length in meters
+    default_head_height: float = 0.01  # Default head height in meters
+    default_upright: bool = True  # If True, wiper is standing upright
+
+    def __init__(
+        self,
+        name: str,
+        env: MujocoEnv | None = None,
+        options: dict | None = None,
+    ) -> None:
+        """Initialize a Wiper object.
+
+        Args:
+            name: Name of the wiper body in the XML
+            options: Dictionary of wiper options:
+                - handle_width: Width of the handle in both x and y dimensions
+                  (default: 0.01)
+                - handle_height: Height of the handle in z dimension (default: 0.01)
+                - head_length: Length of the blade head in x dimension (default: 0.15)
+                - head_height: Height of the blade head in z dimension (default: 0.01)
+                - handle_rgba: Color of the handle (default: [0.5, 0.5, 0.5, 1])
+                - head_rgba: Color of the head (default: [0.5, 0.5, 0.5, 1])
+                - mass: Mass of the wiper (default: 0.1)
+            env: Reference to the environment
+        """
+        super().__init__(name, env, options)
+
+        # Override object type
+        self.symbolic_object = Object(self.name, MujocoMovableObjectType)
+
+        # Handle parameters
+        self.handle_width = float(self.options.get("handle_width", 0.01))
+        self.handle_height = float(self.options.get("handle_height", 0.01))
+
+        # Blade head parameters
+        self.head_length = float(self.options.get("head_length", 0.15))
+        self.head_height = float(self.options.get("head_height", 0.01))
+        self.upright = bool(self.options.get("upright", Wiper.default_upright))
+
+        # Handle rgba parameter - can be string or list of values
+        handle_rgba = self.options.get("handle_rgba", [0.5, 0.5, 0.5, 1])
+        if isinstance(handle_rgba, str):
+            self.handle_rgba = handle_rgba
+        else:
+            self.handle_rgba = " ".join(str(x) for x in handle_rgba)
+
+        # Head rgba parameter - can be string or list of values
+        head_rgba = self.options.get("head_rgba", [0.5, 0.5, 0.5, 1])
+        if isinstance(head_rgba, str):
+            self.head_rgba = head_rgba
+        else:
+            self.head_rgba = " ".join(str(x) for x in head_rgba)
+
+        # Handle mass parameter with default
+        self.mass = self.options.get("mass", 0.1)
+
+        # Create the XML element
+        self.xml_element = self._create_xml_element()
+
+        if self.regions is not None:
+            self._create_regions()
+
+    def _create_xml_element(self) -> ET.Element:
+        """Create the XML Element for this wiper.
+
+        The wiper consists of:
+        - A handle: a box with width x width x height (in x, y, z)
+        - A blade head: a box with head_length x width x head_height (in x, y, z)
+          positioned at the end of the handle
+
+        When upright=True: handle extends in z, head extends in x
+        When upright=False: handle extends in x, head extends in y
+
+        Returns:
+            ET.Element representing the wiper body with both geoms
+        """
+        # Create body element
+        body = ET.Element("body", name=self.name)
+
+        # Add freejoint for position/orientation control
+        ET.SubElement(body, "freejoint", name=self.joint_name)
+
+        # Mass distribution (divide between handle and head)
+        component_mass = self.mass / 2.0
+
+        if self.upright:
+            # Upright orientation: handle extends in z, head extends in x
+            # Handle: a box with square cross-section in x-y plane
+            # MuJoCo box size is half-extent in each direction
+            hw = self.handle_width / 2
+            hh = self.handle_height / 2
+            handle_size = f"{hw} {hw} {hh}"
+            handle_pos_z = self.handle_height / 2 + self.head_height
+            ET.SubElement(
+                body,
+                "geom",
+                type="box",
+                size=handle_size,
+                pos=f"0 0 {handle_pos_z}",
+                rgba=self.handle_rgba,
+                mass=str(component_mass),
+            )
+
+            # Blade head: box at the end of the handle
+            # Position: at the end of the handle along x-axis
+            head_pos = f"0 0 {self.head_height / 2}"
+            # Size: head_length in x, width in y, and head_height in z
+            hl = self.head_length / 2
+            hw = self.handle_width / 2
+            hh = self.head_height / 2
+            head_size = f"{hl} {hw} {hh}"
+            ET.SubElement(
+                body,
+                "geom",
+                type="box",
+                size=head_size,
+                pos=head_pos,
+                rgba=self.head_rgba,
+                mass=str(component_mass),
+            )
+        else:
+            # Horizontal orientation: handle extends in x, head extends in y
+            # Handle: rod extending along x-axis
+            # size = [handle_height/2, handle_width/2, handle_width/2]
+            # pos = [handle_height/2, 0, handle_width/2]
+            hh = self.handle_height / 2
+            hw = self.handle_width / 2
+            hd = self.head_height / 2
+            handle_size = f"{hh} {hw} {hw}"
+            handle_pos = f"{hd} 0 {hw}"
+            ET.SubElement(
+                body,
+                "geom",
+                type="box",
+                size=handle_size,
+                pos=handle_pos,
+                rgba=self.handle_rgba,
+                mass=str(component_mass),
+            )
+
+            # Blade head: box extending along y-axis at end of handle
+            # size = [head_height/2, head_length/2, handle_width/2]
+            # pos = [-handle_height/2, 0, handle_width/2]
+            hd = self.head_height / 2
+            hl = self.head_length / 2
+            hw = self.handle_width / 2
+            hh = self.handle_height / 2
+            head_size = f"{hd} {hl} {hw}"
+            head_pos = f"{-hh} 0 {hw}"
+            ET.SubElement(
+                body,
+                "geom",
+                type="box",
+                size=head_size,
+                pos=head_pos,
+                rgba=self.head_rgba,
+                mass=str(component_mass),
+            )
+
+        return body
+
+    def get_bounding_box_dimensions(self) -> tuple[float, float, float]:
+        """Get the bounding box dimensions for this wiper.
+
+        Returns:
+            Tuple of (length, width, height) encompassing both handle and blade
+        """
+        if self.upright:
+            # Upright: handle extends in z, head extends in x
+            total_length = self.head_length
+            total_width = self.handle_width
+            total_height = self.head_height + self.handle_height
+        else:
+            # Horizontal: handle extends in x, head extends in y
+            # Total x is handle_height + head_height (from handle to head)
+            # Total y is head_length
+            # Total z is handle_width
+            total_length = self.handle_height + self.head_height
+            total_width = self.head_length
+            total_height = self.handle_width
+
+        return (total_length, total_width, total_height)
+
+    @staticmethod
+    def get_bounding_box_from_config(
+        pos: NDArray[np.float32], object_config: dict[str, str | float]
+    ) -> list[float]:
+        """Get bounding box for a wiper given its position and config.
+
+        Args:
+            pos: Position of the wiper as [x, y, z] array
+            object_config: Dictionary containing wiper configuration with keys:
+                - "handle_width": Width of the handle in x and y dimensions
+                - "handle_height": Height of the handle in z dimension
+                - "head_length": Length of the blade head in x dimension
+                - "head_height": Height of the blade head in z dimension
+                - "upright": Boolean indicating orientation
+                  (True = upright, False = horizontal)
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+        """
+        # Extract wiper parameters
+        handle_width = float(object_config.get("handle_width", 0.01))
+        handle_height = float(object_config.get("handle_height", 0.01))
+        head_length = float(object_config.get("head_length", 0.15))
+        head_height = float(object_config.get("head_height", 0.01))
+        upright = bool(object_config.get("upright", Wiper.default_upright))
+
+        if upright:
+            # Upright orientation: handle extends in z, head extends in x
+            # Head geom: size=[head_length/2, handle_width/2, head_height/2],
+            # pos=[0, 0, head_height/2]
+            #   Extends x: ±head_length/2, y: ±handle_width/2, z: [0, head_height]
+            # Handle geom: size=[handle_width/2, handle_width/2, handle_height/2],
+            # pos=[0, 0, head_height + handle_height/2]
+            #   Extends x: ±handle_width/2, y: ±handle_width/2,
+            #   z: [head_height, head_height + handle_height]
+
+            # Overall bounds relative to body origin:
+            # x: [-head_length/2, head_length/2] (head is longer)
+            # y: [-handle_width/2, handle_width/2]
+            # z: [0, head_height + handle_height]
+
+            x_min = pos[0] - head_length / 2
+            x_max = pos[0] + head_length / 2
+
+            y_min = pos[1] - handle_width / 2
+            y_max = pos[1] + handle_width / 2
+
+            z_min = pos[2]
+            z_max = pos[2] + head_height + handle_height
+        else:
+            # Horizontal orientation: handle extends in x, head extends in y
+            # Handle geom: size=[handle_height/2, handle_width/2, handle_width/2],
+            # pos=[head_height/2, 0, handle_width/2]
+            #   Extends x: [head_height/2 - handle_height/2,
+            #              head_height/2 + handle_height/2],
+            #   y: ±handle_width/2, z: [0, handle_width]
+            # Head geom: size=[head_height/2, head_length/2, handle_width/2],
+            # pos=[-handle_height/2, 0, handle_width/2]
+            #   Extends x: [-handle_height/2 - head_height/2,
+            #              -handle_height/2 + head_height/2],
+            #   y: ±head_length/2, z: [0, handle_width]
+
+            # Overall bounds relative to body origin:
+            # x: [-(handle_height + head_height)/2,
+            #     (handle_height + head_height)/2]
+            # y: [-head_length/2, head_length/2]
+            # z: [0, handle_width]
+
+            x_min = pos[0] - (handle_height + head_height) / 2
+            x_max = pos[0] + (handle_height + head_height) / 2
+
+            y_min = pos[1] - head_length / 2
+            y_max = pos[1] + head_length / 2
+
+            z_min = pos[2]
+            z_max = pos[2] + handle_width
+
+        return [x_min, y_min, z_min, x_max, y_max, z_max]
+
+    def __str__(self) -> str:
+        """String representation of the wiper."""
+        return (
+            f"Wiper(name='{self.name}', handle_width={self.handle_width}, "
+            f"handle_height={self.handle_height}, head_length={self.head_length}, "
+            f"head_height={self.head_height}, handle_rgba='{self.handle_rgba}', "
+            f"head_rgba='{self.head_rgba}', mass={self.mass})"
+        )
+
+    def __repr__(self) -> str:
+        """Detailed string representation of the wiper."""
+        return (
+            f"Wiper(name='{self.name}', joint_name='{self.joint_name}', "
+            f"handle_width={self.handle_width}, handle_height={self.handle_height}, "
+            f"head_length={self.head_length}, head_height={self.head_height}, "
+            f"handle_rgba='{self.handle_rgba}', head_rgba='{self.head_rgba}', "
             f"mass={self.mass})"
         )

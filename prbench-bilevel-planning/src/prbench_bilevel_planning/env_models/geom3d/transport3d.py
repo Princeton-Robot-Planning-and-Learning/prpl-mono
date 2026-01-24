@@ -93,7 +93,8 @@ def create_bilevel_planning_models(
         for target in target_objects:
             z = x.get(target, "pose_z")
             bb_z = x.get(target, "half_extent_z")
-            if np.isclose(z, bb_z, atol=on_ground_tol):
+            floor_z = sim.config.floor_z
+            if np.isclose(z, bb_z, atol=floor_z + on_ground_tol):
                 atoms.add(GroundAtom(OnGround, [target]))
 
         # HandEmpty.

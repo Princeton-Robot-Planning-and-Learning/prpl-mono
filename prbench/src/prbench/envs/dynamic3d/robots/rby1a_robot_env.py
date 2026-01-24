@@ -40,6 +40,7 @@ class RBY1ARobotEnv(RobotEnv):
 
     def __init__(
         self,
+        name: str,
         control_frequency: float,
         act_delta: bool = True,
         horizon: int = 1000,
@@ -51,7 +52,9 @@ class RBY1ARobotEnv(RobotEnv):
     ) -> None:
         """
         Args:
+            name: Name of the robot.
             control_frequency: Frequency at which control actions are applied (in Hz).
+            act_delta: Whether to interpret actions as deltas or absolute values.
             horizon: Maximum number of steps per episode.
             camera_names: List of camera names to use for rendering.
             camera_width: Width of camera images.
@@ -69,6 +72,7 @@ class RBY1ARobotEnv(RobotEnv):
             show_viewer=show_viewer,
         )
 
+        self.name = name
         self.act_delta = act_delta
 
         # Initialize robot state attributes
@@ -117,57 +121,64 @@ class RBY1ARobotEnv(RobotEnv):
         assert self.sim is not None, "Simulation must be initialized."
 
         robot_joint_names = {
-            "base": ["right_wheel", "left_wheel"],
-            "torso": ["torso_0", "torso_1", "torso_2", "torso_3", "torso_4", "torso_5"],
+            "base": [f"{self.name}_right_wheel", f"{self.name}_left_wheel"],
+            "torso": [
+                f"{self.name}_torso_0",
+                f"{self.name}_torso_1",
+                f"{self.name}_torso_2",
+                f"{self.name}_torso_3",
+                f"{self.name}_torso_4",
+                f"{self.name}_torso_5",
+            ],
             "right_arm": [
-                "right_arm_0",
-                "right_arm_1",
-                "right_arm_2",
-                "right_arm_3",
-                "right_arm_4",
-                "right_arm_5",
-                "right_arm_6",
+                f"{self.name}_right_arm_0",
+                f"{self.name}_right_arm_1",
+                f"{self.name}_right_arm_2",
+                f"{self.name}_right_arm_3",
+                f"{self.name}_right_arm_4",
+                f"{self.name}_right_arm_5",
+                f"{self.name}_right_arm_6",
             ],
             "left_arm": [
-                "left_arm_0",
-                "left_arm_1",
-                "left_arm_2",
-                "left_arm_3",
-                "left_arm_4",
-                "left_arm_5",
-                "left_arm_6",
+                f"{self.name}_left_arm_0",
+                f"{self.name}_left_arm_1",
+                f"{self.name}_left_arm_2",
+                f"{self.name}_left_arm_3",
+                f"{self.name}_left_arm_4",
+                f"{self.name}_left_arm_5",
+                f"{self.name}_left_arm_6",
             ],
-            "head": ["head_0", "head_1"],
+            "head": [f"{self.name}_head_0", f"{self.name}_head_1"],
         }
         robot_actuator_names = {
-            "base": ["right_wheel_act", "left_wheel_act"],
+            "base": [f"{self.name}_right_wheel_act", f"{self.name}_left_wheel_act"],
             "torso": [
-                "link1_act",
-                "link2_act",
-                "link3_act",
-                "link4_act",
-                "link5_act",
-                "link6_act",
+                f"{self.name}_link1_act",
+                f"{self.name}_link2_act",
+                f"{self.name}_link3_act",
+                f"{self.name}_link4_act",
+                f"{self.name}_link5_act",
+                f"{self.name}_link6_act",
             ],
             "right_arm": [
-                "right_arm_1_act",
-                "right_arm_2_act",
-                "right_arm_3_act",
-                "right_arm_4_act",
-                "right_arm_5_act",
-                "right_arm_6_act",
-                "right_arm_7_act",
+                f"{self.name}_right_arm_1_act",
+                f"{self.name}_right_arm_2_act",
+                f"{self.name}_right_arm_3_act",
+                f"{self.name}_right_arm_4_act",
+                f"{self.name}_right_arm_5_act",
+                f"{self.name}_right_arm_6_act",
+                f"{self.name}_right_arm_7_act",
             ],
             "left_arm": [
-                "left_arm_1_act",
-                "left_arm_2_act",
-                "left_arm_3_act",
-                "left_arm_4_act",
-                "left_arm_5_act",
-                "left_arm_6_act",
-                "left_arm_7_act",
+                f"{self.name}_left_arm_1_act",
+                f"{self.name}_left_arm_2_act",
+                f"{self.name}_left_arm_3_act",
+                f"{self.name}_left_arm_4_act",
+                f"{self.name}_left_arm_5_act",
+                f"{self.name}_left_arm_6_act",
+                f"{self.name}_left_arm_7_act",
             ],
-            "head": ["head_0_act", "head_1_act"],
+            "head": [f"{self.name}_head_0_act", f"{self.name}_head_1_act"],
         }
 
         # Joint positions: joint_id corresponds to qpos index
@@ -251,6 +262,15 @@ class RBY1ARobotEnv(RobotEnv):
             if part not in self.exclude_parts:  # exclude base joints from jacobian
                 self.joint_indices.extend(qvel_indices[part])
                 self.joint_indices_ctrl.extend(ctrl_indices[part])
+
+    def set_robot_base_pos_yaw(self, x: float, y: float, yaw: float) -> None:
+        """Set the robot's base position and yaw orientation.
+
+        Args:
+            x: X position of the robot base .
+            y: Y position of the robot base.
+            yaw: Yaw orientation of the robot base.
+        """
 
     def _randomize_base_pose(self) -> None:
         """Randomize the base pose of the robot within defined limits."""

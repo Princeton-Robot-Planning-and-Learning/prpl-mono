@@ -39,7 +39,7 @@ def test_no_existing_tables():
     )
 
     sampler = create_mock_sampler()
-    pos, yaw = sample_collision_free_position(
+    pos, yaw, bbox = sample_collision_free_position(
         initial_bbox, placed_bboxes, np_random, "test_region", sampler
     )
 
@@ -48,6 +48,8 @@ def test_no_existing_tables():
     assert pos.shape == (3,)
     assert pos[2] == 0.0  # z should always be 0
     assert isinstance(yaw, float)
+    assert isinstance(bbox, list)
+    assert len(bbox) == 6
 
     # Position should be within default ranges
     assert -2.0 <= pos[0] <= 2.0
@@ -67,14 +69,13 @@ def test_with_existing_tables():
     )
 
     sampler = create_mock_sampler()
-    pos, _ = sample_collision_free_position(
+    _, _, bbox = sample_collision_free_position(
         initial_bbox, placed_bboxes, np_random, "test_region", sampler
     )
 
     # Check that the sampled position doesn't create an overlapping bbox
-    new_bbox = Table.get_bounding_box_from_config(pos, table_config)
     for existing_bbox in placed_bboxes:
-        assert not bboxes_overlap(new_bbox[:4], existing_bbox[:4])
+        assert not bboxes_overlap(bbox, existing_bbox, margin=0.0)
 
 
 def test_custom_ranges():
@@ -91,13 +92,14 @@ def test_custom_ranges():
     )
 
     sampler = create_mock_sampler(x_range=x_range, y_range=y_range)
-    pos, _ = sample_collision_free_position(
+    pos, _, bbox = sample_collision_free_position(
         initial_bbox, placed_bboxes, np_random, "test_region", sampler
     )
 
     assert x_range[0] <= pos[0] <= x_range[1]
     assert y_range[0] <= pos[1] <= y_range[1]
     assert pos[2] == 0.0
+    assert isinstance(bbox, list)
 
 
 def test_deterministic_with_seed():
@@ -114,18 +116,19 @@ def test_deterministic_with_seed():
 
     # Sample with first generator
     rng1 = np.random.default_rng(123)
-    pos1, yaw1 = sample_collision_free_position(
+    pos1, yaw1, bbox1 = sample_collision_free_position(
         initial_bbox, placed_bboxes, rng1, "test_region", sampler
     )
 
     # Sample with second generator with same seed
     rng2 = np.random.default_rng(123)
-    pos2, yaw2 = sample_collision_free_position(
+    pos2, yaw2, bbox2 = sample_collision_free_position(
         initial_bbox, placed_bboxes, rng2, "test_region", sampler
     )
 
     np.testing.assert_array_equal(pos1, pos2)
     assert yaw1 == yaw2
+    assert bbox1 == bbox2
 
 
 def test_crowded_scenario_fallback():
@@ -150,7 +153,7 @@ def test_crowded_scenario_fallback():
 
     sampler = create_mock_sampler()
     # Should still return a position (though it might overlap)
-    pos, yaw = sample_collision_free_position(
+    pos, yaw, bbox = sample_collision_free_position(
         initial_bbox, placed_bboxes, np_random, "test_region", sampler, max_attempts=5
     )
 
@@ -158,6 +161,7 @@ def test_crowded_scenario_fallback():
     assert pos.shape == (3,)
     assert pos[2] == 0.0
     assert isinstance(yaw, float)
+    assert isinstance(bbox, list)
 
 
 def test_circular_table():
@@ -172,7 +176,7 @@ def test_circular_table():
     )
 
     sampler = create_mock_sampler()
-    pos, yaw = sample_collision_free_position(
+    pos, yaw, bbox = sample_collision_free_position(
         initial_bbox, placed_bboxes, np_random, "test_region", sampler
     )
 
@@ -180,6 +184,7 @@ def test_circular_table():
     assert pos.shape == (3,)
     assert pos[2] == 0.0
     assert isinstance(yaw, float)
+    assert isinstance(bbox, list)
 
 
 # Tests for MujocoGround.sample_pose_in_region method

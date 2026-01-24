@@ -1,7 +1,9 @@
 {
-    "robots": [
-        "tidybot"
-    ],
+    "robots": {
+        "tidybot": {
+            "robot_0": {}
+        }
+    },
     "scene": {
         "simple": {
             "position": [
@@ -61,9 +63,9 @@
             "ranges": [
                 [
                     0.3,
-                    -0.1,
+                    -1.1,
                     0.5,
-                    0.1
+                    -1.0
                 ]
             ],
             "yaw_ranges": [

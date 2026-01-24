@@ -39,6 +39,7 @@ from relational_structs import (
 from prbench_models.geom3d.base_controllers import BasePlaceController
 from prbench_models.geom3d.constants import (
     GRASP_TRANSFORM_TO_OBJECT,
+    GRIPPER_CLOSE_THRESHOLD,
     HOME_JOINT_POSITIONS,
 )
 from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
@@ -64,7 +65,7 @@ class GroundPickController(
     ) -> None:
         super().__init__(objects)
         self._sim = sim
-        self._joint_infos = sim.robot.arm.joint_infos[:7]
+        self._joint_infos = sim.robot.arm.get_arm_joint_infos()[:7]
         self._robot, self._target = objects
         self._current_params: np.ndarray | None = None
         self._current_arm_joint_plan: list[JointPositions] | None = None
@@ -208,10 +209,13 @@ class GroundPickController(
             return action
 
         if self._pre_grasp and not self._closed_gripper:
-            if self._get_current_robot_gripper_pose() > 0.2 and np.isclose(
-                self._get_current_robot_gripper_pose(),
-                self._last_gripper_state,
-                atol=0.02,
+            if (
+                self._get_current_robot_gripper_pose() > GRIPPER_CLOSE_THRESHOLD
+                and np.isclose(
+                    self._get_current_robot_gripper_pose(),
+                    self._last_gripper_state,
+                    atol=0.02,
+                )
             ):
                 self._closed_gripper = True
             action_lst = [0.0] * 10 + [-1.0]

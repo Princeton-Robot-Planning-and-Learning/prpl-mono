@@ -1,7 +1,4 @@
-"""PyBullet environment where a box must be picked from the table.
-
-There may be other obstructing objects in the environment.
-"""
+"""PyBullet environment where cubes and boxes must be transported onto a table."""
 
 from __future__ import annotations
 
@@ -47,14 +44,11 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         Path(__file__).parent / "assets" / "use_textures" / "light_wood_v3.png"
     )
 
-    # World bounds.
-    x_lb: float = -1.5
-    x_ub: float = 1.5
-    y_lb: float = -1.5
-    y_ub: float = 1.5
-
     # Minimum distance between objects for placement.
     min_placement_dist: float = 0.01
+
+    # Maximum sampling attempts for placing blocks on ground.
+    max_ground_sampling_attempts: int = 100
 
     # Blocks.
     block_size: float = 0.05  # cubes (height = width = length)
@@ -74,8 +68,15 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         Path(__file__).parent / "assets" / "use_textures" / "blue-flower.png"
     )
 
+    # Floor.
+    floor_included_as_object: bool = True
+
     # Gripper.
     gripper_open_threshold: float = 0.01
+
+    # Goal thresholds.
+    goal_height_threshold: float = 0.3
+    goal_distance_threshold: float = 0.2
 
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
@@ -83,7 +84,7 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             "camera_target": (0, 0, 0),
             "camera_yaw": 90,
             "camera_distance": 2.0,
-            "camera_pitch": -20,
+            "camera_pitch": -40,
         }
 
     def sample_block_on_table_pose(
@@ -112,7 +113,7 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             block_half_extents[2],
         )
 
-        for _ in range(100):
+        for _ in range(self.max_ground_sampling_attempts):
             x, y, z = rng.uniform(lb, ub)
             if (
                 np.abs(x - self.table_pose.position[0]) > self.table_half_extents[0]
@@ -120,7 +121,10 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
             ):
                 break
         else:
-            raise RuntimeError("Failed to sample collision-free block pose on ground")
+            raise RuntimeError(
+                f"Failed to sample collision-free block pose on ground after "
+                f"{self.max_ground_sampling_attempts} attempts"
+            )
 
         return Pose((x, y, z))
 
@@ -153,53 +157,22 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         return Pose((x, y, z))
 
     def get_cube_texture(self, idx: int) -> Path:
-        """Get a texture to wrap a cube given the index."""
-        if idx == 0:
-            return self.block_texture_1
-        if idx == 1:
-            return self.block_texture_2
-        raise ValueError(f"Invalid index: {idx}")
+        """Get a texture to wrap a cube given the index.
+
+        Cycles through available textures if idx exceeds the number of textures.
+        """
+        textures = [self.block_texture_1, self.block_texture_2]
+        return textures[idx % len(textures)]
 
 
 class Transport3DObjectCentricState(Geom3DObjectCentricState):
-    """A state in the Transport3DEnv().
-
-    Adds convenience methods on top of Geom3DObjectCentricState().
-    """
-
-    def get_cuboid_half_extents(self, name: str) -> tuple[float, float, float]:
-        """The half extents of the cuboid."""
-        obj = self.get_object_from_name(name)
-        return (
-            self.get(obj, "half_extent_x"),
-            self.get(obj, "half_extent_y"),
-            self.get(obj, "half_extent_z"),
-        )
-
-    def get_cuboid_pose(self, name: str) -> Pose:
-        """The pose of the cuboid."""
-        obj = self.get_object_from_name(name)
-        position = (
-            self.get(obj, "pose_x"),
-            self.get(obj, "pose_y"),
-            self.get(obj, "pose_z"),
-        )
-        orientation = (
-            self.get(obj, "pose_qx"),
-            self.get(obj, "pose_qy"),
-            self.get(obj, "pose_qz"),
-            self.get(obj, "pose_qw"),
-        )
-        return Pose(position, orientation)
+    """A state in the Transport3DEnv()."""
 
 
 class ObjectCentricTransport3DEnv(
     ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Transport3DEnvConfig]
 ):
-    """PyBullet environment where a box must be picked from the table.
-
-    There may be other obstructing objects in the environment.
-    """
+    """PyBullet environment where cubes and boxes must be transported onto a table."""
 
     def __init__(
         self,
@@ -288,12 +261,21 @@ class ObjectCentricTransport3DEnv(
         # Randomly sample collision-free positions for the cubes.
         # Also ensure that they are not in collision with the robot.
         # Samples the poses of the cubes
+        box_ids = set(self._boxes.values())
         sample_collision_free_object_poses(
-            object_ids=set(self._boxes.values()),
+            object_ids=box_ids,
             table_pose=self.config.table_pose,
             table_half_extents=self.config.table_half_extents,
-            lb=(self.config.x_lb, self.config.y_lb, self.config.box_half_extents[2]),
-            ub=(self.config.x_ub, self.config.y_ub, self.config.box_half_extents[2]),
+            lb=(
+                self.config.x_lb,
+                self.config.y_lb,
+                self.config.box_half_extents[2] + self.config.floor_z,
+            ),
+            ub=(
+                self.config.x_ub,
+                self.config.y_ub,
+                self.config.box_half_extents[2] + self.config.floor_z,
+            ),
             physics_client_id=self.physics_client_id,
             rng=self.np_random,
             other_collision_ids={self.robot.base.robot_id},
@@ -306,11 +288,19 @@ class ObjectCentricTransport3DEnv(
             table_half_extents=self.config.table_half_extents,
             box_half_extents=self.config.box_half_extents,
             object_ids=set(self._cubes.values()),
-            lb=(self.config.x_lb, self.config.y_lb, self.config.block_size / 2),
-            ub=(self.config.x_ub, self.config.y_ub, self.config.block_size / 2),
+            lb=(
+                self.config.x_lb,
+                self.config.y_lb,
+                self.config.block_size / 2 + self.config.floor_z,
+            ),
+            ub=(
+                self.config.x_ub,
+                self.config.y_ub,
+                self.config.block_size / 2 + self.config.floor_z,
+            ),
             physics_client_id=self.physics_client_id,
             rng=self.np_random,
-            other_collision_ids={self.robot.base.robot_id},
+            other_collision_ids=box_ids | {self.robot.base.robot_id},
         )
 
     def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
@@ -338,19 +328,27 @@ class ObjectCentricTransport3DEnv(
             return self._cubes[object_name]
         if object_name.startswith("box"):
             return self._boxes[object_name]
+        if object_name.startswith("floor"):
+            assert self.config.floor_included_as_object
+            return self.floor_id
         raise ValueError(f"Unrecognized object name: {object_name}")
 
     def _get_collision_object_ids(self) -> set[int]:
         collision_ids = (
             {self.table_id} | set(self._cubes.values()) | set(self._boxes.values())
         )
+        if self.config.floor_included_as_object:
+            collision_ids.add(self.floor_id)
         return collision_ids
 
     def _get_movable_object_names(self) -> set[str]:
         return set(self._cubes.keys()) | set(self._boxes.keys())
 
     def _get_surface_object_names(self) -> set[str]:
-        return {"table", "box0"}
+        surfaces = {"table"} | set(self._boxes.keys())
+        if self.config.floor_included_as_object:
+            surfaces.add("floor")
+        return surfaces
 
     def _get_half_extents(self, object_name: str) -> tuple[float, float, float]:
         if object_name.startswith("cube"):
@@ -393,10 +391,10 @@ class ObjectCentricTransport3DEnv(
                 np.linalg.norm(
                     np.subtract(robot_end_effector_pose.position, cube_pose.position)
                 )
-                < 0.2
+                < self.config.goal_distance_threshold
             ):
                 return False
-            if cube_pose.position[2] < 0.3:
+            if cube_pose.position[2] < self.config.goal_height_threshold:
                 return False
         for _, box_id in self._boxes.items():
             box_pose = get_pose(box_id, self.physics_client_id)
@@ -404,10 +402,10 @@ class ObjectCentricTransport3DEnv(
                 np.linalg.norm(
                     np.subtract(robot_end_effector_pose.position, box_pose.position)
                 )
-                < 0.2
+                < self.config.goal_distance_threshold
             ):
                 return False
-            if box_pose.position[2] < 0.3:
+            if box_pose.position[2] < self.config.goal_height_threshold:
                 return False
         return True
 
@@ -433,7 +431,8 @@ class Transport3DEnv(ConstantObjectPRBenchEnv):
 
     def _create_env_markdown_description(self) -> str:
         """Create environment description."""
-        return """A 3D environment where the goal is to pick up a box from the table."""
+        # pylint: disable=line-too-long
+        return """A 3D environment where the goal is to place all objects, including one or more solid cubes and a box, on a table."""
 
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
@@ -442,9 +441,9 @@ class Transport3DEnv(ConstantObjectPRBenchEnv):
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
-        return """The reward is a small negative reward (-0.01) per timestep to encourage exploration."""
+        return """The reward is a small negative reward (-1) per timestep until termination, which occurs when all objects are on the table."""
 
     def _create_references_markdown_description(self) -> str:
         """Create references description."""
         # pylint: disable=line-too-long
-        return """This is a very common kind of environment."""
+        return """N/A."""

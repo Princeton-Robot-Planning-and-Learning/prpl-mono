@@ -35,6 +35,9 @@ class Transport3DScriptedPolicy:
         action_space: Geom3DRobotActionSpace,
         num_cubes: int,
         seed: int = 123,
+        birrt_extend_num_interp: int = 25,
+        smooth_mp_max_time: float = 120.0,
+        smooth_mp_max_candidate_plans: int = 20,
     ) -> None:
         self._observation_space = observation_space
         self._action_space = action_space
@@ -44,10 +47,13 @@ class Transport3DScriptedPolicy:
         # Create simulator for controllers.
         self._sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
 
-        # Create controllers.
+        # Create controllers with settings for motion smoothness.
         self._controllers = create_lifted_controllers(
             self._action_space,
             self._sim,
+            birrt_extend_num_interp=birrt_extend_num_interp,
+            smooth_mp_max_time=smooth_mp_max_time,
+            smooth_mp_max_candidate_plans=smooth_mp_max_candidate_plans,
         )
 
         # State tracking.
@@ -148,6 +154,9 @@ def create_domain_specific_policy(
     action_space: Geom3DRobotActionSpace,
     num_cubes: int = 2,
     seed: int = 123,
+    birrt_extend_num_interp: int = 25,
+    smooth_mp_max_time: float = 120.0,
+    smooth_mp_max_candidate_plans: int = 20,
 ) -> Policy:
     """Create a domain-specific policy for Transport3D.
 
@@ -156,6 +165,12 @@ def create_domain_specific_policy(
         action_space: The action space (required for controller creation).
         num_cubes: Number of cubes in the environment.
         seed: Random seed for controller parameter sampling.
+        birrt_extend_num_interp: Number of interpolation steps for BiRRT extend.
+            Defaults to 25.
+        smooth_mp_max_time: Maximum time for motion planning smoothing.
+            Defaults to 120.0.
+        smooth_mp_max_candidate_plans: Maximum candidate plans for smoothing.
+            Defaults to 20.
 
     Returns:
         A policy function that maps observations to actions.
@@ -165,6 +180,9 @@ def create_domain_specific_policy(
         action_space=action_space,
         num_cubes=num_cubes,
         seed=seed,
+        birrt_extend_num_interp=birrt_extend_num_interp,
+        smooth_mp_max_time=smooth_mp_max_time,
+        smooth_mp_max_candidate_plans=smooth_mp_max_candidate_plans,
     )
 
     return policy

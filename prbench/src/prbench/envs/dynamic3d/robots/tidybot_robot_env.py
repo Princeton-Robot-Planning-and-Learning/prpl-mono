@@ -50,6 +50,7 @@ class TidyBotRobotEnv(RobotEnv):
 
     def __init__(
         self,
+        name: str,
         control_frequency: float,
         act_delta: bool = True,
         horizon: int = 1000,
@@ -63,6 +64,7 @@ class TidyBotRobotEnv(RobotEnv):
     ) -> None:
         """
         Args:
+            name: Name of the robot.
             control_frequency: Frequency at which control actions are applied (in Hz).
             act_delta: Whether to interpret actions as deltas or absolute values.
             horizon: Maximum number of steps per episode.
@@ -75,6 +77,11 @@ class TidyBotRobotEnv(RobotEnv):
             arm_kd: Custom derivative gains for arm PD controller (7 values).
         """
 
+        robot_camera_names = [f"{name}_base", f"{name}_wrist"]
+        if camera_names is None:
+            camera_names = []
+        camera_names.extend(robot_camera_names)
+
         super().__init__(
             control_frequency,
             horizon=horizon,
@@ -85,6 +92,7 @@ class TidyBotRobotEnv(RobotEnv):
             show_viewer=show_viewer,
         )
 
+        self.name = name
         self.act_delta = act_delta
 
         # Allow custom PD gains
@@ -100,17 +108,25 @@ class TidyBotRobotEnv(RobotEnv):
         assert self.sim is not None, "Simulation must be initialized."
 
         # Joint names for the base and arm
-        base_joint_names: list[str] = ["joint_x", "joint_y", "joint_th"]
-        arm_joint_names: list[str] = [
-            "joint_1",
-            "joint_2",
-            "joint_3",
-            "joint_4",
-            "joint_5",
-            "joint_6",
-            "joint_7",
+        base_joint_names: list[str] = [
+            f"{self.name}_joint_x",
+            f"{self.name}_joint_y",
+            f"{self.name}_joint_th",
         ]
-        gripper_joint_names = ["right_driver_joint", "left_driver_joint"]
+        arm_joint_names: list[str] = [
+            f"{self.name}_joint_1",
+            f"{self.name}_joint_2",
+            f"{self.name}_joint_3",
+            f"{self.name}_joint_4",
+            f"{self.name}_joint_5",
+            f"{self.name}_joint_6",
+            f"{self.name}_joint_7",
+        ]
+        gripper_joint_names = [
+            f"{self.name}_right_driver_joint",
+            f"{self.name}_left_driver_joint",
+        ]
+        gripper_ctrl_joint_names = [f"{self.name}_fingers_actuator"]
 
         # Joint positions: joint_id corresponds to qpos index
         base_qpos_indices = [
@@ -145,7 +161,7 @@ class TidyBotRobotEnv(RobotEnv):
         ]
         gripper_ctrl_indices = [
             self.sim.model._actuator_name2id[name]  # pylint: disable=protected-access
-            for name in ["fingers_actuator"]
+            for name in gripper_ctrl_joint_names
         ]
 
         # Verify indices are contiguous for slicing
@@ -259,31 +275,22 @@ class TidyBotRobotEnv(RobotEnv):
         # Setup references to robot state/actuator buffers
         self._setup_robot_references()
 
-        # Randomize the base pose of the robot in the sim
-        self._randomize_base_pose()
+        # Randomize the arm pose of the robot in the sim
         self._randomize_arm_pose()
 
         return self.get_obs(), {}
 
-    def _randomize_base_pose(self) -> None:
-        """Randomize the base pose of the robot within defined limits."""
+    def set_robot_base_pos_yaw(self, x: float, y: float, yaw: float) -> None:
+        """Set the base pose of the robot to the specified position and orientation."""
         assert (
             self.sim is not None
-        ), "Simulation must be initialized before randomizing base pose."
+        ), "Simulation must be initialized before setting base pose."
         assert self.qpos is not None, "Base qpos must be initialized first"
         assert self.ctrl is not None, "Base ctrl must be initialized first"
 
-        # Define limits for x, y, and theta
-        x_limit = (-1.0, 1.0)
-        y_limit = (-1.0, 1.0)
-        theta_limit = (-np.pi, np.pi)
-        # Sample random values within the limits
-        x = self.np_random.uniform(*x_limit)
-        y = self.np_random.uniform(*y_limit)
-        theta = self.np_random.uniform(*theta_limit)
         # Set the base position and orientation in the simulation
-        self.qpos["base"][:] = [x, y, theta]
-        self.ctrl["base"][:] = [x, y, theta]
+        self.qpos["base"][:] = [x, y, yaw]
+        self.ctrl["base"][:] = [x, y, yaw]
         self.sim.forward()  # Update the simulation state
 
     def _randomize_arm_pose(self) -> None:

@@ -83,7 +83,9 @@ def test_tidybot_table_clutter_pick_place_goals():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="table",
         num_objects=7,
-        task_config_path=str(tasks_root / "tidybot-table-o20-SortClutteredBlocks.json"),
+        task_config_path=str(
+            tasks_root / "sort" / "tidybot-lab2-o20-SortClutteredBlocks.json"
+        ),
     )
 
     # Reset the environment
@@ -210,7 +212,9 @@ def test_tidybot3d_table_mimiclabs_with_video():
     oc_env = ObjectCentricTidyBot3DEnv(
         scene_type="table",
         num_objects=20,
-        task_config_path=str(tasks_root / "tidybot-table-o20-SortClutteredBlocks.json"),
+        task_config_path=str(
+            tasks_root / "sort" / "tidybot-lab2-o20-SortClutteredBlocks.json"
+        ),
         scene_bg=True,  # Use default mimiclabs scene (lab2 for table tasks)
     )
 
