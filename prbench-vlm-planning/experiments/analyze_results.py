@@ -5,7 +5,7 @@ Usage:
     python analyze_results.py <log_dir>
 
 Example:
-    python analyze_results.py ../logs/2025-11-20/20-21-32
+    python experiments/analyze_results.py logs/2025-11-20/20-21-32
 """
 
 import argparse
