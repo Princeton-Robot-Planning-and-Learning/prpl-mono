@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
+
 def euler_to_quat(euler: list[float]) -> str:
     """Convert euler angles (roll, pitch, yaw) in degrees to MuJoCo quaternion string.
 
@@ -34,6 +35,7 @@ def euler_to_quat(euler: list[float]) -> str:
     z = cr * cp * sy - sr * sp * cy
 
     return f"{w} {x} {y} {z}"
+
 
 def save_mesh(
     vertices: NDArray[np.float32],

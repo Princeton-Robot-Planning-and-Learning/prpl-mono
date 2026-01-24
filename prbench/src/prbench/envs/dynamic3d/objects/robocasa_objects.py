@@ -27,6 +27,7 @@ REPLICA_OBJECTS_DIR = (
     Path(__file__).parent.parent / "models" / "assets" / "replica_objects"
 )
 
+
 class RoboCasaObject(MujocoObject):
     """Base class for RoboCasa objects loaded from model.xml files."""
 
@@ -381,8 +382,8 @@ class RoboCasaObject(MujocoObject):
 class ReplicaObject(RoboCasaObject):
     """Replica object class with support for pos_z and euler options.
 
-    This class extends RoboCasaObject with additional options for positioning
-    and rotating the object, which is useful for replica objects like furniture.
+    This class extends RoboCasaObject with additional options for positioning and
+    rotating the object, which is useful for replica objects like furniture.
     """
 
     def _create_xml_element(self) -> ET.Element:
@@ -551,6 +552,7 @@ def _create_robocasa_object_classes() -> None:
 
         # Add to module globals so it can be imported
         globals()[class_name] = new_class
+
 
 # Auto-generate classes on module import
 _create_robocasa_object_classes()
