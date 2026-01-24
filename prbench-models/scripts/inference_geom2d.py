@@ -232,22 +232,25 @@ def run_inference(
                         "robot_actions": np.zeros(5, dtype=np.float32)
                     }
                 
+                print('action_dict', action_dict)
                 action = action_dict["robot_actions"]
                 if "DynObstruction2D" in env_name:
                     action_min = np.array([-0.0499, -0.0499, -0.065, -0.10, -0.02], dtype=np.float32)
                     action_max = np.array([0.0499, 0.0499, 0.065, 0.10, 0.02], dtype=np.float32)
                 elif "Motion2D" in env_name or "StickButton2D" in env_name:
-                    action_min = np.array([-0.05, -0.05, -0.196, -0.10, 0.000], dtype=np.float32)
-                    action_max = np.array([0.05, 0.05, 0.196, 0.10, 1.000], dtype=np.float32)
+                    action_min = np.array([-0.0498, -0.0499, -0.196, -0.10, 0.000], dtype=np.float32)
+                    action_max = np.array([0.0498, 0.0499, 0.196, 0.10, 1.000], dtype=np.float32)
                 else:
                     raise ValueError(f"Environment {env_name} not supported")
                 action = np.clip(action, action_min, action_max)
-                print('action', action)
+                
 
                 # Record observation and action before stepping
                 if writer is not None:
                     writer.step(obs_dict, action_dict, target_object_key)
 
+                print('action', action)
+                print('action space', env.action_space.low, env.action_space.high)
                 # Execute action in environment
                 obs, reward, terminated, truncated, _ = env.step(  # type: ignore # pylint: disable=line-too-long
                     action
