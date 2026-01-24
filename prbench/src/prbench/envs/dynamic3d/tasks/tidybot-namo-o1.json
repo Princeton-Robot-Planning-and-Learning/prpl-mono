@@ -37,23 +37,6 @@
                 0,
                 0.3
             ]
-        },
-        "ground_obstacle1_init_region": {
-            "target": "ground",
-            "ranges": [
-                [
-                    2.1,
-                    2.1,
-                    2.4,
-                    2.4
-                ]
-            ],
-            "rgba": [
-                1,
-                0,
-                0,
-                0.3
-            ]
         }
     },
     "objects": {

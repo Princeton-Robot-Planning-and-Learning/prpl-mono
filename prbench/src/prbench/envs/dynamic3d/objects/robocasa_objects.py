@@ -17,42 +17,15 @@ from prbench.envs.dynamic3d.objects.base import (
     MujocoObject,
     register_object,
 )
+from prbench.envs.dynamic3d.objects.utils import euler_to_quat
 
 # Get the path to the robocasa objects directory relative to this file
 ROBOCASA_OBJECTS_DIR = (
     Path(__file__).parent.parent / "models" / "assets" / "robocasa_objects"
 )
-
-
-def euler_to_quat(euler: list[float]) -> str:
-    """Convert euler angles (roll, pitch, yaw) in degrees to MuJoCo quaternion string.
-
-    Args:
-        euler: [roll, pitch, yaw] in degrees
-
-    Returns:
-        Quaternion string "w x y z" for MuJoCo
-    """
-    # Convert degrees to radians
-    roll = np.radians(euler[0])
-    pitch = np.radians(euler[1])
-    yaw = np.radians(euler[2])
-
-    # Calculate quaternion components
-    cy = np.cos(yaw * 0.5)
-    sy = np.sin(yaw * 0.5)
-    cp = np.cos(pitch * 0.5)
-    sp = np.sin(pitch * 0.5)
-    cr = np.cos(roll * 0.5)
-    sr = np.sin(roll * 0.5)
-
-    w = cr * cp * cy + sr * sp * sy
-    x = sr * cp * cy - cr * sp * sy
-    y = cr * sp * cy + sr * cp * sy
-    z = cr * cp * sy - sr * sp * cy
-
-    return f"{w} {x} {y} {z}"
-
+REPLICA_OBJECTS_DIR = (
+    Path(__file__).parent.parent / "models" / "assets" / "replica_objects"
+)
 
 class RoboCasaObject(MujocoObject):
     """Base class for RoboCasa objects loaded from model.xml files."""
@@ -469,6 +442,46 @@ def _create_robocasa_object_classes() -> None:
         # Add to module globals so it can be imported
         globals()[class_name] = new_class
 
+    for object_dir in sorted(REPLICA_OBJECTS_DIR.iterdir()):
+        if not object_dir.is_dir():
+            continue
+
+        # Check if model.xml exists
+        model_xml = object_dir / "model.xml"
+        if not model_xml.exists():
+            continue
+
+        # Extract object type name (directory name)
+        object_type_name = object_dir.name
+
+        # Create a class name (convert snake_case to PascalCase)
+        # e.g., "apple_0" -> "RobocasaApple0"
+        class_name_parts = ["Robocasa"] + [
+            part.capitalize() for part in object_type_name.split("_")
+        ]
+        class_name = "".join(class_name_parts)
+
+        # Create a new class dynamically
+        new_class = type(
+            class_name,
+            (RoboCasaObject,),
+            {
+                "object_type_name": object_type_name,
+                "model_dir": object_dir,
+                "__module__": __name__,
+            },
+        )
+
+        # Register the class with multiple names for flexibility
+        register_object(new_class)  # Registers as lowercase class name
+
+        # Also register with the exact object type name (e.g., "apple_0")
+        # and with "robocasa_" prefix (e.g., "robocasa_apple_0")
+        REGISTERED_OBJECTS[object_type_name] = new_class
+        REGISTERED_OBJECTS[f"robocasa_{object_type_name}"] = new_class
+
+        # Add to module globals so it can be imported
+        globals()[class_name] = new_class
 
 # Auto-generate classes on module import
 _create_robocasa_object_classes()
@@ -478,6 +491,7 @@ _create_robocasa_object_classes()
 __all__ = [
     "RoboCasaObject",
     "ROBOCASA_OBJECTS_DIR",
+    "REPLICA_OBJECTS_DIR",
 ] + [
     name
     for name in globals()
