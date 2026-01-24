@@ -193,7 +193,9 @@ def test_namo_robot_can_navigate_to_goal():
     """
     prbench.register_all_environments()
     env = prbench.make(
-        "prbench/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array"
+        "prbench/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array",
+        scene_bg=True,
+        scene_render_camera="agentview_1",
     )
 
     if MAKE_VIDEOS:
@@ -206,16 +208,9 @@ def test_namo_robot_can_navigate_to_goal():
 
     # Get initial state
     state = env.observation_space.devectorize(obs)
-    obstacle_chair = state.get_object_from_name("obstacle_chair")
     robot = state.get_object_from_name("robot")
     robot_x = state.get(robot, "pos_base_x")
     robot_y = state.get(robot, "pos_base_y")
-
-    # Move the chair out of the way (simulating a successful push by the robot)
-    modified_state = state.copy()
-    modified_state.set(obstacle_chair, "x", -1.0)
-    modified_state.set(obstacle_chair, "y", 0.0)
-    oc_env.set_state(modified_state)
 
     # Goal region is at x=0.8 to x=1.2, y=-0.2 to 0.2
     # Move robot towards the goal region center
