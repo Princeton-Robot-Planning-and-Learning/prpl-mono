@@ -48,8 +48,8 @@ def test_base_motion3d_env(env):  # pylint: disable=redefined-outer-name
 
 
 def test_motion_planning_in_base_motion3d_env(
-    env,
-):  # pylint: disable=redefined-outer-name
+    env,  # pylint: disable=redefined-outer-name
+):
     """Proof of concept that motion planning works in this environment."""
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = (
