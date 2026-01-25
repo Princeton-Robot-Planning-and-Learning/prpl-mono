@@ -90,6 +90,16 @@ class ObjectCentricBoxSpace(Box):
         assert self.contains(vec)
         return self.state_cls.from_vec(vec, self.constant_objects, self.type_features)
 
+    def get_object_subvector(self, vec: Array, object_name: str) -> Array:
+        """Extract the subvector corresponding to a specific object's features."""
+        start_idx = 0
+        for obj in self.constant_objects:
+            num_features = len(self.type_features[obj.type])
+            if obj.name == object_name:
+                return vec[start_idx : start_idx + num_features]
+            start_idx += num_features
+        raise ValueError(f"Object '{object_name}' not found in constant_objects")
+
     def create_markdown_description(self) -> str:
         """Create a markdown-format description of this space."""
         md_table_str = "| **Index** | **Object** | **Feature** |"
