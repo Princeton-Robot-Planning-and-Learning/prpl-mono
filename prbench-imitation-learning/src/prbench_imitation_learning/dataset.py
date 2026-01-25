@@ -326,7 +326,10 @@ def iter_teleop_episodes(
         episode_images = None
         if render_images:
             if env is None:
-                env = gym.make(env_id, render_mode="rgb_array")
+                if use_dynamics3d:
+                    env = gym.make(env_id, render_mode="rgb_array", scene_bg=True)
+                else:
+                    env = gym.make(env_id, render_mode="rgb_array")
 
             env.reset(seed=seed)
             if use_dynamics3d:
