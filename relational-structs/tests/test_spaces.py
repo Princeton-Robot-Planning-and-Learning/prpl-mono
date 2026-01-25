@@ -97,3 +97,16 @@ def test_object_centric_state_space():
     assert list(subvec3) == [1]
     with pytest.raises(ValueError, match="not found"):
         box.get_object_subvector(vec, "nonexistent")
+
+    # Test get_vector_excluding_object.
+    excl1 = box.get_vector_excluding_object(vec, "obj1")
+    assert excl1.shape == (3,)
+    assert list(excl1) == [1, 0, 1]  # obj2 + obj3
+    excl2 = box.get_vector_excluding_object(vec, "obj2")
+    assert excl2.shape == (3,)
+    assert list(excl2) == [1, 1, 1]  # obj1 + obj3
+    excl3 = box.get_vector_excluding_object(vec, "obj3")
+    assert excl3.shape == (4,)
+    assert list(excl3) == [1, 1, 1, 0]  # obj1 + obj2
+    with pytest.raises(ValueError, match="not found"):
+        box.get_vector_excluding_object(vec, "nonexistent")
