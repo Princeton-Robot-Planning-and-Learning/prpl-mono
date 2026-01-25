@@ -213,3 +213,134 @@ def test_ppo_agent_training_with_fixed_environment():
     mean_r_after = np.mean(episodic_returns[-5:])  # Mean of last 5 episodes
     assert mean_r_after > -300.0, f"Agent did not improve: mean return {mean_r_after}"
     agent.close()
+
+
+def test_ppo_agent_training_with_fixed_environment_basemotion3d():
+    """Test PPO agent can overfit on fixed BaseMotion3D environment."""
+    prbench.register_all_environments()
+
+    # Create a custom environment wrapper that fixes positions
+    class FixedPositionWrapper(gymnasium.Env):
+        """Environment wrapper that fixes initial positions for testing."""
+
+        def __init__(self, env):
+            super().__init__()
+            self.env = env
+            self.observation_space = env.observation_space
+            self.action_space = env.action_space
+            self.render_mode = env.render_mode
+            self.metadata = env.metadata
+
+            # Reset once to get an initial state
+            obs0, _ = self.env.reset(seed=123)
+            assert hasattr(self.env.observation_space, "devectorize")
+            state0 = self.env.observation_space.devectorize(obs0)
+
+            obj_name_to_obj = {o.name: o for o in list(state0.data.keys())}
+            robot = obj_name_to_obj["robot"]
+            target = obj_name_to_obj["target"]
+
+            # Create a fixed initial state with robot and target nearby
+            # Robot starts at origin, target is at (0.5, 0.5) - close enough to reach
+            state1 = state0.copy()
+            state1.set(robot, "pos_base_x", 0.0)
+            state1.set(robot, "pos_base_y", 0.0)
+            state1.set(robot, "pos_base_rot", 0.0)
+            state1.set(target, "x", 0.1)
+            state1.set(target, "y", 0.1)
+            state1.set(target, "z", 0.2)  # default target_z from config
+
+            self.reset_options = {"init_state": state1}
+            self.num_env_steps = 0
+            self.max_episode_steps = 100
+            self.r = 0.0
+
+        def reset(self, seed=None, options=None):  # pylint: disable=arguments-differ
+            del seed, options  # Ignore external parameters
+            self.num_env_steps = 0
+            self.r = 0.0
+            obs, info = self.env.reset(seed=123, options=self.reset_options)
+            return obs, info
+
+        def step(self, action):
+            self.num_env_steps += 1
+            obs, reward, terminated, _, info = self.env.step(action)
+            truncated = self.num_env_steps >= self.max_episode_steps
+            self.r += reward
+            if terminated or truncated:
+                info["final_info"] = [
+                    {
+                        "episode": {
+                            "r": self.r,
+                            "l": self.num_env_steps - 1,
+                        }
+                    }
+                ]
+                obs, _ = self.reset()
+            return obs, reward, terminated, truncated, info
+
+        def close(self):
+            return self.env.close()
+
+        def render(self):
+            return self.env.render()
+
+    # Register the wrapped environment with a custom ID
+    def make_fixed_env(render_mode=None):
+        """Factory function to create the fixed environment."""
+        base_env = prbench.make(
+            "prbench/BaseMotion3D-v0",
+            render_mode=render_mode,
+        )
+        return FixedPositionWrapper(base_env)
+
+    # Register with gymnasium
+    gymnasium.register(
+        id="BaseMotion3D-Fixed-v0",
+        entry_point=make_fixed_env,
+    )
+
+    # Create PPO agent with config for quick overfitting
+    cfg = DictConfig(
+        {
+            "total_timesteps": 100000,  # More timesteps for 3D env
+            "learning_rate": 1e-4,  # Higher learning rate for faster learning
+            "num_envs": 1,
+            "num_steps": 256,
+            "gamma": 0.99,
+            "gae_lambda": 0.95,
+            "num_minibatches": 32,
+            "update_epochs": 10,
+            "norm_adv": True,
+            "clip_coef": 0.4,
+            "clip_vloss": True,
+            "ent_coef": 0.0,
+            "vf_coef": 0.5,
+            "max_grad_norm": 0.5,
+            "target_kl": None,
+            "hidden_size": 128,
+            "torch_deterministic": True,
+            "cuda": False,
+            "anneal_lr": False,
+            "tf_log_dir": "unit_test_exp",
+            "exp_name": "ppo_basemotion3d_fixed_test",
+        }
+    )
+
+    agent = PPOAgent(
+        seed=123,
+        cfg=cfg,
+        env_id="BaseMotion3D-Fixed-v0",
+        max_episode_steps=100,
+    )
+
+    # Test training
+    train_metric = agent.train()
+
+    # Should have episodic_return in train_metric
+    assert "episodic_return" in train_metric["eval"]
+    episodic_returns = train_metric["eval"]["episodic_return"]
+    assert len(episodic_returns) > 5
+    mean_r_after = np.mean(episodic_returns[-5:])  # Mean of last 5 episodes
+    assert mean_r_after > -100.0, f"Agent did not improve: mean return {mean_r_after}"
+    agent.close()
