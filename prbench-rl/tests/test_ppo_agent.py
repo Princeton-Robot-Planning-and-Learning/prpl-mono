@@ -3,8 +3,10 @@
 import gymnasium
 import numpy as np
 import prbench
+import imageio.v2 as iio
 from gymnasium import spaces
 from omegaconf import DictConfig
+
 from prbench.envs.geom2d.stickbutton2d import StickButton2DEnv
 
 from prbench_rl.ppo_agent import PPOAgent
@@ -250,17 +252,23 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
             state1.set(target, "y", 0.1)
             state1.set(target, "z", 0.2)  # default target_z from config
 
-            self.reset_options = {"init_state": state1}
+            self.reset_state = state1
             self.num_env_steps = 0
             self.max_episode_steps = 100
             self.r = 0.0
+            # Debug rendering only if render_mode is set
+            if self.render_mode is not None:
+                _, _ = env.reset(seed=123)
+                env.set_state(self.reset_state)
+                img = env.render()
+                iio.imwrite("debug/unit_test_fixed_env_init.png", img)
 
         def reset(self, seed=None, options=None):  # pylint: disable=arguments-differ
             del seed, options  # Ignore external parameters
             self.num_env_steps = 0
             self.r = 0.0
-            obs, info = self.env.reset(seed=123, options=self.reset_options)
-            return obs, info
+            self.env.set_state(self.reset_state)
+            return self.env._get_obs(), {}
 
         def step(self, action):
             self.num_env_steps += 1
