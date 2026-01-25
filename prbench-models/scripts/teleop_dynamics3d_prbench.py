@@ -234,8 +234,6 @@ def run_teleop(
                 next_state = env.observation_space.devectorize(obs)
                 state = next_state
 
-                print('env._check_goals', env._check_goals)
-
                 # Check for episode end
                 if ep_terminated:
                     terminated = True
