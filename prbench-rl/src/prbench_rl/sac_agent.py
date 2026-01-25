@@ -373,11 +373,17 @@ class SACAgent(BaseRLAgent[_O, _U]):
                 for info in infos["final_info"]:
                     if info is None or "episode" not in info:
                         continue
+                    raw_return = info["episode"]["r"]
+                    episode_return = (
+                        raw_return.item()
+                        if hasattr(raw_return, "item")
+                        else float(raw_return)
+                    )
                     logging.info(
                         f"eval_episode={len(episodic_returns)}, "
-                        f"episodic_return={info['episode']['r']}"
+                        f"episodic_return={episode_return}"
                     )
-                    episodic_returns.append(info["episode"]["r"])
+                    episodic_returns.append(episode_return)
                     step_lengths.append(step_length)
                     step_length = 0
 
@@ -448,21 +454,32 @@ class SACAgent(BaseRLAgent[_O, _U]):
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
-                        episode_return = info["episode"]["r"]
+                        raw_return = info["episode"]["r"]
+                        episode_return = (
+                            raw_return.item()
+                            if hasattr(raw_return, "item")
+                            else float(raw_return)
+                        )
+                        raw_length = info["episode"]["l"]
+                        episode_length = (
+                            raw_length.item()
+                            if hasattr(raw_length, "item")
+                            else int(raw_length)
+                        )
                         logging.info(
                             f"global_step={global_step}, "
                             f"episodic_return={episode_return}"
                         )
-                        episodic_returns.append(info["episode"]["r"])
+                        episodic_returns.append(episode_return)
                         if self.writer is not None:
                             self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                 "charts/episodic_return",
-                                info["episode"]["r"],
+                                episode_return,
                                 global_step,
                             )
                             self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                 "charts/episodic_length",
-                                info["episode"]["l"],
+                                episode_length,
                                 global_step,
                             )
 
