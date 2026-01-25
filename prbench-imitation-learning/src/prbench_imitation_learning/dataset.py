@@ -326,7 +326,9 @@ def iter_teleop_episodes(
         episode_images = None
         if render_images:
             if env is None:
-                if use_dynamics3d:
+                if use_geom3d:
+                    env = gym.make(env_id, render_mode="rgb_array", realistic_bg=True)
+                elif use_dynamics3d:
                     env = gym.make(env_id, render_mode="rgb_array", scene_bg=True)
                 else:
                     env = gym.make(env_id, render_mode="rgb_array")
@@ -350,6 +352,11 @@ def iter_teleop_episodes(
                     env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
                     wrist_image = env.unwrapped._object_centric_env.render()
                     episode_images.append({"overview": overview_image, "base": base_image, "wrist": wrist_image})
+                    # for debugging
+                    # from prbench_models.teleop_utils import _visualize_image_in_window
+                    # _visualize_image_in_window(overview_image, "overview")
+                    # _visualize_image_in_window(base_image, "base")
+                    # _visualize_image_in_window(wrist_image, "wrist")
             elif use_geom3d:
                 all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
                 episode_images = [all_images]
@@ -358,6 +365,10 @@ def iter_teleop_episodes(
                     env.step(action)  # type: ignore
                     all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
                     episode_images.append(all_images)
+                    # from prbench_models.teleop_utils import _visualize_image_in_window
+                    # _visualize_image_in_window(all_images["overview"], "overview")
+                    # _visualize_image_in_window(all_images["base"], "base")
+                    # _visualize_image_in_window(all_images["wrist"], "wrist")
             else:
                 rendered = env.render()
                 if rendered.shape[-1] == 4:  # type: ignore

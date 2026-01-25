@@ -139,10 +139,17 @@ def run_inference(
         for episode_idx in range(num_episodes):
             # Create the environment
             render_mode = "rgb_array" if render or save else None
-            env = prbench.make(
-                f"prbench/{env_name}",
-                render_mode=render_mode,
-            )
+            if "TidyBot" in env_name:
+                env = prbench.make(
+                    f"prbench/{env_name}",
+                    render_mode=render_mode,
+                    scene_bg=True,
+                )
+            else:
+                env = prbench.make(
+                    f"prbench/{env_name}",
+                    render_mode=render_mode,
+                )
 
             # Create remote policy
             policy = RemotePolicy(host=policy_host, port=policy_port)
@@ -170,7 +177,7 @@ def run_inference(
                 target_object_key = f"cube{num_cubes - 1}"
             elif "Transport3D" in env_name:
                 target_object_key = "box0"
-            elif "BaseMotion3D" in env_name:
+            elif "BaseMotion3D" in env_name or "TidyBot" in env_name:
                 target_object_key = "target"
             elif "Motion3D" in env_name:
                 target_object_key = "target"
@@ -194,10 +201,22 @@ def run_inference(
 
                 if "BaseMotion3D" in env_name:
                     all_images = env.unwrapped._object_centric_env.render_all_cameras()
+                    overview_image = all_images["overview"]
+                    base_image = all_images["base"]
+                    wrist_image = all_images["wrist"]
                     if show_images:
-                        overview_image = all_images["overview"]
-                        base_image = all_images["base"]
-                        wrist_image = all_images["wrist"]
+                        _visualize_image_in_window(overview_image, "overview")
+                        _visualize_image_in_window(base_image, "base")
+                        _visualize_image_in_window(wrist_image, "wrist")
+                elif "TidyBot" in env_name:
+                    robot_name = env.unwrapped._object_centric_env.robot_name
+                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")
+                    overview_image = env.unwrapped._object_centric_env.render()
+                    env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
+                    base_image = env.unwrapped._object_centric_env.render()
+                    env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
+                    wrist_image = env.unwrapped._object_centric_env.render()
+                    if show_images:
                         _visualize_image_in_window(overview_image, "overview")
                         _visualize_image_in_window(base_image, "base")
                         _visualize_image_in_window(wrist_image, "wrist")
@@ -208,7 +227,15 @@ def run_inference(
 
                 # Create observation dict for policy
                 if use_env_state:
-                    if "BaseMotion3D" in env_name:
+                    if "TidyBot" in env_name:
+                        obs_dict = {
+                            "robot_state": obs[-22:],
+                            "env_state": obs[:-22],
+                            "overview_image": overview_image,
+                            "base_image": base_image,
+                            "wrist_image": wrist_image,
+                        }
+                    elif "BaseMotion3D" in env_name:
                         obs_dict = {
                             "robot_state": obs[:19],
                             "env_state": obs[19:],
@@ -235,7 +262,14 @@ def run_inference(
                             "image": image,
                         }
                 else:
-                    if "BaseMotion3D" in env_name:
+                    if "TidyBot" in env_name:
+                        obs_dict = {
+                            "robot_state": obs[-22:],
+                            "overview_image": overview_image,
+                            "base_image": base_image,
+                            "wrist_image": wrist_image,
+                        }
+                    elif "BaseMotion3D" in env_name:
                         obs_dict = {
                             "robot_state": obs[:19],
                             "overview_image": overview_image,
@@ -264,7 +298,7 @@ def run_inference(
 
                 
                 if action_dict is None:
-                    if "BaseMotion3D" in env_name:
+                    if "BaseMotion3D" in env_name or "TidyBot" in env_name:
                         action_dict = {
                             "robot_actions": np.zeros(11, dtype=np.float32)
                         }
