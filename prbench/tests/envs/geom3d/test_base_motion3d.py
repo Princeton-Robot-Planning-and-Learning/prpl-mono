@@ -48,8 +48,8 @@ def test_base_motion3d_env(env):  # pylint: disable=redefined-outer-name
 
 
 def test_motion_planning_in_base_motion3d_env(
-    env,  # pylint: disable=redefined-outer-name
-):
+    env,
+):  # pylint: disable=redefined-outer-name
     """Proof of concept that motion planning works in this environment."""
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = (
@@ -122,10 +122,10 @@ def test_check_mobile_base_collisions_is_called(
         )
 
 
-def test_reset_with_init_state():  # pylint: disable=redefined-outer-name
+def test_reset_with_init_state():
     """Test that reset accepts init_state via options and restores state correctly."""
     prbench.register_all_environments()
-    env = prbench.make(
+    env = prbench.make(  # pylint: disable=redefined-outer-name
         "prbench/BaseMotion3D-v0", render_mode="rgb_array", realistic_bg=False
     )
 
