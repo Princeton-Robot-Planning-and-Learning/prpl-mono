@@ -42,6 +42,7 @@ def convert(
     output_path: Path | None = None,
     render_images: bool = False,
     use_dynamic2d: bool = False,
+    use_geom3d: bool = False,
     use_pushpull2d: bool = False,
 ) -> None:
     """Convert expert or teleoperated data to HDF5 format.
@@ -54,6 +55,7 @@ def convert(
         output_path: Output HDF5 file path
         render_images: If True, render images for teleoperated demos
         use_dynamic2d: If True, use dynamic2d environment
+        use_geom3d: If True, use geom3d environment
         use_pushpull2d: If True, use pushpull2d environment
     """
     if teleop_data_dir is None:
@@ -72,7 +74,7 @@ def convert(
 
         # Iterate over episodes one at a time (memory-efficient)
         for ep_idx, ep_frames, metadata in iter_teleop_episodes(
-            teleop_data_dir, render_images=render_images
+            teleop_data_dir, render_images=render_images, use_geom3d=use_geom3d,
         ):
             # Write metadata once (from first episode)
             if not metadata_written:
@@ -90,9 +92,15 @@ def convert(
             robot_states = []
             actions = []
             images = []
+            overview_images = []
+            wrist_images = []
+            base_images = []
 
             for fr in ep_frames:
-                if use_pushpull2d:
+                if use_geom3d:
+                    robot_observation = np.array(fr["observation.state"][:19], dtype=np.float32)
+                    env_observations = np.array(fr["observation.state"][19:], dtype=np.float32)
+                elif use_pushpull2d:
                     robot_observation = np.array(fr["observation.state"][:24], dtype=np.float32)
                     env_observations = np.array(fr["observation.state"][24:], dtype=np.float32)
                 elif use_dynamic2d:
@@ -107,7 +115,20 @@ def convert(
                 actions.append(action)
 
                 # Add image if present
-                if has_images and "observation.image" in fr:
+                if has_images and use_geom3d:
+                    overview_image = fr["observation.overview_image"]
+                    if isinstance(overview_image, np.ndarray):
+                        overview_image = cv.resize(overview_image, (224, 224))
+                        overview_images.append(overview_image)
+                    wrist_image = fr["observation.wrist_image"]
+                    if isinstance(wrist_image, np.ndarray):
+                        wrist_image = cv.resize(wrist_image, (224, 224))
+                        wrist_images.append(wrist_image)
+                    base_image = fr["observation.base_image"]
+                    if isinstance(base_image, np.ndarray):
+                        base_image = cv.resize(base_image, (224, 224))
+                        base_images.append(base_image)
+                elif has_images and "observation.image" in fr:
                     image = fr["observation.image"]
                     if isinstance(image, np.ndarray):
                         image = cv.resize(image, (224, 224))
@@ -125,7 +146,17 @@ def convert(
             )
 
             # Write images if present
-            if images:
+            if use_geom3d:
+                episode_group.create_dataset(
+                    "obs/overview_image", data=np.array(overview_images, dtype=np.uint8)
+                )
+                episode_group.create_dataset(
+                    "obs/wrist_image", data=np.array(wrist_images, dtype=np.uint8)
+                )
+                episode_group.create_dataset(
+                    "obs/base_image", data=np.array(base_images, dtype=np.uint8)
+                )
+            elif images:
                 episode_group.create_dataset(
                     "obs/image", data=np.array(images, dtype=np.uint8)
                 )
@@ -187,6 +218,11 @@ def main() -> None:
         help="Use dynamic2d environment",
     )
     parser.add_argument(
+        "--use_geom3d",
+        action="store_true",
+        help="Use geom3d environment",
+    )
+    parser.add_argument(
         "--use_pushpull2d",
         action="store_true",
         help="Use dynamicpushpull2d environment",
@@ -212,6 +248,7 @@ def main() -> None:
         output_path=out_path,
         render_images=args.render_images,
         use_dynamic2d=args.use_dynamic2d,
+        use_geom3d=args.use_geom3d,
         use_pushpull2d=args.use_pushpull2d,
     )
 

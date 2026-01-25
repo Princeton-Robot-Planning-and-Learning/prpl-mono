@@ -250,6 +250,7 @@ from typing import Generator, Iterator
 def iter_teleop_episodes(
     teleop_data_dir: Path,
     render_images: bool = False,
+    use_geom3d: bool = False,
 ) -> Generator[Tuple[int, List[Dict[str, Any]], Dict[str, Any]], None, None]:
     """Iterate over teleoperated demonstrations one episode at a time.
 
@@ -327,17 +328,26 @@ def iter_teleop_episodes(
                 env = gym.make(env_id, render_mode="rgb_array")
 
             env.reset(seed=seed)
-            rendered = env.render()
-            if rendered.shape[-1] == 4:  # type: ignore
-                rendered = rendered[:, :, :3]  # type: ignore
-            episode_images = [rendered]
+            if use_geom3d:
+                all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
+                episode_images = [all_images]
 
-            for action in actions:
-                env.step(action)
+                for action in actions:
+                    env.step(action)  # type: ignore
+                    all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
+                    episode_images.append(all_images)
+            else:
                 rendered = env.render()
                 if rendered.shape[-1] == 4:  # type: ignore
                     rendered = rendered[:, :, :3]  # type: ignore
-                episode_images.append(rendered)
+                episode_images = [rendered]
+
+                for action in actions:
+                    env.step(action)
+                    rendered = env.render()
+                    if rendered.shape[-1] == 4:  # type: ignore
+                        rendered = rendered[:, :, :3]  # type: ignore
+                    episode_images.append(rendered)
 
         # Create frames for this episode only
         frames = []
@@ -350,7 +360,12 @@ def iter_teleop_episodes(
             }
 
             if episode_images is not None and frame_idx < len(episode_images):
-                frame["observation.image"] = episode_images[frame_idx]
+                if use_geom3d:
+                    frame["observation.overview_image"] = episode_images[frame_idx]["overview"]
+                    frame["observation.wrist_image"] = episode_images[frame_idx]["wrist"]
+                    frame["observation.base_image"] = episode_images[frame_idx]["base"]
+                else:
+                    frame["observation.image"] = episode_images[frame_idx]
 
             frames.append(frame)
 
