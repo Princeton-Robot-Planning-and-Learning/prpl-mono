@@ -11,8 +11,7 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from prbench_models.policy_constants import POLICY_CONTROL_PERIOD
-from prbench_models.teleop_utils import TeleopPolicy
-from prbench_models.teleop_utils import _visualize_image_in_window
+from prbench_models.teleop_utils import TeleopPolicy, _visualize_image_in_window
 
 prbench.register_all_environments()
 
@@ -90,16 +89,19 @@ def run_teleop(
                     current_joints
                 )
 
-                camera_names = env.unwrapped._object_centric_env.camera_names  # type: ignore # pylint: disable=protected-access
-                robot_name = env.unwrapped._object_centric_env.robot_name
-                env.unwrapped._object_centric_env.set_render_camera("agent_overview")
-                overview_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
-                base_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
-                wrist_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera("agentview_1")
-                agent_image = env.unwrapped._object_centric_env.render()
+                robot_name = env.unwrapped._object_centric_env.robot_name # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera("agent_overview") # type: ignore # pylint: disable=protected-access
+                overview_image = env.unwrapped._object_centric_env.render() # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera( # type: ignore # pylint: disable=protected-access
+                    robot_name + "_base"
+                )
+                base_image = env.unwrapped._object_centric_env.render() # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera( # type: ignore # pylint: disable=protected-access
+                    robot_name + "_wrist"
+                )
+                wrist_image = env.unwrapped._object_centric_env.render() # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera("agentview_1") # type: ignore # pylint: disable=protected-access
+                agent_image = env.unwrapped._object_centric_env.render() # type: ignore # pylint: disable=protected-access
                 if show_images:
                     _visualize_image_in_window(overview_image, "agent_overview")
                     _visualize_image_in_window(base_image, "base")
@@ -225,10 +227,16 @@ def main() -> None:
         help="Port for WebXR web server (default: 5000)",
     )
     parser.add_argument(
-        "--show-images", action="store_true", default=False, help="Show images in OpenCV windows"
+        "--show-images",
+        action="store_true",
+        default=False,
+        help="Show images in OpenCV windows",
     )
     parser.add_argument(
-        "--env-name", type=str, default="TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0", help="Name of the environment"
+        "--env-name",
+        type=str,
+        default="TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0", # pylint: disable=line-too-long
+        help="Name of the environment",
     )
 
     args = parser.parse_args()
