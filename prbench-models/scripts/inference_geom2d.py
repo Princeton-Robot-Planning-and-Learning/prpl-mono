@@ -226,86 +226,119 @@ def run_inference(
                         _visualize_image_in_window(image, "overview")
 
                 # Create observation dict for policy
+                # if use_env_state:
+                #     if "TidyBot" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[-22:],
+                #             "env_state": obs[:-22],
+                #             "overview_image": overview_image,
+                #             "base_image": base_image,
+                #             "wrist_image": wrist_image,
+                #         }
+                #     elif "BaseMotion3D" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[:19],
+                #             "env_state": obs[19:],
+                #             "overview_image": overview_image,
+                #             "base_image": base_image,
+                #             "wrist_image": wrist_image,
+                #         }
+                #     elif "DynPushPullHook2D" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[:24],
+                #             "env_state": obs[24:],
+                #             "image": image,
+                #         }
+                #     elif "DynObstruction2D" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[-24:],
+                #             "env_state": obs[:-24],
+                #             "image": image,
+                #         }
+                #     elif "Motion2D" in env_name or "StickButton2D" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[:9],
+                #             "env_state": obs[9:],
+                #             "image": image,
+                #         }
+                # else:
+                #     if "TidyBot" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[-22:],
+                #             "overview_image": overview_image,
+                #             "base_image": base_image,
+                #             "wrist_image": wrist_image,
+                #         }
+                #     elif "BaseMotion3D" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[:19],
+                #             "overview_image": overview_image,
+                #             "base_image": base_image,
+                #             "wrist_image": wrist_image,
+                #         }
+                #     elif "DynPushPullHook2D" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[:24],
+                #             "image": image,
+                #         }
+                #     elif "DynObstruction2D" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[-24:],
+                #             "image": image,
+                #         }
+                #     elif "Motion2D" in env_name or "StickButton2D" in env_name:
+                #         obs_dict = {
+                #             "robot_state": obs[:9],
+                #             "image": image,
+                #         }
+                
                 if use_env_state:
-                    if "TidyBot" in env_name:
+                    if "TidyBot" in env_name or "BaseMotion3D" in env_name:
                         obs_dict = {
-                            "robot_state": obs[-22:],
-                            "env_state": obs[:-22],
+                            "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
+                            "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
                             "overview_image": overview_image,
                             "base_image": base_image,
                             "wrist_image": wrist_image,
                         }
-                    elif "BaseMotion3D" in env_name:
+                    else:
                         obs_dict = {
-                            "robot_state": obs[:19],
-                            "env_state": obs[19:],
-                            "overview_image": overview_image,
-                            "base_image": base_image,
-                            "wrist_image": wrist_image,
-                        }
-                    elif "DynPushPullHook2D" in env_name:
-                        obs_dict = {
-                            "robot_state": obs[:24],
-                            "env_state": obs[24:],
-                            "image": image,
-                        }
-                    elif "DynObstruction2D" in env_name:
-                        obs_dict = {
-                            "robot_state": obs[-24:],
-                            "env_state": obs[:-24],
-                            "image": image,
-                        }
-                    elif "Motion2D" in env_name or "StickButton2D" in env_name:
-                        obs_dict = {
-                            "robot_state": obs[:9],
-                            "env_state": obs[9:],
+                            "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
+                            "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
                             "image": image,
                         }
                 else:
-                    if "TidyBot" in env_name:
+                    if "TidyBot" in env_name or "BaseMotion3D" in env_name:
                         obs_dict = {
-                            "robot_state": obs[-22:],
+                            "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
+                            "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
                             "overview_image": overview_image,
                             "base_image": base_image,
                             "wrist_image": wrist_image,
                         }
-                    elif "BaseMotion3D" in env_name:
+                    else:
                         obs_dict = {
-                            "robot_state": obs[:19],
-                            "overview_image": overview_image,
-                            "base_image": base_image,
-                            "wrist_image": wrist_image,
-                        }
-                    elif "DynPushPullHook2D" in env_name:
-                        obs_dict = {
-                            "robot_state": obs[:24],
+                            "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
+                            "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
                             "image": image,
                         }
-                    elif "DynObstruction2D" in env_name:
-                        obs_dict = {
-                            "robot_state": obs[-24:],
-                            "image": image,
-                        }
-                    elif "Motion2D" in env_name or "StickButton2D" in env_name:
-                        obs_dict = {
-                            "robot_state": obs[:9],
-                            "image": image,
-                        }
-                
                 
                 # Get action from policy
                 action_dict = policy.step(obs_dict)
 
                 
                 if action_dict is None:
-                    if "BaseMotion3D" in env_name or "TidyBot" in env_name:
-                        action_dict = {
-                            "robot_actions": np.zeros(11, dtype=np.float32)
-                        }
-                    else:
-                        action_dict = {
-                            "robot_actions": np.zeros(5, dtype=np.float32)
-                        }
+                    action_dict = {
+                        "robot_actions": np.zeros(env.action_space.shape[0], dtype=np.float32)
+                    }
+                    # if "BaseMotion3D" in env_name or "TidyBot" in env_name:
+                    #     action_dict = {
+                    #         "robot_actions": np.zeros(11, dtype=np.float32)
+                    #     }
+                    # else:
+                    #     action_dict = {
+                    #         "robot_actions": np.zeros(5, dtype=np.float32)
+                    #     }
                 
                 print('action_dict', action_dict)
                 action = action_dict["robot_actions"]
