@@ -331,27 +331,9 @@ def run_inference(
                     action_dict = {
                         "robot_actions": np.zeros(env.action_space.shape[0], dtype=np.float32)
                     }
-                    # if "BaseMotion3D" in env_name or "TidyBot" in env_name:
-                    #     action_dict = {
-                    #         "robot_actions": np.zeros(11, dtype=np.float32)
-                    #     }
-                    # else:
-                    #     action_dict = {
-                    #         "robot_actions": np.zeros(5, dtype=np.float32)
-                    #     }
                 
                 print('action_dict', action_dict)
                 action = action_dict["robot_actions"]
-                # if "BaseMotion3D" in env_name:
-                # elif "DynObstruction2D" in env_name or "DynPushPullHook2D" in env_name:
-                #     action_min = np.array([-0.0499, -0.0499, -0.065, -0.10, -0.02], dtype=np.float32)
-                #     action_max = np.array([0.0499, 0.0499, 0.065, 0.10, 0.02], dtype=np.float32)
-                # elif "Motion2D" in env_name or "StickButton2D" in env_name:
-                #     action_min = np.array([-0.0498, -0.0499, -0.196, -0.10, 0.000], dtype=np.float32)
-                #     action_max = np.array([0.0498, 0.0499, 0.196, 0.10, 1.000], dtype=np.float32)
-                # else:
-                #     raise ValueError(f"Environment {env_name} not supported")
-                
                 epsilon = 1e-4
                 action = np.clip(action, env.action_space.low + epsilon, env.action_space.high - epsilon)
                 
