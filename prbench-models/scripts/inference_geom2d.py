@@ -192,13 +192,31 @@ def run_inference(
                 # Get robot state
                 robot = state.get_object_from_name("robot")
 
-                image = env.unwrapped._object_centric_env.render()
-                if show_images:
-                    _visualize_image_in_window(image, "overview")
+                if "BaseMotion3D" in env_name:
+                    all_images = env.unwrapped._object_centric_env.render_all_cameras()
+                    if show_images:
+                        overview_image = all_images["overview"]
+                        base_image = all_images["base"]
+                        wrist_image = all_images["wrist"]
+                        _visualize_image_in_window(overview_image, "overview")
+                        _visualize_image_in_window(base_image, "base")
+                        _visualize_image_in_window(wrist_image, "wrist")
+                else:
+                    image = env.unwrapped._object_centric_env.render()
+                    if show_images:
+                        _visualize_image_in_window(image, "overview")
 
                 # Create observation dict for policy
                 if use_env_state:
-                    if "DynPushPullHook2D" in env_name:
+                    if "BaseMotion3D" in env_name:
+                        obs_dict = {
+                            "robot_state": obs[:19],
+                            "env_state": obs[19:],
+                            "overview_image": overview_image,
+                            "base_image": base_image,
+                            "wrist_image": wrist_image,
+                        }
+                    elif "DynPushPullHook2D" in env_name:
                         obs_dict = {
                             "robot_state": obs[:24],
                             "env_state": obs[24:],
@@ -217,7 +235,14 @@ def run_inference(
                             "image": image,
                         }
                 else:
-                    if "DynPushPullHook2D" in env_name:
+                    if "BaseMotion3D" in env_name:
+                        obs_dict = {
+                            "robot_state": obs[:19],
+                            "overview_image": overview_image,
+                            "base_image": base_image,
+                            "wrist_image": wrist_image,
+                        }
+                    elif "DynPushPullHook2D" in env_name:
                         obs_dict = {
                             "robot_state": obs[:24],
                             "image": image,
@@ -239,21 +264,29 @@ def run_inference(
 
                 
                 if action_dict is None:
-                    action_dict = {
-                        "robot_actions": np.zeros(5, dtype=np.float32)
-                    }
+                    if "BaseMotion3D" in env_name:
+                        action_dict = {
+                            "robot_actions": np.zeros(11, dtype=np.float32)
+                        }
+                    else:
+                        action_dict = {
+                            "robot_actions": np.zeros(5, dtype=np.float32)
+                        }
                 
                 print('action_dict', action_dict)
                 action = action_dict["robot_actions"]
-                if "DynObstruction2D" in env_name or "DynPushPullHook2D" in env_name:
-                    action_min = np.array([-0.0499, -0.0499, -0.065, -0.10, -0.02], dtype=np.float32)
-                    action_max = np.array([0.0499, 0.0499, 0.065, 0.10, 0.02], dtype=np.float32)
-                elif "Motion2D" in env_name or "StickButton2D" in env_name:
-                    action_min = np.array([-0.0498, -0.0499, -0.196, -0.10, 0.000], dtype=np.float32)
-                    action_max = np.array([0.0498, 0.0499, 0.196, 0.10, 1.000], dtype=np.float32)
-                else:
-                    raise ValueError(f"Environment {env_name} not supported")
-                action = np.clip(action, action_min, action_max)
+                # if "BaseMotion3D" in env_name:
+                # elif "DynObstruction2D" in env_name or "DynPushPullHook2D" in env_name:
+                #     action_min = np.array([-0.0499, -0.0499, -0.065, -0.10, -0.02], dtype=np.float32)
+                #     action_max = np.array([0.0499, 0.0499, 0.065, 0.10, 0.02], dtype=np.float32)
+                # elif "Motion2D" in env_name or "StickButton2D" in env_name:
+                #     action_min = np.array([-0.0498, -0.0499, -0.196, -0.10, 0.000], dtype=np.float32)
+                #     action_max = np.array([0.0498, 0.0499, 0.196, 0.10, 1.000], dtype=np.float32)
+                # else:
+                #     raise ValueError(f"Environment {env_name} not supported")
+                
+                epsilon = 1e-4
+                action = np.clip(action, env.action_space.low + epsilon, env.action_space.high - epsilon)
                 
 
                 # Record observation and action before stepping
