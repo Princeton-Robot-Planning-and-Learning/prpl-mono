@@ -342,14 +342,14 @@
     },
     "cameras": {
         "agent_overview": {
-            "position": [-2.8, -1.5, 1.7],
-            "lookat": [1, -1.0, 0],
+            "position": [1.8, -0.4, 0.7],
+            "lookat": [1, -0.25, 0.5],
             "fovy": 42,
             "resolution": [640, 480]
         },
         "agentview_1": {
-            "position": [2.5, -2.5, 3.5],
-            "lookat": [0.5, 0.0, 1.0],
+            "position": [2, -1.25, 1.8],
+            "lookat": [1.2, -0.5, 1.0],
             "fovy": 42,
             "resolution": [640, 480]
         }
