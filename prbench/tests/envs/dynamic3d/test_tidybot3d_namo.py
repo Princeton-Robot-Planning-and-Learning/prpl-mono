@@ -132,7 +132,7 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
 
     # Goal should not be satisfied initially
     assert (
-        not oc_env._check_goals() # pylint: disable=protected-access
+        not oc_env._check_goals()  # pylint: disable=protected-access
     ), "Goal should not be satisfied after reset"
 
     # Get current state
@@ -190,12 +190,15 @@ def test_namo_robot_can_navigate_to_goal():
     3. The goal is achieved when the robot reaches the goal region
     """
     prbench.register_all_environments()
-    env = prbench.make(
-        "prbench/TidyBot3D-navigate-namo-o1-v0",
-        render_mode="rgb_array",
-        scene_bg=True,
-        scene_render_camera="agentview_1",
-    )
+    if MIMICLABS_SCENES_DIR.exists():
+        env = prbench.make(
+            "prbench/TidyBot3D-navigate-namo-o1-v0",
+            render_mode="rgb_array",
+            scene_bg=True,
+            scene_render_camera="agentview_1",
+        )
+    else:
+        env = prbench.make("prbench/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_navigate")
