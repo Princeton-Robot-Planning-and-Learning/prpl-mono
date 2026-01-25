@@ -425,22 +425,27 @@ class ObjectCentricGeom3DRobotEnv(
 
     def reset(
         self,
-        *args,
-        **kwargs,
+        *,
+        seed: int | None = None,
+        options: dict | None = None,
     ) -> tuple[_ObsType, dict]:
         # Reset the random seed.
-        gymnasium.Env.reset(self, *args, **kwargs)
+        gymnasium.Env.reset(self, seed=seed)
 
-        # Reset the robot. In the future, we may want to allow randomizing the initial
-        # robot joint positions.
-        self._set_robot_and_held_object(
-            self.config.robot_base_home_pose,
-            self.config.initial_joints,
-            self.config.initial_finger_state,
-        )
+        # For testing purposes, the options may specify an initial state.
+        if options is not None and "init_state" in options:
+            self.set_state(options["init_state"])
+        else:
+            # Reset the robot. In the future, we may want to allow randomizing the
+            # initial robot joint positions.
+            self._set_robot_and_held_object(
+                self.config.robot_base_home_pose,
+                self.config.initial_joints,
+                self.config.initial_finger_state,
+            )
 
-        # Reset objects.
-        self._reset_objects()
+            # Reset objects.
+            self._reset_objects()
 
         return self._get_obs(), {}
 

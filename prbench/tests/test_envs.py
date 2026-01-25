@@ -28,3 +28,4 @@ def test_env_make_and_check_env():
         assert env.render_mode == "rgb_array"
         assert isinstance(env, gymnasium.Env)
         check_env(env.unwrapped)
+        env.close()
