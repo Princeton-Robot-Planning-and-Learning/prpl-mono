@@ -251,6 +251,7 @@ def iter_teleop_episodes(
     teleop_data_dir: Path,
     render_images: bool = False,
     use_geom3d: bool = False,
+    use_dynamics3d: bool = False,
 ) -> Generator[Tuple[int, List[Dict[str, Any]], Dict[str, Any]], None, None]:
     """Iterate over teleoperated demonstrations one episode at a time.
 
@@ -328,7 +329,25 @@ def iter_teleop_episodes(
                 env = gym.make(env_id, render_mode="rgb_array")
 
             env.reset(seed=seed)
-            if use_geom3d:
+            if use_dynamics3d:
+                robot_name = env.unwrapped._object_centric_env.robot_name
+                env.unwrapped._object_centric_env.set_render_camera("agent_overview")
+                overview_image = env.unwrapped._object_centric_env.render()
+                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
+                base_image = env.unwrapped._object_centric_env.render()
+                env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
+                wrist_image = env.unwrapped._object_centric_env.render()
+                episode_images = [{"overview": overview_image, "base": base_image, "wrist": wrist_image}]
+                for action in actions:
+                    env.step(action)
+                    env.unwrapped._object_centric_env.set_render_camera("agent_overview")
+                    overview_image = env.unwrapped._object_centric_env.render()
+                    env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
+                    base_image = env.unwrapped._object_centric_env.render()
+                    env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
+                    wrist_image = env.unwrapped._object_centric_env.render()
+                    episode_images.append({"overview": overview_image, "base": base_image, "wrist": wrist_image})
+            elif use_geom3d:
                 all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
                 episode_images = [all_images]
 
@@ -360,7 +379,7 @@ def iter_teleop_episodes(
             }
 
             if episode_images is not None and frame_idx < len(episode_images):
-                if use_geom3d:
+                if use_geom3d or use_dynamics3d:
                     frame["observation.overview_image"] = episode_images[frame_idx]["overview"]
                     frame["observation.wrist_image"] = episode_images[frame_idx]["wrist"]
                     frame["observation.base_image"] = episode_images[frame_idx]["base"]
