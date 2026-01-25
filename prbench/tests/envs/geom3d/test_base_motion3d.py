@@ -10,6 +10,7 @@ from pybullet_helpers.motion_planning import (
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
 
+import prbench
 from prbench.envs.geom3d.base_motion3d import (
     BaseMotion3DEnv,
     BaseMotion3DObjectCentricState,
@@ -119,3 +120,61 @@ def test_check_mobile_base_collisions_is_called(
             call_args[0][0]
             == env.unwrapped._object_centric_env.robot.base  # pylint: disable=protected-access
         )
+
+
+def test_reset_with_init_state():  # pylint: disable=redefined-outer-name
+    """Test that reset accepts init_state via options and restores state correctly."""
+    prbench.register_all_environments()
+    env = prbench.make(
+        "prbench/BaseMotion3D-v0", render_mode="rgb_array", realistic_bg=False
+    )
+
+    # Get initial observation after reset.
+    vec_obs, _ = env.reset(seed=123)
+    initial_oc_obs = env.observation_space.devectorize(vec_obs)
+    initial_state = BaseMotion3DObjectCentricState(
+        initial_oc_obs.data, initial_oc_obs.type_features
+    )
+
+    # Take some actions to change state.
+    for _ in range(5):
+        action = np.array([0.05, 0.02, 0.01] + [0.0] * 7 + [0.0], dtype=np.float32)
+        env.step(action)
+
+    # Verify state has changed.
+    changed_vec_obs = (
+        env.unwrapped._object_centric_env._get_obs()  # pylint: disable=protected-access
+    )
+    changed_state = BaseMotion3DObjectCentricState(
+        changed_vec_obs.data, changed_vec_obs.type_features
+    )
+    assert not np.allclose(
+        initial_state.base_pose.x, changed_state.base_pose.x, atol=1e-3
+    ), "State should have changed after taking actions"
+
+    # Reset with init_state to restore the original state.
+    restored_vec_obs, _ = env.reset(options={"init_state": initial_state})
+    restored_oc_obs = env.observation_space.devectorize(restored_vec_obs)
+    restored_state = BaseMotion3DObjectCentricState(
+        restored_oc_obs.data, restored_oc_obs.type_features
+    )
+
+    # Verify the state matches the initial state.
+    assert np.allclose(
+        initial_state.base_pose.x, restored_state.base_pose.x, atol=1e-6
+    ), "Base pose x should match after reset with init_state"
+    assert np.allclose(
+        initial_state.base_pose.y, restored_state.base_pose.y, atol=1e-6
+    ), "Base pose y should match after reset with init_state"
+    assert np.allclose(
+        initial_state.target_base_pose.x,
+        restored_state.target_base_pose.x,
+        atol=1e-6,
+    ), "Target pose x should match after reset with init_state"
+    assert np.allclose(
+        initial_state.target_base_pose.y,
+        restored_state.target_base_pose.y,
+        atol=1e-6,
+    ), "Target pose y should match after reset with init_state"
+
+    env.close()
