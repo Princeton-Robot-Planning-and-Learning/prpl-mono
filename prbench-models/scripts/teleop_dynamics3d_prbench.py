@@ -22,6 +22,12 @@ from prbench_models.teleop_utils import _visualize_image_in_window
 
 prbench.register_all_environments()
 
+# Default demos directory: ../prbench/demos relative to this script
+# Script: prpl-mono/prbench-models/scripts/teleop_dynamics3d_prbench.py
+# Demos:  prpl-mono/prbench/demos
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_DEFAULT_DEMOS_DIR = _SCRIPT_DIR.parent.parent / "prbench" / "demos"
+
 
 def sanitize_env_id(env_id: str) -> str:
     """Remove unnecessary stuff from the env ID.
@@ -272,7 +278,9 @@ def main() -> None:
         description="Run teleoperation in prbench environment"
     )
     parser.add_argument(
-        "--output-dir", default="/home/yixuan/prbench_dir/prpl-mono/prbench/demos", help="Directory to save episodes"
+        "--output-dir",
+        default=str(_DEFAULT_DEMOS_DIR),
+        help="Directory to save episodes (default: prbench/demos)",
     )
     parser.add_argument(
         "--seed", type=int, default=123, help="Random seed for reproducibility"
