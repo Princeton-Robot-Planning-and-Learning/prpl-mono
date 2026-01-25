@@ -331,7 +331,7 @@ def iter_teleop_episodes(
             env.reset(seed=seed)
             if use_dynamics3d:
                 robot_name = env.unwrapped._object_centric_env.robot_name
-                env.unwrapped._object_centric_env.set_render_camera("agent_overview")
+                env.unwrapped._object_centric_env.set_render_camera("agentview_1")
                 overview_image = env.unwrapped._object_centric_env.render()
                 env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
                 base_image = env.unwrapped._object_centric_env.render()
@@ -340,7 +340,7 @@ def iter_teleop_episodes(
                 episode_images = [{"overview": overview_image, "base": base_image, "wrist": wrist_image}]
                 for action in actions:
                     env.step(action)
-                    env.unwrapped._object_centric_env.set_render_camera("agent_overview")
+                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")
                     overview_image = env.unwrapped._object_centric_env.render()
                     env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
                     base_image = env.unwrapped._object_centric_env.render()
