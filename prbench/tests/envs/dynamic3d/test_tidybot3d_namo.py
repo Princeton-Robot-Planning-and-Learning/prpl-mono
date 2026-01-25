@@ -172,11 +172,10 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
     assert -0.2 <= robot_y <= 0.2, f"Robot y should be in [-0.2, 0.2], got {robot_y}"
 
     # Now goal should be satisfied (robot is in the goal region)
+    goal_satisfied = oc_env._check_goals()  # pylint: disable=protected-access
     assert (
-        oc_env._check_goals()
-    ), (  # pylint: disable=protected-access
-        "Goal should be satisfied after teleporting chair away and robot to goal region"
-    )
+        goal_satisfied
+    ), "Goal should be satisfied after teleporting chair away and robot to goal region"
 
     env.close()
 
@@ -198,7 +197,9 @@ def test_namo_robot_can_navigate_to_goal():
             scene_render_camera="agentview_1",
         )
     else:
-        env = prbench.make("prbench/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array")
+        env = prbench.make(
+            "prbench/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array"
+        )
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_navigate")
@@ -236,11 +237,8 @@ def test_namo_robot_can_navigate_to_goal():
         env.step(action)
 
     # Verify the goal is achieved
-    assert (
-        oc_env._check_goals()
-    ), (  # pylint: disable=protected-access
-        "Goal should be achieved after robot navigates to goal region"
-    )
+    goal_achieved = oc_env._check_goals()  # pylint: disable=protected-access
+    assert goal_achieved, "Goal should be achieved after robot navigates to goal region"
 
     env.close()
 
