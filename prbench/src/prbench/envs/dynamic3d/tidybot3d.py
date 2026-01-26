@@ -440,15 +440,17 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
                         if fixture_found:
                             if pred[0] == "in":
-                                print(
-                                    "Warning: Found 'in' predicate for fixture placement, "
-                                    "which is not supported. Falling back to 'on' predicate."
+                                warning_msg = (
+                                    "Warning: Found 'in' predicate for fixture "
+                                    "placement, which is not supported. "
+                                    "Falling back to 'on' predicate."
                                 )
+                                print(warning_msg)
                             region_config = self.task_config["regions"][region_name]
                             # Assert that the region target is ground
                             assert region_config["target"] == "ground", (
                                 f"Region {region_name} for fixture {fixture_name} "
-                                f"must have target 'ground', got "
+                                "must have target 'ground', got "
                                 f"'{region_config['target']}'"
                             )
 
@@ -577,7 +579,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Separate objects by their target (ground or fixture)
         ground_objects: dict[str, dict[str, Any]] = {}
-        fixture_objects: dict[str, tuple[str, str, str]] = {}  # obj_name -> (target, region, pred_type)
+        # obj_name -> (target, region, pred_type)
+        fixture_objects: dict[str, tuple[str, str, str]] = {}
 
         # Go through all initial state predicates and categorize objects
         for pred in init_predicates:
