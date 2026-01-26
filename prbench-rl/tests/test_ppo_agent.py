@@ -252,14 +252,15 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
             state1.set(target, "y", 0.1)
             state1.set(target, "z", 0.2)  # default target_z from config
 
+            self.reset_options = {"init_state": state1}
+
             self.reset_state = state1
             self.num_env_steps = 0
             self.max_episode_steps = 100
             self.r = 0.0
             # Debug rendering only if render_mode is set
             if self.render_mode is not None:
-                _, _ = env.reset(seed=123)
-                env.set_state(self.reset_state)
+                _, _ = env.reset(seed=123, options=self.reset_options)
                 img = env.render()
                 iio.imwrite("debug/unit_test_fixed_env_init.png", img)
 
@@ -267,12 +268,34 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
             del seed, options  # Ignore external parameters
             self.num_env_steps = 0
             self.r = 0.0
-            self.env.set_state(self.reset_state)
-            return self.env._get_obs(), {}
+            obs, info = self.env.reset(seed=123, options=self.reset_options)
+            self.curr_distance = self.compute_distance(obs)
+            return obs, info
+
+        def compute_distance(self, obs):
+            state = self.env.observation_space.devectorize(obs)
+            obj_map = {o.name: o for o in state.data.keys()}
+
+            robot = obj_map.get("robot")
+            target = obj_map.get("target")
+            if robot is None or target is None:
+                return float('inf')
+
+            # Robot base position
+            robot_x = state.get(robot, "pos_base_x")
+            robot_y = state.get(robot, "pos_base_y")
+
+            # Target position
+            target_x = state.get(target, "x")
+            target_y = state.get(target, "y")
+
+            distance = np.sqrt((robot_x - target_x) ** 2 + (robot_y - target_y) ** 2)
+            return distance
 
         def step(self, action):
             self.num_env_steps += 1
-            obs, reward, terminated, _, info = self.env.step(action)
+            obs, _, terminated, _, info = self.env.step(action)
+            reward = self.compute_reward(obs, terminated)
             truncated = self.num_env_steps >= self.max_episode_steps
             self.r += reward
             if terminated or truncated:
@@ -292,6 +315,33 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
 
         def render(self):
             return self.env.render()
+        
+        def compute_reward(self, obs, terminated):
+            # 1. Terminal Bonus
+            if terminated:
+                return 100.0
+                
+            current_distance = self.compute_distance(obs)
+            
+            # 2. Distance Shaping (The "Guide")
+            # Formula: (Old - New)
+            # If we get closer, (Old > New), result is Positive.
+            raw_shaping = (self.curr_distance - current_distance)
+            
+            # Scale this up! 
+            # Since your world is 0.1 units wide, a step might be 0.001. 
+            # Multiply by 100 or 1000 so the gradient is felt by the network.
+            shaping_reward = raw_shaping * 100.0 
+            
+            # 3. Time Penalty (The "Clock")
+            # Forces the agent to not loiter. 
+            # Must be small enough that moving closer (shaping) > penalty.
+            time_penalty = -0.1
+            
+            # Update state
+            self.curr_distance = current_distance
+            
+            return shaping_reward + time_penalty
 
     # Register the wrapped environment with a custom ID
     def make_fixed_env(render_mode=None):
@@ -311,27 +361,27 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
     # Create PPO agent with config for quick overfitting
     cfg = DictConfig(
         {
-            "total_timesteps": 100000,  # More timesteps for 3D env
-            "learning_rate": 1e-4,  # Higher learning rate for faster learning
-            "num_envs": 1,
+            "total_timesteps": 500000,  # More timesteps for 3D env
+            "learning_rate": 3e-4,  # Higher learning rate for faster learning
+            "num_envs": 16,
             "num_steps": 256,
             "gamma": 0.99,
             "gae_lambda": 0.95,
-            "num_minibatches": 32,
+            "num_minibatches": 4,
             "update_epochs": 10,
             "norm_adv": True,
-            "clip_coef": 0.4,
+            "clip_coef": 0.1,
             "clip_vloss": True,
-            "ent_coef": 0.0,
+            "ent_coef": 0.01,
             "vf_coef": 0.5,
             "max_grad_norm": 0.5,
             "target_kl": None,
             "hidden_size": 128,
             "torch_deterministic": True,
             "cuda": False,
-            "anneal_lr": False,
+            "anneal_lr": True,
             "tf_log_dir": "unit_test_exp",
-            "exp_name": "ppo_basemotion3d_fixed_test",
+            "exp_name": "ppo_basemotion3d_fixed_test3",
         }
     )
 

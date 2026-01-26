@@ -409,7 +409,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         start_time = time.time()
 
         for iteration in range(1, self.args.num_iterations + 1):
-            logging.info(f"Epoch: {iteration}, global_step={global_step}")
+            print(f"Epoch: {iteration}, global_step={global_step}")
             if self.args.save_model and iteration % self.args.save_model_freq == 1:
                 model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
                 base_path = Path(self.log_path) / "policies"
@@ -463,7 +463,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                                 if hasattr(raw_length, "item")
                                 else int(raw_length)
                             )
-                            logging.info(
+                            print(
                                 f"global_step={global_step}, "
                                 f"episodic_return={episode_return}"
                             )
