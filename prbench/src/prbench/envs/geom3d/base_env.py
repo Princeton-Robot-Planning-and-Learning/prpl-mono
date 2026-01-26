@@ -604,13 +604,13 @@ class ObjectCentricGeom3DRobotEnv(
                     )
                 ):
                     # If the fingers are fully closed, stop.
-                    current_finger_state = self._robot_arm.get_finger_state()
+                    intermediate_finger_state = self._robot_arm.get_finger_state()
                     closed_finger_state = self._robot_arm.closed_fingers_state
-                    assert isinstance(current_finger_state, float)
+                    assert isinstance(intermediate_finger_state, float)
                     assert isinstance(closed_finger_state, float)
-                    if current_finger_state >= closed_finger_state - 1e-2:
+                    if intermediate_finger_state >= closed_finger_state - 1e-2:
                         break
-                    next_finger_state = current_finger_state + 1e-2
+                    next_finger_state = intermediate_finger_state + 1e-2
                     self._robot_arm.set_finger_state(next_finger_state)
                 # Handle the edge case where the robot fingers penetrate the table as
                 # the fingers close to grasp the object. This can happen with a gripper
