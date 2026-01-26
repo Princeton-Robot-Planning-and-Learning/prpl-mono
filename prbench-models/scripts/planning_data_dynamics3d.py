@@ -100,7 +100,7 @@ def collect_data(
         # print('current_orientation: ', current_orientation)
         # print('action: ', action)
 
-        camera_names = env.unwrapped._object_centric_env.camera_names  # type: ignore # pylint: disable=protected-access
+        
         env.unwrapped._object_centric_env.set_render_camera("overview")
         overview_image = env.unwrapped._object_centric_env.render()
         env.unwrapped._object_centric_env.set_render_camera("base")
