@@ -246,7 +246,11 @@ def sample_pose_in_bbox_3d(
 
 
 def bboxes_overlap(
-    bbox1: list[float], bbox2: list[float], margin: float = 0.001
+    bbox1: list[float],
+    bbox2: list[float],
+    margin: float = 0.001,
+    atol: float = 1e-5,
+    rtol: float = 1e-5,
 ) -> bool:
     """Check if two bounding boxes overlap with a safety margin.
 
@@ -254,28 +258,48 @@ def bboxes_overlap(
         bbox1: First bounding box as [x_min, y_min, x_max, y_max]
         bbox2: Second bounding box as [x_min, y_min, x_max, y_max]
         margin: Safety margin in meters to add between bounding boxes
+        atol: Absolute tolerance for np.isclose comparisons
+        rtol: Relative tolerance for np.isclose comparisons
 
     Returns:
         True if bounding boxes overlap (including margin), False otherwise
     """
     if len(bbox1) == 4:
         assert len(bbox2) == 4
-        return not (
-            bbox1[2] + margin <= bbox2[0]  # bbox1 right + margin <= bbox2 left
-            or bbox2[2] + margin <= bbox1[0]  # bbox2 right + margin <= bbox1 left
-            or bbox1[3] + margin <= bbox2[1]  # bbox1 top + margin <= bbox2 bottom
-            or bbox2[3] + margin <= bbox1[1]
-        )  # bbox2 top + margin <= bbox1 bottom
+        sep_x = (bbox1[2] + margin < bbox2[0]) or np.isclose(
+            bbox1[2] + margin, bbox2[0], atol=atol, rtol=rtol
+        )
+        sep_x2 = (bbox2[2] + margin < bbox1[0]) or np.isclose(
+            bbox2[2] + margin, bbox1[0], atol=atol, rtol=rtol
+        )
+        sep_y = (bbox1[3] + margin < bbox2[1]) or np.isclose(
+            bbox1[3] + margin, bbox2[1], atol=atol, rtol=rtol
+        )
+        sep_y2 = (bbox2[3] + margin < bbox1[1]) or np.isclose(
+            bbox2[3] + margin, bbox1[1], atol=atol, rtol=rtol
+        )
+        return not (sep_x or sep_x2 or sep_y or sep_y2)
     if len(bbox1) == 6:
         assert len(bbox2) == 6
-        return not (
-            bbox1[3] + margin <= bbox2[0]  # bbox1 x_max + margin <= bbox2 x_min
-            or bbox2[3] + margin <= bbox1[0]  # bbox2 x_max + margin <= bbox1 x_min
-            or bbox1[4] + margin <= bbox2[1]  # bbox1 y_max + margin <= bbox2 y_min
-            or bbox2[4] + margin <= bbox1[1]  # bbox2 y_max + margin <= bbox1 y_min
-            or bbox1[5] + margin <= bbox2[2]  # bbox1 z_max + margin <= bbox2 z_min
-            or bbox2[5] + margin <= bbox1[2]
-        )  # bbox2 z_max + margin <= bbox1 z_min
+        sep_x = (bbox1[3] + margin < bbox2[0]) or np.isclose(
+            bbox1[3] + margin, bbox2[0], atol=atol, rtol=rtol
+        )
+        sep_x2 = (bbox2[3] + margin < bbox1[0]) or np.isclose(
+            bbox2[3] + margin, bbox1[0], atol=atol, rtol=rtol
+        )
+        sep_y = (bbox1[4] + margin < bbox2[1]) or np.isclose(
+            bbox1[4] + margin, bbox2[1], atol=atol, rtol=rtol
+        )
+        sep_y2 = (bbox2[4] + margin < bbox1[1]) or np.isclose(
+            bbox2[4] + margin, bbox1[1], atol=atol, rtol=rtol
+        )
+        sep_z = (bbox1[5] + margin < bbox2[2]) or np.isclose(
+            bbox1[5] + margin, bbox2[2], atol=atol, rtol=rtol
+        )
+        sep_z2 = (bbox2[5] + margin < bbox1[2]) or np.isclose(
+            bbox2[5] + margin, bbox1[2], atol=atol, rtol=rtol
+        )
+        return not (sep_x or sep_x2 or sep_y or sep_y2 or sep_z or sep_z2)
     raise ValueError("Bounding boxes must be of length 4 or 6.")
 
 
