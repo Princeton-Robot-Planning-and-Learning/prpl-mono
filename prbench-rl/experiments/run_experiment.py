@@ -6,16 +6,49 @@ Examples:
 """
 
 import logging
-import os
+from pathlib import Path
 
 import hydra
 import numpy as np
 import pandas as pd
 import prbench
-from hydra.core.hydra_config import HydraConfig
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig, OmegaConf, read_write
 
 from prbench_rl import create_rl_agents
+
+
+def _get_env_name(env_id: str) -> str:
+    """Extract environment name from env_id for use in paths.
+
+    Examples:
+        "prbench/BaseMotion3D-v0" -> "BaseMotion3D-v0"
+        "prbench/DynObstruction2D-o1-v0" -> "DynObstruction2D-o1-v0"
+    """
+    # Remove the "prbench/" prefix if present
+    if "/" in env_id:
+        return env_id.split("/")[-1]
+    return env_id
+
+
+def _get_output_dirs(cfg: DictConfig) -> tuple[Path, Path]:
+    """Compute output and runs directories based on config.
+
+    Returns:
+        Tuple of (output_dir, runs_dir) paths.
+        Structure: {base}/{env_name}/seed{seed}/{reward_type}
+    """
+    env_name = _get_env_name(cfg.env_id)
+    seed_str = f"seed{cfg.seed}"
+
+    # Determine reward type from agent config
+    dense_reward = cfg.agent.get("args", {}).get("dense_reward", False)
+    reward_type = "dense" if dense_reward else "sparse"
+
+    # Construct paths
+    output_dir = Path("outputs") / env_name / seed_str / reward_type
+    runs_dir = Path("runs") / env_name / seed_str / reward_type
+
+    return output_dir, runs_dir
 
 
 def _print_results_summary(metrics: dict, cfg: DictConfig) -> None:
@@ -63,14 +96,31 @@ def _print_results_summary(metrics: dict, cfg: DictConfig) -> None:
 
 @hydra.main(version_base=None, config_name="config", config_path="conf/")
 def _main(cfg: DictConfig) -> None:
+    # Compute output directories based on env_id, seed, and dense_reward
+    output_dir, runs_dir = _get_output_dirs(cfg)
+
+    # Create directories
+    output_dir.mkdir(parents=True, exist_ok=True)
+    runs_dir.mkdir(parents=True, exist_ok=True)
+
     logging.info(
         f"Running agent={cfg.agent.name}, env={cfg.env_id},"
         f" max_episode_steps={cfg.max_episode_steps},"
         f" seed={cfg.seed}, eval_episodes={cfg.eval_episodes}"
     )
+    logging.info(f"Output directory: {output_dir}")
+    logging.info(f"TensorBoard runs directory: {runs_dir}")
 
     # Create the environment
     prbench.register_all_environments()
+
+    # Update agent config with proper tensorboard log directory
+    # OmegaConf is read-only by default, so we need to use read_write context
+    with read_write(cfg):
+        cfg.agent.tb_log_dir = str(runs_dir)
+        # Update exp_name to be more descriptive
+        env_name = _get_env_name(cfg.env_id)
+        cfg.agent.exp_name = f"{cfg.agent.name}_{env_name}"
 
     # Create the agent
     agent = create_rl_agents(cfg.agent, cfg.env_id, cfg.max_episode_steps, cfg.seed)
@@ -79,26 +129,25 @@ def _main(cfg: DictConfig) -> None:
     logging.info("Starting training and evaluation...")
     metrics = agent.train(eval_episodes=cfg.eval_episodes)
 
-    # Save trained agent
-    current_dir = HydraConfig.get().runtime.output_dir
-    agent_path = os.path.join(current_dir, "agent.pkl")
+    # Save trained agent to our custom output directory
+    agent_path = output_dir / "agent.pkl"
     agent.save(agent_path)
     logging.info(f"Saved trained agent to {agent_path}")
 
     # Save training metrics
     if "train" in metrics:
-        train_results_path = os.path.join(current_dir, "train_results.csv")
+        train_results_path = output_dir / "train_results.csv"
         pd.DataFrame(metrics["train"]).to_csv(train_results_path, index=False)
         logging.info(f"Saved training results to {train_results_path}")
 
     # Save evaluation metrics
     if "eval" in metrics:
-        eval_results_path = os.path.join(current_dir, "eval_results.csv")
+        eval_results_path = output_dir / "eval_results.csv"
         pd.DataFrame(metrics["eval"]).to_csv(eval_results_path, index=False)
         logging.info(f"Saved evaluation results to {eval_results_path}")
 
     # Save config
-    config_path = os.path.join(current_dir, "config.yaml")
+    config_path = output_dir / "config.yaml"
     with open(config_path, "w", encoding="utf-8") as f:
         OmegaConf.save(cfg, f)
     logging.info(f"Saved config to {config_path}")
