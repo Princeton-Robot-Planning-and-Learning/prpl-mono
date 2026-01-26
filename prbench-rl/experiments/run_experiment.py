@@ -44,6 +44,7 @@ def _print_results_summary(metrics: dict, cfg: DictConfig) -> None:
     # Evaluation results
     if "eval" in metrics and metrics["eval"].get("episodic_return"):
         eval_returns = metrics["eval"]["episodic_return"]
+        eval_lengths = metrics["eval"]["step_length"]
         print("EVALUATION:")
         print(f"  Episodes: {len(eval_returns)}")
         print(f"  Mean return: {np.mean(eval_returns):.2f}")
@@ -53,9 +54,9 @@ def _print_results_summary(metrics: dict, cfg: DictConfig) -> None:
 
         # Calculate success rate (episodes with positive return or > -max_steps)
         # Assuming -1 reward per step, success means finishing early
-        threshold = -cfg.max_episode_steps * 0.5  # 50% of max steps as threshold
-        successes = sum(1 for r in eval_returns if r > threshold)
-        print(f"  Success rate (return > {threshold:.0f}): {successes}/{len(eval_returns)} ({100*successes/len(eval_returns):.1f}%)")
+        threshold = cfg.max_episode_steps
+        successes = sum(1 for l in eval_lengths if l < threshold)
+        print(f"  Success rate (step < {threshold:.0f}): {successes}/{len(eval_returns)} ({100*successes/len(eval_returns):.1f}%)")
 
     print("=" * 60 + "\n")
 
