@@ -21,20 +21,17 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Callable
 
 import dill as pkl  # type: ignore[import-untyped]
 import hydra
 import numpy as np
 import prbench
 from gymnasium.core import Env
-from numpy.typing import NDArray
 from omegaconf import DictConfig
 from prpl_utils.utils import sample_seed_from_rng
 
 from prbench_ds_policies.policies import create_domain_specific_policy
-
-Policy = Callable[[NDArray], NDArray]
+from prbench_ds_policies.policies.base import PolicyFailure, StatefulPolicy
 
 
 def sanitize_env_id(env_id: str) -> str:
@@ -80,7 +77,7 @@ def save_demo(
 
 
 def collect_single_demo(
-    policy: Policy,
+    policy: StatefulPolicy,
     env: Env,
     seed: int,
     max_steps: int,
@@ -100,11 +97,15 @@ def collect_single_demo(
     terminated = False
     truncated = False
 
+    policy.reset()
     obs, _ = env.reset(seed=seed)
     observations.append(obs)
 
     for _ in range(max_steps):
-        action = policy(obs)
+        try:
+            action = policy(obs)
+        except PolicyFailure:
+            break
 
         obs, rew, done, trunc, _ = env.step(action)
         observations.append(obs)

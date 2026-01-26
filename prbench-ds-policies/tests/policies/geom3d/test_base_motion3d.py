@@ -7,8 +7,6 @@ from gymnasium.wrappers import RecordVideo
 from prbench.envs.geom3d.base_motion3d import BaseMotion3DObjectCentricState
 
 from prbench_ds_policies.policies import create_domain_specific_policy
-from prbench_ds_policies.policies.geom3d.base_motion3d import (
-    create_domain_specific_policy as create_base_motion3d_policy,)
 from tests.conftest import MAKE_VIDEOS
 
 prbench.register_all_environments()
@@ -17,7 +15,9 @@ prbench.register_all_environments()
 def test_base_motion3d_policy_returns_valid_action():
     """Test that the policy returns a valid action."""
     env = prbench.make("prbench/BaseMotion3D-v0")
-    policy = create_base_motion3d_policy(env.observation_space)
+    policy = create_domain_specific_policy(
+        "base_motion3d", observation_space=env.observation_space
+    )
     obs, _ = env.reset(seed=123)
 
     action = policy(obs)
@@ -33,7 +33,9 @@ def test_base_motion3d_policy_returns_valid_action():
 def test_base_motion3d_policy_moves_toward_target():
     """Test that the policy action moves the robot toward the target."""
     env = prbench.make("prbench/BaseMotion3D-v0")
-    policy = create_base_motion3d_policy(env.observation_space)
+    policy = create_domain_specific_policy(
+        "base_motion3d", observation_space=env.observation_space
+    )
     obs, _ = env.reset(seed=123)
 
     # Get initial distance to target
@@ -95,7 +97,9 @@ def test_base_motion3d_policy_solves_task(seed):
             env, "unit_test_videos", name_prefix=f"BaseMotion3D-ds-policy-{seed}"
         )
 
-    policy = create_base_motion3d_policy(env.observation_space)
+    policy = create_domain_specific_policy(
+        "base_motion3d", observation_space=env.observation_space
+    )
     obs, _ = env.reset(seed=seed)
 
     for _ in range(1000):
