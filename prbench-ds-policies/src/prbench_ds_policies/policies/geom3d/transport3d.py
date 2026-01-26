@@ -8,6 +8,9 @@ models/tests/geom3d/transport3d.
 from typing import Any
 
 import numpy as np
+from bilevel_planning.trajectory_samplers.trajectory_sampler import (
+    TrajectorySamplingFailure,
+)
 from numpy.typing import NDArray
 from prbench.envs.geom3d.transport3d import ObjectCentricTransport3DEnv
 from prbench.envs.geom3d.utils import Geom3DRobotActionSpace
@@ -17,7 +20,7 @@ from prbench_models.geom3d.transport3d.parameterized_skills import (
 from relational_structs import Object, ObjectCentricState
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from prbench_ds_policies.policies.base import StatefulPolicy
+from prbench_ds_policies.policies.base import PolicyFailure, StatefulPolicy
 
 __all__ = ["create_domain_specific_policy"]
 
@@ -117,7 +120,10 @@ class Transport3DScriptedPolicy(StatefulPolicy):
         skill_name, objects, params = self._skill_sequence[self._skill_index]
         lifted_controller = self._controllers[skill_name]
         self._current_controller = lifted_controller.ground(objects)
-        self._current_controller.reset(state, params)
+        try:
+            self._current_controller.reset(state, params)
+        except TrajectorySamplingFailure:
+            raise PolicyFailure("Sampling failed in reset().")
         self._first_step_of_skill = True
         return True
 
@@ -147,7 +153,10 @@ class Transport3DScriptedPolicy(StatefulPolicy):
 
         # Get action from current controller.
         if self._current_controller is not None:
-            action = self._current_controller.step()
+            try:
+                action = self._current_controller.step()
+            except TrajectorySamplingFailure:
+                raise PolicyFailure("Sampling failed in step().")
             self._first_step_of_skill = False
             return action
 

@@ -33,3 +33,7 @@ class StatefulPolicy(ABC):
         Returns:
             The action to take.
         """
+
+
+class PolicyFailure(BaseException):
+    """Raised when a policy fails to produce an action."""

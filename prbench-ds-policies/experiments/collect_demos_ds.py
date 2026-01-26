@@ -31,7 +31,7 @@ from omegaconf import DictConfig
 from prpl_utils.utils import sample_seed_from_rng
 
 from prbench_ds_policies.policies import create_domain_specific_policy
-from prbench_ds_policies.policies.base import StatefulPolicy
+from prbench_ds_policies.policies.base import PolicyFailure, StatefulPolicy
 
 
 def sanitize_env_id(env_id: str) -> str:
@@ -102,7 +102,10 @@ def collect_single_demo(
     observations.append(obs)
 
     for _ in range(max_steps):
-        action = policy(obs)
+        try:
+            action = policy(obs)
+        except PolicyFailure:
+            break
 
         obs, rew, done, trunc, _ = env.step(action)
         observations.append(obs)
