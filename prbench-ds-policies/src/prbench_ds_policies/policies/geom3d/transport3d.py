@@ -13,7 +13,7 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
 )
 from numpy.typing import NDArray
 from prbench.envs.geom3d.transport3d import ObjectCentricTransport3DEnv
-from prbench.envs.geom3d.utils import Geom3DRobotActionSpace
+from prbench.envs.geom3d.utils import Geom3DObjectCentricState, Geom3DRobotActionSpace
 from prbench_models.geom3d.transport3d.parameterized_skills import (
     create_lifted_controllers,
 )
@@ -130,6 +130,7 @@ class Transport3DScriptedPolicy(StatefulPolicy):
         state = self._observation_space.devectorize(observation)
 
         # Sync sim.
+        assert isinstance(state, Geom3DObjectCentricState)
         self._sim.set_state(state)
 
         # Initialize on first call.
