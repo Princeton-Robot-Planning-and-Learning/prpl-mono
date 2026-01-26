@@ -27,7 +27,6 @@ import hydra
 import numpy as np
 import prbench
 from gymnasium.core import Env
-from numpy.typing import NDArray
 from omegaconf import DictConfig
 from prpl_utils.utils import sample_seed_from_rng
 
