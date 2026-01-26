@@ -148,8 +148,6 @@ def load_teleop_demonstrations(
         for frame_idx, (obs, act) in enumerate(zip(observations[:-1], actions)):
             frame = {
                 "observation.state": obs,
-                "observation.robot_state": env.observation_space.get_object_subvector(obs, "robot"),
-                "observation.env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
                 "action": act,
                 "episode_index": ep_idx,
                 "frame_index": frame_idx,
@@ -389,6 +387,8 @@ def iter_teleop_episodes(
         for frame_idx, (obs, act) in enumerate(zip(observations[:-1], actions)):
             frame = {
                 "observation.state": obs,
+                "observation.robot_state": env.observation_space.get_object_subvector(obs, "robot"),
+                "observation.env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
                 "action": act,
                 "episode_index": ep_idx,
                 "frame_index": frame_idx,
