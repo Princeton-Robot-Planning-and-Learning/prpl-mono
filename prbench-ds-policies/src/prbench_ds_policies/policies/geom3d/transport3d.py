@@ -5,7 +5,7 @@ parameterized skills from prbench-models. The logic mirrors the test in prbench-
 models/tests/geom3d/transport3d.
 """
 
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -17,12 +17,12 @@ from prbench_models.geom3d.transport3d.parameterized_skills import (
 from relational_structs import Object, ObjectCentricState
 from relational_structs.spaces import ObjectCentricBoxSpace
 
+from prbench_ds_policies.policies.base import StatefulPolicy
+
 __all__ = ["create_domain_specific_policy"]
 
-Policy = Callable[[NDArray], NDArray]
 
-
-class Transport3DScriptedPolicy:
+class Transport3DScriptedPolicy(StatefulPolicy):
     """A stateful scripted policy for Transport3D.
 
     This policy maintains state between calls to track which controller is currently
@@ -59,6 +59,14 @@ class Transport3DScriptedPolicy:
         # State tracking.
         self._current_controller: Any = None
         self._skill_sequence: list[tuple[str, tuple[Object, ...], NDArray]] = []
+        self._skill_index = 0
+        self._initialized = False
+        self._first_step_of_skill = True
+
+    def reset(self) -> None:
+        """Reset the policy state for a new episode."""
+        self._current_controller = None
+        self._skill_sequence = []
         self._skill_index = 0
         self._initialized = False
         self._first_step_of_skill = True
@@ -155,9 +163,9 @@ def create_domain_specific_policy(
     num_cubes: int = 2,
     seed: int = 123,
     birrt_extend_num_interp: int = 25,
-    smooth_mp_max_time: float = 120.0,
-    smooth_mp_max_candidate_plans: int = 20,
-) -> Policy:
+    smooth_mp_max_time: float = 10.0,
+    smooth_mp_max_candidate_plans: int = 1,
+) -> StatefulPolicy:
     """Create a domain-specific policy for Transport3D.
 
     Args:
@@ -173,7 +181,7 @@ def create_domain_specific_policy(
             Defaults to 20.
 
     Returns:
-        A policy function that maps observations to actions.
+        A policy that maps observations to actions.
     """
     policy = Transport3DScriptedPolicy(
         observation_space=observation_space,
