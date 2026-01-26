@@ -69,7 +69,7 @@
         }
     },
     "initial_state": [
-        ["on", "wiper_0", "wiper_init_region"],
+        ["in", "wiper_0", "wiper_init_region"],
         ["on", "bowl_0", "kitchen_cooking_area_upper_shelf_1_region"]
     ],
     "goal_state": [
