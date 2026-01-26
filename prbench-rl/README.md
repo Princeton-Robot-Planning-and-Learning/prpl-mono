@@ -58,7 +58,8 @@ python experiments/run_experiment.py agent=<agent_config> env_id=<environment_id
 python experiments/run_experiment.py \
     agent=ppo_basemotion3d \
     env_id="prbench/BaseMotion3D-v0" \
-    max_episode_steps=300 \
+    agent.args.total_timesteps=50000 \
+    max_episode_steps=100 \
     eval_episodes=50 \
     seed=0
 ```
