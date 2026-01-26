@@ -318,7 +318,8 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         obs, _ = train_envs.reset()
         episodic_returns: list[float] = []
         step_lengths: list[int] = []
-        step_length = 0
+        # Track step count per environment
+        step_counts = [0] * train_envs.num_envs
 
         while len(episodic_returns) < eval_episodes:
             with torch.no_grad():
@@ -327,10 +328,11 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 actions = action.cpu().numpy()
 
             obs, _, _, _, infos = train_envs.step(actions)
-            step_length += 1
+            # Increment step count for all environments
+            step_counts = [s + 1 for s in step_counts]
 
             if "final_info" in infos:
-                for info in infos["final_info"]:
+                for env_idx, info in enumerate(infos["final_info"]):
                     if info is None or "episode" not in info:
                         continue
                     raw_return = info["episode"]["r"]
@@ -344,8 +346,9 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                         f"episodic_return={episode_return}"
                     )
                     episodic_returns.append(episode_return)
-                    step_lengths.append(step_length)
-                    step_length = 0
+                    step_lengths.append(step_counts[env_idx])
+                    # Reset step count for this environment only
+                    step_counts[env_idx] = 0
 
         eval_metrics = {
             "episodic_return": episodic_returns,
