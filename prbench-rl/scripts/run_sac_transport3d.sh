@@ -7,6 +7,9 @@ SEED=${2:-0}       # Default seed: 0
 
 cd "$(dirname "$0")/.."
 
+# Activate the monorepo virtual environment
+source "$(dirname "$0")/../../.venv/bin/activate"
+
 python experiments/run_experiment.py \
     agent=sac_transport3d \
     env_id="prbench/Transport3D-o${NUM_CUBES}-v0" \

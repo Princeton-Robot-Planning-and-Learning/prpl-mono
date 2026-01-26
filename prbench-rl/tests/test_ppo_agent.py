@@ -344,6 +344,7 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
             
             return shaping_reward + time_penalty
 
+
     # Register the wrapped environment with a custom ID
     def make_fixed_env(render_mode=None):
         """Factory function to create the fixed environment."""

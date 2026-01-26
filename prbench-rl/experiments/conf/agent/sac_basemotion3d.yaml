@@ -6,6 +6,9 @@ args:
   total_timesteps: 1000000
   num_eval_envs: 1
   hidden_size: 128
+  # Dense reward settings
+  dense_reward: false
+  dense_reward_scale: 0.1
 
 # Training settings
 torch_deterministic: true

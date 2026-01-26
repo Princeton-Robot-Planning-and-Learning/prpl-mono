@@ -7,6 +7,9 @@ REWARD_SCALE=${2:-0.1}    # Default dense reward scale: 0.1
 
 cd "$(dirname "$0")/.."
 
+# Activate the monorepo virtual environment
+source "$(dirname "$0")/../../.venv/bin/activate"
+
 python experiments/run_experiment.py \
     agent=sac_basemotion3d \
     env_id="prbench/BaseMotion3D-v0" \

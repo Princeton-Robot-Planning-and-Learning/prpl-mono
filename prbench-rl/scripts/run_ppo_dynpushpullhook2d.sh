@@ -7,6 +7,9 @@ SEED=${2:-0}       # Default seed: 0
 
 cd "$(dirname "$0")/.."
 
+# Activate the monorepo virtual environment
+source "$(dirname "$0")/../../.venv/bin/activate"
+
 python experiments/run_experiment.py \
     agent=ppo_dynpushpullhook2d \
     env_id="prbench/DynPushPullHook2D-o${NUM_CUBES}-v0" \
