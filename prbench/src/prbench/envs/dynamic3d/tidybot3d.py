@@ -577,7 +577,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Separate objects by their target (ground or fixture)
         ground_objects: dict[str, dict[str, Any]] = {}
-        fixture_objects: dict[str, tuple[str, str]] = {}  # obj_name -> (target, region)
+        fixture_objects: dict[str, tuple[str, str, str]] = {}  # obj_name -> (target, region, pred_type)
 
         # Go through all initial state predicates and categorize objects
         for pred in init_predicates:
