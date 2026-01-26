@@ -64,7 +64,6 @@ class Transport3DScriptedPolicy(StatefulPolicy):
         self._skill_sequence: list[tuple[str, tuple[Object, ...], NDArray]] = []
         self._skill_index = 0
         self._initialized = False
-        self._first_step_of_skill = True
 
     def reset(self) -> None:
         """Reset the policy state for a new episode."""
@@ -72,7 +71,6 @@ class Transport3DScriptedPolicy(StatefulPolicy):
         self._skill_sequence = []
         self._skill_index = 0
         self._initialized = False
-        self._first_step_of_skill = True
 
     def _build_skill_sequence(self, state: ObjectCentricState) -> None:
         """Build the skill sequence based on current state."""
@@ -124,7 +122,6 @@ class Transport3DScriptedPolicy(StatefulPolicy):
             self._current_controller.reset(state, params)
         except TrajectorySamplingFailure:
             raise PolicyFailure("Sampling failed in reset().")
-        self._first_step_of_skill = True
         return True
 
     def __call__(self, observation: NDArray[np.float32]) -> NDArray[np.float32]:
@@ -132,38 +129,35 @@ class Transport3DScriptedPolicy(StatefulPolicy):
         # Devectorize observation.
         state = self._observation_space.devectorize(observation)
 
+        # Sync sim.
+        self._sim.set_state(state)
+
         # Initialize on first call.
         if not self._initialized:
             self._build_skill_sequence(state)
             self._start_next_skill(state)
             self._initialized = True
 
-        # On non-first step of a skill, observe the result of the last action.
-        if not self._first_step_of_skill and self._current_controller is not None:
-            self._current_controller.observe(state)
+        # Observe the result of the last action.
+        assert self._current_controller is not None
+        self._current_controller.observe(state)
 
-            # Check if current controller is done, move to next skill if so.
-            while self._current_controller.terminated():
-                self._skill_index += 1
-                if not self._start_next_skill(state):
-                    # All skills complete - return zero action.
-                    shape = self._action_space.shape
-                    assert shape is not None
-                    return np.zeros(shape, dtype=np.float32)
+        # Check if current controller is done, move to next skill if so.
+        while self._current_controller.terminated():
+            self._skill_index += 1
+            if not self._start_next_skill(state):
+                # All skills complete - return zero action.
+                shape = self._action_space.shape
+                assert shape is not None
+                return np.zeros(shape, dtype=np.float32)
 
         # Get action from current controller.
-        if self._current_controller is not None:
-            try:
-                action = self._current_controller.step()
-            except TrajectorySamplingFailure:
-                raise PolicyFailure("Sampling failed in step().")
-            self._first_step_of_skill = False
-            return action
-
-        # Fallback - return zero action.
-        shape = self._action_space.shape
-        assert shape is not None
-        return np.zeros(shape, dtype=np.float32)
+        assert self._current_controller is not None
+        try:
+            action = self._current_controller.step()
+        except TrajectorySamplingFailure:
+            raise PolicyFailure("Sampling failed in step().")
+        return action
 
 
 def create_domain_specific_policy(

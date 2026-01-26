@@ -436,8 +436,11 @@ class ObjectCentricGeom3DRobotEnv(
         if options is not None and "init_state" in options:
             self.set_state(options["init_state"])
         else:
-            # Reset the robot. In the future, we may want to allow randomizing the
-            # initial robot joint positions.
+            # Reset the held object info.
+            self._grasped_object = None
+            self._grasped_object_transform = None
+
+            # Reset the robot.
             self._set_robot_and_held_object(
                 self.config.robot_base_home_pose,
                 self.config.initial_joints,
