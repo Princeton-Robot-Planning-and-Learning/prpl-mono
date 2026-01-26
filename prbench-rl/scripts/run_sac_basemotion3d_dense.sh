@@ -16,7 +16,8 @@ python experiments/run_experiment.py \
     max_episode_steps=100 \
     eval_episodes=50 \
     seed=${SEED} \
-    agent.args.total_timesteps=500000 \
+    agent.args.total_timesteps=50000 \
+    agent.args.num_envs=16 \
     agent.args.hidden_size=128 \
     agent.args.dense_reward=true \
     agent.args.dense_reward_scale=${REWARD_SCALE}

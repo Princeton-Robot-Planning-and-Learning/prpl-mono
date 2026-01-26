@@ -6,7 +6,11 @@ args:
   total_timesteps: 1000000
   num_eval_envs: 1
   hidden_size: 128
-
+  num_envs: 8
+  hidden_size: 128
+  buffer_size: 100000
+  learning_starts: 5000
+  
 # Training settings
 torch_deterministic: true
 cuda: false
