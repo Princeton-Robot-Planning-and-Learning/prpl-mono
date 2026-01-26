@@ -110,9 +110,7 @@ def test_state():
     )
     assert not state.allclose(state2)  # obj2 is extra
     # Test pretty_str
-    assert (
-        state2.pretty_str()
-        == """################# STATE ################
+    assert state2.pretty_str() == """################# STATE ################
 type: type1      feat1    feat2
 -------------  -------  -------
 obj3                 1      122
@@ -126,7 +124,6 @@ obj4                 8        9       10
 obj9                11       12       13
 ########################################
 """
-    )
     # Test hashing.
     assert isinstance(hash(state), int)
     assert hash(state) != hash(state2)
