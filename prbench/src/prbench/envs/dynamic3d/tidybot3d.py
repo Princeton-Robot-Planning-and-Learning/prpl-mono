@@ -423,12 +423,6 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         fixture_name = pred[1]
                         region_name = pred[2]
 
-                        if pred[0] == "in":
-                            print(
-                                "Warning: Found 'in' predicate for fixture placement, "
-                                "which is not supported. Falling back to 'on' predicate."
-                            )
-
                         # Check if this fixture exists in any fixture type and add to
                         # fixtures dict
                         fixture_found = False
@@ -445,6 +439,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                                 break
 
                         if fixture_found:
+                            if pred[0] == "in":
+                                print(
+                                    "Warning: Found 'in' predicate for fixture placement, "
+                                    "which is not supported. Falling back to 'on' predicate."
+                                )
                             region_config = self.task_config["regions"][region_name]
                             # Assert that the region target is ground
                             assert region_config["target"] == "ground", (
