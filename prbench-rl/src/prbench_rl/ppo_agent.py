@@ -99,6 +99,12 @@ class PPOArgs:
     reward_scale: float = 1.0
     """Scale the reward by this factor."""
 
+    # Dense reward settings
+    dense_reward: bool = False
+    """Whether to use dense reward shaping."""
+    dense_reward_scale: float = 0.1
+    """Scale factor for dense reward."""
+
     # to be filled in runtime
     batch_size: int = 0
     """The batch size (computed in runtime)"""
@@ -361,6 +367,9 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 make_env_ppo(
                     self.env_id,
                     self.max_episode_steps,
+                    gamma=self.args.gamma,
+                    dense_reward=self.args.dense_reward,
+                    dense_reward_scale=self.args.dense_reward_scale,
                 )
                 for i in range(self.args.num_envs)
             ]

@@ -352,3 +352,93 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
     mean_r_after = np.mean(episodic_returns[-5:])  # Mean of last 5 episodes
     assert mean_r_after > -100.0, f"Agent did not improve: mean return {mean_r_after}"
     agent.close()
+
+
+def test_dense_reward_wrapper_basemotion3d():
+    """Test that dense reward wrapper works for BaseMotion3D."""
+    from prbench_rl.dense_rewards import wrap_with_dense_reward
+
+    prbench.register_all_environments()
+
+    # Test that BaseMotion3D has dense reward implemented
+    env = prbench.make("prbench/BaseMotion3D-v0")
+    wrapped_env = wrap_with_dense_reward(env, "prbench/BaseMotion3D-v0", reward_scale=0.1)
+
+    wrapped_env.reset(seed=42)
+    action = wrapped_env.action_space.sample()
+    _, _, terminated, _, info = wrapped_env.step(action)
+
+    # Check that dense reward info is present
+    assert "sparse_reward" in info
+    assert "dense_reward" in info
+    assert np.isfinite(info["dense_reward"])
+
+    # Dense reward should be negative (distance-based) unless terminated
+    assert info["dense_reward"] <= 0.0 or terminated
+
+    wrapped_env.close()
+
+
+def test_dense_reward_not_implemented_raises():
+    """Test that NotImplementedError is raised for unsupported environments."""
+    import pytest
+
+    from prbench_rl.dense_rewards import wrap_with_dense_reward
+
+    prbench.register_all_environments()
+
+    # DynObstruction2D doesn't have dense reward implemented
+    env = prbench.make("prbench/DynObstruction2D-o1-v0")
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        wrap_with_dense_reward(env, "prbench/DynObstruction2D-o1-v0")
+
+    assert "Dense reward not implemented" in str(exc_info.value)
+    env.close()
+
+
+def test_ppo_with_dense_reward_basemotion3d():
+    """Test PPO agent with dense reward on BaseMotion3D."""
+    prbench.register_all_environments()
+
+    # Create PPO agent with dense reward enabled
+    cfg = DictConfig(
+        {
+            "total_timesteps": 2000,
+            "learning_rate": 3e-4,
+            "num_envs": 1,
+            "num_steps": 256,
+            "gamma": 0.99,
+            "gae_lambda": 0.95,
+            "num_minibatches": 4,
+            "update_epochs": 4,
+            "norm_adv": True,
+            "clip_coef": 0.2,
+            "clip_vloss": True,
+            "ent_coef": 0.0,
+            "vf_coef": 0.5,
+            "max_grad_norm": 0.5,
+            "target_kl": None,
+            "hidden_size": 64,
+            "torch_deterministic": True,
+            "cuda": False,
+            "anneal_lr": False,
+            "tf_log": False,
+            "dense_reward": True,
+            "dense_reward_scale": 0.1,
+        }
+    )
+
+    agent = PPOAgent(
+        seed=123,
+        cfg=cfg,
+        env_id="prbench/BaseMotion3D-v0",
+        max_episode_steps=50,
+    )
+
+    # Training should complete without errors
+    train_metric = agent.train(eval_episodes=3)
+
+    assert "episodic_return" in train_metric["eval"]
+    assert len(train_metric["eval"]["episodic_return"]) == 3
+    agent.close()

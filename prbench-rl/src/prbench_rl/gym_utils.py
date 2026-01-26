@@ -9,13 +9,24 @@ import prbench
 import torch as th
 from gymnasium import spaces
 
+from prbench_rl.dense_rewards import wrap_with_dense_reward
+
 
 def make_env_ppo(
     env_id: str,
     max_episode_steps: int,
     gamma: float = 0.99,
+    dense_reward: bool = False,
+    dense_reward_scale: float = 0.1,
 ):
     """Create a single environment instance with appropriate wrappers for PPO.
+
+    Args:
+        env_id: Environment ID.
+        max_episode_steps: Maximum steps per episode.
+        gamma: Discount factor.
+        dense_reward: Whether to add dense reward shaping.
+        dense_reward_scale: Scale factor for dense reward.
 
     Note: Video recording should be added later via RecordVideo wrapper if needed.
     """
@@ -28,6 +39,10 @@ def make_env_ppo(
             env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
         else:
             env = gym.make(env_id, render_mode="rgb_array")
+
+        # Apply dense reward wrapper BEFORE flattening (needs object-centric state)
+        if dense_reward:
+            env = wrap_with_dense_reward(env, env_id, reward_scale=dense_reward_scale)
 
         # Apply standard wrappers
         env = gym.wrappers.FlattenObservation(env)
@@ -46,8 +61,17 @@ def make_env_sac(
     env_id: str,
     max_episode_steps: int,
     gamma: float = 0.99,
+    dense_reward: bool = False,
+    dense_reward_scale: float = 0.1,
 ):
     """Create a single environment instance with appropriate wrappers for SAC.
+
+    Args:
+        env_id: Environment ID.
+        max_episode_steps: Maximum steps per episode.
+        gamma: Discount factor.
+        dense_reward: Whether to add dense reward shaping.
+        dense_reward_scale: Scale factor for dense reward.
 
     Note: Video recording should be added later via RecordVideo wrapper if needed.
     """
@@ -60,6 +84,10 @@ def make_env_sac(
             env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
         else:
             env = gym.make(env_id, render_mode="rgb_array")
+
+        # Apply dense reward wrapper BEFORE flattening (needs object-centric state)
+        if dense_reward:
+            env = wrap_with_dense_reward(env, env_id, reward_scale=dense_reward_scale)
 
         # Apply standard wrappers
         env = gym.wrappers.FlattenObservation(env)

@@ -91,6 +91,12 @@ class SACArgs:
     autotune: bool = True
     """Automatic tuning of the entropy coefficient."""
 
+    # Dense reward settings
+    dense_reward: bool = False
+    """Whether to use dense reward shaping."""
+    dense_reward_scale: float = 0.1
+    """Scale factor for dense reward."""
+
 
 # ALGO LOGIC: initialize agent here:
 class SoftQNetwork(nn.Module):
@@ -411,6 +417,9 @@ class SACAgent(BaseRLAgent[_O, _U]):
                 make_env_sac(
                     self.env_id,
                     self.max_episode_steps,
+                    gamma=self.args.gamma,
+                    dense_reward=self.args.dense_reward,
+                    dense_reward_scale=self.args.dense_reward_scale,
                 )
                 for i in range(self.args.num_envs)
             ]
