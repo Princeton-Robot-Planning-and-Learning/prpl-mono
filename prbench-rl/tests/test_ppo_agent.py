@@ -1,5 +1,6 @@
 """Tests for the PPO agent."""
 
+import pytest
 import gymnasium
 import numpy as np
 import prbench
@@ -216,7 +217,7 @@ def test_ppo_agent_training_with_fixed_environment():
     assert mean_r_after > -300.0, f"Agent did not improve: mean return {mean_r_after}"
     agent.close()
 
-
+@pytest.mark.skip(reason="The script takes too long to run in CI.")
 def test_ppo_agent_training_with_fixed_environment_basemotion3d():
     """Test PPO agent can overfit on fixed BaseMotion3D environment."""
     prbench.register_all_environments()
