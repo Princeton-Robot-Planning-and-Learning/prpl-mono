@@ -99,21 +99,23 @@ def convert(
             base_images = []
 
             for fr in ep_frames:
+                robot_observation = np.array(fr["observation.robot_state"], dtype=np.float32)
+                env_observations = np.array(fr["observation.env_state"], dtype=np.float32)
                 if use_dynamics3d:
-                    robot_observation = np.array(fr["observation.state"][-22:], dtype=np.float32)
-                    env_observations = np.array(fr["observation.state"][:-22], dtype=np.float32)
+                    robot_observation.shape == np.array(fr["observation.state"][-22:], dtype=np.float32).shape
+                    env_observations.shape == np.array(fr["observation.state"][:-22], dtype=np.float32).shape
                 elif use_geom3d:
-                    robot_observation = np.array(fr["observation.state"][:19], dtype=np.float32)
-                    env_observations = np.array(fr["observation.state"][19:], dtype=np.float32)
+                    robot_observation.shape == np.array(fr["observation.state"][:19], dtype=np.float32).shape
+                    env_observations.shape == np.array(fr["observation.state"][19:], dtype=np.float32).shape
                 elif use_pushpull2d:
-                    robot_observation = np.array(fr["observation.state"][:24], dtype=np.float32)
-                    env_observations = np.array(fr["observation.state"][24:], dtype=np.float32)
+                    robot_observation.shape == np.array(fr["observation.state"][:24], dtype=np.float32).shape
+                    env_observations.shape == np.array(fr["observation.state"][24:], dtype=np.float32).shape
                 elif use_dynamic2d:
-                    robot_observation = np.array(fr["observation.state"][-24:], dtype=np.float32)
-                    env_observations = np.array(fr["observation.state"][:-24], dtype=np.float32)
+                    robot_observation.shape == np.array(fr["observation.state"][-24:], dtype=np.float32).shape
+                    env_observations.shape == np.array(fr["observation.state"][:-24], dtype=np.float32).shape
                 else:
-                    robot_observation = np.array(fr["observation.state"][:9], dtype=np.float32)
-                    env_observations = np.array(fr["observation.state"][9:], dtype=np.float32)
+                    robot_observation.shape == np.array(fr["observation.state"][:9], dtype=np.float32).shape
+                    env_observations.shape == np.array(fr["observation.state"][9:], dtype=np.float32).shape
                 action = np.array(fr["action"], dtype=np.float32)
                 env_states.append(env_observations)
                 robot_states.append(robot_observation)
