@@ -185,6 +185,16 @@ def convert(
                 episode_group.create_dataset(
                     "obs/image", data=np.array(images, dtype=np.uint8)
                 )
+                if save_videos and images:
+                    # Create video output directory next to the HDF5 file
+                    video_dir = output_path.parent / f"videos_{teleop_data_dir.name}" / f"demo_{ep_idx}" 
+                    video_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    # Save videos for each camera view
+                    fps = 30
+                    image_video_path = video_dir / "image.mp4"
+                    iio.mimsave(image_video_path, images, fps=fps)
+                    print(f"  Saved video for episode {ep_idx}")
 
             # Store episode length as attribute
             episode_group.attrs["num_frames"] = len(ep_frames)
