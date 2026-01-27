@@ -139,227 +139,51 @@
         ["on", "boxed_drink_0", "kitchen_island_shelf_2_region"],
         ["on", "carrot_0", "kitchen_island_shelf_2_region"],
         ["on", "avocado_0", "kitchen_island_shelf_2_region"],
-        [
-            "on",
-            "yellow_bowl_1",
-            "kitchen_cooking_area_shelf_2_region"
-        ],
-        [
-            "on",
-            "wiper_0",
-            "wiper_init_region"
-        ],
-        [
-            "on",
-            "cube_0",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_1",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_2",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_3",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_4",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_5",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_6",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_7",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_8",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_9",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_10",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_11",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_12",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_13",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_14",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_15",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_16",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_17",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_18",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "cube_19",
-            "blocks_init_region"
-        ],
-        [
-            "on",
-            "robot_0",
-            "robot_living_area_init_region"
-        ]
+        ["on", "yellow_bowl_1", "kitchen_cooking_area_shelf_2_region"],
+        ["on", "wiper_0", "wiper_init_region"],
+        ["on", "cube_0", "blocks_init_region"],
+        ["on", "cube_1", "blocks_init_region"],
+        ["on", "cube_2", "blocks_init_region"],
+        ["on", "cube_3", "blocks_init_region"],
+        ["on", "cube_4", "blocks_init_region"],
+        ["on", "cube_5", "blocks_init_region"],
+        ["on", "cube_6", "blocks_init_region"],
+        ["on", "cube_7", "blocks_init_region"],
+        ["on", "cube_8", "blocks_init_region"],
+        ["on", "cube_9", "blocks_init_region"],
+        ["on", "cube_10", "blocks_init_region"],
+        ["on", "cube_11", "blocks_init_region"],
+        ["on", "cube_12", "blocks_init_region"],
+        ["on", "cube_13", "blocks_init_region"],
+        ["on", "cube_14", "blocks_init_region"],
+        ["on", "cube_15", "blocks_init_region"],
+        ["on", "cube_16", "blocks_init_region"],
+        ["on", "cube_17", "blocks_init_region"],
+        ["on", "cube_18", "blocks_init_region"],
+        ["on", "cube_19", "blocks_init_region"],
+        ["on", "robot_0", "robot_living_area_init_region"]
     ],
     "goal_state": [
-        [
-            "on",
-            "boxed_drink_0",
-            "yellow_bowl_1_back_region"
-        ],
-        [
-            "on",
-            "cube_0",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_1",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_2",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_3",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_4",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_5",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_6",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_7",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_8",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_9",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_10",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_11",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_12",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_13",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_14",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_15",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_16",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_17",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_18",
-            "kitchen_island_shelf_1_partition_1_region"
-        ],
-        [
-            "on",
-            "cube_19",
-            "kitchen_island_shelf_1_partition_1_region"
-        ]
+        ["on", "boxed_drink_0", "yellow_bowl_1_back_region"],
+        ["on", "cube_0", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_1", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_2", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_3", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_4", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_5", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_6", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_7", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_8", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_9", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_10", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_11", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_12", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_13", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_14", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_15", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_16", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_17", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_18", "kitchen_island_shelf_1_partition_1_region"],
+        ["on", "cube_19", "kitchen_island_shelf_1_partition_1_region"]
     ]
 }

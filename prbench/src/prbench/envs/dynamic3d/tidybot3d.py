@@ -419,7 +419,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 # need to be placed, and create pos/yaw samplers for them
                 init_predicates = self.task_config.get("initial_state", [])
                 for pred in init_predicates:
-                    if pred[0] == "on" and len(pred) == 3:
+                    if pred[0] in ["on", "in"] and len(pred) == 3:
                         fixture_name = pred[1]
                         region_name = pred[2]
 
@@ -439,11 +439,18 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                                 break
 
                         if fixture_found:
+                            if pred[0] == "in":
+                                warning_msg = (
+                                    "Warning: Found 'in' predicate for fixture "
+                                    "placement, which is not supported. "
+                                    "Falling back to 'on' predicate."
+                                )
+                                print(warning_msg)
                             region_config = self.task_config["regions"][region_name]
                             # Assert that the region target is ground
                             assert region_config["target"] == "ground", (
                                 f"Region {region_name} for fixture {fixture_name} "
-                                f"must have target 'ground', got "
+                                "must have target 'ground', got "
                                 f"'{region_config['target']}'"
                             )
 
@@ -572,10 +579,13 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         # Separate objects by their target (ground or fixture)
         ground_objects: dict[str, dict[str, Any]] = {}
-        fixture_objects: dict[str, tuple[str, str]] = {}  # obj_name -> (target, region)
+        # obj_name -> (target, region, pred_type)
+        fixture_objects: dict[str, tuple[str, str, str]] = {}
 
+        # Go through all initial state predicates and categorize objects
         for pred in init_predicates:
-            if pred[0] == "on":
+            if pred[0] in ["on", "in"]:
+                pred_type = pred[0]
                 obj_name = pred[1]
                 region_name = pred[2]
 
@@ -600,12 +610,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     )
                     obj_config = self.task_config["objects"][obj_type].get(obj_name, {})
                     ground_objects[obj_name] = obj_config
-                    fixture_objects[obj_name] = (target, region_name)
+                    fixture_objects[obj_name] = (target, region_name, pred_type)
                 else:
                     # Handle fixture-placed objects separately below
-                    fixture_objects[obj_name] = (target, region_name)
+                    fixture_objects[obj_name] = (target, region_name, pred_type)
 
-        # Process ground-placed objects with collision checking
+        # Place objects on ground with collision checking
         if ground_objects:
             # Reuse the ground fixture already created in _create_scene_xml()
             assert self._ground_fixture is not None, "Ground fixture not initialized"
@@ -616,17 +626,21 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             entity_pos_yaw_samplers: dict[str, Any] = {}
             entity_check_in_region: dict[str, Any] = {}
 
-            # Build configs dict with only ground objects
+            # Process regions and samplers on ground
             ground_object_configs: dict[str, dict[str, Any]] = {}
-
-            for obj_name, region_name in fixture_objects.items():
-                target, reg_name = region_name
+            for obj_name, region_info in fixture_objects.items():
+                target, region_name, pred_type = region_info
                 if target == "ground" and obj_name in ground_objects:
-                    entity_region_names[obj_name] = reg_name
+                    entity_region_names[obj_name] = region_name
                     entity_pos_yaw_samplers[obj_name] = (
                         ground_fixture.sample_pose_in_region
                     )
-                    entity_check_in_region[obj_name] = ground_fixture.check_in_region
+                    if pred_type == "in":
+                        # If object needs to be "in" the region, we additionally check
+                        # for the object bbox to lie entirely within the region
+                        entity_check_in_region[obj_name] = (
+                            ground_fixture.check_in_region
+                        )
                     # Get the object type for this object
                     obj = self._objects_dict[obj_name]
                     # pylint: disable=no-member
@@ -656,14 +670,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     quat = convert_yaw_to_quaternion(yaw)
                     obj.set_pose(pos, quat)
 
-        # Process fixture-placed objects with unified API
+        # Place objects on fixtures
         fixture_entity_region_names: dict[str, str] = {}
         fixture_entity_pos_yaw_samplers: dict[str, Any] = {}
         fixture_entity_check_in_region: dict[str, Any] = {}
         fixture_object_configs: dict[str, dict[str, Any]] = {}
 
         for obj_name, region_info in fixture_objects.items():
-            target, region_name = region_info
+            target, region_name, pred_type = region_info
 
             if target == "ground":
                 continue  # Already handled above
@@ -676,7 +690,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
             fixture_entity_pos_yaw_samplers[obj_name] = (
                 target_fixture.sample_pose_in_region
             )
-            fixture_entity_check_in_region[obj_name] = target_fixture.check_in_region
+            if pred_type == "in":
+                # If object needs to be "in" the region, we additionally check
+                # for the object bbox to lie entirely within the region
+                fixture_entity_check_in_region[obj_name] = (
+                    target_fixture.check_in_region
+                )
 
             # Get the object type for this object
             obj = self._objects_dict[obj_name]
@@ -725,8 +744,17 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         init_predicates = self.task_config.get("initial_state", [])
         robot_predicates = []
         for pred in init_predicates:
-            if len(pred) >= 3 and pred[0] == "on" and pred[1] == self.robot_name:
+            if (
+                len(pred) >= 3
+                and pred[0] in ["on", "in"]
+                and pred[1] == self.robot_name
+            ):
                 robot_predicates.append(pred)
+                if pred[0] == "in":
+                    print(
+                        "Warning: Found 'in' predicate for robot initial pose, "
+                        "which is not supported. Falling back to 'on' predicate."
+                    )
 
         # Assert there is exactly one predicate for the robot
         assert len(robot_predicates) <= 1, (
@@ -994,7 +1022,14 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Evaluate each goal predicate
         successes = []
         for pred in goal_predicates:
-            if pred[0] == "on":
+            if pred[0] in ["on", "in"]:
+                # Treating "on" and "in" the same in predicate checking for now
+                if pred[0] == "in":
+                    print(
+                        "Warning: Found 'in' predicate for success check, "
+                        "which is not supported. Falling back to 'on' predicate."
+                    )
+
                 obj_name = pred[1]
                 region_name = pred[2]
                 obj = state.get_object_from_name(obj_name)
