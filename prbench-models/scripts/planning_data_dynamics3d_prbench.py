@@ -183,7 +183,8 @@ def collect_data(
             cupboard = state.get_object_from_name("cupboard_1")
             object_parameters = (robot, cube, cupboard)  # type: ignore
             controller = lifted_controller.ground(object_parameters)
-            params = np.array([0.91823519, -0.13385369, -1.57079633])
+            # params = np.array([0.91823519, -0.13385369, -1.57079633])
+            params = np.array([0.88823519, -0.13385369, -1.57079633])
 
             # Reset and execute the controller until it terminates.
             try:

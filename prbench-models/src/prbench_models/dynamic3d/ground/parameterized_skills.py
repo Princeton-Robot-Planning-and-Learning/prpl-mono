@@ -1456,7 +1456,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             while len(self._current_retract_plan) > 1:  # type: ignore
                 peek_conf = self._current_retract_plan[0]  # type: ignore
                 # Close enough, pop and continue.
-                if self._robot_is_close_to_conf(peek_conf):
+                if self._robot_is_close_to_conf(peek_conf, atol=0.08):
                     self._current_retract_plan.pop(0)  # type: ignore
                 # Not close enough, stop popping.
                 break
@@ -1519,11 +1519,11 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             return GRASP_CLOSE_THRESHOLD
         return 0.0
 
-    def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
+    def _robot_is_close_to_conf(self, conf: JointPositions, atol: float = WAYPOINT_TOL) -> bool:
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 4 * 1e-2
+        return dist < atol
 
     def _robot_is_close_to_pose(self, pose: SE2, atol: float = WAYPOINT_TOL) -> bool:
         robot_pose = self._get_current_robot_pose()
