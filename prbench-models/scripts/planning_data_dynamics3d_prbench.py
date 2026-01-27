@@ -129,10 +129,17 @@ def collect_data(
         object_parameters = (robot, cube)
         controller = lifted_controller.ground(object_parameters)
         # params = controller.sample_parameters(state, np.random.default_rng(123))
-        params = np.array([0.5, 0.0])
+        params = np.array([0.6, 0.0])
 
         # Reset and execute the controller until it terminates.
-        controller.reset(state, params)
+        try:
+            controller.reset(state, params)
+        except ValueError as e:
+            print(e)
+            print("Pick controller reset failed. Not saving.")
+            env.close()  # type: ignore
+            return
+
         for step_idx in range(400):
             action = controller.step()
             
@@ -176,10 +183,16 @@ def collect_data(
             cupboard = state.get_object_from_name("cupboard_1")
             object_parameters = (robot, cube, cupboard)  # type: ignore
             controller = lifted_controller.ground(object_parameters)
-            params = controller.sample_parameters(state, np.random.default_rng(seed))
+            params = np.array([0.91823519, -0.13385369, -1.57079633])
 
             # Reset and execute the controller until it terminates.
-            controller.reset(state, params)
+            try:
+                controller.reset(state, params)
+            except ValueError as e:
+                print(e)
+                print("Pick controller reset failed. Not saving.")
+                env.close()  # type: ignore
+                return
             for step_idx in range(400):
                 action = controller.step()
                 

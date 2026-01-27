@@ -91,6 +91,13 @@
                     0
                 ]
             ]
+        },
+        "cupboard_1_cube_1_goal_region": {
+            "target": "cupboard_1",
+            "shelf": 2,
+            "ranges": [[-0.3, -0.2, 0.3, 0.2]],
+            "rgba": [1.0, 1.0, 0.0, 0.0],
+            "yaw_ranges": [[0, 360]]
         }
     },
     "objects": {
@@ -142,5 +149,8 @@
             "robot_0",
             "robot_0_task_init_region"
         ]
+    ],
+    "goal_state": [
+        ["on", "cube1", "cupboard_1_cube_1_goal_region"]
     ]
 }

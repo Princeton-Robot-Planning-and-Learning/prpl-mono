@@ -748,14 +748,11 @@ def test_pick_place_skill():
         )
 
     # Reset the environment and get the initial state.
-    obs, _ = env.reset(seed=129)
+    obs, _ = env.reset(seed=123)
     for _ in range(5):
         obs, _, _, _, _ = env.step(np.zeros(11))
-    
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
-
-    
 
     assert state is not None
     pybullet_sim = PyBulletSim(state, rendering=False)
@@ -768,7 +765,8 @@ def test_pick_place_skill():
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
-    params = np.array([0.5, 0.0])
+    # params = controller.sample_parameters(state, np.random.default_rng(123))
+    params = np.array([0.6, 0.0])
 
     # Reset and execute the controller until it terminates.
     controller.reset(state, params)
@@ -786,7 +784,7 @@ def test_pick_place_skill():
     # create the place ground controller.
     lifted_controller = controllers["place_ground"]
     robot = state.get_object_from_name("robot")
-    cube = state.get_object_from_name("cube2")
+    cube = state.get_object_from_name("cube1")
     cupboard = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube, cupboard)
     controller = lifted_controller.ground(object_parameters)
@@ -806,7 +804,6 @@ def test_pick_place_skill():
         assert False, "Controller did not terminate"
 
     env.close()
-
 
 def test_pick_place_two_cubes_skill():
     """Test pick and place skill in ground environment with 1 cube."""

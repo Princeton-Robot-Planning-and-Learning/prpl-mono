@@ -54,13 +54,13 @@ MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
 GRIPPER_OPEN_THRESHOLD = 0.01
 GRASP_CLOSE_THRESHOLD = 1.0  # for stable grasp
 GRIPPER_CLOSED_THRESHOLD = 0.02
-WAYPOINT_TOL = 3 * 1e-2
+WAYPOINT_TOL = 4 * 1e-2
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi, np.pi)
 WORLD_X_BOUNDS = (-2.5, 2.5)  # we should move these later
 WORLD_Y_BOUNDS = (-2.5, 2.5)  # we should move these later
 ROBOT_ARM_POSE_TO_BASE = Pose((0.12, 0.0, 0.4))
-GRASP_TRANSFORM_TO_OBJECT = Pose((0.005, 0, 0.005), (0.707, 0.707, 0, 0))
+GRASP_TRANSFORM_TO_OBJECT = Pose((0.005, 0, 0.01), (0.707, 0.707, 0, 0))
 BASE_DISTANCE_TO_CUPBOARD = 0.95
 ARM_MOVEMENT_CUPBOARD = Pose((0.8, 0.0, 0.25), (0.5, 0.5, 0.5, 0.5))
 PLACE_SAMPLER_COLLISION_THRESHOLD = 0.05
@@ -1013,13 +1013,6 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
 
-        # Remap the plan to ensure we stay within action limits.
-        plan = remap_joint_position_plan_to_constant_distance(
-            plan,
-            self._pybullet_sim.robot,
-            max_distance=0.4,
-        )
-
         retract_plan = run_motion_planning(
             self._pybullet_sim.robot,
             target_joints,
@@ -1037,6 +1030,16 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
 
+        assert plan is not None, "Motion planning failed"
+        assert retract_plan is not None, "Motion planning failed"
+
+        # Remap the plan to ensure we stay within action limits.
+        plan = remap_joint_position_plan_to_constant_distance(
+            plan,
+            self._pybullet_sim.robot,
+            max_distance=0.4,
+        )
+        
         # Remap the plan to ensure we stay within action limits.
         retract_plan = remap_joint_position_plan_to_constant_distance(
             retract_plan,
@@ -1044,8 +1047,6 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             max_distance=0.4,
         )
 
-        assert plan is not None, "Motion planning failed"
-        assert retract_plan is not None, "Motion planning failed"
         self._current_arm_joint_plan = plan
         self._current_retract_plan = retract_plan
 
@@ -1120,14 +1121,10 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             self._last_gripper_state = self._get_current_robot_gripper_pose()
             return action
         if self._pre_grasp and self._closed_gripper:
-            print('retracting')
             while len(self._current_retract_plan) > 1:  # type: ignore
                 peek_conf = self._current_retract_plan[0]  # type: ignore
                 # Close enough, pop and continue.
-                print('peek_conf: ', peek_conf)
-                print('current_conf: ', self._get_current_robot_arm_conf())
-                print('close_to_conf: ', self._robot_is_close_to_conf(peek_conf))
-                if self._robot_is_close_to_conf(peek_conf):
+                if self._robot_is_close_to_conf(peek_conf, atol=0.08):
                     self._current_retract_plan.pop(0)  # type: ignore
                 # Not close enough, stop popping.
                 break
@@ -1191,7 +1188,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         return 0.0
 
     def _robot_is_close_to_conf(
-        self, conf: JointPositions, atol: float = 6 * 1e-2
+        self, conf: JointPositions, atol: float = WAYPOINT_TOL
     ) -> bool:
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
@@ -1362,25 +1359,25 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             base_link_to_held_obj=self._pybullet_sim.base_link_to_held_obj,
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
+        
+
+        retract_plan = run_motion_planning(
+            self._pybullet_sim.robot,
+            target_joints,
+            self.home_joints.tolist(),
+            collision_bodies=self._pybullet_sim.get_collision_bodies(),
+            seed=0,  # use a constant seed to make this effectively deterministic
+            physics_client_id=self._pybullet_sim.physics_client_id,
+        )
+
+        assert plan is not None, "Motion planning failed"
+        assert retract_plan is not None, "Motion planning failed"
 
         # Remap the plan to ensure we stay within action limits.
         plan = remap_joint_position_plan_to_constant_distance(
             plan,
             self._pybullet_sim.robot,
             max_distance=0.4,
-        )
-
-        retract_plan = run_motion_planning(
-            self._pybullet_sim.robot,
-            target_joints,
-            self.home_joints.tolist(),
-            collision_bodies=self._pybullet_sim.get_collision_bodies(
-                held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
-                    target_object_place.name
-                ]
-            ),
-            seed=0,  # use a constant seed to make this effectively deterministic
-            physics_client_id=self._pybullet_sim.physics_client_id,
         )
 
         # Remap the plan to ensure we stay within action limits.
@@ -1390,8 +1387,6 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             max_distance=0.4,
         )
 
-        assert plan is not None, "Motion planning failed"
-        assert retract_plan is not None, "Motion planning failed"
         self._current_arm_joint_plan = plan
         self._current_retract_plan = retract_plan
 
