@@ -29,6 +29,7 @@ import argparse
 from pathlib import Path
 
 import h5py  # type: ignore
+import imageio as iio
 import numpy as np
 import cv2 as cv
 
@@ -45,6 +46,7 @@ def convert(
     use_geom3d: bool = False,
     use_dynamics3d: bool = False,
     use_pushpull2d: bool = False,
+    save_videos: bool = False,
 ) -> None:
     """Convert expert or teleoperated data to HDF5 format.
 
@@ -59,6 +61,7 @@ def convert(
         use_geom3d: If True, use geom3d environment
         use_dynamics3d: If True, use dynamics3d environment
         use_pushpull2d: If True, use pushpull2d environment
+        save_videos: If True, save videos for teleoperated demos
     """
     if teleop_data_dir is None:
         raise ValueError("teleop_data_dir must be provided")
@@ -163,6 +166,21 @@ def convert(
                 episode_group.create_dataset(
                     "obs/base_image", data=np.array(base_images, dtype=np.uint8)
                 )
+                if save_videos and overview_images:
+                    # Create video output directory next to the HDF5 file
+                    video_dir = output_path.parent / f"videos_{teleop_data_dir.name}" / f"demo_{ep_idx}" 
+                    video_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    # Save videos for each camera view
+                    fps = 30
+                    overview_video_path = video_dir / "overview.mp4"
+                    wrist_video_path = video_dir / "wrist.mp4"
+                    base_video_path = video_dir / "base.mp4"
+                    
+                    iio.mimsave(overview_video_path, overview_images, fps=fps)
+                    iio.mimsave(wrist_video_path, wrist_images, fps=fps)
+                    iio.mimsave(base_video_path, base_images, fps=fps)
+                    print(f"  Saved videos for episode {ep_idx}")
             elif images:
                 episode_group.create_dataset(
                     "obs/image", data=np.array(images, dtype=np.uint8)
@@ -239,6 +257,11 @@ def main() -> None:
         action="store_true",
         help="Use dynamicpushpull2d environment",
     )
+    parser.add_argument(
+        "--save_videos",
+        action="store_true",
+        help="Save videos for teleoperated demos",
+    )
     args = parser.parse_args()
 
     # Validate inputs
@@ -263,6 +286,7 @@ def main() -> None:
         use_geom3d=args.use_geom3d,
         use_dynamics3d=args.use_dynamics3d,
         use_pushpull2d=args.use_pushpull2d,
+        save_videos=args.save_videos,
     )
 
 
