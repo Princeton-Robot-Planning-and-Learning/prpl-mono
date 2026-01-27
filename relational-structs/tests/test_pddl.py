@@ -34,16 +34,12 @@ def test_operators():
     lifted_operator = LiftedOperator(
         "Pick", parameters, preconditions, add_effects, delete_effects
     )
-    assert (
-        str(lifted_operator)
-        == repr(lifted_operator)
-        == """(:action Pick
+    assert str(lifted_operator) == repr(lifted_operator) == """(:action Pick
     :parameters (?cup - cup_type ?plate - plate_type)
     :precondition (and (NotOn ?cup ?plate))
     :effect (and (On ?cup ?plate)
         (not (NotOn ?cup ?plate)))
 )"""
-    )
     assert lifted_operator.short_str == "Pick(?cup, ?plate)"
 
     assert isinstance(hash(lifted_operator), int)
@@ -62,16 +58,12 @@ def test_operators():
     ground_operator = lifted_operator.ground((cup, plate))
     assert isinstance(ground_operator, GroundOperator)
     assert ground_operator.parent is lifted_operator
-    assert (
-        str(ground_operator)
-        == repr(ground_operator)
-        == """(:action Pick
+    assert str(ground_operator) == repr(ground_operator) == """(:action Pick
     :parameters (cup - cup_type plate - plate_type)
     :precondition (and (NotOn cup plate))
     :effect (and (On cup plate)
         (not (NotOn cup plate)))
 )"""
-    )
     assert ground_operator.short_str == "Pick(cup, plate)"
     ground_operator2 = lifted_operator2.ground((cup, plate))
     ground_operator3 = lifted_operator3.ground((cup, plate))
@@ -228,9 +220,7 @@ def test_run_pyperplan_planning():
     # we had a bug where "block" was missing from the left hand side, because it has
     # no parent, leading to a parsing error in pyperplan.
 
-    assert (
-        str(domain)
-        == """(define (domain blocks_world)
+    assert str(domain) == """(define (domain blocks_world)
     (:requirements :typing)
     (:types 
     b_block - a_block
@@ -248,7 +238,6 @@ def test_run_pyperplan_planning():
 )
 )
 """
-    )
 
     # Define initial state and goal
     block0 = Object(name="block0", type=level1_block_type)
