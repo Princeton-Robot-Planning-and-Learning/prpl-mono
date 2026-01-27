@@ -799,7 +799,8 @@ class Cupboard(MujocoFixture):
                 else:
                     raise ValueError(
                         f"Each region range must have 4 or 6 values "
-                        f"[x_start, y_start, x_end, y_end] or [x_start, y_start, z_start, x_end, y_end, z_end], "
+                        f"[x_start, y_start, x_end, y_end] or "
+                        f"[x_start, y_start, z_start, x_end, y_end, z_end], "
                         f"got {len(region_range)} for region '{region_name}'"
                     )
 
