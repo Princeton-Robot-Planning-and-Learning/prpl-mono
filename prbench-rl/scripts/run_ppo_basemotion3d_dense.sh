@@ -16,7 +16,7 @@ python experiments/run_experiment.py \
     max_episode_steps=100 \
     eval_episodes=50 \
     seed=${SEED} \
-    agent.args.total_timesteps=50000 \
+    agent.args.total_timesteps=1000000 \
     agent.args.num_envs=16 \
     agent.args.num_steps=256 \
     agent.args.hidden_size=128 \

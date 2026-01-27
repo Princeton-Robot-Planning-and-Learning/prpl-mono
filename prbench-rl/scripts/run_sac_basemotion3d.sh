@@ -18,6 +18,4 @@ python experiments/run_experiment.py \
     seed=${SEED} \
     agent.args.total_timesteps=1000000 \
     agent.args.num_envs=16 \
-    agent.args.hidden_size=128 \
-    agent.args.dense_reward=true \
-    agent.args.dense_reward_scale=${REWARD_SCALE}
+    agent.args.hidden_size=128
