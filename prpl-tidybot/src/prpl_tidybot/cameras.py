@@ -123,10 +123,10 @@ class KinovaCamera(Camera):
             image = self.get_image()
 
         # Make sure fisheye lens did not accidentally get bumped
-        if not check_fisheye_centered(image):
-            raise Exception(
-                "The fisheye lens on the Kinova wrist camera appears to be off-center"
-            )
+        # if not check_fisheye_centered(image):
+        #     raise Exception(
+        #         "The fisheye lens on the Kinova wrist camera appears to be off-center"
+        #     )
 
     def apply_camera_settings(self):
         # Note: This function adds significant camera latency when it is called

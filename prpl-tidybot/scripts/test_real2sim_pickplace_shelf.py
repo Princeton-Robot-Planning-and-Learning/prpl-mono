@@ -29,11 +29,11 @@ def real2sim() -> None:
         # Create the environment.
         num_cubes = 1
         env = prbench.make(
-            f"prbench/TidyBot3D-cupboard-o{num_cubes}-v0", render_mode="rgb_array"
+            f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0", render_mode="rgb_array", scene_bg=True
         )
 
         env = RecordVideo(
-            env, "unit_test_videos", name_prefix=f"TidyBot3D-cupboard-o{num_cubes}"
+            env, "unit_test_videos", name_prefix=f"TidyBot3D-cupboard_real-o{num_cubes}"
         )
 
         # Reset the environment and get the initial state.
@@ -96,6 +96,7 @@ def real2sim() -> None:
                 0.707,
                 0,
                 0,
+                0.0,
             ]
         )  # x, y, z, rw, rx, ry, rz
         params = target_end_effector_pose
@@ -194,6 +195,7 @@ def real2sim() -> None:
                 0.5,
                 0.5,
                 0.5,
+                0.0,
             ]
         )  # x, y, z, rw, rx, ry, rz
         params = target_end_effector_pose
@@ -243,7 +245,7 @@ def real2sim2real() -> None:
         # Create the environment.
         num_cubes = 1
         env = prbench.make(
-            f"prbench/TidyBot3D-cupboard-o{num_cubes}-v0", render_mode="rgb_array"
+            f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0", render_mode="rgb_array"
         )
 
         # Reset the environment and get the initial state.
@@ -333,6 +335,7 @@ def real2sim2real() -> None:
                 0.707,
                 0,
                 0,
+                0.0,
             ]
         )  # x, y, z, rw, rx, ry, rz
         params = target_end_effector_pose
@@ -483,6 +486,7 @@ def real2sim2real() -> None:
                 0.5,
                 0.5,
                 0.5,
+                0.0,
             ]
         )  # x, y, z, rw, rx, ry, rz
         params = target_end_effector_pose
@@ -522,5 +526,5 @@ def real2sim2real() -> None:
 
 
 if __name__ == "__main__":
-    # real2sim()
-    real2sim2real()
+    real2sim()
+    # real2sim2real()

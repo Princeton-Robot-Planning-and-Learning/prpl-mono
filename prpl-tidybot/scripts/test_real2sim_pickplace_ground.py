@@ -96,6 +96,7 @@ def real2sim() -> None:
                 0.707,
                 0,
                 0,
+                0.0,
             ]
         )  # x, y, z, rw, rx, ry, rz
         params = target_end_effector_pose
@@ -194,6 +195,7 @@ def real2sim() -> None:
                 0.707,
                 0,
                 0,
+                0.0,
             ]
         )  # x, y, z, rw, rx, ry, rz
         params = target_end_effector_pose
@@ -331,6 +333,7 @@ def real2sim2real() -> None:
                 0.707,
                 0,
                 0,
+                0.0,
             ]
         )  # x, y, z, rw, rx, ry, rz
         params = target_end_effector_pose
@@ -478,6 +481,7 @@ def real2sim2real() -> None:
                 0.707,
                 0,
                 0,
+                0.0,
             ]
         )  # x, y, z, rw, rx, ry, rz
         params = target_end_effector_pose
@@ -517,5 +521,5 @@ def real2sim2real() -> None:
 
 
 if __name__ == "__main__":
-    # real2sim()
-    real2sim2real()
+    real2sim()
+    # real2sim2real()
