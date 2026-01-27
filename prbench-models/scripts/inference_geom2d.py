@@ -1,8 +1,12 @@
 """Policy inference script for running remote policies in prbench environments."""
 
 import argparse
+import json
 import time
+from datetime import datetime
+from pathlib import Path
 
+import imageio as iio
 import cv2 as cv
 import numpy as np
 import prbench
@@ -99,7 +103,7 @@ class RemotePolicy:
 
 
 def run_inference(
-    output_dir: str = "data/inference",
+    output_dir: Path = Path("data/inference"),
     seed: int = 123,
     save: bool = True,
     num_episodes: int = 1,
@@ -113,6 +117,7 @@ def run_inference(
     use_qpos: bool = False,
     use_delta_qpos: bool = False,
     use_env_state: bool = False,
+    save_videos: bool = False,
 ):
     """Run policy inference in the prbench environment.
 
@@ -131,11 +136,22 @@ def run_inference(
         use_qpos: Whether to use qpos for the policy.
         use_delta_qpos: Whether to use delta qpos for the policy.
         use_env_state: Whether to use env state for the policy.
+        save_videos: Whether to save videos for evaluation.
     """
     
 
+    # Episode tracking
     successes = 0
+    episode_rewards = []
+    episode_lengths = []
+    episode_terminated = []
+    episode_truncated = []
+    episode_seeds = []
+    
     try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        video_parent_dir = output_dir / f"videos_{env_name}_{timestamp}"
+        video_parent_dir.mkdir(parents=True, exist_ok=True)
         for episode_idx in range(num_episodes):
             # Create the environment
             render_mode = "rgb_array" if render or save else None
@@ -151,6 +167,15 @@ def run_inference(
                     render_mode=render_mode,
                 )
 
+            
+            if save_videos:
+                video_dir = video_parent_dir / f"eval_episode_{episode_idx}" 
+                video_dir.mkdir(parents=True, exist_ok=True)
+                overview_images = []
+                base_images = []
+                wrist_images = []
+                images_2d = []
+                fps = 30
             # Create remote policy
             policy = RemotePolicy(host=policy_host, port=policy_port)
 
@@ -161,6 +186,7 @@ def run_inference(
 
             # Reset the environment
             episode_seed = seed + episode_idx
+            episode_seeds.append(episode_seed)
             (
                 obs,
                 _,
@@ -189,6 +215,11 @@ def run_inference(
             # Reset the policy
             policy.reset(target_object_key)  # type: ignore
 
+            # Episode metrics
+            episode_reward = 0.0
+            ep_terminated = False
+            ep_truncated = False
+            
             start_time = time.time()
             for step_idx in range(max_steps):
                 # Enforce desired control frequency
@@ -204,6 +235,10 @@ def run_inference(
                     overview_image = all_images["overview"]
                     base_image = all_images["base"]
                     wrist_image = all_images["wrist"]
+                    if save_videos:
+                        overview_images.append(overview_image)
+                        base_images.append(base_image)
+                        wrist_images.append(wrist_image)
                     if show_images:
                         _visualize_image_in_window(overview_image, "overview")
                         _visualize_image_in_window(base_image, "base")
@@ -216,12 +251,18 @@ def run_inference(
                     base_image = env.unwrapped._object_centric_env.render()
                     env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
                     wrist_image = env.unwrapped._object_centric_env.render()
+                    if save_videos:
+                        overview_images.append(overview_image)
+                        base_images.append(base_image)
+                        wrist_images.append(wrist_image)
                     if show_images:
                         _visualize_image_in_window(overview_image, "overview")
                         _visualize_image_in_window(base_image, "base")
                         _visualize_image_in_window(wrist_image, "wrist")
                 else:
                     image = env.unwrapped._object_centric_env.render()
+                    if save_videos:
+                        images_2d.append(image)
                     if show_images:
                         _visualize_image_in_window(image, "overview")
 
@@ -287,7 +328,6 @@ def run_inference(
                         "robot_actions": np.zeros(env.action_space.shape[0], dtype=np.float32)
                     }
                 
-                print('action_dict', action_dict)
                 action = action_dict["robot_actions"]
                 epsilon = 1e-4
                 action = np.clip(action, env.action_space.low + epsilon, env.action_space.high - epsilon)
@@ -297,29 +337,55 @@ def run_inference(
                 if writer is not None:
                     writer.step(obs_dict, action_dict, target_object_key)
 
-                print('action', action)
                 action = action.astype(np.float32)
                 # Execute action in environment
                 obs, reward, terminated, truncated, _ = env.step(  # type: ignore # pylint: disable=line-too-long
                     action
                 )
+                episode_reward += reward
                 next_state = env.observation_space.devectorize(obs)
                 state = next_state
 
                 # Check for episode end
                 if terminated or truncated:
+                    ep_terminated = terminated
+                    ep_truncated = truncated
                     print(f"Episode ended after {step_idx + 1} steps")
                     print(
-                        f"  Reward: {reward}, Terminated: {terminated}, Truncated: {truncated}"  # pylint: disable=line-too-long
+                        f"  Reward: {reward}, Total Reward: {episode_reward:.3f}, "
+                        f"Terminated: {terminated}, Truncated: {truncated}"
                     )
-                    successes += 1
+                    if terminated:
+                        successes += 1
+                    episode_lengths.append(step_idx + 1)
                     break
 
             else:
+                # Max steps reached without termination
+                episode_lengths.append(max_steps)
                 print(f"Episode reached max steps ({max_steps})")
+            
+            # Log episode results (runs for both break and normal completion)
+            episode_rewards.append(episode_reward)
+            episode_terminated.append(ep_terminated)
+            episode_truncated.append(ep_truncated)
 
-            print(f"Successes: {successes}")
-            print(f"Success rate: {successes / num_episodes}")
+            if save_videos:
+                if len(overview_images) > 0:
+                    overview_video_path = video_dir / "overview.mp4"
+                    iio.mimsave(overview_video_path, overview_images, fps=fps)
+                if len(base_images) > 0:
+                    base_video_path = video_dir / "base.mp4"
+                    iio.mimsave(base_video_path, base_images, fps=fps)
+                if len(wrist_images) > 0:
+                    wrist_video_path = video_dir / "wrist.mp4"
+                    iio.mimsave(wrist_video_path, wrist_images, fps=fps)
+                if len(images_2d) > 0:
+                    image_video_path = video_dir / "image.mp4"
+                    iio.mimsave(image_video_path, images_2d, fps=fps)
+            
+            print(f"Episode {episode_idx + 1}: reward={episode_reward:.3f}, "
+                  f"terminated={ep_terminated}, truncated={ep_truncated}")
             policy.close()  # type: ignore
             env.close()  # type: ignore
             # Save episode data to disk
@@ -329,15 +395,71 @@ def run_inference(
                 print(f"Episode saved with {len(writer)} steps")
 
     finally:
-        print(f"Successes: {successes}")
-        print(f"Success rate: {successes / num_episodes}")
+        # Print summary statistics
+        print("\n" + "=" * 50)
+        print("EVALUATION SUMMARY")
+        print("=" * 50)
+        print(f"Environment: {env_name}")
+        print(f"Episodes completed: {len(episode_rewards)}/{num_episodes}")
+        print(f"Successes (terminated): {successes}")
+        print(f"Success rate: {successes / max(len(episode_rewards), 1):.2%}")
+        
+        if episode_rewards:
+            print(f"\nReward Statistics:")
+            print(f"  Total rewards: {episode_rewards}")
+            print(f"  Average reward: {np.mean(episode_rewards):.3f}")
+            print(f"  Std reward: {np.std(episode_rewards):.3f}")
+            print(f"  Min reward: {np.min(episode_rewards):.3f}")
+            print(f"  Max reward: {np.max(episode_rewards):.3f}")
+        
+        if episode_lengths:
+            print(f"\nEpisode Length Statistics:")
+            print(f"  Average length: {np.mean(episode_lengths):.1f}")
+            print(f"  Min length: {np.min(episode_lengths)}")
+            print(f"  Max length: {np.max(episode_lengths)}")
+        
+        print(f"\nTerminated: {sum(episode_terminated)}, Truncated: {sum(episode_truncated)}")
+        print("=" * 50)
+        
+        # Save logs to JSON file
+        logs = {
+            "environment": env_name,
+            "seed": seed,
+            "num_episodes": num_episodes,
+            "max_steps": max_steps,
+            "timestamp": timestamp,
+            "episodes_completed": len(episode_rewards),
+            "successes": successes,
+            "success_rate": successes / max(len(episode_rewards), 1),
+            "episode_seeds": episode_seeds,
+            "episode_rewards": episode_rewards,
+            "episode_lengths": episode_lengths,
+            "episode_terminated": episode_terminated,
+            "episode_truncated": episode_truncated,
+            "reward_stats": {
+                "mean": float(np.mean(episode_rewards)) if episode_rewards else 0.0,
+                "std": float(np.std(episode_rewards)) if episode_rewards else 0.0,
+                "min": float(np.min(episode_rewards)) if episode_rewards else 0.0,
+                "max": float(np.max(episode_rewards)) if episode_rewards else 0.0,
+            },
+            "length_stats": {
+                "mean": float(np.mean(episode_lengths)) if episode_lengths else 0.0,
+                "min": int(np.min(episode_lengths)) if episode_lengths else 0,
+                "max": int(np.max(episode_lengths)) if episode_lengths else 0,
+            },
+        }
+        
+        logs_path = video_parent_dir / "evaluation_logs.json"
+        with open(logs_path, "w") as f:
+            json.dump(logs, f, indent=2)
+        print(f"\nLogs saved to: {logs_path}")
 
 
 def main() -> None:
     """Main function to run policy inference in prbench."""
     parser = argparse.ArgumentParser(description="Run policy inference in prbench")
     parser.add_argument(
-        "--output-dir", default="data/inference", help="Directory to save episodes"
+        "--output-dir", default="data/evaluations", help="Directory to save episodes"
     )
     parser.add_argument(
         "--seed", type=int, default=123, help="Random seed for reproducibility"
@@ -375,6 +497,7 @@ def main() -> None:
         default=False,
         help="Show images in a window",
     )
+    parser.add_argument("--save-videos", action="store_true", default=False, help="Save videos for evaluation")
     parser.add_argument("--render", action="store_true", help="Render the environment")
     parser.add_argument("--use-qpos", action="store_true", default=False, help="Use qpos for the policy")
     parser.add_argument("--use-delta-qpos", action="store_true", default=False, help="Use delta qpos for the policy")
@@ -382,7 +505,7 @@ def main() -> None:
     args = parser.parse_args()
 
     run_inference(
-        output_dir=args.output_dir,
+        output_dir=Path(args.output_dir),
         seed=args.seed,
         save=args.save,
         num_episodes=args.num_episodes,
@@ -396,6 +519,7 @@ def main() -> None:
         use_qpos=args.use_qpos,
         use_delta_qpos=args.use_delta_qpos,
         use_env_state=args.use_env_state,
+        save_videos=args.save_videos,
     )
 
 
