@@ -11,7 +11,6 @@ import cv2 as cv
 import numpy as np
 import prbench
 import zmq
-from episode_storage import EpisodeWriter
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from prbench_models.policy_constants import (
@@ -105,7 +104,6 @@ class RemotePolicy:
 def run_inference(
     output_dir: Path = Path("data/inference"),
     seed: int = 123,
-    save: bool = True,
     num_episodes: int = 1,
     max_steps: int = 200,
     policy_host: str = POLICY_SERVER_HOST,
@@ -124,7 +122,6 @@ def run_inference(
     Args:
         output_dir: Directory to save episode data.
         seed: Random seed for reproducibility.
-        save: Whether to save the episode data to disk.
         num_episodes: Number of episodes to run.
         max_steps: Maximum steps per episode.
         policy_host: Policy server hostname.
@@ -154,7 +151,7 @@ def run_inference(
         video_parent_dir.mkdir(parents=True, exist_ok=True)
         for episode_idx in range(num_episodes):
             # Create the environment
-            render_mode = "rgb_array" if render or save else None
+            render_mode = "rgb_array" if render or save_videos else None
             if "TidyBot" in env_name:
                 env = prbench.make(
                     f"prbench/{env_name}",
@@ -181,9 +178,6 @@ def run_inference(
 
             print(f"\n=== Episode {episode_idx + 1}/{num_episodes} ===")
 
-            # Create episode writer if saving is enabled
-            writer = EpisodeWriter(output_dir) if save else None
-
             # Reset the environment
             episode_seed = seed + episode_idx
             episode_seeds.append(episode_seed)
@@ -203,7 +197,7 @@ def run_inference(
                 target_object_key = f"cube{num_cubes - 1}"
             elif "Transport3D" in env_name:
                 target_object_key = "box0"
-            elif "BaseMotion3D" in env_name or "TidyBot" in env_name:
+            elif "BaseMotion3D" in env_name or "TidyBot" in env_name or "Transport3D" in env_name:
                 target_object_key = "target"
             elif "Motion3D" in env_name:
                 target_object_key = "target"
@@ -230,7 +224,7 @@ def run_inference(
                 # Get robot state
                 robot = state.get_object_from_name("robot")
 
-                if "BaseMotion3D" in env_name:
+                if "BaseMotion3D" in env_name or "Transport3D" in env_name:
                     all_images = env.unwrapped._object_centric_env.render_all_cameras()
                     overview_image = all_images["overview"]
                     base_image = all_images["base"]
@@ -268,7 +262,7 @@ def run_inference(
 
                 # Create observation dict for policy
                 if use_env_state:
-                    if "TidyBot" in env_name or "BaseMotion3D" in env_name:
+                    if "TidyBot" in env_name or "BaseMotion3D" in env_name or "Transport3D" in env_name:
                         obs_dict = {
                             "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
                             "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
@@ -283,7 +277,7 @@ def run_inference(
                             "image": image,
                         }
                 else:
-                    if "TidyBot" in env_name or "BaseMotion3D" in env_name:
+                    if "TidyBot" in env_name or "BaseMotion3D" in env_name or "Transport3D" in env_name:
                         obs_dict = {
                             "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
                             "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
@@ -302,7 +296,7 @@ def run_inference(
                     assert obs_dict["robot_state"].shape == obs[-22:].shape
                     if "env_state" in obs_dict:
                         assert obs_dict["env_state"].shape == obs[:-22].shape
-                elif "BaseMotion3D" in env_name:
+                elif "BaseMotion3D" in env_name or "Transport3D" in env_name:
                     assert obs_dict["robot_state"].shape == obs[:19].shape
                     if "env_state" in obs_dict:
                         assert obs_dict["env_state"].shape == obs[19:].shape
@@ -331,11 +325,8 @@ def run_inference(
                 action = action_dict["robot_actions"]
                 epsilon = 1e-4
                 action = np.clip(action, env.action_space.low + epsilon, env.action_space.high - epsilon)
-                
-
-                # Record observation and action before stepping
-                if writer is not None:
-                    writer.step(obs_dict, action_dict, target_object_key)
+                if "BaseMotion3D" in env_name:
+                    action[3:] = 0.0
 
                 action = action.astype(np.float32)
                 # Execute action in environment
@@ -388,11 +379,6 @@ def run_inference(
                   f"terminated={ep_terminated}, truncated={ep_truncated}")
             policy.close()  # type: ignore
             env.close()  # type: ignore
-            # Save episode data to disk
-            if writer is not None and len(writer) > 0:
-                writer.flush_async()
-                writer.wait_for_flush()
-                print(f"Episode saved with {len(writer)} steps")
 
     finally:
         # Print summary statistics
@@ -465,10 +451,6 @@ def main() -> None:
         "--seed", type=int, default=123, help="Random seed for reproducibility"
     )
     parser.add_argument(
-        "--save", action="store_true", default=True, help="Save episodes"
-    )
-    parser.add_argument("--no-save", dest="save", action="store_false")
-    parser.add_argument(
         "--num-episodes", type=int, default=1, help="Number of episodes to run"
     )
     parser.add_argument(
@@ -507,7 +489,6 @@ def main() -> None:
     run_inference(
         output_dir=Path(args.output_dir),
         seed=args.seed,
-        save=args.save,
         num_episodes=args.num_episodes,
         num_cubes=args.num_cubes,
         max_steps=args.max_steps,
