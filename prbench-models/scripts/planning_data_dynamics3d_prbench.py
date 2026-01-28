@@ -266,7 +266,7 @@ def main() -> None:
     )
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     parser.add_argument("--save", type=bool, default=True)
-    parser.add_argument("--grasping-only", type=bool, default=False)
+    parser.add_argument("--grasping-only", action="store_true", default=False)
     parser.add_argument("--show-images", action="store_true", default=False)
     parser.add_argument("--no-save", dest="save", action="store_false")
     parser.add_argument(

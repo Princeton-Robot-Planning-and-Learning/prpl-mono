@@ -116,6 +116,7 @@ def run_inference(
     use_delta_qpos: bool = False,
     use_env_state: bool = False,
     save_videos: bool = False,
+    remove_velocity: bool = False,
 ):
     """Run policy inference in the prbench environment.
 
@@ -134,6 +135,7 @@ def run_inference(
         use_delta_qpos: Whether to use delta qpos for the policy.
         use_env_state: Whether to use env state for the policy.
         save_videos: Whether to save videos for evaluation.
+        remove_velocity: Whether to remove velocity from the policy.
     """
     
 
@@ -263,13 +265,22 @@ def run_inference(
                 # Create observation dict for policy
                 if use_env_state:
                     if "TidyBot" in env_name or "BaseMotion3D" in env_name or "Transport3D" in env_name:
-                        obs_dict = {
-                            "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
-                            "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
-                            "overview_image": overview_image,
-                            "base_image": base_image,
-                            "wrist_image": wrist_image,
-                        }
+                        if remove_velocity and "TidyBot" in env_name:
+                            obs_dict = {
+                                "robot_state": env.observation_space.get_object_subvector(obs, "robot")[:11],
+                                "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
+                                "overview_image": overview_image,
+                                "base_image": base_image,
+                                "wrist_image": wrist_image,
+                            }
+                        else:
+                            obs_dict = {
+                                "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
+                                "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
+                                "overview_image": overview_image,
+                                "base_image": base_image,
+                                "wrist_image": wrist_image,
+                            }
                     else:
                         obs_dict = {
                             "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
@@ -278,22 +289,31 @@ def run_inference(
                         }
                 else:
                     if "TidyBot" in env_name or "BaseMotion3D" in env_name or "Transport3D" in env_name:
-                        obs_dict = {
-                            "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
-                            "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
-                            "overview_image": overview_image,
-                            "base_image": base_image,
-                            "wrist_image": wrist_image,
-                        }
+                        if remove_velocity and "TidyBot" in env_name:
+                            obs_dict = {
+                                "robot_state": env.observation_space.get_object_subvector(obs, "robot")[:11],
+                                "overview_image": overview_image,
+                                "base_image": base_image,
+                                "wrist_image": wrist_image,
+                            }
+                        else:
+                            obs_dict = {
+                                "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
+                                "overview_image": overview_image,
+                                "base_image": base_image,
+                                "wrist_image": wrist_image,
+                            }
                     else:
                         obs_dict = {
                             "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
-                            "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
                             "image": image,
                         }
                 
                 if "TidyBot" in env_name:
-                    assert obs_dict["robot_state"].shape == obs[-22:].shape
+                    if remove_velocity:
+                        assert obs_dict["robot_state"].shape == obs[-22:-11].shape
+                    else:
+                        assert obs_dict["robot_state"].shape == obs[-22:].shape
                     if "env_state" in obs_dict:
                         assert obs_dict["env_state"].shape == obs[:-22].shape
                 elif "BaseMotion3D" in env_name or "Transport3D" in env_name:
@@ -480,10 +500,11 @@ def main() -> None:
         help="Show images in a window",
     )
     parser.add_argument("--save-videos", action="store_true", default=False, help="Save videos for evaluation")
-    parser.add_argument("--render", action="store_true", help="Render the environment")
+    parser.add_argument("--render", action="store_true", default=True, help="Render the environment")
     parser.add_argument("--use-qpos", action="store_true", default=False, help="Use qpos for the policy")
     parser.add_argument("--use-delta-qpos", action="store_true", default=False, help="Use delta qpos for the policy")
-    parser.add_argument("--use-env-state", type=bool, default=True, help="Use env state for the policy")
+    parser.add_argument("--use-env-state", action="store_true", default=False, help="Use env state for the policy")
+    parser.add_argument("--remove_velocity", action="store_true", default=False, help="remove velocity from the policy")
     args = parser.parse_args()
 
     run_inference(
@@ -501,6 +522,7 @@ def main() -> None:
         use_delta_qpos=args.use_delta_qpos,
         use_env_state=args.use_env_state,
         save_videos=args.save_videos,
+        remove_velocity=args.remove_velocity,
     )
 
 
