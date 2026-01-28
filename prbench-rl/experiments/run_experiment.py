@@ -45,7 +45,7 @@ def _get_output_dirs(cfg: DictConfig) -> tuple[Path, Path]:
     reward_type = "dense" if dense_reward else "sparse"
 
     # Construct paths
-    output_dir = Path("outputs") / env_name / seed_str / reward_type
+    output_dir = Path("outputs") / env_name / seed_str / reward_type / cfg.agent.name
     runs_dir = Path("runs") / env_name / seed_str / reward_type
 
     return output_dir, runs_dir
