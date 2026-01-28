@@ -114,6 +114,136 @@ class GroundPickController(
     def terminated(self) -> bool:
         return self._lifted
 
+    def get_base_motion_plan(self):
+        """Get the base motion plan to the target pose."""
+        self._sim.set_state(self._current_state)
+
+        target_pose = self._current_state.get_object_pose(
+            self.objects[1].name
+        ).to_se2()
+        target_base_pose = get_target_robot_pose_from_parameters(
+            target_pose, self._current_params[0], self._current_params[1]
+        )
+
+        # Run base motion planning to the target pose.
+        base_plan = run_single_arm_mobile_base_motion_planning(
+            self._sim.robot,
+            self._sim.robot.base.get_pose(),
+            target_base_pose,
+            collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+            seed=0,  # for determinism
+        )
+
+        if base_plan is None:
+            raise TrajectorySamplingFailure("Base motion planning failed")
+
+        # Store the plan (excluding the first state which is the current state).
+        self._current_plan = base_plan[1:]
+
+    def get_arm_motion_plan(self, real=False):
+        """Get the arm motion plan to the target grasp pose."""
+        self._sim.set_state(self._current_state)
+        # Create target pose from target position and sampled orientation.
+        target_grasp_pose_world = self._current_state.get_object_pose(
+            self.objects[1].name
+        )
+
+        if real:
+            GRASP_TRANSFORM_TO_OBJECT = Pose((0.0, 0, 0.045), (0.707, 0.707, 0, 0))
+        
+        target_end_effector_pose = multiply_poses(
+            target_grasp_pose_world,
+            GRASP_TRANSFORM_TO_OBJECT,
+        )
+
+        # Run inverse kinematics to get joint positions.
+        try:
+            joint_positions = inverse_kinematics(
+                self._sim.robot.arm,
+                target_end_effector_pose,
+                validate=True,
+                set_joints=False,
+            )
+        except InverseKinematicsError as e:
+            raise TrajectorySamplingFailure(
+                f"IK failed for target pose {target_end_effector_pose}"
+            ) from e
+
+        # Run motion planning to the target joint positions.
+        joint_plan = run_motion_planning(
+            self._sim.robot.arm,
+            initial_positions=self._sim.robot.arm.get_joint_positions(),
+            target_positions=joint_positions,
+            collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+            seed=0,  # for determinism
+            physics_client_id=self._sim.physics_client_id,
+        )
+
+        if joint_plan is None:
+            raise TrajectorySamplingFailure("Motion planning failed")
+
+        # Remap the plan to ensure we stay within action limits.
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan,
+            self._sim.robot.arm,
+            max_distance=self._sim.config.max_action_mag / 2,
+        )
+
+        # Store the plan (excluding the first state which is the current state).
+        self._current_arm_joint_plan = joint_plan[1:]
+    
+    def get_retract_motion_plan(self, real=False):
+        """Get the retract motion plan to the home joint positions."""
+        self._sim.set_state(self._current_state)
+
+        grasped_object_id = (
+            self._sim._grasped_object_id  # pylint: disable=protected-access
+        )
+        grasped_object_transform = (
+            self._sim._grasped_object_transform  # pylint: disable=protected-access
+        )
+        all_collision_ids = (
+            self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+        )
+        if real:
+            # Run motion planning to the target joint positions.
+            joint_plan = run_motion_planning(
+                self._sim.robot.arm,
+                initial_positions=self._sim.robot.arm.get_joint_positions(),
+                target_positions=HOME_JOINT_POSITIONS.tolist(),
+                collision_bodies={},
+                seed=0,  # for determinism
+                physics_client_id=self._sim.physics_client_id,
+                held_object=grasped_object_id,
+                base_link_to_held_obj=grasped_object_transform,
+            )
+        else:
+            # Run motion planning to the target joint positions.
+            joint_plan = run_motion_planning(
+                self._sim.robot.arm,
+                initial_positions=self._sim.robot.arm.get_joint_positions(),
+                target_positions=HOME_JOINT_POSITIONS.tolist(),
+                collision_bodies=all_collision_ids - {grasped_object_id},
+                seed=0,  # for determinism
+                physics_client_id=self._sim.physics_client_id,
+                held_object=grasped_object_id,
+                base_link_to_held_obj=grasped_object_transform,
+            )
+
+        if joint_plan is None:
+            raise TrajectorySamplingFailure("Motion planning failed")
+
+        # Remap the plan to ensure we stay within action limits.
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan,
+            self._sim.robot.arm,
+            max_distance=self._sim.config.max_action_mag / 2,
+        )
+
+        # Store the plan (excluding the first state which is the current state).
+        self._current_retract_plan = joint_plan[1:]
+    
+    
     def step(self) -> np.ndarray:
         assert self._current_state is not None
         assert self._current_params is not None
@@ -121,29 +251,7 @@ class GroundPickController(
 
         # Generate the motion plan if it doesn't exist yet.
         if self._current_plan is None:
-            self._sim.set_state(self._current_state)
-
-            target_pose = self._current_state.get_object_pose(
-                self.objects[1].name
-            ).to_se2()
-            target_base_pose = get_target_robot_pose_from_parameters(
-                target_pose, self._current_params[0], self._current_params[1]
-            )
-
-            # Run base motion planning to the target pose.
-            base_plan = run_single_arm_mobile_base_motion_planning(
-                self._sim.robot,
-                self._sim.robot.base.get_pose(),
-                target_base_pose,
-                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
-                seed=0,  # for determinism
-            )
-
-            if base_plan is None:
-                raise TrajectorySamplingFailure("Base motion planning failed")
-
-            # Store the plan (excluding the first state which is the current state).
-            self._current_plan = base_plan[1:]
+            self.get_base_motion_plan()
 
         if not self._navigated:
             # Pop the next target base pose from the plan.
@@ -166,52 +274,7 @@ class GroundPickController(
         if self._navigated and not self._pre_grasp:
             # Generate the motion plan if it doesn't exist yet.
             if self._current_arm_joint_plan is None:
-                self._sim.set_state(self._current_state)
-                # Create target pose from target position and sampled orientation.
-                target_grasp_pose_world = self._current_state.get_object_pose(
-                    self.objects[1].name
-                )
-
-                target_end_effector_pose = multiply_poses(
-                    target_grasp_pose_world,
-                    GRASP_TRANSFORM_TO_OBJECT,
-                )
-
-                # Run inverse kinematics to get joint positions.
-                try:
-                    joint_positions = inverse_kinematics(
-                        self._sim.robot.arm,
-                        target_end_effector_pose,
-                        validate=True,
-                        set_joints=False,
-                    )
-                except InverseKinematicsError as e:
-                    raise TrajectorySamplingFailure(
-                        f"IK failed for target pose {target_end_effector_pose}"
-                    ) from e
-
-                # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
-                    self._sim.robot.arm,
-                    initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=joint_positions,
-                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
-                    seed=0,  # for determinism
-                    physics_client_id=self._sim.physics_client_id,
-                )
-
-                if joint_plan is None:
-                    raise TrajectorySamplingFailure("Motion planning failed")
-
-                # Remap the plan to ensure we stay within action limits.
-                joint_plan = remap_joint_position_plan_to_constant_distance(
-                    joint_plan,
-                    self._sim.robot.arm,
-                    max_distance=self._sim.config.max_action_mag / 2,
-                )
-
-                # Store the plan (excluding the first state which is the current state).
-                self._current_arm_joint_plan = joint_plan[1:]
+                self.get_arm_motion_plan()
             # Pop the next target joint positions from the plan.
             assert self._current_arm_joint_plan is not None
             target_joints = self._current_arm_joint_plan.pop(0)
@@ -248,42 +311,7 @@ class GroundPickController(
         if self._closed_gripper and not self._lifted:
             # Generate the motion plan if it doesn't exist yet.
             if self._current_retract_plan is None:
-
-                self._sim.set_state(self._current_state)
-
-                grasped_object_id = (
-                    self._sim._grasped_object_id  # pylint: disable=protected-access
-                )
-                grasped_object_transform = (
-                    self._sim._grasped_object_transform  # pylint: disable=protected-access
-                )
-                all_collision_ids = (
-                    self._sim._get_collision_object_ids()  # pylint: disable=protected-access
-                )
-                # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
-                    self._sim.robot.arm,
-                    initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=all_collision_ids - {grasped_object_id},
-                    seed=0,  # for determinism
-                    physics_client_id=self._sim.physics_client_id,
-                    held_object=grasped_object_id,
-                    base_link_to_held_obj=grasped_object_transform,
-                )
-
-                if joint_plan is None:
-                    raise TrajectorySamplingFailure("Motion planning failed")
-
-                # Remap the plan to ensure we stay within action limits.
-                joint_plan = remap_joint_position_plan_to_constant_distance(
-                    joint_plan,
-                    self._sim.robot.arm,
-                    max_distance=self._sim.config.max_action_mag / 2,
-                )
-
-                # Store the plan (excluding the first state which is the current state).
-                self._current_retract_plan = joint_plan[1:]
+                self.get_retract_motion_plan()
             # Pop the next target joint positions from the plan.
             assert self._current_retract_plan is not None
             target_joints = self._current_retract_plan.pop(0)
@@ -355,39 +383,45 @@ class GroundPlaceController(
     def terminated(self) -> bool:
         return self._lifted
 
-    def step(self) -> np.ndarray:
-        assert self._current_state is not None
-        assert self._current_params is not None
-        assert isinstance(self._current_state, Ground3DObjectCentricState)
+    def get_base_motion_plan(self, real=False):
+        """Get the base motion plan to the target pose."""
+        self._sim.set_state(self._current_state)
 
-        # Generate the motion plan if it doesn't exist yet.
-        if self._current_plan is None:
-            self._sim.set_state(self._current_state)
-
-            target_pose = self._current_state.get_object_pose(self.objects[1].name)
-            self._target_place_pose_world = Pose(
-                (
-                    target_pose.position[0] + self._current_params[0],
-                    target_pose.position[1] + self._current_params[1],
-                    self._current_state.get_object_half_extents(self.objects[1].name)[2]
-                    + 0.01,
-                ),
-                target_pose.orientation,
+        target_pose = self._current_state.get_object_pose(self.objects[1].name)
+        self._target_place_pose_world = Pose(
+            (
+                target_pose.position[0] + self._current_params[0],
+                target_pose.position[1] + self._current_params[1],
+                self._current_state.get_object_half_extents(self.objects[1].name)[2]
+                + 0.01,
+            ),
+            target_pose.orientation,
+        )
+        self._target_place_pose_se2 = self._target_place_pose_world.to_se2()
+        target_base_pose = get_target_robot_pose_from_parameters(
+            self._target_place_pose_se2, 0.5, 0.0
+        )
+        # Run base motion planning to the target pose.
+        grasped_object_id = (
+            self._sim._grasped_object_id  # pylint: disable=protected-access
+        )
+        grasped_object_transform = (
+            self._sim._grasped_object_transform  # pylint: disable=protected-access
+        )
+        all_collision_ids = (
+            self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+        )
+        if real:
+            base_plan = run_single_arm_mobile_base_motion_planning(
+                self._sim.robot,
+                self._sim.robot.base.get_pose(),
+                target_base_pose,
+                collision_bodies={},
+                seed=0,  # for determinism
+                held_object=grasped_object_id,
+                base_link_to_held_obj=grasped_object_transform,
             )
-            self._target_place_pose_se2 = self._target_place_pose_world.to_se2()
-            target_base_pose = get_target_robot_pose_from_parameters(
-                self._target_place_pose_se2, 0.5, 0.0
-            )
-            # Run base motion planning to the target pose.
-            grasped_object_id = (
-                self._sim._grasped_object_id  # pylint: disable=protected-access
-            )
-            grasped_object_transform = (
-                self._sim._grasped_object_transform  # pylint: disable=protected-access
-            )
-            all_collision_ids = (
-                self._sim._get_collision_object_ids()  # pylint: disable=protected-access
-            )
+        else:
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
@@ -398,11 +432,120 @@ class GroundPlaceController(
                 base_link_to_held_obj=grasped_object_transform,
             )
 
-            if base_plan is None:
-                raise TrajectorySamplingFailure("Base motion planning failed")
+        if base_plan is None:
+            raise TrajectorySamplingFailure("Base motion planning failed")
 
-            # Store the plan (excluding the first state which is the current state).
-            self._current_plan = base_plan[1:]
+        # Store the plan (excluding the first state which is the current state).
+        self._current_plan = base_plan[1:]
+
+    def get_arm_motion_plan(self, real=False):
+        """Get the arm motion plan to the target place pose."""
+        self._sim.set_state(self._current_state)
+        # Create target pose from target position and sampled orientation.
+
+        assert self._target_place_pose_world is not None
+        if real:
+            GRASP_TRANSFORM_TO_OBJECT = Pose((0.0, 0, 0.045), (0.707, 0.707, 0, 0))
+        target_end_effector_pose = multiply_poses(
+            self._target_place_pose_world,
+            GRASP_TRANSFORM_TO_OBJECT,
+        )
+
+        # Run inverse kinematics to get joint positions.
+        try:
+            joint_positions = inverse_kinematics(
+                self._sim.robot.arm,
+                target_end_effector_pose,
+                validate=True,
+                set_joints=False,
+            )
+        except InverseKinematicsError as e:
+            raise TrajectorySamplingFailure(
+                f"IK failed for target pose {target_end_effector_pose}"
+            ) from e
+
+        # Run motion planning to the target joint positions.
+        grasped_object_id = (
+            self._sim._grasped_object_id  # pylint: disable=protected-access
+        )
+        grasped_object_transform = (
+            self._sim._grasped_object_transform  # pylint: disable=protected-access
+        )
+        all_collision_ids = (
+            self._sim._get_collision_object_ids()  # pylint: disable=protected-access
+        )
+        if real:
+            joint_plan = run_motion_planning(
+                self._sim.robot.arm,
+                initial_positions=self._sim.robot.arm.get_joint_positions(),
+                target_positions=joint_positions,
+                collision_bodies={},
+                seed=0,  # for determinism
+                physics_client_id=self._sim.physics_client_id,
+                held_object=grasped_object_id,
+                base_link_to_held_obj=grasped_object_transform,
+            )
+        else:
+            joint_plan = run_motion_planning(
+                self._sim.robot.arm,
+                initial_positions=self._sim.robot.arm.get_joint_positions(),
+                target_positions=joint_positions,
+                collision_bodies=all_collision_ids - {grasped_object_id},
+                seed=0,  # for determinism
+                physics_client_id=self._sim.physics_client_id,
+                held_object=grasped_object_id,
+                base_link_to_held_obj=grasped_object_transform,
+            )
+
+        if joint_plan is None:
+            raise TrajectorySamplingFailure("Motion planning failed")
+
+        # Remap the plan to ensure we stay within action limits.
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan,
+            self._sim.robot.arm,
+            max_distance=self._sim.config.max_action_mag / 2,
+        )
+
+        # Store the plan (excluding the first state which is the current state).
+        self._current_arm_joint_plan = joint_plan[1:]
+    
+    def get_retract_motion_plan(self):
+        """Get the retract motion plan to the home joint positions."""
+        self._sim.set_state(self._current_state)
+
+        # Run motion planning to the target joint positions.
+        joint_plan = run_motion_planning(
+            self._sim.robot.arm,
+            initial_positions=self._sim.robot.arm.get_joint_positions(),
+            target_positions=HOME_JOINT_POSITIONS.tolist(),
+            collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+            seed=0,  # for determinism
+            physics_client_id=self._sim.physics_client_id,
+        )
+
+        if joint_plan is None:
+            raise TrajectorySamplingFailure("Motion planning failed")
+
+        # Remap the plan to ensure we stay within action limits.
+        joint_plan = remap_joint_position_plan_to_constant_distance(
+            joint_plan,
+            self._sim.robot.arm,
+            max_distance=self._sim.config.max_action_mag / 2,
+        )
+
+        # Store the plan (excluding the first state which is the current state).
+        self._current_retract_plan = joint_plan[1:]
+    
+
+    def step(self) -> np.ndarray:
+        assert self._current_state is not None
+        assert self._current_params is not None
+        assert isinstance(self._current_state, Ground3DObjectCentricState)
+
+        # Generate the motion plan if it doesn't exist yet.
+        if self._current_plan is None:
+            self.get_base_motion_plan()
 
         if not self._navigated:
             # Pop the next target base pose from the plan.
@@ -425,61 +568,7 @@ class GroundPlaceController(
         if self._navigated and not self._pre_place:
             # Generate the motion plan if it doesn't exist yet.
             if self._current_arm_joint_plan is None:
-                self._sim.set_state(self._current_state)
-                # Create target pose from target position and sampled orientation.
-
-                assert self._target_place_pose_world is not None
-                target_end_effector_pose = multiply_poses(
-                    self._target_place_pose_world,
-                    GRASP_TRANSFORM_TO_OBJECT,
-                )
-
-                # Run inverse kinematics to get joint positions.
-                try:
-                    joint_positions = inverse_kinematics(
-                        self._sim.robot.arm,
-                        target_end_effector_pose,
-                        validate=True,
-                        set_joints=False,
-                    )
-                except InverseKinematicsError as e:
-                    raise TrajectorySamplingFailure(
-                        f"IK failed for target pose {target_end_effector_pose}"
-                    ) from e
-
-                # Run motion planning to the target joint positions.
-                grasped_object_id = (
-                    self._sim._grasped_object_id  # pylint: disable=protected-access
-                )
-                grasped_object_transform = (
-                    self._sim._grasped_object_transform  # pylint: disable=protected-access
-                )
-                all_collision_ids = (
-                    self._sim._get_collision_object_ids()  # pylint: disable=protected-access
-                )
-                joint_plan = run_motion_planning(
-                    self._sim.robot.arm,
-                    initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=joint_positions,
-                    collision_bodies=all_collision_ids - {grasped_object_id},
-                    seed=0,  # for determinism
-                    physics_client_id=self._sim.physics_client_id,
-                    held_object=grasped_object_id,
-                    base_link_to_held_obj=grasped_object_transform,
-                )
-
-                if joint_plan is None:
-                    raise TrajectorySamplingFailure("Motion planning failed")
-
-                # Remap the plan to ensure we stay within action limits.
-                joint_plan = remap_joint_position_plan_to_constant_distance(
-                    joint_plan,
-                    self._sim.robot.arm,
-                    max_distance=self._sim.config.max_action_mag / 2,
-                )
-
-                # Store the plan (excluding the first state which is the current state).
-                self._current_arm_joint_plan = joint_plan[1:]
+                self.get_arm_motion_plan()
             # Pop the next target joint positions from the plan.
             assert self._current_arm_joint_plan is not None
             target_joints = self._current_arm_joint_plan.pop(0)
@@ -508,31 +597,7 @@ class GroundPlaceController(
         if self._opened_gripper and not self._lifted:
             # Generate the motion plan if it doesn't exist yet.
             if self._current_retract_plan is None:
-
-                self._sim.set_state(self._current_state)
-
-                # Run motion planning to the target joint positions.
-                joint_plan = run_motion_planning(
-                    self._sim.robot.arm,
-                    initial_positions=self._sim.robot.arm.get_joint_positions(),
-                    target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
-                    seed=0,  # for determinism
-                    physics_client_id=self._sim.physics_client_id,
-                )
-
-                if joint_plan is None:
-                    raise TrajectorySamplingFailure("Motion planning failed")
-
-                # Remap the plan to ensure we stay within action limits.
-                joint_plan = remap_joint_position_plan_to_constant_distance(
-                    joint_plan,
-                    self._sim.robot.arm,
-                    max_distance=self._sim.config.max_action_mag / 2,
-                )
-
-                # Store the plan (excluding the first state which is the current state).
-                self._current_retract_plan = joint_plan[1:]
+                self.get_retract_motion_plan()
             # Pop the next target joint positions from the plan.
             assert self._current_retract_plan is not None
             target_joints = self._current_retract_plan.pop(0)
