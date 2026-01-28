@@ -49,7 +49,7 @@ from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 GRASP_TRANSFORM_TO_OBJECT_BOX = Pose(
     (0.0, 0.15, 0.08), (0.707, 0.707, 0, 0)
 )  # side grasp
-GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.02), (0.707, -0.707, 0, 0))
+GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.02), (0.707, 0.707, 0, 0))
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.5, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
@@ -72,8 +72,8 @@ class GroundPickController(
         objects: Sequence[Object],
         sim: ObjectCentricTransport3DEnv,
         birrt_extend_num_interp: int = 10,
-        smooth_mp_max_time: float = 0.1,
-        smooth_mp_max_candidate_plans: int = 1,
+        smooth_mp_max_time: float = 120.0,
+        smooth_mp_max_candidate_plans: int = 50,
         base_mp_birrt_smooth_amt: int = 100,
     ) -> None:
         super().__init__(objects)
