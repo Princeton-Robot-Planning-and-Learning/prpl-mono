@@ -421,10 +421,9 @@ def _create_robocasa_object_classes() -> None:
 
             # Register the class with robocasa_ prefix (e.g., "robocasa_apple_0")
             # pylint: disable=too-many-locals
-            registered_class: type[RoboCasaObject] = register_object(  # type: ignore[assignment]
-                name=f"robocasa_{object_type_name}"
-            )(new_class)
-            new_class = registered_class
+            register_fn = register_object(name=f"robocasa_{object_type_name}")
+            registered = register_fn(new_class)  # type: ignore
+            new_class = registered
 
             # Add to module globals so it can be imported
             # pylint: disable=global-variable-undefined
