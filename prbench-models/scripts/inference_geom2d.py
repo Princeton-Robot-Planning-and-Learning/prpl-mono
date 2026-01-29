@@ -21,6 +21,7 @@ from prbench_models.policy_constants import (
     POLICY_SERVER_PORT,
 )
 from prbench_models.teleop_utils import _visualize_image_in_window
+from prpl_utils.utils import sample_seed_from_rng
 
 prbench.register_all_environments()
 
@@ -146,12 +147,15 @@ def run_inference(
     episode_terminated = []
     episode_truncated = []
     episode_seeds = []
+    episode_avg_inference_times = []
+    executed_action_steps = 8
     
     try:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        video_parent_dir = output_dir / f"videos_{env_name}_{timestamp}"
-        video_parent_dir.mkdir(parents=True, exist_ok=True)
+        seed_dir = output_dir / f"seed_{seed}"
+        seed_dir.mkdir(parents=True, exist_ok=True)
+        rng = np.random.default_rng(seed)
         for episode_idx in range(num_episodes):
+            this_episode_inference_times = []
             # Create the environment
             render_mode = "rgb_array" if render or save_videos else None
             if "TidyBot" in env_name:
@@ -168,7 +172,7 @@ def run_inference(
 
             
             if save_videos:
-                video_dir = video_parent_dir / f"eval_episode_{episode_idx}" 
+                video_dir = seed_dir / f"eval_episode_{episode_idx}" 
                 video_dir.mkdir(parents=True, exist_ok=True)
                 overview_images = []
                 base_images = []
@@ -181,7 +185,7 @@ def run_inference(
             print(f"\n=== Episode {episode_idx + 1}/{num_episodes} ===")
 
             # Reset the environment
-            episode_seed = seed + episode_idx
+            episode_seed = sample_seed_from_rng(rng)
             episode_seeds.append(episode_seed)
             (
                 obs,
@@ -339,12 +343,15 @@ def run_inference(
                 
                 if action_dict is None:
                     action_dict = {
-                        "robot_actions": np.zeros(env.action_space.shape[0], dtype=np.float32)
+                        "robot_actions": np.zeros(env.action_space.shape[0], dtype=np.float32),
+                        "inference_time": 0.0
                     }
                 
                 action = action_dict["robot_actions"]
+                inference_time = action_dict["inference_time"]
                 epsilon = 1e-4
-                action = np.clip(action, env.action_space.low + epsilon, env.action_space.high - epsilon)
+                if "2D" in env_name:
+                    action = np.clip(action, env.action_space.low + epsilon, env.action_space.high - epsilon)
                 if "BaseMotion3D" in env_name:
                     action[3:] = 0.0
 
@@ -356,6 +363,8 @@ def run_inference(
                 episode_reward += reward
                 next_state = env.observation_space.devectorize(obs)
                 state = next_state
+
+                this_episode_inference_times.append(inference_time/executed_action_steps)
 
                 # Check for episode end
                 if terminated or truncated:
@@ -380,7 +389,7 @@ def run_inference(
             episode_rewards.append(episode_reward)
             episode_terminated.append(ep_terminated)
             episode_truncated.append(ep_truncated)
-
+            episode_avg_inference_times.append(np.sum(this_episode_inference_times)/episode_lengths[-1])
             if save_videos:
                 if len(overview_images) > 0:
                     overview_video_path = video_dir / "overview.mp4"
@@ -409,20 +418,44 @@ def run_inference(
         print(f"Episodes completed: {len(episode_rewards)}/{num_episodes}")
         print(f"Successes (terminated): {successes}")
         print(f"Success rate: {successes / max(len(episode_rewards), 1):.2%}")
+
+        if episode_avg_inference_times:
+            print(f"\nAverage Inference Time Statistics (All Episodes):")
+            print(f"  Average inference time: {np.mean(episode_avg_inference_times):.3f}")
+            print(f"  Std inference time: {np.std(episode_avg_inference_times):.3f}")
+            print(f"  Min inference time: {np.min(episode_avg_inference_times):.3f}")
+            print(f"  Max inference time: {np.max(episode_avg_inference_times):.3f}")
         
         if episode_rewards:
-            print(f"\nReward Statistics:")
+            print(f"\nReward Statistics (All Episodes):")
             print(f"  Total rewards: {episode_rewards}")
             print(f"  Average reward: {np.mean(episode_rewards):.3f}")
             print(f"  Std reward: {np.std(episode_rewards):.3f}")
             print(f"  Min reward: {np.min(episode_rewards):.3f}")
             print(f"  Max reward: {np.max(episode_rewards):.3f}")
         
-        if episode_lengths:
-            print(f"\nEpisode Length Statistics:")
-            print(f"  Average length: {np.mean(episode_lengths):.1f}")
-            print(f"  Min length: {np.min(episode_lengths)}")
-            print(f"  Max length: {np.max(episode_lengths)}")
+        # if episode_lengths:
+        #     print(f"\nEpisode Length Statistics (All Episodes):")
+        #     print(f"  Average length: {np.mean(episode_lengths):.1f}")
+        #     print(f"  Min length: {np.min(episode_lengths)}")
+        #     print(f"  Max length: {np.max(episode_lengths)}")
+        
+        # Calculate stats for successful episodes only
+        successful_rewards = [r for r, t in zip(episode_rewards, episode_terminated) if t]
+        successful_lengths = [l for l, t in zip(episode_lengths, episode_terminated) if t]
+        
+        if successful_rewards:
+            print(f"\nReward Statistics (Successful Episodes Only):")
+            print(f"  Average reward: {np.mean(successful_rewards):.3f}")
+            print(f"  Std reward: {np.std(successful_rewards):.3f}")
+            print(f"  Min reward: {np.min(successful_rewards):.3f}")
+            print(f"  Max reward: {np.max(successful_rewards):.3f}")
+        
+        # if successful_lengths:
+        #     print(f"\nEpisode Length Statistics (Successful Episodes Only):")
+        #     print(f"  Average length: {np.mean(successful_lengths):.1f}")
+        #     print(f"  Min length: {np.min(successful_lengths)}")
+        #     print(f"  Max length: {np.max(successful_lengths)}")
         
         print(f"\nTerminated: {sum(episode_terminated)}, Truncated: {sum(episode_truncated)}")
         print("=" * 50)
@@ -433,7 +466,6 @@ def run_inference(
             "seed": seed,
             "num_episodes": num_episodes,
             "max_steps": max_steps,
-            "timestamp": timestamp,
             "episodes_completed": len(episode_rewards),
             "successes": successes,
             "success_rate": successes / max(len(episode_rewards), 1),
@@ -442,6 +474,13 @@ def run_inference(
             "episode_lengths": episode_lengths,
             "episode_terminated": episode_terminated,
             "episode_truncated": episode_truncated,
+            "episode_avg_inference_times": episode_avg_inference_times,
+            "inference_time_stats": {
+                "mean": float(np.mean(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
+                "std": float(np.std(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
+                "min": float(np.min(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
+                "max": float(np.max(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
+            },
             "reward_stats": {
                 "mean": float(np.mean(episode_rewards)) if episode_rewards else 0.0,
                 "std": float(np.std(episode_rewards)) if episode_rewards else 0.0,
@@ -453,13 +492,191 @@ def run_inference(
                 "min": int(np.min(episode_lengths)) if episode_lengths else 0,
                 "max": int(np.max(episode_lengths)) if episode_lengths else 0,
             },
+            "successful_reward_stats": {
+                "mean": float(np.mean(successful_rewards)) if successful_rewards else 0.0,
+                "std": float(np.std(successful_rewards)) if successful_rewards else 0.0,
+                "min": float(np.min(successful_rewards)) if successful_rewards else 0.0,
+                "max": float(np.max(successful_rewards)) if successful_rewards else 0.0,
+            },
+            "successful_length_stats": {
+                "mean": float(np.mean(successful_lengths)) if successful_lengths else 0.0,
+                "min": int(np.min(successful_lengths)) if successful_lengths else 0,
+                "max": int(np.max(successful_lengths)) if successful_lengths else 0,
+            },
         }
         
-        logs_path = video_parent_dir / "evaluation_logs.json"
+        logs_path = seed_dir / "evaluation_logs.json"
         with open(logs_path, "w") as f:
             json.dump(logs, f, indent=2)
         print(f"\nLogs saved to: {logs_path}")
 
+def run_summary(
+    output_dir: Path
+):
+    """Aggregate evaluation logs from all seed directories and print summary."""
+    # Find all seed directories
+    seed_dirs = sorted(output_dir.glob("seed_*"))
+    if not seed_dirs:
+        print("No seed directories found.")
+        return
+    
+    # Load all evaluation logs
+    all_logs = []
+    for seed_dir in seed_dirs:
+        logs_path = seed_dir / "evaluation_logs.json"
+        if logs_path.exists():
+            with open(logs_path, "r") as f:
+                logs = json.load(f)
+                all_logs.append(logs)
+                print(f"Loaded: {logs_path}")
+        else:
+            print(f"Warning: {logs_path} not found")
+    
+    if not all_logs:
+        print("No evaluation logs found.")
+        return
+    
+    # Calculate per-seed statistics first, then aggregate across seeds
+    all_success_rates = [log["success_rate"] for log in all_logs]
+    per_seed_mean_rewards = []
+    per_seed_mean_lengths = []
+    per_seed_mean_inference_times = []
+    per_seed_mean_successful_rewards = []
+    per_seed_mean_successful_lengths = []
+    total_successes = 0
+    total_episodes = 0
+    
+    for log in all_logs:
+        episode_rewards = log.get("episode_rewards", [])
+        episode_lengths = log.get("episode_lengths", [])
+        episode_terminated = log.get("episode_terminated", [])
+        episode_inference_times = log.get("episode_avg_inference_times", [])
+        
+        if episode_rewards:
+            per_seed_mean_rewards.append(np.mean(episode_rewards))
+        if episode_lengths:
+            per_seed_mean_lengths.append(np.mean(episode_lengths))
+        if episode_inference_times:
+            per_seed_mean_inference_times.append(np.mean(episode_inference_times))
+        
+        # Calculate stats for successful episodes only
+        successful_rewards = [r for r, t in zip(episode_rewards, episode_terminated) if t]
+        successful_lengths = [l for l, t in zip(episode_lengths, episode_terminated) if t]
+        if successful_rewards:
+            per_seed_mean_successful_rewards.append(np.mean(successful_rewards))
+        if successful_lengths:
+            per_seed_mean_successful_lengths.append(np.mean(successful_lengths))
+        
+        total_successes += log.get("successes", 0)
+        total_episodes += log.get("episodes_completed", 0)
+    
+    # Print aggregated summary
+    print("\n" + "=" * 60)
+    print("AGGREGATED SUMMARY ACROSS ALL SEEDS")
+    print("=" * 60)
+    print(f"Number of seeds: {len(all_logs)}")
+    print(f"Total episodes: {total_episodes}")
+    print(f"Total successes: {total_successes}")
+    print(f"Overall success rate: {total_successes / max(total_episodes, 1):.2%}")
+    
+    print(f"\nSuccess Rate Across Seeds:")
+    print(f"  Mean: {np.mean(all_success_rates):.2%}")
+    print(f"  Std: {np.std(all_success_rates):.2%}")
+    print(f"  Min: {np.min(all_success_rates):.2%}")
+    print(f"  Max: {np.max(all_success_rates):.2%}")
+    
+    if per_seed_mean_rewards:
+        print(f"\nReward Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print(f"  Mean: {np.mean(per_seed_mean_rewards):.3f}")
+        print(f"  Std: {np.std(per_seed_mean_rewards):.3f}")
+        print(f"  Min: {np.min(per_seed_mean_rewards):.3f}")
+        print(f"  Max: {np.max(per_seed_mean_rewards):.3f}")
+    
+    if per_seed_mean_lengths:
+        print(f"\nEpisode Length Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print(f"  Mean: {np.mean(per_seed_mean_lengths):.1f}")
+        print(f"  Std: {np.std(per_seed_mean_lengths):.1f}")
+        print(f"  Min: {np.min(per_seed_mean_lengths):.1f}")
+        print(f"  Max: {np.max(per_seed_mean_lengths):.1f}")
+    
+    if per_seed_mean_inference_times:
+        print(f"\nInference Time Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print(f"  Mean: {np.mean(per_seed_mean_inference_times):.6f}")
+        print(f"  Std: {np.std(per_seed_mean_inference_times):.6f}")
+        print(f"  Min: {np.min(per_seed_mean_inference_times):.6f}")
+        print(f"  Max: {np.max(per_seed_mean_inference_times):.6f}")
+    
+    if per_seed_mean_successful_rewards:
+        print(f"\nSuccessful Episode Reward Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print(f"  Mean: {np.mean(per_seed_mean_successful_rewards):.3f}")
+        print(f"  Std: {np.std(per_seed_mean_successful_rewards):.3f}")
+        print(f"  Min: {np.min(per_seed_mean_successful_rewards):.3f}")
+        print(f"  Max: {np.max(per_seed_mean_successful_rewards):.3f}")
+    
+    if per_seed_mean_successful_lengths:
+        print(f"\nSuccessful Episode Length Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print(f"  Mean: {np.mean(per_seed_mean_successful_lengths):.1f}")
+        print(f"  Std: {np.std(per_seed_mean_successful_lengths):.1f}")
+        print(f"  Min: {np.min(per_seed_mean_successful_lengths):.1f}")
+        print(f"  Max: {np.max(per_seed_mean_successful_lengths):.1f}")
+    
+    print("=" * 60)
+    
+    # Save aggregated summary
+    summary = {
+        "num_seeds": len(all_logs),
+        "total_episodes": total_episodes,
+        "total_successes": total_successes,
+        "overall_success_rate": total_successes / max(total_episodes, 1),
+        "success_rate_per_seed": all_success_rates,
+        "per_seed_mean_rewards": per_seed_mean_rewards,
+        "per_seed_mean_lengths": per_seed_mean_lengths,
+        "per_seed_mean_inference_times": per_seed_mean_inference_times,
+        "success_rate_stats": {
+            "mean": float(np.mean(all_success_rates)),
+            "std": float(np.std(all_success_rates)),
+            "min": float(np.min(all_success_rates)),
+            "max": float(np.max(all_success_rates)),
+        },
+        "reward_stats": {
+            "mean": float(np.mean(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0,
+            "std": float(np.std(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0,
+            "min": float(np.min(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0,
+            "max": float(np.max(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0,
+        },
+        "length_stats": {
+            "mean": float(np.mean(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0,
+            "std": float(np.std(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0,
+            "min": float(np.min(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0,
+            "max": float(np.max(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0,
+        },
+        "inference_time_stats": {
+            "mean": float(np.mean(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
+            "std": float(np.std(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
+            "min": float(np.min(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
+            "max": float(np.max(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
+        },
+        "per_seed_mean_successful_rewards": per_seed_mean_successful_rewards,
+        "per_seed_mean_successful_lengths": per_seed_mean_successful_lengths,
+        "successful_reward_stats": {
+            "mean": float(np.mean(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
+            "std": float(np.std(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
+            "min": float(np.min(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
+            "max": float(np.max(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
+        },
+        "successful_length_stats": {
+            "mean": float(np.mean(per_seed_mean_successful_lengths)) if per_seed_mean_successful_lengths else 0.0,
+            "std": float(np.std(per_seed_mean_successful_lengths)) if per_seed_mean_successful_lengths else 0.0,
+            "min": float(np.min(per_seed_mean_successful_lengths)) if per_seed_mean_successful_lengths else 0.0,
+            "max": float(np.max(per_seed_mean_successful_lengths)) if per_seed_mean_successful_lengths else 0.0,
+        },
+    }
+    
+    summary_path = output_dir / "aggregated_summary.json"
+    with open(summary_path, "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"\nAggregated summary saved to: {summary_path}")
+    
 
 def main() -> None:
     """Main function to run policy inference in prbench."""
@@ -468,7 +685,10 @@ def main() -> None:
         "--output-dir", default="data/evaluations", help="Directory to save episodes"
     )
     parser.add_argument(
-        "--seed", type=int, default=123, help="Random seed for reproducibility"
+        "--seed", type=int, default=301, help="Random seed for reproducibility"
+    )
+    parser.add_argument(
+        "--num-seeds", type=int, default=5, help="Number of random seeds to run"
     )
     parser.add_argument(
         "--num-episodes", type=int, default=1, help="Number of episodes to run"
@@ -505,24 +725,44 @@ def main() -> None:
     parser.add_argument("--use-delta-qpos", action="store_true", default=False, help="Use delta qpos for the policy")
     parser.add_argument("--use-env-state", action="store_true", default=False, help="Use env state for the policy")
     parser.add_argument("--remove_velocity", action="store_true", default=False, help="remove velocity from the policy")
+    parser.add_argument("--summary_only", action="store_true", default=False, help="only run the summary")
     args = parser.parse_args()
 
-    run_inference(
-        output_dir=Path(args.output_dir),
-        seed=args.seed,
-        num_episodes=args.num_episodes,
-        num_cubes=args.num_cubes,
-        max_steps=args.max_steps,
-        policy_host=args.policy_host,
-        policy_port=args.policy_port,
-        env_name=args.env_name,
-        render=args.render,
-        show_images=args.show_images,
-        use_qpos=args.use_qpos,
-        use_delta_qpos=args.use_delta_qpos,
-        use_env_state=args.use_env_state,
-        save_videos=args.save_videos,
-        remove_velocity=args.remove_velocity,
+    if args.summary_only:
+        # Find the most recent matching directory
+        output_base = Path(args.output_dir)
+        pattern = f"videos_{args.env_name}_*"
+        matching_dirs = sorted(output_base.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+        if not matching_dirs:
+            print(f"No directories matching '{pattern}' found in {output_base}")
+            return
+        video_parent_dir = matching_dirs[0]
+        print(f"Using most recent directory: {video_parent_dir}")
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        video_parent_dir = Path(args.output_dir) / f"videos_{args.env_name}_{timestamp}"
+        video_parent_dir.mkdir(parents=True, exist_ok=True)
+        for seed_idx in range(args.num_seeds):
+            run_inference(
+                output_dir=video_parent_dir,
+                seed=args.seed + seed_idx,
+                num_episodes=args.num_episodes,
+                num_cubes=args.num_cubes,
+                max_steps=args.max_steps,
+                policy_host=args.policy_host,
+                policy_port=args.policy_port,
+                env_name=args.env_name,
+                render=args.render,
+                show_images=args.show_images,
+                use_qpos=args.use_qpos,
+                use_delta_qpos=args.use_delta_qpos,
+                use_env_state=args.use_env_state,
+                save_videos=args.save_videos,
+                remove_velocity=args.remove_velocity,
+            )
+    
+    run_summary(
+        output_dir=video_parent_dir
     )
 
 

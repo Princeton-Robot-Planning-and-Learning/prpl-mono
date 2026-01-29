@@ -175,6 +175,11 @@ def collect_data(
         else:
             raise ValueError("Pick controller did not terminate within 400 steps")
 
+        cube_z = state.get(cube, "z")
+        if cube_z < 0.1:
+            print("Cube is too low. Not saving.")
+            env.close()  # type: ignore
+            return
         if not grasping_only:
             # Create the place ground controller.
             lifted_controller = controllers["place_ground"]

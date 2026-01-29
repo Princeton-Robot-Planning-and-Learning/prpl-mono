@@ -884,7 +884,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         self._current_retract_plan: list[JointPositions] | None = None
         self._current_base_motion_plan: list[SE2] | None = None
         self._pybullet_sim: PyBulletSim | None = pybullet_sim
-        self._navigated: bool = False
+        self._navigated: bool = True
         self._pre_grasp: bool = False
         self._closed_gripper: bool = False
         self._lifted: bool = False
@@ -964,9 +964,10 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         plan_x = x.copy()
         robot = plan_x.get_object_from_name("robot")
         target_base_pose = self._current_base_motion_plan[-1]
-        plan_x.set(robot, "pos_base_x", target_base_pose.x)
-        plan_x.set(robot, "pos_base_y", target_base_pose.y)
-        plan_x.set(robot, "pos_base_rot", target_base_pose.theta())
+        if not self._navigated:
+            plan_x.set(robot, "pos_base_x", target_base_pose.x)
+            plan_x.set(robot, "pos_base_y", target_base_pose.y)
+            plan_x.set(robot, "pos_base_rot", target_base_pose.theta())
 
         # Reset PyBullet given the current state.
         self._pybullet_sim.set_state(plan_x)
