@@ -5,24 +5,27 @@ parameterized skills from prbench-models. The logic mirrors the test in prbench-
 models/tests/geom3d/transport3d.
 """
 
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
+from bilevel_planning.trajectory_samplers.trajectory_sampler import (
+    TrajectorySamplingFailure,
+)
 from numpy.typing import NDArray
 from prbench.envs.geom3d.transport3d import ObjectCentricTransport3DEnv
-from prbench.envs.geom3d.utils import Geom3DRobotActionSpace
+from prbench.envs.geom3d.utils import Geom3DObjectCentricState, Geom3DRobotActionSpace
 from prbench_models.geom3d.transport3d.parameterized_skills import (
     create_lifted_controllers,
 )
 from relational_structs import Object, ObjectCentricState
 from relational_structs.spaces import ObjectCentricBoxSpace
 
+from prbench_ds_policies.policies.base import PolicyFailure, StatefulPolicy
+
 __all__ = ["create_domain_specific_policy"]
 
-Policy = Callable[[NDArray], NDArray]
 
-
-class Transport3DScriptedPolicy:
+class Transport3DScriptedPolicy(StatefulPolicy):
     """A stateful scripted policy for Transport3D.
 
     This policy maintains state between calls to track which controller is currently
@@ -61,7 +64,13 @@ class Transport3DScriptedPolicy:
         self._skill_sequence: list[tuple[str, tuple[Object, ...], NDArray]] = []
         self._skill_index = 0
         self._initialized = False
-        self._first_step_of_skill = True
+
+    def reset(self) -> None:
+        """Reset the policy state for a new episode."""
+        self._current_controller = None
+        self._skill_sequence = []
+        self._skill_index = 0
+        self._initialized = False
 
     def _build_skill_sequence(self, state: ObjectCentricState) -> None:
         """Build the skill sequence based on current state."""
@@ -109,8 +118,10 @@ class Transport3DScriptedPolicy:
         skill_name, objects, params = self._skill_sequence[self._skill_index]
         lifted_controller = self._controllers[skill_name]
         self._current_controller = lifted_controller.ground(objects)
-        self._current_controller.reset(state, params)
-        self._first_step_of_skill = True
+        try:
+            self._current_controller.reset(state, params)
+        except TrajectorySamplingFailure:
+            raise PolicyFailure("Sampling failed in reset().")
         return True
 
     def __call__(self, observation: NDArray[np.float32]) -> NDArray[np.float32]:
@@ -118,35 +129,36 @@ class Transport3DScriptedPolicy:
         # Devectorize observation.
         state = self._observation_space.devectorize(observation)
 
+        # Sync sim.
+        assert isinstance(state, Geom3DObjectCentricState)
+        self._sim.set_state(state)
+
         # Initialize on first call.
         if not self._initialized:
             self._build_skill_sequence(state)
             self._start_next_skill(state)
             self._initialized = True
 
-        # On non-first step of a skill, observe the result of the last action.
-        if not self._first_step_of_skill and self._current_controller is not None:
-            self._current_controller.observe(state)
+        # Observe the result of the last action.
+        assert self._current_controller is not None
+        self._current_controller.observe(state)
 
-            # Check if current controller is done, move to next skill if so.
-            while self._current_controller.terminated():
-                self._skill_index += 1
-                if not self._start_next_skill(state):
-                    # All skills complete - return zero action.
-                    shape = self._action_space.shape
-                    assert shape is not None
-                    return np.zeros(shape, dtype=np.float32)
+        # Check if current controller is done, move to next skill if so.
+        while self._current_controller.terminated():
+            self._skill_index += 1
+            if not self._start_next_skill(state):
+                # All skills complete - return zero action.
+                shape = self._action_space.shape
+                assert shape is not None
+                return np.zeros(shape, dtype=np.float32)
 
         # Get action from current controller.
-        if self._current_controller is not None:
+        assert self._current_controller is not None
+        try:
             action = self._current_controller.step()
-            self._first_step_of_skill = False
-            return action
-
-        # Fallback - return zero action.
-        shape = self._action_space.shape
-        assert shape is not None
-        return np.zeros(shape, dtype=np.float32)
+        except TrajectorySamplingFailure:
+            raise PolicyFailure("Sampling failed in step().")
+        return action
 
 
 def create_domain_specific_policy(
@@ -155,9 +167,9 @@ def create_domain_specific_policy(
     num_cubes: int = 2,
     seed: int = 123,
     birrt_extend_num_interp: int = 25,
-    smooth_mp_max_time: float = 120.0,
-    smooth_mp_max_candidate_plans: int = 20,
-) -> Policy:
+    smooth_mp_max_time: float = 10.0,
+    smooth_mp_max_candidate_plans: int = 1,
+) -> StatefulPolicy:
     """Create a domain-specific policy for Transport3D.
 
     Args:
@@ -173,7 +185,7 @@ def create_domain_specific_policy(
             Defaults to 20.
 
     Returns:
-        A policy function that maps observations to actions.
+        A policy that maps observations to actions.
     """
     policy = Transport3DScriptedPolicy(
         observation_space=observation_space,

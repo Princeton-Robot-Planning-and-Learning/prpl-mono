@@ -768,6 +768,14 @@ class Cupboard(MujocoFixture):
                 x_min = -cupboard_half_length
                 x_max = cupboard_half_length
 
+            # Compute z bounds from shelf position and height
+            z_min = self._shelf_z_positions[shelf]
+            z_max = z_min + shelf_height
+            # Compute relative z bounds with respect to shelf position
+            partition_center_z = self._shelf_z_positions[shelf]
+            z_min_relative = z_min - partition_center_z
+            z_max_relative = z_max - partition_center_z
+
             # Get ranges - if not provided, use the computed x_min, x_max, y_min, y_max
             ranges = region_config.get("ranges")
             if ranges is None:
@@ -780,15 +788,21 @@ class Cupboard(MujocoFixture):
                 x_max_relative = x_max - partition_center_x
                 ranges = [[x_min_relative, y_min, x_max_relative, y_max]]
 
+            # Parse each compartment-relative range, where ranges are with respect to
+            # (partition_center_x, 0, partition_center_z)
             for region_idx, region_range in enumerate(ranges):
-                if len(region_range) != 4:
+                if len(region_range) == 4:
+                    x_start, y_start, x_end, y_end = region_range
+                    z_start, z_end = z_min_relative, z_max_relative
+                elif len(region_range) == 6:
+                    x_start, y_start, z_start, x_end, y_end, z_end = region_range
+                else:
                     raise ValueError(
-                        f"Each region range must have exactly 4 values "
-                        f"[x_start, y_start, x_end, y_end], "
+                        f"Each region range must have 4 or 6 values "
+                        f"[x_start, y_start, x_end, y_end] or "
+                        f"[x_start, y_start, z_start, x_end, y_end, z_end], "
                         f"got {len(region_range)} for region '{region_name}'"
                     )
-
-                x_start, y_start, x_end, y_end = region_range
 
                 # Validate bounds (ranges are relative to partition center)
                 if x_start >= x_end:
@@ -799,6 +813,11 @@ class Cupboard(MujocoFixture):
                 if y_start >= y_end:
                     raise ValueError(
                         f"y_start ({y_start}) must be less than y_end ({y_end}) "
+                        f"for region '{region_name}'"
+                    )
+                if z_start >= z_end:
+                    raise ValueError(
+                        f"z_start ({z_start}) must be less than z_end ({z_end}) "
                         f"for region '{region_name}'"
                     )
 
@@ -824,22 +843,20 @@ class Cupboard(MujocoFixture):
                     # (drawer body has its own local frame centered at partition center)
                     region_center_x = (x_start + x_end) / 2
                     region_center_y = (y_start + y_end) / 2
-                    region_center_z = shelf_height / 2  # Center of drawer height
-                    region_size_x = (x_end - x_start) / 2
-                    region_size_y = (y_end - y_start) / 2
-                    region_size_z = shelf_height / 2
+                    region_center_z = (z_start + z_end) / 2  # Center of drawer height
                 else:
                     # For cupboard sites: convert partition-relative to world-relative
                     region_center_x = (
                         partition_center_x + x_start + partition_center_x + x_end
                     ) / 2
                     region_center_y = (y_start + y_end) / 2
-                    z_min = self._shelf_z_positions[shelf]
-                    z_max = z_min + shelf_height
-                    region_center_z = (z_min + z_max) / 2
-                    region_size_x = (x_end - x_start) / 2
-                    region_size_y = (y_end - y_start) / 2
-                    region_size_z = (z_max - z_min) / 2
+                    # Use pre-computed z bounds
+                    region_center_z = (
+                        partition_center_z + z_start + partition_center_z + z_end
+                    ) / 2
+                region_size_x = (x_end - x_start) / 2
+                region_size_y = (y_end - y_start) / 2
+                region_size_z = (z_end - z_start) / 2
 
                 # Create site element for the region
                 site = ET.Element("site")
