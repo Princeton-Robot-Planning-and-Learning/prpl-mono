@@ -41,8 +41,8 @@ class RemotePolicy:
         self.image_height = image_height
 
         # Connection to policy server
-        context = zmq.Context()
-        self.socket = context.socket(zmq.REQ)
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REQ)
         self.socket.connect(f"tcp://{host}:{port}")
         print(f"Connected to policy server at {host}:{port}")
 
@@ -101,6 +101,7 @@ class RemotePolicy:
     def close(self):
         """Close the connection to policy server."""
         self.socket.close()
+        self.context.term()  # Terminate the context!
 
 
 def run_inference(
