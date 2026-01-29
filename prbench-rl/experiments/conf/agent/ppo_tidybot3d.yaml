@@ -8,6 +8,7 @@ args:
   num_steps: 512
   num_eval_envs: 1
   hidden_size: 256
+  async_envs: true  # Use AsyncVectorEnv for faster parallel stepping
 
 # Training settings
 torch_deterministic: true

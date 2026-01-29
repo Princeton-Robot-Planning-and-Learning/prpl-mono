@@ -18,7 +18,8 @@ python experiments/run_experiment.py \
     eval_episodes=50 \
     seed=${seed} \
     agent.args.total_timesteps=5000000 \
-    agent.args.num_envs=1 \
-    agent.args.num_steps=512 \
-    agent.args.hidden_size=256
+    agent.args.num_envs=16 \
+    agent.args.num_steps=64 \
+    agent.args.hidden_size=256 \
+    agent.args.async_envs=true
 done
