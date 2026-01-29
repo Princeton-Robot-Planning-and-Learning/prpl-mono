@@ -1177,7 +1177,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
         assert self.robot_type == "tidybot"
         assert self._robot_env is not None, "Robot environment not initialized"
-        robot = Object("robot", MujocoTidyBotRobotObjectType)
+        robot = Object(self.robot_name, MujocoTidyBotRobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
         assert self._robot_env.qpos is not None
         assert self._robot_env.qvel is not None
@@ -1212,7 +1212,7 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         """Set the robot state in the simulation."""
         assert self._robot_env is not None, "Robot environment not initialized"
 
-        robot_obj = state.get_object_from_name("robot")
+        robot_obj = state.get_object_from_name(self.robot_name)
 
         # Reset the robot base position.
         robot_base_pos = [
@@ -1358,7 +1358,7 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
     def _get_object_centric_robot_data(self) -> dict[Object, dict[str, float]]:
         assert self.robot_type == "rby1a"
         assert self._robot_env is not None, "Robot environment not initialized"
-        robot = Object("robot", MujocoRBY1ARobotObjectType)
+        robot = Object(self.robot_name, MujocoRBY1ARobotObjectType)
         # Build this super explicitly, even though verbose, to be careful.
         state_dict = {}
         assert self._robot_env.qpos is not None
@@ -1373,7 +1373,7 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         """Set the robot state in the simulation."""
         assert self._robot_env is not None, "Robot environment not initialized"
 
-        robot_obj = state.get_object_from_name("robot")
+        robot_obj = state.get_object_from_name(self.robot_name)
 
         # Reset the robot base position.
         assert self._robot_env.qpos is not None

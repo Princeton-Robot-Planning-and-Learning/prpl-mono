@@ -4,6 +4,8 @@ from typing import Any, ClassVar
 
 from relational_structs import ObjectCentricState
 
+from prbench.envs.dynamic3d.object_types import MujocoTidyBotRobotObjectType
+
 
 class TidyBotRewardCalculator:
     """Base class for TidyBot task rewards."""
@@ -56,7 +58,10 @@ class BaseMotionRewardCalculator(TidyBotRewardCalculator):
         state = obs["object_centric_state"]
         assert isinstance(state, ObjectCentricState)
         target = state.get_object_from_name("cube1")
-        robot = state.get_object_from_name("robot")
+        # Find the robot by type (name varies by config)
+        robots = state.get_objects(MujocoTidyBotRobotObjectType)
+        assert len(robots) == 1, f"Expected 1 robot, found {len(robots)}"
+        robot = robots[0]
         target_x = state.get(target, "x")
         target_y = state.get(target, "y")
         robot_x = state.get(robot, "pos_base_x")
