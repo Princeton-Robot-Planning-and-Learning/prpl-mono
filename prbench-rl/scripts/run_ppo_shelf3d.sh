@@ -1,22 +1,24 @@
 #!/bin/bash
-# PPO training on Shelf3D environment
-# Usage: ./run_ppo_shelf3d.sh [num_cubes] [seed]
+# PPO training on TidyBot3D tool_use environment (sweep blocks into drawer)
+# Usage: ./run_ppo_shelf3d.sh [seed]
 
-NUM_CUBES=${1:-1}  # Default: 1 cube
-SEED=${2:-0}       # Default seed: 0
+# SEED=${1:-0}       # Default seed: 0
 
-cd "$(dirname "$0")/.."
+# cd "$(dirname "$0")/.."
 
-# Activate the monorepo virtual environment
-source "$(dirname "$0")/../../.venv/bin/activate"
+# # Activate the monorepo virtual environment
+# source "$(dirname "$0")/../../.venv/bin/activate"
 
+for seed in 300 301 302 303 304
+do
 python experiments/run_experiment.py \
-    agent=ppo_shelf3d \
-    env_id="prbench/Shelf3D-o${NUM_CUBES}-v0" \
-    max_episode_steps=300 \
+    agent=ppo_tidybot3d \
+    env_id="prbench/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0" \
+    max_episode_steps=600 \
     eval_episodes=50 \
-    seed=${SEED} \
-    agent.args.total_timesteps=1000000 \
-    agent.args.num_envs=8 \
-    agent.args.num_steps=256 \
-    agent.args.hidden_size=128
+    seed=${seed} \
+    agent.args.total_timesteps=5000000 \
+    agent.args.num_envs=1 \
+    agent.args.num_steps=512 \
+    agent.args.hidden_size=256
+done
