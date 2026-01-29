@@ -902,7 +902,6 @@ class Scoop(MujocoObject):
         ET.SubElement(body, "freejoint", name=self.joint_name)
 
         # Calculate half dimensions
-        half_length = self.length / 2
         half_width = self.width / 2
         half_wall_width = self.wall_width / 2
 
@@ -913,7 +912,6 @@ class Scoop(MujocoObject):
         outer_half_width = outer_width / 2
 
         # Mass distribution
-        total_components = 6  # 5 bin components + 1 handle
         bin_component_mass = (self.mass * 0.8) / 5.0  # 80% to bin
         handle_mass = self.mass * 0.2  # 20% to handle
 
@@ -1053,7 +1051,6 @@ class Scoop(MujocoObject):
         height = float(object_config.get("height", 0.05))
         wall_width = float(object_config.get("wall_width", Scoop.default_wall_width))
         handle_length = float(object_config.get("handle_length", 0.05))
-        handle_height = float(object_config.get("handle_height", 0.05))
 
         # Outer dimensions (including walls)
         outer_length = length + 2 * wall_width
