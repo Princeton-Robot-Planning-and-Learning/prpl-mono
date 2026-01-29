@@ -12,6 +12,7 @@ import numpy as np
 import prbench
 import zmq
 from relational_structs.spaces import ObjectCentricBoxSpace
+import gc
 
 from prbench_models.policy_constants import (
     POLICY_CONTROL_PERIOD,
@@ -408,6 +409,9 @@ def run_inference(
                   f"terminated={ep_terminated}, truncated={ep_truncated}")
             policy.close()  # type: ignore
             env.close()  # type: ignore
+            gc.collect()
+            del policy
+            del env
 
     finally:
         # Print summary statistics
