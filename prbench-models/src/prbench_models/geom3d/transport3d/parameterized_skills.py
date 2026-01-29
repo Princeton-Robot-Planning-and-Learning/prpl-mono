@@ -20,16 +20,12 @@ from prbench.envs.geom3d.utils import (
     Geom3DRobotActionSpace,
 )
 from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
-from pybullet_helpers.inverse_kinematics import InverseKinematicsError
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
-    MotionPlanningHyperparameters,
     create_joint_distance_fn,
     remap_joint_position_plan_to_constant_distance,
-    remap_se2_pose_plan_to_constant_distance,
     run_motion_planning,
     run_single_arm_mobile_base_motion_planning,
-    run_smooth_motion_planning_to_pose,
     smoothly_follow_end_effector_path,
 )
 from relational_structs import (
@@ -39,19 +35,16 @@ from relational_structs import (
 )
 
 from prbench_models.geom3d.base_controllers import BasePlaceController
-from prbench_models.geom3d.constants import (
-    GRIPPER_CLOSE_THRESHOLD,
-    HOME_JOINT_POSITIONS,
-)
 from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 
 # constants
 GRASP_TRANSFORM_TO_OBJECT_BOX = Pose(
-    (0.0, 0.15, 0.08), (0.707, 0.707, 0, 0)
+    (0.0, 0.10, 0.08), (0.707, 0.707, 0, 0)
 )  # side grasp
-GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.02), (0.707, 0.707, 0, 0))
+GRASP_TRANSFORM_TO_OBJECT_CUBE = Pose((0.005, 0, 0.005), (0.707, 0.707, 0, 0))
 SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
-MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.5, 0.6)
+MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
+HOME_JOINT_POSITIONS = np.deg2rad([0, -20, 180, -146, 0, -50, 90, 0, 0, 0, 0, 0, 0])
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
 PLACE_X_OFFSET_BOUNDS_BOX = (-0.1, 0.0)
 PLACE_Y_OFFSET_BOUNDS_BOX = (-0.05, 0.05)
@@ -71,10 +64,6 @@ class GroundPickController(
         self,
         objects: Sequence[Object],
         sim: ObjectCentricTransport3DEnv,
-        birrt_extend_num_interp: int = 10,
-        smooth_mp_max_time: float = 120.0,
-        smooth_mp_max_candidate_plans: int = 50,
-        base_mp_birrt_smooth_amt: int = 100,
     ) -> None:
         super().__init__(objects)
         self._sim = sim
@@ -92,11 +81,6 @@ class GroundPickController(
         self._last_gripper_state: float = 0.0
         self._target_pick_pose_world: Pose | None = None
         self._pre_pick_pose_world: Pose | None = None
-        # Motion planning hyperparameters.
-        self._birrt_extend_num_interp = birrt_extend_num_interp
-        self._smooth_mp_max_time = smooth_mp_max_time
-        self._smooth_mp_max_candidate_plans = smooth_mp_max_candidate_plans
-        self._base_mp_birrt_smooth_amt = base_mp_birrt_smooth_amt
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         """No parameters needed for base motion - just move to target."""
@@ -128,28 +112,29 @@ class GroundPickController(
             target_base_pose = get_target_robot_pose_from_parameters(
                 target_pose, self._current_params[0], self._current_params[1]
             )
-
+            collision_ids = (
+                {self._sim.table_id}
+                | set(self._sim._cubes.values())  # pylint: disable=protected-access
+                | set(self._sim._boxes.values())  # pylint: disable=protected-access
+            )
+            if (
+                self._sim._grasped_object_id  # pylint: disable=protected-access
+                is not None
+            ):
+                collision_ids.discard(
+                    self._sim._grasped_object_id  # pylint: disable=protected-access
+                )
             # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                collision_bodies=collision_ids,
                 seed=0,  # for determinism
-                hyperparameters=MotionPlanningHyperparameters(
-                    birrt_extend_num_interp=self._birrt_extend_num_interp,
-                    birrt_smooth_amt=self._base_mp_birrt_smooth_amt,
-                ),
             )
 
             if base_plan is None:
                 raise TrajectorySamplingFailure("Base motion planning failed")
-
-            # Remap the plan to ensure we stay within action limits.
-            base_plan = remap_se2_pose_plan_to_constant_distance(
-                base_plan,
-                max_distance=self._sim.config.max_action_mag,
-            )
 
             # Store the plan (excluding the first state which is the current state).
             self._current_plan = base_plan[1:]
@@ -200,64 +185,24 @@ class GroundPickController(
                     target_end_effector_pose.orientation,
                 )
 
-                collision_ids = (
-                    self._sim._get_collision_object_ids()  # pylint: disable=protected-access
-                )
                 joint_distance_fn = create_joint_distance_fn(self._sim.robot.arm)
-
-                # First run motion planning to get to the pre-pick pose.
-                smooth_mp_kwargs: dict[str, Any] = {
-                    "max_time": self._smooth_mp_max_time,
-                    "max_candidate_plans": self._smooth_mp_max_candidate_plans,
-                    "birrt_extend_num_interp": self._birrt_extend_num_interp,
-                }
-                try:
-                    joint_plan1 = run_smooth_motion_planning_to_pose(
-                        self._pre_pick_pose_world,
-                        self._sim.robot.arm,
-                        collision_ids=collision_ids,
-                        end_effector_frame_to_plan_frame=Pose.identity(),
-                        seed=0,  # for determinism
-                        **smooth_mp_kwargs,
-                    )
-                except InverseKinematicsError:
-                    joint_plan1 = None
-                    # Debugging
-                    # import pybullet as p
-                    # while True:
-                    #     p.getMouseEvents(self._sim.physics_client_id)
-
-                if joint_plan1 is None:
-                    raise TrajectorySamplingFailure("Motion planning failed")
-
                 # Run motion planning to the target joint positions.
-                try:
-                    self._sim.robot.arm.set_joints(joint_plan1[-1])
-                    ee_pose = self._sim.robot.arm.get_end_effector_pose()
-                    assert ee_pose.allclose(self._pre_pick_pose_world, atol=1e-4)
-                    joint_plan2 = smoothly_follow_end_effector_path(
-                        self._sim.robot.arm,
-                        [self._pre_pick_pose_world, self._target_pick_pose_world],
-                        initial_joints=self._sim.robot.arm.get_joint_positions(),
-                        collision_ids=collision_ids,
-                        seed=0,  # for determinism
-                        joint_distance_fn=joint_distance_fn,
-                        max_smoothing_iters_per_step=1,
-                        include_start=False,
-                    )
-                except InverseKinematicsError:
-                    joint_plan2 = None
-                    # Debugging
-                    # import pybullet as p
-                    # while True:
-                    #     p.getMouseEvents(self._sim.physics_client_id)
+                joint_plan = smoothly_follow_end_effector_path(
+                    self._sim.robot.arm,
+                    [self._pre_pick_pose_world, self._target_pick_pose_world],
+                    initial_joints=self._sim.robot.arm.get_joint_positions(),
+                    collision_ids=self._sim._get_collision_object_ids(),  # pylint: disable=protected-access
+                    seed=0,  # for determinism
+                    joint_distance_fn=joint_distance_fn,
+                    max_smoothing_iters_per_step=1,
+                )
 
-                if joint_plan2 is None:
+                if joint_plan is None:
                     raise TrajectorySamplingFailure("Motion planning failed")
 
                 # Remap the plan to ensure we stay within action limits.
                 joint_plan = remap_joint_position_plan_to_constant_distance(
-                    joint_plan1 + joint_plan2,
+                    joint_plan,
                     self._sim.robot.arm,
                     max_distance=self._sim.config.max_action_mag / 2,
                 )
@@ -283,13 +228,10 @@ class GroundPickController(
             return action
 
         if self._pre_grasp and not self._closed_gripper:
-            if (
-                self._get_current_robot_gripper_pose() > GRIPPER_CLOSE_THRESHOLD
-                and np.isclose(
-                    self._get_current_robot_gripper_pose(),
-                    self._last_gripper_state,
-                    atol=0.02,
-                )
+            if self._get_current_robot_gripper_pose() > 0.2 and np.isclose(
+                self._get_current_robot_gripper_pose(),
+                self._last_gripper_state,
+                atol=0.02,
             ):
                 self._closed_gripper = True
             action_lst = [0.0] * 10 + [-1.0]
@@ -304,27 +246,13 @@ class GroundPickController(
                 self._sim.set_state(self._current_state)
 
                 # Run motion planning to the target joint positions.
-                grasped_object_id = (
-                    self._sim._grasped_object_id  # pylint: disable=protected-access
-                )
-                grasped_object_transform = (
-                    self._sim._grasped_object_transform  # pylint: disable=protected-access
-                )
-                all_collision_ids = (
-                    self._sim._get_collision_object_ids()  # pylint: disable=protected-access
-                )
-                all_collision_ids -= (
-                    self._sim._get_inside_object_ids()  # pylint: disable=protected-access
-                )
                 joint_plan = run_motion_planning(  # type: ignore
                     self._sim.robot.arm,
                     initial_positions=self._sim.robot.arm.get_joint_positions(),
                     target_positions=HOME_JOINT_POSITIONS.tolist(),
-                    collision_bodies=all_collision_ids - {grasped_object_id},
+                    collision_bodies=set(),
                     seed=0,  # for determinism
                     physics_client_id=self._sim.physics_client_id,
-                    held_object=grasped_object_id,
-                    base_link_to_held_obj=grasped_object_transform,
                 )
 
                 if joint_plan is None:
@@ -402,76 +330,45 @@ class GroundPlaceController(BasePlaceController):
         if self._current_plan is None:
             self._sim.set_state(self._current_state)
 
-            # Get the grasp transform to compute EE pose from desired object pose.
-            grasped_object_transform = (
-                self._sim._grasped_object_transform  # pylint: disable=protected-access
-            )
-            assert grasped_object_transform is not None
-
-            # Compute the desired object placement pose (where the held object
-            # should end up). The object should be placed upright.
-            target_surface_pose = self._current_state.get_object_pose(
-                self.objects[2].name
-            )
+            target_pose = self._current_state.get_object_pose(self.objects[2].name)
             if "box" in self.objects[1].name and "table" in self.objects[2].name:
-                # Place box on table: box center should be at table surface
-                # + box bottom thickness + half box height.
-                desired_object_z = (
-                    target_surface_pose.position[2]
-                    + self._sim.config.table_half_extents[2]
-                    + self._sim.config.box_wall_thickness
-                    + self._sim.config.box_half_extents[2]
-                )
-                desired_object_pose = Pose(
+                self._target_place_pose_world = Pose.from_rpy(
                     (
-                        target_surface_pose.position[0] + self._current_params[0],
-                        target_surface_pose.position[1] + self._current_params[1],
-                        desired_object_z,
+                        target_pose.position[0] + self._current_params[0],
+                        target_pose.position[1] + self._current_params[1],
+                        target_pose.position[2]
+                        + self._sim.config.table_half_extents[2]
+                        + self._sim.config.box_wall_thickness
+                        + self._sim.config.box_half_extents[2]
+                        + 0.03,
                     ),
-                    (0, 0, 0, 1),  # Upright (identity quaternion, xyzw format)
+                    (np.pi, 0, np.pi / 2),
                 )
             elif "cube" in self.objects[1].name and "table" in self.objects[2].name:
-                # Place cube on table: cube center at table surface + half cube size.
-                desired_object_z = (
-                    target_surface_pose.position[2]
-                    + self._sim.config.table_half_extents[2]
-                    + self._sim.config.block_size / 2
-                )
-                desired_object_pose = Pose(
+                self._target_place_pose_world = Pose.from_rpy(
                     (
-                        target_surface_pose.position[0] + self._current_params[0],
-                        target_surface_pose.position[1] + self._current_params[1],
-                        desired_object_z,
+                        target_pose.position[0] + self._current_params[0],
+                        target_pose.position[1] + self._current_params[1],
+                        target_pose.position[2]
+                        + self._sim.config.table_half_extents[2]
+                        + self._sim.config.block_size / 2
+                        + 0.015,
                     ),
-                    (0, 0, 0, 1),  # Upright (identity quaternion, xyzw format)
+                    (np.pi, 0, np.pi / 2),
                 )
             elif "cube" in self.objects[1].name and "box" in self.objects[2].name:
-                # Place cube inside box: cube center at box bottom + half cube size.
-                # The x,y are relative to the box position.
-                desired_object_z = (
-                    self._sim.config.box_wall_thickness
-                    + self._sim.config.block_size / 2
-                    + target_surface_pose.position[2]
-                    - self._sim.config.box_half_extents[2]
-                )
-                desired_object_pose = Pose(
+                self._target_place_pose_world = Pose.from_rpy(
                     (
-                        target_surface_pose.position[0] + self._current_params[0],
-                        target_surface_pose.position[1] + self._current_params[1],
-                        desired_object_z,
+                        target_pose.position[0] + self._current_params[0],
+                        target_pose.position[1] + self._current_params[1],
+                        self._sim.config.box_wall_thickness
+                        + self._sim.config.block_size / 2
+                        + 0.01,
                     ),
-                    (0, 0, 0, 1),  # Upright (identity quaternion, xyzw format)
+                    (np.pi, 0, np.pi / 2),
                 )
             else:
                 raise ValueError("Invalid target object")
-
-            # Compute EE pose from desired object pose using the grasp transform.
-            # object_pose = ee_pose * grasped_object_transform
-            # => ee_pose = object_pose * grasped_object_transform.invert()
-            self._target_place_pose_world = multiply_poses(
-                desired_object_pose, grasped_object_transform.invert()
-            )
-
             distance = 0.65
             pre_place_height = 0.03
 
@@ -483,8 +380,7 @@ class GroundPlaceController(BasePlaceController):
                 ),
                 self._target_place_pose_world.orientation,
             )
-
-            target_pose_temp_se2 = target_surface_pose.to_se2()
+            target_pose_temp_se2 = target_pose.to_se2()
             self._target_place_pose_se2 = SE2Pose(
                 target_pose_temp_se2.x + self._current_params[0],
                 target_pose_temp_se2.y + self._current_params[1],
@@ -494,41 +390,25 @@ class GroundPlaceController(BasePlaceController):
                 self._target_place_pose_se2, distance, 0.0
             )
 
-            # Run base motion planning to the target pose.
-            grasped_object_id = (
+            collision_ids = {self._sim.table_id} | set(self._sim._cubes.values()) | set(self._sim._boxes.values())  # type: ignore # pylint: disable=line-too-long # pylint: disable=protected-access
+            if (
                 self._sim._grasped_object_id  # pylint: disable=protected-access
-            )
-            all_collision_ids = (
-                self._sim._get_collision_object_ids()  # pylint: disable=protected-access
-            )
-            if "box" in self.objects[1].name:
-                collision_bodies = {
-                    self._sim.table_id  # type: ignore # pylint: disable=protected-access
-                }
-            else:
-                collision_bodies = all_collision_ids - {grasped_object_id}
+                is not None
+            ):
+                collision_ids.discard(
+                    self._sim._grasped_object_id  # pylint: disable=protected-access
+                )
+            # Run base motion planning to the target pose.
             base_plan = run_single_arm_mobile_base_motion_planning(
                 self._sim.robot,
                 self._sim.robot.base.get_pose(),
                 target_base_pose,
-                collision_bodies=collision_bodies,
+                collision_bodies=collision_ids,
                 seed=0,  # for determinism
-                held_object=grasped_object_id,
-                base_link_to_held_obj=grasped_object_transform,
-                hyperparameters=MotionPlanningHyperparameters(
-                    birrt_extend_num_interp=self._birrt_extend_num_interp,
-                    birrt_smooth_amt=self._base_mp_birrt_smooth_amt,
-                ),
             )
 
             if base_plan is None:
                 raise TrajectorySamplingFailure("Base motion planning failed")
-
-            # Remap the plan to ensure we stay within action limits.
-            base_plan = remap_se2_pose_plan_to_constant_distance(
-                base_plan,
-                max_distance=self._sim.config.max_action_mag,
-            )
 
             # Store the plan (excluding the first state which is the current state).
             self._current_plan = base_plan[1:]
@@ -551,46 +431,21 @@ class GroundPlaceController(BasePlaceController):
 def create_lifted_controllers(
     action_space: Geom3DRobotActionSpace,
     sim: ObjectCentricTransport3DEnv,
-    birrt_extend_num_interp: int = 10,
-    smooth_mp_max_time: float = 0.1,
-    smooth_mp_max_candidate_plans: int = 1,
 ) -> dict[str, LiftedParameterizedController]:
-    """Create lifted parameterized controllers for Transport3D.
-
-    Args:
-        action_space: The action space for the controllers.
-        sim: The simulation environment.
-        birrt_extend_num_interp: Number of interpolation steps for BiRRT extension.
-            Higher values produce smoother motion but are slower. None uses default.
-        smooth_mp_max_time: Maximum time for smooth motion planning.
-        smooth_mp_max_candidate_plans: Maximum candidate plans to consider
-            for smooth motion planning. Higher values may produce smoother motion.
-    """
+    """Create lifted parameterized controllers for Transport3D."""
 
     # Create partial controller classes that include the sim
     class PickController(GroundPickController):
         """Controller for picking up an object."""
 
         def __init__(self, objects):
-            super().__init__(
-                objects,
-                sim,
-                birrt_extend_num_interp=birrt_extend_num_interp,
-                smooth_mp_max_time=smooth_mp_max_time,
-                smooth_mp_max_candidate_plans=smooth_mp_max_candidate_plans,
-            )
+            super().__init__(objects, sim)
 
     class PlaceController(GroundPlaceController):
         """Controller for placing an object."""
 
         def __init__(self, objects):
-            super().__init__(
-                objects,
-                sim,
-                birrt_extend_num_interp=birrt_extend_num_interp,
-                smooth_mp_max_time=smooth_mp_max_time,
-                smooth_mp_max_candidate_plans=smooth_mp_max_candidate_plans,
-            )
+            super().__init__(objects, sim)
 
     # Create variables for lifted controllers
     robot = Variable("?robot", Geom3DRobotType)

@@ -18,10 +18,7 @@ def test_pick_controller():
     """Test pick controller in Transport3D environment."""
 
     env = prbench.make(
-        "prbench/Transport3D-o1-v0",
-        render_mode="rgb_array",
-        use_gui=False,
-        realistic_bg=False,
+        "prbench/Transport3D-o1-v0", render_mode="rgb_array", use_gui=False
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Transport3D")
@@ -30,7 +27,7 @@ def test_pick_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTransport3DEnv(num_cubes=1, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(num_cubes=1)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -41,7 +38,8 @@ def test_pick_controller():
     object_parameters = (robot, target)
     controller = lifted_controller.ground(object_parameters)
 
-    params = np.array([0.5, 0.0])
+    rng = np.random.default_rng(123)
+    params = controller.sample_parameters(state, rng)
 
     controller.reset(state, params)
     for _ in range(500):
@@ -62,10 +60,7 @@ def test_pick_and_place_controller():
     """Test pick and place controller in Transport3D environment."""
 
     env = prbench.make(
-        "prbench/Transport3D-o1-v0",
-        render_mode="rgb_array",
-        use_gui=False,
-        realistic_bg=False,
+        "prbench/Transport3D-o1-v0", render_mode="rgb_array", use_gui=False
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Transport3D")
@@ -74,7 +69,7 @@ def test_pick_and_place_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTransport3DEnv(num_cubes=1, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(num_cubes=1)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -130,19 +125,16 @@ def test_pick_and_place_inside_box_controller():
 
     num_cubes = 2
     env = prbench.make(
-        f"prbench/Transport3D-o{num_cubes}-v0",
-        render_mode="rgb_array",
-        use_gui=False,
-        realistic_bg=False,
+        f"prbench/Transport3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Transport3D")
 
-    obs, _ = env.reset(seed=124)
+    obs, _ = env.reset(seed=123)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -175,7 +167,8 @@ def test_pick_and_place_inside_box_controller():
     object_parameters = (robot, target, target_box)
     controller = lifted_controller.ground(object_parameters)
 
-    params = np.array([0.0, -0.06])
+    rng = np.random.default_rng(123)
+    params = controller.sample_parameters(state, rng)
 
     controller.reset(state, params)
     for _ in range(500):
@@ -195,7 +188,8 @@ def test_pick_and_place_inside_box_controller():
     object_parameters = (robot, target)
     controller = lifted_controller.ground(object_parameters)
 
-    params = np.array([0.5, 0.0])
+    rng = np.random.default_rng(122)
+    params = controller.sample_parameters(state, rng)
 
     controller.reset(state, params)
     for _ in range(500):
@@ -216,7 +210,8 @@ def test_pick_and_place_inside_box_controller():
     object_parameters = (robot, target, target_box)
     controller = lifted_controller.ground(object_parameters)
 
-    params = np.array([0.0, 0.06])
+    rng = np.random.default_rng(123)
+    params = controller.sample_parameters(state, rng)
 
     controller.reset(state, params)
     for _ in range(500):
@@ -281,10 +276,7 @@ def test_pick_cube_and_place_on_table_controller():
 
     num_cubes = 2
     env = prbench.make(
-        f"prbench/Transport3D-o{num_cubes}-v0",
-        render_mode="rgb_array",
-        use_gui=False,
-        realistic_bg=False,
+        f"prbench/Transport3D-o{num_cubes}-v0", render_mode="rgb_array", use_gui=False
     )
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos", name_prefix="Transport3D")
@@ -293,7 +285,7 @@ def test_pick_cube_and_place_on_table_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
