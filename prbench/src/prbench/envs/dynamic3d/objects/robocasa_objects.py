@@ -203,7 +203,7 @@ class RoboCasaObject(MujocoObject):
 
         # Look for site elements that define the bounding box
         # Sites are typically named: bottom_site, top_site, horizontal_radius_site
-        sites: dict[str, NDArray[Any]] = {}
+        sites: dict[str, Any] = {}
         for body in worldbody.iter("body"):
             for site in body.findall("site"):
                 site_name = site.attrib.get("name", "")
@@ -314,7 +314,7 @@ class RoboCasaObject(MujocoObject):
                 raise ValueError("No worldbody found in model.xml")
 
             # Extract sites to calculate bounding box
-            sites_dict: dict[str, NDArray[Any]] = {}
+            sites_dict: dict[str, Any] = {}
             for body in worldbody.iter("body"):
                 for site in body.findall("site"):
                     site_name = site.attrib.get("name", "")
@@ -420,7 +420,11 @@ def _create_robocasa_object_classes() -> None:
             )
 
             # Register the class with robocasa_ prefix (e.g., "robocasa_apple_0")
-            register_object(new_class, name=f"robocasa_{object_type_name}")
+            # pylint: disable=too-many-locals
+            registered_class: type[RoboCasaObject] = register_object(  # type: ignore[assignment]
+                name=f"robocasa_{object_type_name}"
+            )(new_class)
+            new_class = registered_class
 
             # Add to module globals so it can be imported
             # pylint: disable=global-variable-undefined
