@@ -156,22 +156,23 @@ def run_inference(
         seed_dir = output_dir / f"seed_{seed}"
         seed_dir.mkdir(parents=True, exist_ok=True)
         rng = np.random.default_rng(seed)
+
+        # Create the environment
+        render_mode = "rgb_array" if render or save_videos else None
+        if "TidyBot" in env_name:
+            env = prbench.make(
+                f"prbench/{env_name}",
+                render_mode=render_mode,
+                scene_bg=True,
+            )
+        else:
+            env = prbench.make(
+                f"prbench/{env_name}",
+                render_mode=render_mode,
+            )
+
         for episode_idx in range(num_episodes):
             this_episode_inference_times = []
-            # Create the environment
-            render_mode = "rgb_array" if render or save_videos else None
-            if "TidyBot" in env_name:
-                env = prbench.make(
-                    f"prbench/{env_name}",
-                    render_mode=render_mode,
-                    scene_bg=True,
-                )
-            else:
-                env = prbench.make(
-                    f"prbench/{env_name}",
-                    render_mode=render_mode,
-                )
-
             
             if save_videos:
                 video_dir = seed_dir / f"eval_episode_{episode_idx}" 
@@ -411,12 +412,13 @@ def run_inference(
             print(f"Episode {episode_idx + 1}: reward={episode_reward:.3f}, "
                   f"terminated={ep_terminated}, truncated={ep_truncated}")
             policy.close()  # type: ignore
-            env.close()  # type: ignore
             gc.collect()
             del policy
-            del env
+            
 
     finally:
+        env.close()  # type: ignore
+        del env
         # Print summary statistics
         print("\n" + "=" * 50)
         print("EVALUATION SUMMARY")
