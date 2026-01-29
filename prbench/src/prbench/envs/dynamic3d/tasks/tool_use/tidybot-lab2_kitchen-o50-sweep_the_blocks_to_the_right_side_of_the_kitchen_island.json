@@ -14,8 +14,8 @@
         },
         "wiper_init_region": {
             "target": "ground",
-            "ranges": [[2.0, -2.5, 2.5, -2.0]],
-            "yaw_ranges": [[0, 360]],
+            "ranges": [[2.0, -2.0, 2.5, -1.5]],
+            "yaw_ranges": [[-45, 45]],
             "rgba": [0.5, 0.5, 0.5, 0.0]
         },
         "sweep_region": {
@@ -23,6 +23,12 @@
             "ranges": [[0.125, -1.375, 0.875, -1.0]],
             "yaw_ranges": [[0, 360]],
             "rgba": [0.5, 0.5, 0.5, 0.3]
+        },
+        "robot_task_init_region": {
+            "target": "ground",
+            "ranges": [[0.5, -1.7, 0.6, -1.6]],
+            "yaw_ranges": [[85, 95]],
+            "rgba": [0.5, 0.5, 0.5, 0.0]
         }
     },
     "objects": {
@@ -89,6 +95,14 @@
             "cube_49": {"size": 0.01, "rgba": [0.5, 0.1, 0.1, 1.0]}
         }
     },
+    "cameras": {
+        "task_view": {
+            "position": [-2.0, 1.5, 2.5],
+            "lookat": [0.5, 0.0, 1.0],
+            "fovy": 42,
+            "resolution": [640, 480]
+        }
+    },
     "initial_state": [
         ["in", "wiper_0", "wiper_init_region"],
         ["in", "cube_0", "blocks_init_region"],
@@ -141,7 +155,7 @@
         ["in", "cube_47", "blocks_init_region"],
         ["in", "cube_48", "blocks_init_region"],
         ["in", "cube_49", "blocks_init_region"],
-        ["on", "robot_0", "robot_living_area_init_region"]
+        ["on", "robot_0", "robot_task_init_region"]
     ],
     "goal_state": [
         ["on", "cube_0", "sweep_region"],
