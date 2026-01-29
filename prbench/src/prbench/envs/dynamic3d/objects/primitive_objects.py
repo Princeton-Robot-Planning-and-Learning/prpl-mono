@@ -229,6 +229,10 @@ class Bin(MujocoObject):
     - 4 wall panels (front, back, left, right)
     """
 
+    # Outer dimensions of the bin
+    default_length: float = 0.1  # Default bin length in meters
+    default_width: float = 0.1  # Default bin width in meters
+    default_height: float = 0.05  # Default bin height in meters
     default_wall_thickness: float = 0.005  # Default wall thickness in meters
 
     def __init__(
@@ -257,9 +261,13 @@ class Bin(MujocoObject):
         self.symbolic_object = Object(self.name, MujocoMovableObjectType)
 
         # Bin dimensions
-        self.length = float(self.options.get("length", 0.1))  # x dimension
-        self.width = float(self.options.get("width", 0.1))  # y dimension
-        self.height = float(self.options.get("height", 0.05))  # z dimension
+        self.length = float(
+            self.options.get("length", Bin.default_length)
+        )  # x dimension
+        self.width = float(self.options.get("width", Bin.default_width))  # y dimension
+        self.height = float(
+            self.options.get("height", Bin.default_height)
+        )  # z dimension
         self.wall_thickness = float(
             self.options.get("wall_thickness", Bin.default_wall_thickness)
         )
@@ -518,13 +526,35 @@ class Wiper(MujocoObject):
     def _create_xml_element(self) -> ET.Element:
         """Create the XML Element for this wiper.
 
-        The wiper consists of:
-        - A handle: a box with width x width x height (in x, y, z)
-        - A blade head: a box with head_length x width x head_height (in x, y, z)
-          positioned at the end of the handle
+        The wiper consists of two geoms: a handle and a blade head.
 
-        When upright=True: handle extends in z, head extends in x
-        When upright=False: handle extends in x, head extends in y
+        When upright=True (handle extends upward in z, head extends horizontally):
+        - Handle geom:
+            size = [handle_width/2, handle_width/2, handle_height/2]
+            pos = [0, 0, handle_height/2 + head_height]
+            extends x: [-handle_width/2, handle_width/2]
+            extends y: [-handle_width/2, handle_width/2]
+            extends z: [head_height, head_height + handle_height]
+        - Head geom (blade at bottom, perpendicular to handle):
+            size = [head_length/2, handle_width/2, head_height/2]
+            pos = [0, 0, head_height/2]
+            extends x: [-head_length/2, head_length/2]
+            extends y: [-handle_width/2, handle_width/2]
+            extends z: [0, head_height]
+
+        When upright=False (handle extends horizontally in x, head extends in y):
+        - Handle geom (rod along x):
+            size = [handle_height/2, handle_width/2, handle_width/2]
+            pos = [head_height/2, 0, handle_width/2]
+            extends x: [0, handle_height]
+            extends y: [-handle_width/2, handle_width/2]
+            extends z: [0, handle_width]
+        - Head geom (blade perpendicular to handle, extends in y):
+            size = [head_height/2, head_length/2, handle_width/2]
+            pos = [-handle_height/2, 0, handle_width/2]
+            extends x: [-handle_height, 0]
+            extends y: [-head_length/2, head_length/2]
+            extends z: [0, handle_width]
 
         Returns:
             ET.Element representing the wiper body with both geoms
@@ -731,5 +761,345 @@ class Wiper(MujocoObject):
             f"handle_width={self.handle_width}, handle_height={self.handle_height}, "
             f"head_length={self.head_length}, head_height={self.head_height}, "
             f"handle_rgba='{self.handle_rgba}', head_rgba='{self.head_rgba}', "
+            f"mass={self.mass})"
+        )
+
+
+@register_object
+class Scoop(MujocoObject):
+    """A scoop object composed of a small bin with walls and a handle.
+
+    The scoop consists of:
+    - A bottom panel
+    - 4 wall panels (front, back, left, right)
+    - A handle attached at the back of the bin
+
+    Coordinate system (body origin at 0, 0, 0):
+    - x-axis: handle extends from -handle_length to 0, bin extends from 0 to
+        (length + 2*wall_width)
+    - y-axis: bin extends symmetrically from -(width + wall_width)/2 to
+        +(width + wall_width)/2
+    - z-axis: bin bottom at 0, extends to (height + wall_width)
+    """
+
+    # Inner dimensions of the scoop
+    default_wall_width: float = 0.005  # Default wall thickness in meters
+    default_length: float = 0.1  # Default bin length in meters
+    default_width: float = 0.1  # Default bin width in meters
+    default_height: float = 0.05  # Default bin height in meters
+    default_handle_length: float = 0.05  # Default handle length in meters
+    default_handle_width: float = 0.02  # Default handle width in meters
+    default_handle_height: float = 0.02  # Default handle height in meters
+
+    def __init__(
+        self,
+        name: str,
+        env: MujocoEnv | None = None,
+        options: dict | None = None,
+    ) -> None:
+        """Initialize a Scoop object.
+
+        Args:
+            name: Name of the scoop body in the XML
+            options: Dictionary of scoop options:
+                - length: Length of bin (x dimension, inner)
+                - width: Width of bin (y dimension, inner)
+                - height: Height of bin (z dimension)
+                - wall_width: Thickness of walls (default: 0.005)
+                - handle_length: Length of the handle (y direction)
+                - handle_width: Width of the handle (x direction)
+                - handle_height: Height of the handle (z direction)
+                - rgba: Color of the scoop (default: [0.5, 0.5, 0.5, 1])
+                - handle_rgba: Color of the handle (default: [0.5, 0.5, 0.5, 1])
+                - mass: Total mass of the scoop (default: 0.1)
+            env: Reference to the environment
+        """
+        super().__init__(name, env, options)
+
+        # Override object type
+        self.symbolic_object = Object(self.name, MujocoMovableObjectType)
+
+        # Bin dimensions
+        self.length = float(self.options.get("length", Scoop.default_length))
+        self.width = float(self.options.get("width", Scoop.default_width))
+        self.height = float(self.options.get("height", Scoop.default_height))
+        self.wall_width = float(
+            self.options.get("wall_width", Scoop.default_wall_width)
+        )
+
+        # Handle dimensions
+        self.handle_length = float(
+            self.options.get("handle_length", Scoop.default_handle_length)
+        )
+        self.handle_width = float(
+            self.options.get("handle_width", Scoop.default_handle_width)
+        )
+        self.handle_height = float(
+            self.options.get("handle_height", Scoop.default_handle_height)
+        )
+
+        # Handle rgba parameter - can be string or list of values
+        handle_rgba = self.options.get("handle_rgba", [0.5, 0.5, 0.5, 1])
+        if isinstance(handle_rgba, str):
+            self.handle_rgba = handle_rgba
+        else:
+            self.handle_rgba = " ".join(str(x) for x in handle_rgba)
+
+        # Bin rgba parameter - can be string or list of values
+        rgba = self.options.get("rgba", [0.5, 0.5, 0.5, 1])
+        if isinstance(rgba, str):
+            self.rgba = rgba
+        else:
+            self.rgba = " ".join(str(x) for x in rgba)
+
+        # Handle mass parameter with default
+        self.mass = self.options.get("mass", 0.1)
+
+        # Create the XML element
+        self.xml_element = self._create_xml_element()
+
+        if self.regions is not None:
+            self._create_regions()
+
+    def _create_xml_element(self) -> ET.Element:
+        """Create the XML Element for this scoop.
+
+        The scoop consists of:
+        - 1 bottom panel: full outer dimensions including walls
+          size = [outer_length/2, outer_width/2, wall_width/2]
+          pos = [outer_length/2, 0, wall_width/2]
+          extends x: [0, outer_length], y: [-outer_width/2, outer_width/2],
+          z: [0, wall_width]
+
+        - 4 wall panels: back, front, left, right walls extending from
+          z = wall_width to z = wall_width + height
+          * back wall (y = -outer_width/2):
+            size = [outer_length/2, wall_width/2, height/2]
+            extends x: [0, outer_length], y: [-outer_width/2, -outer_width/2 + wall_width]
+          * front wall (y = +outer_width/2):
+            size = [outer_length/2, wall_width/2, height/2]
+            extends x: [0, outer_length], y: [outer_width/2 - wall_width, outer_width/2]
+          * left wall (x = 0):
+            size = [wall_width/2, width/2, height/2]
+            extends x: [0, wall_width], y: [-width/2, width/2]
+          * right wall (x = outer_length):
+            size = [wall_width/2, width/2, height/2]
+            extends x: [outer_length - wall_width, outer_length], y: [-width/2, width/2]
+
+        - 1 handle: attached at the back-left corner, extending backward (negative x)
+          size = [handle_length/2, handle_width/2, handle_height/2]
+          pos = [-handle_length/2, 0, height + wall_width - handle_height/2]
+          extends x: [-handle_length, 0], y: [-handle_width/2, handle_width/2],
+          z: [height + wall_width - handle_height, height + wall_width]
+
+        Returns:
+            ET.Element representing the scoop body with all geoms
+        """
+        # Create body element
+        body = ET.Element("body", name=self.name)
+
+        # Add freejoint for position/orientation control
+        ET.SubElement(body, "freejoint", name=self.joint_name)
+
+        # Calculate half dimensions
+        half_length = self.length / 2
+        half_width = self.width / 2
+        half_wall_width = self.wall_width / 2
+
+        # Total outer dimensions (including walls)
+        outer_length = self.length
+        outer_half_length = outer_length / 2
+        outer_width = self.width
+        outer_half_width = outer_width / 2
+
+        # Mass distribution
+        total_components = 6  # 5 bin components + 1 handle
+        bin_component_mass = (self.mass * 0.8) / 5.0  # 80% to bin
+        handle_mass = self.mass * 0.2  # 20% to handle
+
+        # Bottom panel (full outer dimensions)
+        # Center at [(outer_length)/2, 0, wall_width/2]
+        # extends from x: [0, outer_length], y: [-outer_width/2, outer_width/2]
+        bottom_size = [outer_half_length, outer_half_width, half_wall_width]
+        bottom_pos = [outer_half_length, 0.0, half_wall_width]
+        ET.SubElement(
+            body,
+            "geom",
+            type="box",
+            size=" ".join(str(x) for x in bottom_size),
+            pos=" ".join(str(x) for x in bottom_pos),
+            rgba=self.rgba,
+            mass=str(bin_component_mass),
+        )
+
+        # Wall heights (excluding bottom thickness)
+        wall_height = self.height
+        half_wall_height = wall_height / 2
+        wall_z = self.wall_width + half_wall_height
+
+        # Back wall (at y = -outer_width/2)
+        back_wall_size = [outer_half_length, half_wall_width, half_wall_height]
+        back_wall_pos = [outer_half_length, -outer_half_width + half_wall_width, wall_z]
+        ET.SubElement(
+            body,
+            "geom",
+            type="box",
+            size=" ".join(str(x) for x in back_wall_size),
+            pos=" ".join(str(x) for x in back_wall_pos),
+            rgba=self.rgba,
+            mass=str(bin_component_mass),
+        )
+
+        # Front wall (at y = +outer_width/2)
+        front_wall_size = back_wall_size
+        front_wall_pos = [outer_half_length, outer_half_width - half_wall_width, wall_z]
+        ET.SubElement(
+            body,
+            "geom",
+            type="box",
+            size=" ".join(str(x) for x in front_wall_size),
+            pos=" ".join(str(x) for x in front_wall_pos),
+            rgba=self.rgba,
+            mass=str(bin_component_mass),
+        )
+
+        # Left wall (at x = 0, inner half-width = width/2)
+        left_wall_size = [half_wall_width, half_width, half_wall_height]
+        left_wall_pos = [half_wall_width, 0.0, wall_z]
+        ET.SubElement(
+            body,
+            "geom",
+            type="box",
+            size=" ".join(str(x) for x in left_wall_size),
+            pos=" ".join(str(x) for x in left_wall_pos),
+            rgba=self.rgba,
+            mass=str(bin_component_mass),
+        )
+
+        # # Right wall (at x = outer_length)
+        # right_wall_size = [half_wall_width, half_width, half_wall_height]
+        # right_wall_pos = [outer_length - half_wall_width, 0.0, wall_z]
+        # ET.SubElement(
+        #     body,
+        #     "geom",
+        #     type="box",
+        #     size=" ".join(str(x) for x in right_wall_size),
+        #     pos=" ".join(str(x) for x in right_wall_pos),
+        #     rgba=self.rgba,
+        #     mass=str(bin_component_mass),
+        # )
+
+        # Handle: positioned at the back-left corner, extending along y
+        # Handle position: at x=0, y extends from -(wall_width + handle_length)/2
+        # to +(wall_width + handle_length)/2 (for symmetry)
+        # z extends from height-handle_height to height (top flush with wall top)
+        handle_half_length = self.handle_length / 2
+        handle_half_width = self.handle_width / 2
+        handle_half_height = self.handle_height / 2
+
+        # Handle center position
+        handle_x = -handle_half_length
+        handle_y = 0.0  # Centered in y at back
+        handle_z = self.height + self.wall_width - handle_half_height
+
+        handle_size = [handle_half_length, handle_half_width, handle_half_height]
+        handle_pos = [handle_x, handle_y, handle_z]
+        ET.SubElement(
+            body,
+            "geom",
+            type="box",
+            size=" ".join(str(x) for x in handle_size),
+            pos=" ".join(str(x) for x in handle_pos),
+            rgba=self.handle_rgba,
+            mass=str(handle_mass),
+        )
+
+        return body
+
+    def get_bounding_box_dimensions(self) -> tuple[float, float, float]:
+        """Get the bounding box dimensions for this scoop.
+
+        Returns:
+            Tuple of (length, width, height) including walls and handle
+        """
+        return (
+            self.length + 2 * self.wall_width + self.handle_length,
+            self.width + 2 * self.wall_width,
+            self.height + self.wall_width,
+        )
+
+    @staticmethod
+    def get_bounding_box_from_config(
+        pos: NDArray[np.float32], object_config: dict[str, str | float]
+    ) -> list[float]:
+        """Get bounding box for a scoop given its position and config.
+
+        Args:
+            pos: Position of the scoop body center as [x, y, z]
+            object_config: Dictionary containing scoop configuration with keys:
+                - "length": Inner length of bin (x dimension)
+                - "width": Inner width of bin (y dimension)
+                - "height": Height of bin (z dimension)
+                - "wall_width": Thickness of walls
+                - "handle_length": Length of the handle
+                - "handle_height": Height of the handle
+
+        Returns:
+            Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+        """
+        # Extract scoop parameters
+        length = float(object_config.get("length", 0.1))
+        width = float(object_config.get("width", 0.1))
+        height = float(object_config.get("height", 0.05))
+        wall_width = float(object_config.get("wall_width", Scoop.default_wall_width))
+        handle_length = float(object_config.get("handle_length", 0.05))
+        handle_height = float(object_config.get("handle_height", 0.05))
+
+        # Outer dimensions (including walls)
+        outer_length = length + 2 * wall_width
+        outer_width = width + 2 * wall_width
+        outer_half_width = outer_width / 2
+
+        # Compute bounding box relative to body origin, then add pos offset
+        # x extent: handle extends backward to -handle_length, bin extends
+        # forward to outer_length
+        x_min_relative = -handle_length
+        x_max_relative = outer_length
+
+        # y extent: symmetric around center
+        y_min_relative = -outer_half_width
+        y_max_relative = outer_half_width
+
+        # z extent: bottom panel starts at 0, top of handle is at
+        # height + wall_width
+        z_min_relative = 0
+        z_max_relative = height + wall_width
+
+        return [
+            pos[0] + x_min_relative,
+            pos[1] + y_min_relative,
+            pos[2] + z_min_relative,
+            pos[0] + x_max_relative,
+            pos[1] + y_max_relative,
+            pos[2] + z_max_relative,
+        ]
+
+    def __str__(self) -> str:
+        """String representation of the scoop."""
+        return (
+            f"Scoop(name='{self.name}', length={self.length}, "
+            f"width={self.width}, height={self.height}, "
+            f"wall_width={self.wall_width}, handle_length={self.handle_length}, "
+            f"handle_width={self.handle_width}, handle_height={self.handle_height})"
+        )
+
+    def __repr__(self) -> str:
+        """Detailed string representation of the scoop."""
+        return (
+            f"Scoop(name='{self.name}', joint_name='{self.joint_name}', "
+            f"length={self.length}, width={self.width}, height={self.height}, "
+            f"wall_width={self.wall_width}, handle_length={self.handle_length}, "
+            f"handle_width={self.handle_width}, handle_height={self.handle_height}, "
+            f"rgba='{self.rgba}', handle_rgba='{self.handle_rgba}', "
             f"mass={self.mass})"
         )
