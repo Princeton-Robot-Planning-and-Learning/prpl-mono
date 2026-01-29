@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -203,7 +203,7 @@ class RoboCasaObject(MujocoObject):
 
         # Look for site elements that define the bounding box
         # Sites are typically named: bottom_site, top_site, horizontal_radius_site
-        sites = {}
+        sites: dict[str, NDArray[Any]] = {}
         for body in worldbody.iter("body"):
             for site in body.findall("site"):
                 site_name = site.attrib.get("name", "")
@@ -288,7 +288,9 @@ class RoboCasaObject(MujocoObject):
             ]
 
         # Load the model and calculate bounding box dimensions
-        model_dir: Path = object_class.model_dir  # type: ignore[assignment]
+        model_dir = getattr(object_class, "model_dir", Path())
+        if not isinstance(model_dir, Path):
+            model_dir = Path(str(model_dir))
         model_xml_path = model_dir / "model.xml"
 
         if not model_xml_path.exists():
@@ -312,22 +314,22 @@ class RoboCasaObject(MujocoObject):
                 raise ValueError("No worldbody found in model.xml")
 
             # Extract sites to calculate bounding box
-            sites = {}
+            sites_dict: dict[str, NDArray[Any]] = {}
             for body in worldbody.iter("body"):
                 for site in body.findall("site"):
                     site_name = site.attrib.get("name", "")
                     pos_str = site.attrib.get("pos", "0 0 0")
                     site_pos = np.array([float(x) for x in pos_str.split()])
-                    sites[site_name] = site_pos
+                    sites_dict[site_name] = site_pos
 
             # Calculate dimensions from sites
-            if "bottom_site" in sites and "top_site" in sites:
-                height = abs(sites["top_site"][2] - sites["bottom_site"][2])
+            if "bottom_site" in sites_dict and "top_site" in sites_dict:
+                height = abs(sites_dict["top_site"][2] - sites_dict["bottom_site"][2])
             else:
                 height = 0.05
 
-            if "horizontal_radius_site" in sites:
-                radius_pos = sites["horizontal_radius_site"]
+            if "horizontal_radius_site" in sites_dict:
+                radius_pos = sites_dict["horizontal_radius_site"]
                 width = 2 * abs(radius_pos[0])
                 depth = 2 * abs(radius_pos[1])
             else:
@@ -348,8 +350,10 @@ class RoboCasaObject(MujocoObject):
                 float(pos[1]) + half_depth,
                 float(pos[2]) + half_height,
             ]
-        except Exception:
-            # Fallback to default dimensions on any error
+        except (ValueError, OSError, ET.ParseError) as e:
+            # Fallback to default dimensions on error (parsing or file access issues)
+            # pylint: disable=unused-variable
+            _ = e
             return [
                 float(pos[0]) - 0.05,
                 float(pos[1]) - 0.05,
@@ -419,6 +423,7 @@ def _create_robocasa_object_classes() -> None:
             register_object(new_class, name=f"robocasa_{object_type_name}")
 
             # Add to module globals so it can be imported
+            # pylint: disable=global-variable-undefined
             globals()[class_name] = new_class
 
 
@@ -427,11 +432,13 @@ _create_robocasa_object_classes()
 
 
 # Export all dynamically created classes
-__all__ = [
-    "RoboCasaObject",
-    "ROBOCASA_OBJECTS_DIR",
-] + [
+# pylint: disable=unused-variable
+_dynamic_exports = [
     name
     for name in globals()
     if name.startswith("Robocasa") and name != "RoboCasaObject"
 ]
+__all__ = [
+    "RoboCasaObject",
+    "ROBOCASA_OBJECTS_DIR",
+] + _dynamic_exports
