@@ -101,6 +101,7 @@ class RemotePolicy:
     def close(self):
         """Close the connection to policy server."""
         self.socket.close()
+        self.context.term()  # Terminate the context!
 
 
 def run_inference(
@@ -404,6 +405,8 @@ def run_inference(
                 if len(images_2d) > 0:
                     image_video_path = video_dir / "image.mp4"
                     iio.mimsave(image_video_path, images_2d, fps=fps)
+                # Clear image lists to free memory immediately
+                del overview_images, base_images, wrist_images, images_2d
             
             print(f"Episode {episode_idx + 1}: reward={episode_reward:.3f}, "
                   f"terminated={ep_terminated}, truncated={ep_truncated}")
