@@ -232,7 +232,7 @@ class Table(MujocoFixture):
             for region_idx, region_range in enumerate(region_config["ranges"]):
                 if len(region_range) == 4:
                     x_start, y_start, x_end, y_end = region_range
-                    z_start = 0
+                    z_start = 0.0
                     z_end = self.DEFAULT_REGION_HEIGHT
                 elif len(region_range) == 6:
                     x_start, y_start, z_start, x_end, y_end, z_end = region_range
