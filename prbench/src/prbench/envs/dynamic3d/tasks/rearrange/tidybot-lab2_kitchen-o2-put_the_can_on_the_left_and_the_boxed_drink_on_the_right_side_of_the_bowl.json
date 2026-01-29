@@ -15,22 +15,41 @@
         "kitchen_island_shelf_2_bowl_region": {
             "target": "kitchen_island",
             "shelf": 2,
-            "ranges": [[0.1, -0.2, 0.3, 0.0]],
+            "ranges": [
+                [-0.1, -0.3, 0.1, -0.1]
+            ],
+            "rgba": [1.0, 1.0, 0.0, 0.0],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_island_shelf_2_can_region": {
+            "target": "kitchen_island",
+            "ranges": [
+                [0.2, -0.2, 0.4, 0.0]
+            ],
+            "shelf": 2,
             "rgba": [1.0, 1.0, 0.0, 0.0],
             "yaw_ranges": [[0, 0]]
         },
         "kitchen_island_shelf_2_boxed_drink_region": {
             "target": "kitchen_island",
             "shelf": 2,
-            "ranges": [[-0.3, -0.2, -0.1, 0.0]],
+            "ranges": [
+                [-0.4, -0.2, -0.2, 0.0]
+            ],
             "rgba": [1.0, 1.0, 0.0, 0.0],
             "yaw_ranges": [[0, 0]]
         },
-        "bowl_0_region": {
+        "bowl_0_left_region": {
             "target": "bowl_0",
-            "ranges": [[-0.12, -0.12, 0.12, 0.12]],
+            "ranges": [[-0.05, -0.12, 0.05, -0.05]],
             "yaw_ranges": [[0, 360]],
-            "rgba": [1, 0, 0, 0.3]
+            "rgba": [0, 1, 0, 0.3]
+        },
+        "bowl_0_right_region": {
+            "target": "bowl_0",
+            "ranges": [[-0.05, 0.05, 0.05, 0.12]],
+            "yaw_ranges": [[0, 360]],
+            "rgba": [0, 0, 1, 0.3]
         }
     },
     "objects": {
@@ -39,6 +58,9 @@
         },
         "robocasa_bowl_0": {
             "bowl_0": {}
+        },
+        "robocasa_can_0": {
+            "can_0": {}
         }
     },
     "cameras": {
@@ -51,10 +73,12 @@
     },
     "initial_state": [
         ["on", "boxed_drink_0", "kitchen_island_shelf_2_boxed_drink_region"],
+        ["on", "can_0", "kitchen_island_shelf_2_can_region"],
         ["on", "bowl_0", "kitchen_island_shelf_2_bowl_region"],
         ["on", "robot_0", "robot_task_init_region"]
     ],
     "goal_state": [
-        ["on", "boxed_drink_0", "bowl_0_region"]
+        ["on", "can_0", "bowl_0_left_region"],
+        ["on", "boxed_drink_0", "bowl_0_right_region"]
     ]
 }

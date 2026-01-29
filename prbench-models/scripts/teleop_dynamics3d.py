@@ -11,7 +11,7 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from prbench_models.policy_constants import POLICY_CONTROL_PERIOD
-from prbench_models.teleop_utils import TeleopPolicy
+from prbench_models.teleop_utils import TeleopPolicy, _visualize_image_in_window
 
 prbench.register_all_environments()
 
@@ -22,9 +22,10 @@ def run_teleop(
     save: bool = True,
     num_episodes: int = 1,
     max_steps: int = 1000,
-    num_cubes: int = 2,
     enable_web_server: bool = True,
     port: int = 5000,
+    show_images: bool = False,
+    env_name: str = "TidyBot3D-cupboard_real-o2-v0",
 ) -> None:
     """Run teleoperation in the prbench environment.
 
@@ -34,14 +35,14 @@ def run_teleop(
         save: Whether to save the episode data to disk.
         num_episodes: Number of episodes to run.
         max_steps: Maximum steps per episode.
-        num_cubes: Number of cubes in the environment.
         enable_web_server: Whether to enable the WebXR web server.
         port: Port for the WebXR web server.
     """
     # Create the environment
     env = prbench.make(
-        f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0",
+        f"prbench/{env_name}",
         render_mode="rgb_array",
+        scene_bg=True,
     )
 
     # Create FK/IK solvers for computing end-effector pose
@@ -61,7 +62,7 @@ def run_teleop(
 
             # Reset the environment
             episode_seed = seed + episode_idx
-            obs, _, raw_obs = env.reset_with_images(seed=episode_seed)  # type: ignore
+            obs, _ = env.reset(seed=episode_seed)  # type: ignore
             assert isinstance(env.observation_space, ObjectCentricBoxSpace)
             state = env.observation_space.devectorize(obs)
 
@@ -88,6 +89,24 @@ def run_teleop(
                     current_joints
                 )
 
+                robot_name = env.unwrapped._object_centric_env.robot_name # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera("agent_overview") # type: ignore # pylint: disable=protected-access
+                overview_image = env.unwrapped._object_centric_env.render() # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera( # type: ignore # pylint: disable=protected-access
+                    robot_name + "_base"
+                )
+                base_image = env.unwrapped._object_centric_env.render() # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera( # type: ignore # pylint: disable=protected-access
+                    robot_name + "_wrist"
+                )
+                wrist_image = env.unwrapped._object_centric_env.render() # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera("agentview_1") # type: ignore # pylint: disable=protected-access
+                agent_image = env.unwrapped._object_centric_env.render() # type: ignore # pylint: disable=protected-access
+                if show_images:
+                    _visualize_image_in_window(overview_image, "agent_overview")
+                    _visualize_image_in_window(base_image, "base")
+                    _visualize_image_in_window(wrist_image, "wrist")
+                    _visualize_image_in_window(agent_image, "agentview_1")
                 # Create observation dict for policy
                 obs_dict = {
                     "base_pose": np.array(
@@ -100,9 +119,9 @@ def run_teleop(
                     "arm_pos": current_position,
                     "arm_quat": current_orientation,
                     "gripper_pos": np.array([state.get(robot, "pos_gripper")]),
-                    "base_image": raw_obs["raw_obs"]["base_image"].copy(),
-                    "wrist_image": raw_obs["raw_obs"]["wrist_image"].copy(),
-                    "overview_image": raw_obs["raw_obs"]["overview_image"].copy(),
+                    "base_image": base_image,
+                    "wrist_image": wrist_image,
+                    "overview_image": overview_image,
                 }
 
                 # Get action from policy
@@ -144,7 +163,7 @@ def run_teleop(
                     writer.step(obs_dict, action_dict, target_object_key)  # type: ignore
 
                 # Execute action in environment
-                obs, reward, terminated, truncated, _, raw_obs = env.step_with_images(  # type: ignore # pylint: disable=line-too-long
+                obs, reward, terminated, truncated, _ = env.step(  # type: ignore # pylint: disable=line-too-long
                     action
                 )
                 next_state = env.observation_space.devectorize(obs)
@@ -195,9 +214,6 @@ def main() -> None:
         "--max-steps", type=int, default=1000, help="Maximum steps per episode"
     )
     parser.add_argument(
-        "--num-cubes", type=int, default=2, help="Number of cubes in environment"
-    )
-    parser.add_argument(
         "--no-web-server",
         dest="enable_web_server",
         action="store_false",
@@ -210,6 +226,18 @@ def main() -> None:
         default=5000,
         help="Port for WebXR web server (default: 5000)",
     )
+    parser.add_argument(
+        "--show-images",
+        action="store_true",
+        default=False,
+        help="Show images in OpenCV windows",
+    )
+    parser.add_argument(
+        "--env-name",
+        type=str,
+        default="TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0", # pylint: disable=line-too-long
+        help="Name of the environment",
+    )
 
     args = parser.parse_args()
 
@@ -219,9 +247,10 @@ def main() -> None:
         save=args.save,
         num_episodes=args.num_episodes,
         max_steps=args.max_steps,
-        num_cubes=args.num_cubes,
+        env_name=args.env_name,
         enable_web_server=args.enable_web_server,
         port=args.port,
+        show_images=args.show_images,
     )
 
 
