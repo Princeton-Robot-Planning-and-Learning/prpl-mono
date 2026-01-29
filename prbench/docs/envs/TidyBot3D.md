@@ -8,7 +8,7 @@
 A 3D mobile manipulation environment using the TidyBot platform.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: ground with 5 objects. In the 'ground' scene, objects are placed randomly on a flat ground plane.
+Scene type: table with 5 objects.
 
 The robot can control:
 - Base pose (x, y, theta)
@@ -21,25 +21,44 @@ The robot can control:
 This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
 
 - `prbench/TidyBot3D-table-o5-v0` (table-o5)
-- `prbench/TidyBot3D-cupboard-o12-ConstrainedFitting-v0` (cupboard-o12-ConstrainedFitting)
+- `prbench/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_right_side_of_the_kitchen_island-v0` (tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_right_side_of_the_kitchen_island)
+- `prbench/TidyBot3D-tool_use-lab2_kitchen-o1-move_the_bowl_to_top_drawer_of_the_kitchen_cabinet-v0` (tool_use-lab2_kitchen-o1-move_the_bowl_to_top_drawer_of_the_kitchen_cabinet)
+- `prbench/TidyBot3D-tool_use-lab2_kitchen-o5-scoop_the_blocks_from_the_yellow_bin_to_the_green_bin-v0` (tool_use-lab2_kitchen-o5-scoop_the_blocks_from_the_yellow_bin_to_the_green_bin)
+- `prbench/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_left_side_of_the_kitchen_island-v0` (tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_left_side_of_the_kitchen_island)
+- `prbench/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_right_side_of_the_kitchen_counter-v0` (tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_right_side_of_the_kitchen_counter)
+- `prbench/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0` (tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island)
+- `prbench/TidyBot3D-navigate-namo-o1-v0` (navigate-namo-o1)
 - `prbench/TidyBot3D-ground-o1-v0` (ground-o1)
 - `prbench/TidyBot3D-cupboard_real-o1-v0` (cupboard_real-o1)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o1-put_the_boxed_drink_on_the_left_side_of_the_bowl-v0` (rearrange-lab2_kitchen-o1-put_the_boxed_drink_on_the_left_side_of_the_bowl)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o1-put_the_boxed_drink_on_the_right_side_of_the_bowl-v0` (rearrange-lab2_kitchen-o1-put_the_boxed_drink_on_the_right_side_of_the_bowl)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o1-put_the_boxed_drink_next_to_the_bowl-v0` (rearrange-lab2_kitchen-o1-put_the_boxed_drink_next_to_the_bowl)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl-v0` (rearrange-lab2_kitchen-o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o1-put_the_boxed_drink_behind_the_bowl-v0` (rearrange-lab2_kitchen-o1-put_the_boxed_drink_behind_the_bowl)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl-v0` (rearrange-lab2_kitchen-o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl-v0` (rearrange-lab2_kitchen-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl-v0` (rearrange-lab2_kitchen-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl-v0` (rearrange-lab2_kitchen-o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl)
+- `prbench/TidyBot3D-rearrange-lab2_kitchen-o1-put_the_boxed_drink_in_front_of_the_bowl-v0` (rearrange-lab2_kitchen-o1-put_the_boxed_drink_in_front_of_the_bowl)
+- `prbench/TidyBot3D-sort-lab2-o1-fit_the_blocks_in_the_cupboard-v0` (sort-lab2-o1-fit_the_blocks_in_the_cupboard)
+- `prbench/TidyBot3D-sort-lab2-o2-fit_the_blocks_in_the_cupboard-v0` (sort-lab2-o2-fit_the_blocks_in_the_cupboard)
+- `prbench/TidyBot3D-sort-lab2-o20-sort_the_cluttered_blocks_into_bowls-v0` (sort-lab2-o20-sort_the_cluttered_blocks_into_bowls)
+- `prbench/TidyBot3D-sort-lab2-o12-sort_the_blocks_into_the_cupboard-v0` (sort-lab2-o12-sort_the_blocks_into_the_cupboard)
+- `prbench/TidyBot3D-sort-lab2-o6-fit_the_blocks_in_the_cupboard-v0` (sort-lab2-o6-fit_the_blocks_in_the_cupboard)
 - `prbench/TidyBot3D-ground-o7-v0` (ground-o7)
-- `prbench/TidyBot3D-table-o20-SortClutteredBlocks-v0` (table-o20-SortClutteredBlocks)
 - `prbench/TidyBot3D-table-o3-v0` (table-o3)
 - `prbench/TidyBot3D-cupboard-o8-v0` (cupboard-o8)
+- `prbench/TidyBot3D-balance-o4-v0` (balance-o4)
 - `prbench/TidyBot3D-ground-o5-v0` (ground-o5)
 - `prbench/TidyBot3D-cupboard_real-o4-v0` (cupboard_real-o4)
 - `prbench/TidyBot3D-cupboard_real-o8-v0` (cupboard_real-o8)
-- `prbench/TidyBot3D-table-o4-BalanceSeesaw-v0` (table-o4-BalanceSeesaw)
 - `prbench/TidyBot3D-table-o7-v0` (table-o7)
 - `prbench/TidyBot3D-ground-o3-v0` (ground-o3)
 - `prbench/TidyBot3D-cupboard_real-o2-v0` (cupboard_real-o2)
 - `prbench/TidyBot3D-base_motion-o1-v0` (base_motion-o1)
-- `prbench/TidyBot3D-table-o20-SortClutteredBlocksIntoBowls-v0` (table-o20-SortClutteredBlocksIntoBowls)
 
 ## Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/TidyBot3D.gif)
+*(Initial state GIF could not be generated due to rendering issues)*
 
 ## Example Demonstration
 *(No demonstration GIFs available)*
@@ -128,39 +147,54 @@ The entries of an array in this Box space correspond to the following object fea
 | 77 | cube5 | bb_x |
 | 78 | cube5 | bb_y |
 | 79 | cube5 | bb_z |
-| 80 | robot | pos_base_x |
-| 81 | robot | pos_base_y |
-| 82 | robot | pos_base_rot |
-| 83 | robot | pos_arm_joint1 |
-| 84 | robot | pos_arm_joint2 |
-| 85 | robot | pos_arm_joint3 |
-| 86 | robot | pos_arm_joint4 |
-| 87 | robot | pos_arm_joint5 |
-| 88 | robot | pos_arm_joint6 |
-| 89 | robot | pos_arm_joint7 |
-| 90 | robot | pos_gripper |
-| 91 | robot | vel_base_x |
-| 92 | robot | vel_base_y |
-| 93 | robot | vel_base_rot |
-| 94 | robot | vel_arm_joint1 |
-| 95 | robot | vel_arm_joint2 |
-| 96 | robot | vel_arm_joint3 |
-| 97 | robot | vel_arm_joint4 |
-| 98 | robot | vel_arm_joint5 |
-| 99 | robot | vel_arm_joint6 |
-| 100 | robot | vel_arm_joint7 |
-| 101 | robot | vel_gripper |
+| 80 | robot_0 | pos_base_x |
+| 81 | robot_0 | pos_base_y |
+| 82 | robot_0 | pos_base_rot |
+| 83 | robot_0 | pos_arm_joint1 |
+| 84 | robot_0 | pos_arm_joint2 |
+| 85 | robot_0 | pos_arm_joint3 |
+| 86 | robot_0 | pos_arm_joint4 |
+| 87 | robot_0 | pos_arm_joint5 |
+| 88 | robot_0 | pos_arm_joint6 |
+| 89 | robot_0 | pos_arm_joint7 |
+| 90 | robot_0 | pos_gripper |
+| 91 | robot_0 | vel_base_x |
+| 92 | robot_0 | vel_base_y |
+| 93 | robot_0 | vel_base_rot |
+| 94 | robot_0 | vel_arm_joint1 |
+| 95 | robot_0 | vel_arm_joint2 |
+| 96 | robot_0 | vel_arm_joint3 |
+| 97 | robot_0 | vel_arm_joint4 |
+| 98 | robot_0 | vel_arm_joint5 |
+| 99 | robot_0 | vel_arm_joint6 |
+| 100 | robot_0 | vel_arm_joint7 |
+| 101 | robot_0 | vel_gripper |
+| 102 | table_1 | x |
+| 103 | table_1 | y |
+| 104 | table_1 | z |
+| 105 | table_1 | qw |
+| 106 | table_1 | qx |
+| 107 | table_1 | qy |
+| 108 | table_1 | qz |
+| 109 | table_2 | x |
+| 110 | table_2 | y |
+| 111 | table_2 | z |
+| 112 | table_2 | qw |
+| 113 | table_2 | qx |
+| 114 | table_2 | qy |
+| 115 | table_2 | qz |
 
 
 ## Action Space
 Actions: base pos and yaw (3), arm joints (7), gripper pos (1)
 
 ## Rewards
-The primary reward is for successfully placing objects at their target locations.
-- A reward of +1.0 is given for each object placed within a 5cm tolerance of its target.
-- A smaller positive reward is given for objects within a 10cm tolerance to guide the robot.
-- A small negative reward (-0.01) is applied at each timestep to encourage efficiency.
-The episode terminates when all objects are placed at their respective targets.
+Reward function depends on the specific task:
+- Object stacking: Reward for successfully stacking objects
+- Drawer/cabinet tasks: Reward for opening/closing and placing objects
+- General manipulation: Reward for successful pick-and-place operations
+
+Currently returns a small negative reward (-0.01) per timestep to encourage exploration.
 
 
 ## References
