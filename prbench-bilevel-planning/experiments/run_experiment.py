@@ -107,6 +107,7 @@ def _run_single_episode_evaluation(
 ) -> dict[str, float]:
     steps = 0
     success = False
+    total_reward = 0.0
     seed = sample_seed_from_rng(rng)
     obs, info = env.reset(seed=seed)
     planning_time = 0.0  # measure the time taken by the approach only
@@ -119,7 +120,7 @@ def _run_single_episode_evaluation(
             planning_failed = True
     planning_time += result["time"]
     if planning_failed:
-        return {"success": False, "steps": steps, "planning_time": planning_time}
+        return {"success": False, "steps": steps, "planning_time": planning_time, "reward": total_reward}
     for _ in range(max_eval_steps):
         step_failed = False
         with timer() as result:
@@ -130,9 +131,10 @@ def _run_single_episode_evaluation(
                 step_failed = True
         planning_time += result["time"]
         if step_failed:
-            return {"success": False, "steps": steps, "planning_time": planning_time}
+            return {"success": False, "steps": steps, "planning_time": planning_time, "reward": total_reward}
         obs, rew, done, truncated, info = env.step(action)
         reward = float(rew)
+        total_reward += reward
         assert not truncated
         with timer() as result:
             agent.update(obs, reward, done, info)
@@ -142,7 +144,7 @@ def _run_single_episode_evaluation(
             break
         steps += 1
     logging.info(f"Success result: {success}")
-    return {"success": success, "steps": steps, "planning_time": planning_time}
+    return {"success": success, "steps": steps, "planning_time": planning_time, "reward": total_reward}
 
 
 if __name__ == "__main__":
