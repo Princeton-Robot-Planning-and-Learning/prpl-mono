@@ -243,9 +243,9 @@ def run_inference(
                     base_image = all_images["base"]
                     wrist_image = all_images["wrist"]
                     if save_videos:
-                        overview_images.append(cv.resize(overview_image, (224, 224)))
-                        base_images.append(cv.resize(base_image, (224, 224)))
-                        wrist_images.append(cv.resize(wrist_image, (224, 224)))
+                        overview_images.append(overview_image)
+                        base_images.append(base_image)
+                        wrist_images.append(wrist_image)
                     if show_images:
                         _visualize_image_in_window(overview_image, "overview")
                         _visualize_image_in_window(base_image, "base")
@@ -259,9 +259,9 @@ def run_inference(
                     env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
                     wrist_image = env.unwrapped._object_centric_env.render()
                     if save_videos:
-                        overview_images.append(cv.resize(overview_image, (224, 224)))
-                        base_images.append(cv.resize(base_image, (224, 224)))
-                        wrist_images.append(cv.resize(wrist_image, (224, 224)))
+                        overview_images.append(overview_image)
+                        base_images.append(base_image)
+                        wrist_images.append(wrist_image)
                     if show_images:
                         _visualize_image_in_window(overview_image, "overview")
                         _visualize_image_in_window(base_image, "base")
@@ -269,7 +269,7 @@ def run_inference(
                 else:
                     image = env.unwrapped._object_centric_env.render()
                     if save_videos:
-                        images_2d.append(cv.resize(image, (224, 224)))
+                        images_2d.append(image)
                     if show_images:
                         _visualize_image_in_window(image, "overview")
 
