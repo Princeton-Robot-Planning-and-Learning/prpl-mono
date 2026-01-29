@@ -95,7 +95,7 @@
         "cupboard_1_cube_1_goal_region": {
             "target": "cupboard_1",
             "shelf": 2,
-            "ranges": [[-0.3, -0.12, 0.00, 0.3, 0.12, 0.02]],
+            "ranges": [[-0.3, -0.12, 0.00, 0.3, 0.12, 0.03]],
             "rgba": [1.0, 1.0, 0.0, 0.0],
             "yaw_ranges": [[0, 360]]
         }
