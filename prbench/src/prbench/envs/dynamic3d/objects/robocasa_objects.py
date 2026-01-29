@@ -384,46 +384,42 @@ def _create_robocasa_object_classes() -> None:
         return
 
     # Iterate through all directories in the robocasa_objects folder
-    for object_dir in sorted(ROBOCASA_OBJECTS_DIR.iterdir()):
-        if not object_dir.is_dir():
-            continue
+    for object_type_dir in sorted(ROBOCASA_OBJECTS_DIR.iterdir()):
+        for object_dir in sorted(object_type_dir.iterdir()):
+            if not object_dir.is_dir():
+                continue
 
-        # Check if model.xml exists
-        model_xml = object_dir / "model.xml"
-        if not model_xml.exists():
-            continue
+            # Check if model.xml exists
+            model_xml = object_dir / "model.xml"
+            if not model_xml.exists():
+                continue
 
-        # Extract object type name (directory name)
-        object_type_name = object_dir.name
+            # Extract object type name (directory name)
+            object_type_name = object_dir.name
 
-        # Create a class name (convert snake_case to PascalCase)
-        # e.g., "apple_0" -> "RobocasaApple0"
-        class_name_parts = ["Robocasa"] + [
-            part.capitalize() for part in object_type_name.split("_")
-        ]
-        class_name = "".join(class_name_parts)
+            # Create a class name (convert snake_case to PascalCase)
+            # e.g., "apple_0" -> "RobocasaApple0"
+            class_name_parts = ["Robocasa"] + [
+                part.capitalize() for part in object_type_name.split("_")
+            ]
+            class_name = "".join(class_name_parts)
 
-        # Create a new class dynamically
-        new_class = type(
-            class_name,
-            (RoboCasaObject,),
-            {
-                "object_type_name": object_type_name,
-                "model_dir": object_dir,
-                "__module__": __name__,
-            },
-        )
+            # Create a new class dynamically
+            new_class = type(
+                class_name,
+                (RoboCasaObject,),
+                {
+                    "object_type_name": object_type_name,
+                    "model_dir": object_dir,
+                    "__module__": __name__,
+                },
+            )
 
-        # Register the class with multiple names for flexibility
-        register_object(new_class)  # Registers as lowercase class name
+            # Register the class with robocasa_ prefix (e.g., "robocasa_apple_0")
+            register_object(new_class, name=f"robocasa_{object_type_name}")
 
-        # Also register with the exact object type name (e.g., "apple_0")
-        # and with "robocasa_" prefix (e.g., "robocasa_apple_0")
-        REGISTERED_OBJECTS[object_type_name] = new_class
-        REGISTERED_OBJECTS[f"robocasa_{object_type_name}"] = new_class
-
-        # Add to module globals so it can be imported
-        globals()[class_name] = new_class
+            # Add to module globals so it can be imported
+            globals()[class_name] = new_class
 
 
 # Auto-generate classes on module import
