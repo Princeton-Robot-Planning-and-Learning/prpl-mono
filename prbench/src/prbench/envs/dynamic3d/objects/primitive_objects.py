@@ -875,10 +875,12 @@ class Scoop(MujocoObject):
           z = wall_width to z = wall_width + height
           * back wall (y = -outer_width/2):
             size = [outer_length/2, wall_width/2, height/2]
-            extends x: [0, outer_length], y: [-outer_width/2, -outer_width/2 + wall_width]
+            extends x: [0, outer_length],
+            y: [-outer_width/2, -outer_width/2 + wall_width]
           * front wall (y = +outer_width/2):
             size = [outer_length/2, wall_width/2, height/2]
-            extends x: [0, outer_length], y: [outer_width/2 - wall_width, outer_width/2]
+            extends x: [0, outer_length],
+            y: [outer_width/2 - wall_width, outer_width/2]
           * left wall (x = 0):
             size = [wall_width/2, width/2, height/2]
             extends x: [0, wall_width], y: [-width/2, width/2]
