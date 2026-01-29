@@ -13,9 +13,9 @@
 for seed in 300 301 302 303 304
 do
 python experiments/run_experiment.py \
-    agent=sac_shelf3d \
-    env_id="prbench/TidyBot3D-cupboard_real-o1-v0" \
-    max_episode_steps=500 \
+    agent=sac_tidybot3d \
+    env_id="prbench/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0" \
+    max_episode_steps=600 \
     eval_episodes=50 \
     seed=${seed} \
     agent.args.total_timesteps=1000000 \
