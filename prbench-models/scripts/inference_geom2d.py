@@ -6,6 +6,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import matplotlib
+# matplotlib.use('Agg')  # Force non-interactive backend
+import matplotlib.pyplot as plt
+
 import imageio as iio
 import cv2 as cv
 import numpy as np
@@ -412,6 +416,7 @@ def run_inference(
             print(f"Episode {episode_idx + 1}: reward={episode_reward:.3f}, "
                   f"terminated={ep_terminated}, truncated={ep_truncated}")
             policy.close()  # type: ignore
+            plt.close('all')
             gc.collect()
             del policy
             
