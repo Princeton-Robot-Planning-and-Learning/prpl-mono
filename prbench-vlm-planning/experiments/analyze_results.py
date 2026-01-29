@@ -74,6 +74,7 @@ def analyze_results(log_dir: Path) -> pd.DataFrame:
                     "success": row["success"],
                     "planning_time": row["planning_time"],
                     "steps": row["steps"],
+                    "reward": row["reward"],
                 }
             )
 
@@ -92,23 +93,41 @@ def analyze_results(log_dir: Path) -> pd.DataFrame:
                 "success": ["mean", "std", "count"],
                 "planning_time": ["mean", "std"],
                 "steps": "mean",
+                "reward": ["mean", "std"],
             }
         )
-        .reset_index()
     )
 
-    # Flatten column names
-    grouped.columns = pd.Index(
-        [
-            "env",
-            "rgb_observation",
-            "solve_rate",
-            "solve_rate_std",
-            "num_runs",
-            "avg_planning_time",
-            "planning_time_std",
-            "avg_steps",
-        ]
+    # Flatten column names before reset_index
+    grouped.columns = [
+        "solve_rate",
+        "solve_rate_std",
+        "num_runs",
+        "avg_planning_time",
+        "planning_time_std",
+        "avg_steps",
+        "avg_reward",
+        "avg_reward_std",
+    ]
+    grouped = grouped.reset_index()
+
+    # Calculate average reward among successful episodes
+    successful_reward = (
+        df[df["success"] == True]
+        .groupby(["env", "rgb_observation"])["reward"]
+        .agg(["mean", "std"])
+        .reset_index()
+    )
+    successful_reward.columns = [
+        "env",
+        "rgb_observation",
+        "avg_reward_successful",
+        "reward_successful_std",
+    ]
+
+    # Merge successful reward back into grouped dataframe
+    grouped = grouped.merge(
+        successful_reward, on=["env", "rgb_observation"], how="left"
     )
 
     # Sort by environment and rgb_observation
@@ -124,13 +143,14 @@ def format_table(df: pd.DataFrame) -> str:
 
     # Create a formatted table
     lines = []
-    lines.append("=" * 130)
+    lines.append("=" * 200)
     lines.append(
         f"{'Environment':<25} {'Method':<15} "
         f"{'Solve Rate (mean±std)':<25} "
-        f"{'Planning Time/s (mean±std)':<30} {'Avg Steps':<15}"
+        f"{'Planning Time/s (mean±std)':<30} {'Avg Steps':<15} "
+        f"{'Avg Reward (mean±std)':<25} {'Avg Reward Success (mean±std)':<30}"
     )
-    lines.append("=" * 130)
+    lines.append("=" * 200)
 
     for _, row in df.iterrows():
         env = row["env"]
@@ -141,13 +161,20 @@ def format_table(df: pd.DataFrame) -> str:
             f"{row['avg_planning_time']:.4f} ± {row['planning_time_std']:.4f}"
         )
         avg_steps = f"{row['avg_steps']:.1f}"
+        avg_reward = f"{row['avg_reward']:.3f} ± {row['avg_reward_std']:.3f}"
+        avg_reward_successful = (
+            f"{row['avg_reward_successful']:.3f} ± {row['reward_successful_std']:.3f}"
+            if pd.notna(row["avg_reward_successful"])
+            else "N/A"
+        )
 
         lines.append(
             f"{env:<25} {method:<15} {solve_rate:<25} "
-            f"{planning_time:<30} {avg_steps:<15}"
+            f"{planning_time:<30} {avg_steps:<15} "
+            f"{avg_reward:<25} {avg_reward_successful:<30}"
         )
 
-    lines.append("=" * 130)
+    lines.append("=" * 200)
     lines.append(f"\nTotal configurations: {len(df)}")
     lines.append(f"Runs per configuration: {int(df['num_runs'].iloc[0])}")
 
