@@ -26,6 +26,10 @@ class Table(MujocoFixture):
     DEFAULT_REGION_Z_OFFSET: float = 0.05  # 5cm offset above table surface
     # (assumes max possible half-height of any object is 5cm)
 
+    # Default RGBA colors for table components
+    default_rgba_table_top: list[float] = [0.8, 0.6, 0.4, 1.0]
+    default_rgba_table_leg: list[float] = [0.6, 0.4, 0.2, 1.0]
+
     def __init__(
         self,
         name: str,
@@ -56,6 +60,14 @@ class Table(MujocoFixture):
         self.table_height = float(self.fixture_config["height"])
         self.table_thickness = float(self.fixture_config["thickness"])
         self.leg_inset = 0.05
+
+        # Parse RGBA colors from fixture config or use class defaults
+        self.rgba_table_top: list[float] = self.fixture_config.get(
+            "rgba_table_top", Table.default_rgba_table_top
+        )  # type: ignore
+        self.rgba_table_leg: list[float] = self.fixture_config.get(
+            "rgba_table_leg", Table.default_rgba_table_leg
+        )  # type: ignore
 
         # Optional parameters
         self.table_length: float | None = None
@@ -122,7 +134,7 @@ class Table(MujocoFixture):
                 f"{table_half_length} {table_half_width} {table_half_thickness}",
             )
             table_top.set("pos", f"0 0 {table_top_z_pos}")
-            table_top.set("rgba", "0.8 0.6 0.4 1")
+            table_top.set("rgba", " ".join(map(str, self.rgba_table_top)))
 
             # Create table legs at four corners
             leg_positions = [
@@ -150,7 +162,7 @@ class Table(MujocoFixture):
                 leg.set("type", "cylinder")
                 leg.set("size", f"{leg_radius} {leg_half_height}")
                 leg.set("pos", pos)
-                leg.set("rgba", "0.6 0.4 0.2 1")
+                leg.set("rgba", " ".join(map(str, self.rgba_table_leg)))
 
         elif self.table_shape == "circle":
             assert self.table_diameter is not None
@@ -173,7 +185,7 @@ class Table(MujocoFixture):
             table_top.set("type", "cylinder")
             table_top.set("size", f"{table_radius} {table_half_thickness}")
             table_top.set("pos", f"0 0 {table_top_z_pos}")
-            table_top.set("rgba", "0.8 0.6 0.4 1")
+            table_top.set("rgba", " ".join(map(str, self.rgba_table_top)))
 
             # Create table legs at 4 positions around the circle
             # (at 45, 135, 225, 315 degrees)
@@ -193,7 +205,7 @@ class Table(MujocoFixture):
                 leg.set("type", "cylinder")
                 leg.set("size", f"{leg_radius} {leg_half_height}")
                 leg.set("pos", f"{leg_x} {leg_y} {leg_z_pos}")
-                leg.set("rgba", "0.6 0.4 0.2 1")
+                leg.set("rgba", " ".join(map(str, self.rgba_table_leg)))
 
         else:
             raise ValueError(
@@ -218,14 +230,18 @@ class Table(MujocoFixture):
             region_list: list = []
 
             for region_idx, region_range in enumerate(region_config["ranges"]):
-                if len(region_range) != 4:
+                if len(region_range) == 4:
+                    x_start, y_start, x_end, y_end = region_range
+                    z_start = 0.0
+                    z_end = self.DEFAULT_REGION_HEIGHT
+                elif len(region_range) == 6:
+                    x_start, y_start, z_start, x_end, y_end, z_end = region_range
+                else:
                     raise ValueError(
                         f"Each region range must have exactly 4 values "
                         f"[x_start, y_start, x_end, y_end], "
                         f"got {len(region_range)} for region '{region_name}'"
                     )
-
-                x_start, y_start, x_end, y_end = region_range
 
                 # Validate bounds
                 if x_start >= x_end:
@@ -238,20 +254,25 @@ class Table(MujocoFixture):
                         f"y_start ({y_start}) must be less than y_end ({y_end}) "
                         f"for region '{region_name}'"
                     )
+                if z_start >= z_end:
+                    raise ValueError(
+                        f"z_start ({z_start}) must be less than z_end ({z_end}) "
+                        f"for region '{region_name}'"
+                    )
 
                 # Create 3D bounding box:
-                # z_min is offset above table surface (assuming max object half-height)
-                # z_max is DEFAULT_REGION_HEIGHT above z_min
-                z_min = self.table_height + self.DEFAULT_REGION_Z_OFFSET
-                z_max = z_min + self.DEFAULT_REGION_HEIGHT
+                # z_start is offset above table surface
+                # z_end is DEFAULT_REGION_HEIGHT above z_start
+                z_start += self.table_height
+                z_end += self.table_height
 
                 # Calculate center and half-sizes for MuJoCo box site
                 region_center_x = (x_start + x_end) / 2
                 region_center_y = (y_start + y_end) / 2
-                region_center_z = (z_min + z_max) / 2
+                region_center_z = (z_start + z_end) / 2
                 region_size_x = (x_end - x_start) / 2
                 region_size_y = (y_end - y_start) / 2
-                region_size_z = (z_max - z_min) / 2
+                region_size_z = (z_end - z_start) / 2
 
                 # Create site element for the region
                 site = ET.Element("site")
@@ -471,9 +492,9 @@ class Cupboard(MujocoFixture):
 
         Top View (from above, y pointing up):
 
-                              y
-                              ↑
-                              |
+                              y    shelves opening
+                              ↑     ↑
+                              |     |
                   ┌─────────────●──────────────┐
                   │            |               │
                   │            |               │
