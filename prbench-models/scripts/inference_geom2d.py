@@ -691,7 +691,7 @@ def main() -> None:
         "--num-seeds", type=int, default=5, help="Number of random seeds to run"
     )
     parser.add_argument(
-        "--num-episodes", type=int, default=1, help="Number of episodes to run"
+        "--num-episodes", type=int, default=50, help="Number of episodes to run"
     )
     parser.add_argument(
         "--num-cubes", type=int, default=1, help="Number of cubes in environment"
