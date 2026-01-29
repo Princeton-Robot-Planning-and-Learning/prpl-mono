@@ -1,7 +1,7 @@
 {
     "robots": {
         "tidybot": {
-            "robot": {}
+            "robot_0": {}
         }
     },
     "scene": {
@@ -112,7 +112,7 @@
     "goal_state": [
         [
             "on",
-            "robot",
+            "robot_0",
             "ground_goal_region"
         ]
     ]

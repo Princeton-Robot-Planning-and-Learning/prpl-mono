@@ -1037,7 +1037,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
                 # Handle robot objects specially (they have pos_base_x/y instead
                 # of x/y/z)
-                if obj_name == "robot":
+                if obj_name == self.robot_name:
                     position = np.array(
                         [
                             state.get(obj, "pos_base_x"),
