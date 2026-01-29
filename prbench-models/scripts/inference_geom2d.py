@@ -470,11 +470,11 @@ def run_inference(
             "successes": successes,
             "success_rate": successes / max(len(episode_rewards), 1),
             "episode_seeds": episode_seeds,
-            "episode_rewards": episode_rewards,
-            "episode_lengths": episode_lengths,
-            "episode_terminated": episode_terminated,
-            "episode_truncated": episode_truncated,
-            "episode_avg_inference_times": episode_avg_inference_times,
+            "episode_rewards": [float(r) for r in episode_rewards],
+            "episode_lengths": [int(l) for l in episode_lengths],
+            "episode_terminated": [bool(t) for t in episode_terminated],
+            "episode_truncated": [bool(t) for t in episode_truncated],
+            "episode_avg_inference_times": [float(t) for t in episode_avg_inference_times],
             "inference_time_stats": {
                 "mean": float(np.mean(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
                 "std": float(np.std(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
@@ -628,10 +628,10 @@ def run_summary(
         "total_episodes": total_episodes,
         "total_successes": total_successes,
         "overall_success_rate": total_successes / max(total_episodes, 1),
-        "success_rate_per_seed": all_success_rates,
-        "per_seed_mean_rewards": per_seed_mean_rewards,
-        "per_seed_mean_lengths": per_seed_mean_lengths,
-        "per_seed_mean_inference_times": per_seed_mean_inference_times,
+        "success_rate_per_seed": [float(r) for r in all_success_rates],
+        "per_seed_mean_rewards": [float(r) for r in per_seed_mean_rewards],
+        "per_seed_mean_lengths": [float(l) for l in per_seed_mean_lengths],
+        "per_seed_mean_inference_times": [float(t) for t in per_seed_mean_inference_times],
         "success_rate_stats": {
             "mean": float(np.mean(all_success_rates)),
             "std": float(np.std(all_success_rates)),
@@ -656,8 +656,8 @@ def run_summary(
             "min": float(np.min(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
             "max": float(np.max(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
         },
-        "per_seed_mean_successful_rewards": per_seed_mean_successful_rewards,
-        "per_seed_mean_successful_lengths": per_seed_mean_successful_lengths,
+        "per_seed_mean_successful_rewards": [float(r) for r in per_seed_mean_successful_rewards],
+        "per_seed_mean_successful_lengths": [float(l) for l in per_seed_mean_successful_lengths],
         "successful_reward_stats": {
             "mean": float(np.mean(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
             "std": float(np.std(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
@@ -682,7 +682,7 @@ def main() -> None:
     """Main function to run policy inference in prbench."""
     parser = argparse.ArgumentParser(description="Run policy inference in prbench")
     parser.add_argument(
-        "--output-dir", default="data/evaluations", help="Directory to save episodes"
+        "--output-dir", default="data/evaluations_final", help="Directory to save episodes"
     )
     parser.add_argument(
         "--seed", type=int, default=301, help="Random seed for reproducibility"
