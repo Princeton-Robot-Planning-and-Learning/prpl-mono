@@ -219,8 +219,8 @@ class PRBenchTransport3DPerceiver(Perceiver[ObjectCentricState]):
             "pose_qw": 1.0,
             "grasp_active": 0.0,
             "object_type": 0,
-            "half_extent_x": 0.1,
-            "half_extent_y": 0.15,
+            "half_extent_x": 0.15,
+            "half_extent_y": 0.2,
             "half_extent_z": 0.1,
         }
 

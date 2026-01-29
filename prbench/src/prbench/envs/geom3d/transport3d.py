@@ -61,7 +61,7 @@ class Transport3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     )
 
     # Box.
-    box_half_extents: tuple[float, float, float] = (0.1, 0.15, 0.1)
+    box_half_extents: tuple[float, float, float] = (0.15, 0.2, 0.1)
     box_rgba: tuple[float, float, float, float] = (1.0, 1.0, 1.0, 1.0)
     box_wall_thickness: float = 0.01
     box_texture: Path = (
