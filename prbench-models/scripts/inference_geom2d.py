@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 import matplotlib
-# matplotlib.use('Agg')  # Force non-interactive backend
+matplotlib.use('Agg')  # Force non-interactive backend
 import matplotlib.pyplot as plt
 
 import imageio as iio
@@ -346,6 +346,7 @@ def run_inference(
                 
                 # Get action from policy
                 action_dict = policy.step(obs_dict)
+                del obs_dict
 
                 
                 if action_dict is None:
