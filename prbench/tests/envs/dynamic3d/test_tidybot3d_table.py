@@ -3,11 +3,9 @@
 from pathlib import Path
 
 import pytest
-from gymnasium.wrappers import RecordVideo
 
 import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
-from tests.conftest import MAKE_VIDEOS
 
 # Path to MimicLabs scenes
 MIMICLABS_SCENES_DIR = (
