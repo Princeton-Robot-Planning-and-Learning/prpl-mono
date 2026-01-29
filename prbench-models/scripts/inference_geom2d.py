@@ -101,7 +101,6 @@ class RemotePolicy:
     def close(self):
         """Close the connection to policy server."""
         self.socket.close()
-        self.context.term()  # Terminate the context!
 
 
 def run_inference(
