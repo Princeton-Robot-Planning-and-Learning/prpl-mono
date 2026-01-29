@@ -1,5 +1,8 @@
 # Default configuration for VLM planning experiments
 
+defaults:
+  - env: Motion2D-p0-v0
+
 # Agent configuration
 vlm_model: "gpt-5"
 temperature: 1
@@ -7,13 +10,9 @@ max_planning_horizon: 50
 rgb_observation: true
 use_env_models: true
 
-# Environment configuration
-env: "prbench/Motion2D-p1-v0"
-
 # Evaluation configuration
 seed: 0
 num_eval_episodes: 50
-max_eval_steps: 3000
 
 hydra:
   run:

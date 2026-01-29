@@ -1,0 +1,4 @@
+# @package _global_
+# Configuration for StickButton2D-b1-v0
+env: "StickButton2D-b1-v0"
+max_eval_steps: 200

@@ -11,7 +11,7 @@ Examples:
     python experiments/run_experiment.py -m seed='range(0,3)' \
         env=Motion2D-p0-v0,StickButton2D-b1-v0 \
         vlm_model=gpt-5 rgb_observation=true,false temperature=1
-    python experiments/run_experiment.py -m seed='range(0,3)' \
+    python exeriments/run_experiment.py -m seed='range(0,3)' \
         env=BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0 \
         vlm_model=gpt-5 rgb_observation=true,false temperature=1
 """
@@ -93,6 +93,7 @@ def _main(cfg: DictConfig) -> None:
                 "success": False,
                 "steps": 0,
                 "planning_time": 0.0,
+                "reward": 0.0,
                 "eval_episode": eval_episode,
                 "error": str(e),
             }
@@ -124,6 +125,7 @@ def _run_single_episode_evaluation(
 ) -> dict[str, float | bool | str]:
     steps = 0
     success = False
+    total_reward = 0.0
     seed = sample_seed_from_rng(rng)
     obs, info = env.reset(seed=seed)
 
@@ -149,7 +151,12 @@ def _run_single_episode_evaluation(
     planning_time += result["time"]
 
     if planning_failed:
-        return {"success": False, "steps": steps, "planning_time": planning_time}
+        return {
+            "success": False,
+            "steps": steps,
+            "planning_time": planning_time,
+            "reward": total_reward,
+        }
 
     # Execute the plan
     for _ in range(max_eval_steps):
@@ -164,6 +171,7 @@ def _run_single_episode_evaluation(
         # Execute action in environment
         obs, rew, done, truncated, info = env.step(action)
         reward = float(rew)
+        total_reward += reward
         assert not truncated
 
         # Log the resulting state and done status
@@ -196,7 +204,12 @@ def _run_single_episode_evaluation(
         planning_time += result["time"]
 
     logging.info(f"Success result: {success}")
-    return {"success": success, "steps": steps, "planning_time": planning_time}
+    return {
+        "success": success,
+        "steps": steps,
+        "planning_time": planning_time,
+        "reward": total_reward,
+    }
 
 
 if __name__ == "__main__":
