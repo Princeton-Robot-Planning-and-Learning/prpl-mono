@@ -8,9 +8,9 @@
     "regions": {
         "robot_task_init_region": {
             "target": "ground",
-            "ranges": [[-0.20, 0.0, -0.20, 0.0]],
+            "ranges": [[-0.25, -0.05, -0.15, 0.05]],
             "rgba": [0.0, 1.0, 0.0, 0.0],
-            "yaw_ranges": [[0, 0]]
+            "yaw_ranges": [[-5, 5]]
         },
         "kitchen_island_shelf_2_bowl_region": {
             "target": "kitchen_island",
@@ -18,7 +18,7 @@
             "ranges": [
                 [-0.1, -0.3, 0.1, -0.1]
             ],
-            "rgba": [1.0, 1.0, 0.0, 0.3],
+            "rgba": [1.0, 1.0, 0.0, 0.0],
             "yaw_ranges": [[0, 0]]
         },
         "kitchen_island_shelf_2_can_region": {
@@ -27,7 +27,7 @@
                 [0.2, -0.2, 0.4, 0.0]
             ],
             "shelf": 2,
-            "rgba": [1.0, 1.0, 0.0, 0.3],
+            "rgba": [1.0, 1.0, 0.0, 0.0],
             "yaw_ranges": [[0, 0]]
         },
         "kitchen_island_shelf_2_boxed_drink_region": {
@@ -36,7 +36,7 @@
             "ranges": [
                 [-0.4, -0.2, -0.2, 0.0]
             ],
-            "rgba": [1.0, 1.0, 0.0, 0.3],
+            "rgba": [1.0, 1.0, 0.0, 0.0],
             "yaw_ranges": [[0, 0]]
         },
         "bowl_0_front_region": {

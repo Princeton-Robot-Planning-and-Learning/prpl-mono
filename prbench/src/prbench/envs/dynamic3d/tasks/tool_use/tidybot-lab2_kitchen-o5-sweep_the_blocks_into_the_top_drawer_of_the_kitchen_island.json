@@ -47,6 +47,14 @@
             "cube_4": {"size": 0.01, "rgba": [0.5, 0.1, 0.1, 1.0]}
         }
     },
+    "cameras": {
+        "task_view": {
+            "position": [2.5, -2.5, 3.5],
+            "lookat": [0.5, 0.0, 1.0],
+            "fovy": 42,
+            "resolution": [640, 480]
+        }
+    },
     "initial_state": [
         ["in", "wiper_0", "wiper_init_region"],
         ["in", "cube_0", "blocks_init_region"],
