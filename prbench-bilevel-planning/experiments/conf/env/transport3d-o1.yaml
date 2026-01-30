@@ -8,3 +8,5 @@ make_kwargs:
 # Passed into create_bilevel_planning_models() to create the env models.
 env_model_kwargs:
   num_objects: 1
+
+max_skill_horizon: 1000

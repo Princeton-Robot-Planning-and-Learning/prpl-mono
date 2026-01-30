@@ -9,4 +9,5 @@ make_kwargs:
 env_model_kwargs:
   num_objects: 2
 
+max_skill_horizon: 1000
 max_eval_steps: 1200
