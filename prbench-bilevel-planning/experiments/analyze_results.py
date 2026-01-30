@@ -33,7 +33,7 @@ def load_run_data(run_dir: Path) -> Optional[Dict]:
     results_df = pd.read_csv(results_path)
 
     return {
-        "env_name": config["env"]["env_name"],
+        "env_name": config["env"]["make_kwargs"]["id"],
         "seed": config["seed"],
         "max_abstract_plans": config.get("max_abstract_plans", "unknown"),
         "samples_per_step": config.get("samples_per_step", "unknown"),
@@ -163,10 +163,12 @@ def format_table(df: pd.DataFrame) -> str:
 
     has_reward = "avg_reward" in df.columns
 
+    # Dynamically determine environment column width based on longest environment name
+    max_env_len = max(len(str(env)) for env in df["env_name"])
+    env_col_width = max(max_env_len + 2, len("Environment"))  # At least as wide as header
+
     # Create a formatted table
     lines = []
-    header_line_length = 200 if has_reward else 150
-    lines.append("=" * header_line_length)
 
     # Build header dynamically based on varying columns
     header_parts = ["Environment"]
@@ -204,9 +206,14 @@ def format_table(df: pd.DataFrame) -> str:
         )
 
     # Calculate column widths
-    widths = [25] + [15] * len(config_cols) + [25, 30, 15]
+    widths = [env_col_width] + [15] * len(config_cols) + [25, 30, 15]
     if has_reward:
         widths.extend([25, 30])
+
+    # Calculate total table width
+    header_line_length = sum(widths) + len(widths)  # +len(widths) for spaces
+
+    lines.append("=" * header_line_length)
 
     # Format header
     header = ""

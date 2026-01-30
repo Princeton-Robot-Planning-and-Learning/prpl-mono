@@ -141,16 +141,23 @@ def format_table(df: pd.DataFrame) -> str:
     if df.empty:
         return "No results to display"
 
+    # Dynamically determine environment column width based on longest environment name
+    max_env_len = max(len(str(env)) for env in df["env"])
+    env_col_width = max(max_env_len + 2, len("Environment"))  # At least as wide as header
+
+    # Calculate total table width
+    table_width = env_col_width + 15 + 25 + 30 + 15 + 25 + 30 + 6  # +6 for spaces
+
     # Create a formatted table
     lines = []
-    lines.append("=" * 200)
+    lines.append("=" * table_width)
     lines.append(
-        f"{'Environment':<25} {'Method':<15} "
+        f"{'Environment':<{env_col_width}} {'Method':<15} "
         f"{'Solve Rate (mean±std)':<25} "
         f"{'Planning Time/s (mean±std)':<30} {'Avg Steps':<15} "
         f"{'Avg Reward (mean±std)':<25} {'Avg Reward Success (mean±std)':<30}"
     )
-    lines.append("=" * 200)
+    lines.append("=" * table_width)
 
     for _, row in df.iterrows():
         env = row["env"]
@@ -169,12 +176,12 @@ def format_table(df: pd.DataFrame) -> str:
         )
 
         lines.append(
-            f"{env:<25} {method:<15} {solve_rate:<25} "
+            f"{env:<{env_col_width}} {method:<15} {solve_rate:<25} "
             f"{planning_time:<30} {avg_steps:<15} "
             f"{avg_reward:<25} {avg_reward_successful:<30}"
         )
 
-    lines.append("=" * 200)
+    lines.append("=" * table_width)
     lines.append(f"\nTotal configurations: {len(df)}")
     lines.append(f"Runs per configuration: {int(df['num_runs'].iloc[0])}")
 
