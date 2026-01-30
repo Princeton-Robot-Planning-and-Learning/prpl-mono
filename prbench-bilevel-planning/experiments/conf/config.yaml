@@ -1,3 +1,7 @@
+defaults:
+  - _self_
+  - env: clutteredstorage2d-b1
+
 hydra:
   run:
     dir: ./logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
@@ -18,8 +22,3 @@ samples_per_step: 3
 max_skill_horizon: 100
 heuristic_name: "hff"
 planning_timeout: 60  # seconds
-
-# Environment.
-defaults:
-  - _self_
-  - env: clutteredstorage2d-b1
