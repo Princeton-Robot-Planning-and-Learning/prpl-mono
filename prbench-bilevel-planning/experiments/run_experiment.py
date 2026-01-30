@@ -10,6 +10,11 @@ Examples:
 
     python experiments/run_experiment.py -m env=stickbutton2d-b3 seed=0 \
         max_abstract_plans=1,5,10,20
+
+- Running on multiple environments and seeds (parallelized):
+    python experiments/run_experiment.py -m seed='range(0,3)' \
+        env=clutteredstorage2d-b1,transport3d-o2 hydra/launcher=joblib
+
 """
 
 import logging
@@ -110,7 +115,8 @@ def _run_single_episode_evaluation(
     total_reward = 0.0
     seed = sample_seed_from_rng(rng)
     obs, info = env.reset(seed=seed)
-    planning_time = 0.0  # measure the time taken by the approach only
+    planning_time = 0.0  # time spent generating plans (abstract + skill planning)
+    execution_time = 0.0  # time spent executing the policy (getting actions)
     planning_failed = False
     with timer() as result:
         try:
@@ -120,7 +126,7 @@ def _run_single_episode_evaluation(
             planning_failed = True
     planning_time += result["time"]
     if planning_failed:
-        return {"success": False, "steps": steps, "planning_time": planning_time, "reward": total_reward}
+        return {"success": False, "steps": steps, "planning_time": planning_time, "execution_time": execution_time, "reward": total_reward}
     for _ in range(max_eval_steps):
         step_failed = False
         with timer() as result:
@@ -129,22 +135,22 @@ def _run_single_episode_evaluation(
             except AgentFailure:
                 logging.info("Agent failed during step().")
                 step_failed = True
-        planning_time += result["time"]
+        execution_time += result["time"]
         if step_failed:
-            return {"success": False, "steps": steps, "planning_time": planning_time, "reward": total_reward}
+            return {"success": False, "steps": steps, "planning_time": planning_time, "execution_time": execution_time, "reward": total_reward}
         obs, rew, done, truncated, info = env.step(action)
         reward = float(rew)
         total_reward += reward
         assert not truncated
         with timer() as result:
             agent.update(obs, reward, done, info)
-        planning_time += result["time"]
+        execution_time += result["time"]
         if done:
             success = True
             break
         steps += 1
     logging.info(f"Success result: {success}")
-    return {"success": success, "steps": steps, "planning_time": planning_time, "reward": total_reward}
+    return {"success": success, "steps": steps, "planning_time": planning_time, "execution_time": execution_time, "reward": total_reward}
 
 
 if __name__ == "__main__":

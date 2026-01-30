@@ -13,7 +13,7 @@ Examples:
         vlm_model=gpt-5 rgb_observation=true,false temperature=1
     python exeriments/run_experiment.py -m seed='range(0,3)' \
         env=BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0 \
-        vlm_model=gpt-5 rgb_observation=true,false temperature=1
+        vlm_model=gpt-5 rgb_observation=true,false temperature=1 hydra/launcher=joblib
 """
 
 import logging
@@ -93,6 +93,7 @@ def _main(cfg: DictConfig) -> None:
                 "success": False,
                 "steps": 0,
                 "planning_time": 0.0,
+                "execution_time": 0.0,
                 "reward": 0.0,
                 "eval_episode": eval_episode,
                 "error": str(e),
@@ -138,7 +139,8 @@ def _run_single_episode_evaluation(
         env.metadata["description"] is not None
     ), "Environment must have a description."
     info.update({"description": env.metadata["description"]})
-    planning_time = 0.0  # measure the time taken by the approach only
+    planning_time = 0.0  # time spent generating plans (VLM queries)
+    execution_time = 0.0  # time spent executing the policy (getting actions)
     planning_failed = False
 
     # Initial planning
@@ -155,6 +157,7 @@ def _run_single_episode_evaluation(
             "success": False,
             "steps": steps,
             "planning_time": planning_time,
+            "execution_time": execution_time,
             "reward": total_reward,
         }
 
@@ -166,7 +169,7 @@ def _run_single_episode_evaluation(
             except VLMPlanningAgentFailure as e:
                 logging.info(f"Agent failed during execution: {e}")
                 break
-        planning_time += result["time"]
+        execution_time += result["time"]
 
         # Execute action in environment
         obs, rew, done, truncated, info = env.step(action)
@@ -201,13 +204,14 @@ def _run_single_episode_evaluation(
             except VLMPlanningAgentFailure as e:
                 logging.info(f"Agent failed during update: {e}")
                 break
-        planning_time += result["time"]
+        execution_time += result["time"]
 
     logging.info(f"Success result: {success}")
     return {
         "success": success,
         "steps": steps,
         "planning_time": planning_time,
+        "execution_time": execution_time,
         "reward": total_reward,
     }
 
