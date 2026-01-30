@@ -32,7 +32,7 @@ def test_tidybot_lab2_fit_blocks_in_cupboard_goals():
         scene_type="lab2",
         num_objects=6,
         task_config_path=str(task_config_path),
-        scene_bg=True,
+        scene_bg=False,
     )
 
     # Reset the environment
