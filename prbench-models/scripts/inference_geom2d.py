@@ -5,11 +5,13 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any, List
 
 import matplotlib
 matplotlib.use('Agg')  # Force non-interactive backend
 import matplotlib.pyplot as plt
 
+import dill as pkl
 import imageio as iio
 import cv2 as cv
 import numpy as np
@@ -29,7 +31,6 @@ from prbench_models.teleop_utils import _visualize_image_in_window
 from prpl_utils.utils import sample_seed_from_rng
 
 prbench.register_all_environments()
-
 
 class RemotePolicy:
     """Execute policy running on remote server via ZMQ."""
@@ -124,6 +125,7 @@ def run_inference(
     use_env_state: bool = False,
     save_videos: bool = False,
     remove_velocity: bool = False,
+    save_trajectories: bool = False,
 ):
     """Run policy inference in the prbench environment.
 
@@ -143,6 +145,7 @@ def run_inference(
         use_env_state: Whether to use env state for the policy.
         save_videos: Whether to save videos for evaluation.
         remove_velocity: Whether to remove velocity from the policy.
+        save_trajectories: Whether to save trajectory pickle files.
     """
     
 
@@ -178,9 +181,11 @@ def run_inference(
         for episode_idx in range(num_episodes):
             this_episode_inference_times = []
             
+            # Create episode directory for videos/trajectories
+            episode_dir = seed_dir / f"eval_episode_{episode_idx}"
+            if save_videos or save_trajectories:
+                episode_dir.mkdir(parents=True, exist_ok=True)
             if save_videos:
-                video_dir = seed_dir / f"eval_episode_{episode_idx}" 
-                video_dir.mkdir(parents=True, exist_ok=True)
                 overview_images = []
                 base_images = []
                 wrist_images = []
@@ -226,6 +231,11 @@ def run_inference(
             episode_reward = 0.0
             ep_terminated = False
             ep_truncated = False
+            
+            # Trajectory collection (same format as collect_demos_ds.py)
+            traj_observations: List[Any] = [obs.copy()]  # Start with initial obs
+            traj_actions: List[Any] = []
+            traj_rewards: List[float] = []
             
             start_time = time.time()
             for step_idx in range(max_steps):
@@ -372,6 +382,11 @@ def run_inference(
                 next_state = env.observation_space.devectorize(obs)
                 state = next_state
 
+                # Collect trajectory data
+                traj_observations.append(obs.copy())
+                traj_actions.append(action.copy())
+                traj_rewards.append(float(reward))
+
                 this_episode_inference_times.append(inference_time/executed_action_steps)
 
                 # Check for episode end
@@ -400,19 +415,40 @@ def run_inference(
             episode_avg_inference_times.append(np.sum(this_episode_inference_times)/episode_lengths[-1])
             if save_videos:
                 if len(overview_images) > 0:
-                    overview_video_path = video_dir / "overview.mp4"
+                    overview_video_path = episode_dir / "overview.mp4"
                     iio.mimsave(overview_video_path, overview_images, fps=fps)
                 if len(base_images) > 0:
-                    base_video_path = video_dir / "base.mp4"
+                    base_video_path = episode_dir / "base.mp4"
                     iio.mimsave(base_video_path, base_images, fps=fps)
                 if len(wrist_images) > 0:
-                    wrist_video_path = video_dir / "wrist.mp4"
+                    wrist_video_path = episode_dir / "wrist.mp4"
                     iio.mimsave(wrist_video_path, wrist_images, fps=fps)
                 if len(images_2d) > 0:
-                    image_video_path = video_dir / "image.mp4"
+                    image_video_path = episode_dir / "image.mp4"
                     iio.mimsave(image_video_path, images_2d, fps=fps)
                 # Clear image lists to free memory immediately
                 del overview_images, base_images, wrist_images, images_2d
+            
+            # Save trajectory pickle (same format as collect_demos_ds.py)
+            if save_trajectories:
+                timestamp = int(time.time())
+                traj_data = {
+                    "env_id": f"prbench/{env_name}-v0",
+                    "timestamp": timestamp,
+                    "seed": episode_seed,
+                    "observations": traj_observations,
+                    "actions": traj_actions,
+                    "rewards": traj_rewards,
+                    "terminated": ep_terminated,
+                    "truncated": ep_truncated,
+                }
+                traj_path = episode_dir / f"{timestamp}.p"
+                with open(traj_path, "wb") as f:
+                    pkl.dump(traj_data, f)
+                print(f"Trajectory saved to {traj_path}")
+            
+            # Clear trajectory data to free memory
+            del traj_observations, traj_actions, traj_rewards
             
             print(f"Episode {episode_idx + 1}: reward={episode_reward:.3f}, "
                   f"terminated={ep_terminated}, truncated={ep_truncated}")
@@ -735,6 +771,7 @@ def main() -> None:
         help="Show images in a window",
     )
     parser.add_argument("--save-videos", action="store_true", default=False, help="Save videos for evaluation")
+    parser.add_argument("--save-trajectories", action="store_true", default=True, help="Save trajectory pickle files")
     parser.add_argument("--render", action="store_true", default=True, help="Render the environment")
     parser.add_argument("--use-qpos", action="store_true", default=False, help="Use qpos for the policy")
     parser.add_argument("--use-delta-qpos", action="store_true", default=False, help="Use delta qpos for the policy")
@@ -773,6 +810,7 @@ def main() -> None:
                 use_delta_qpos=args.use_delta_qpos,
                 use_env_state=args.use_env_state,
                 save_videos=args.save_videos,
+                save_trajectories=args.save_trajectories,
                 remove_velocity=args.remove_velocity,
             )
     
