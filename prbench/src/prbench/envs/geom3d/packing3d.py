@@ -74,10 +74,10 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
         return {
-            "camera_target": (0, 0, 0),
-            "camera_yaw": 90,
-            "camera_distance": 1.0,
-            "camera_pitch": -20,
+            "camera_target": (0.5, 0, 0),
+            "camera_yaw": -60,
+            "camera_distance": 0.75,
+            "camera_pitch": -30,
         }
 
     def _sample_block_on_block_pose(
