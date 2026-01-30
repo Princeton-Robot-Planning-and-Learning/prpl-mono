@@ -89,26 +89,26 @@
                 [-5, 5]
             ]
         },
-        "cupboard_1_shelf_0_red_goal": {
-            "target": "cupboard_1",
-            "shelf": 0,
-            "rgba": [1.0, 0.0, 0.0, 0.0]
-        },
-        "cupboard_0_shelf_1_red_goal": {
+        "cupboard_0_shelf_1_goal": {
             "target": "cupboard_0",
             "shelf": 1,
+            "rgba": [1.0, 0.0, 0.0, 0.0]
+        },
+        "cupboard_1_shelf_0_goal": {
+            "target": "cupboard_1",
+            "shelf": 0,
             "rgba": [1.0, 0.0, 0.0, 0.0]
         }
     },
     "objects": {
         "cuboid": {
             "cuboid_0": {
-                "size": [0.015, 0.30, 0.015],
+                "size": [0.015, 0.15, 0.015],
                 "rgba": [0.918, 0.894, 0.835, 1.0],
                 "mass": 0.1
             },
             "cuboid_1": {
-                "size": [0.015, 0.30, 0.015],
+                "size": [0.015, 0.15, 0.015],
                 "rgba": [0.918, 0.894, 0.835, 1.0],
                 "mass": 0.1
             }
@@ -116,7 +116,7 @@
     },
     "cameras": {
         "task_view": {
-            "position": [-1.5, 0, 2.5],
+            "position": [-1.5, 0, 2.0],
             "lookat": [1, 0, 0],
             "fovy": 42,
             "resolution": [640, 480]
@@ -131,9 +131,7 @@
         ["on", "robot_0", "robot_task_init_region"]
     ],
     "goal_state": [
-        ["on", "cuboid_0", "cupboard_1_shelf_0_red_goal"],
-        ["on", "cuboid_0", "cupboard_0_shelf_1_red_goal"],
-        ["on", "cuboid_1", "cupboard_1_shelf_0_red_goal"],
-        ["on", "cuboid_1", "cupboard_0_shelf_1_red_goal"]
+        ["on", "cuboid_0", "cupboard_1_shelf_0_goal"],
+        ["on", "cuboid_1", "cupboard_1_shelf_0_goal"]
     ]
 }
