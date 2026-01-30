@@ -39,6 +39,7 @@ from prbench.envs.utils import (
     sample_se2_pose,
     state_2d_has_collision,
 )
+from prpl_utils.utils import wrap_angle
 
 TargetBlockType = Type("target_block", parent=DynRectangleType)
 HookType = Type("hook", parent=LObjectType)
@@ -673,7 +674,7 @@ class ObjectCentricDynPushPullHook2DEnv(
                 # Update object state from body
                 state.set(obj, "x", pymunk_body.position.x)
                 state.set(obj, "y", pymunk_body.position.y)
-                state.set(obj, "theta", pymunk_body.angle)
+                state.set(obj, "theta", wrap_angle(pymunk_body.angle))
                 state.set(obj, "vx", pymunk_body.velocity.x)
                 state.set(obj, "vy", pymunk_body.velocity.y)
                 state.set(obj, "omega", pymunk_body.angular_velocity)
