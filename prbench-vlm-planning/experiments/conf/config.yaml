@@ -6,7 +6,6 @@ defaults:
 # Agent configuration
 vlm_model: "gpt-5"
 temperature: 1
-max_planning_horizon: 50
 rgb_observation: true
 use_env_models: true
 

@@ -65,7 +65,7 @@ def _main(cfg: DictConfig) -> None:
         env_controllers=env_controllers,
         vlm_model_name=cfg.vlm_model,
         temperature=cfg.temperature,
-        max_planning_horizon=cfg.max_planning_horizon,
+        max_planning_horizon=cfg.max_eval_steps,
         seed=cfg.seed,
         rgb_observation=cfg.get("rgb_observation", False),
     )
