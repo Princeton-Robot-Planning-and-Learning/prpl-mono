@@ -2,7 +2,8 @@
 """Generate images for prbench environments.
 
 Supports both generating images from environments and using existing image files.
-To use an existing image, set the `existing_image_path` field in EnvImageConfig.
+Set USE_EXISTING_IMAGES = True (default) to load from existing images in docs/env_images.
+Set USE_EXISTING_IMAGES = False to generate fresh images from environments.
 
 Usage:
     python scripts/generate_env_images.py
@@ -18,6 +19,9 @@ from numpy.typing import NDArray
 from PIL import Image
 
 import prbench
+
+# Global toggle: if True, use existing images from docs/env_images instead of generating
+USE_EXISTING_IMAGES = True
 
 
 @dataclass
@@ -182,12 +186,11 @@ ENV_CONFIGS = [
         scale=0.17,
     ),
     EnvImageConfig(
-        env_id="prbench/tidybot-namo-o1-v0",
+        env_id="prbench/TidyBot3D-namo-o1-v0",
         seed=42,
         crop=None,
         position=(171, 600),
         scale=0.17,
-        existing_image_path="docs/env_images/TidyBot3D-namo-o1-v0.png",
     ),
     EnvImageConfig(
         env_id="prbench/TidyBot3D-dynamic-lab2-o1-toss_the_blocks_into_the_bin-v0",
@@ -234,21 +237,32 @@ def generate_image(
     env_name = config.env_id.replace("prbench/", "").replace("/", "_")
     output_path = output_dir / f"{env_name}.png"
 
-    if config.existing_image_path is not None:
-        # Load existing image instead of generating
-        existing_path = Path(config.existing_image_path)
+    # Check if we should use existing images
+    use_existing = USE_EXISTING_IMAGES or config.existing_image_path is not None
+
+    if use_existing:
+        # Determine existing image path
+        if config.existing_image_path is not None:
+            # Use explicitly specified path
+            existing_path = Path(config.existing_image_path)
+        else:
+            # Auto-construct path based on env_id
+            existing_path = Path(f"{env_name}.png")
+
         if not existing_path.is_absolute():
             # Resolve relative paths from the script's parent directory
-            existing_path = Path(__file__).parent.parent / existing_path
+            existing_path = Path(__file__).parent.parent / "docs" / "env_images" / existing_path
 
         img = Image.open(existing_path)
 
         if config.crop is not None:
+            # Only save if we need to apply cropping
             img = img.crop(config.crop)
+            img.save(output_path)
+            return output_path, img
 
-        # Save to output directory for consistency
-        img.save(output_path)
-        return output_path, img
+        # Use existing image as-is, no need to save
+        return existing_path, img
 
     # Generate from environment
     env = prbench.make(config.env_id, render_mode="rgb_array")
@@ -317,7 +331,7 @@ def main() -> None:
 
     images: list[Image.Image] = []
     for config in ENV_CONFIGS:
-        if config.existing_image_path is not None:
+        if USE_EXISTING_IMAGES or config.existing_image_path is not None:
             print(f"Using existing image for {config.env_id}...")
         else:
             print(f"Generating image for {config.env_id}...")
