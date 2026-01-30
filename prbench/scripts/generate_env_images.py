@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Generate images for prbench environments.
 
+Supports both generating images from environments and using existing image files.
+To use an existing image, set the `existing_image_path` field in EnvImageConfig.
+
 Usage:
     python scripts/generate_env_images.py
     python scripts/generate_env_images.py --output-dir /path/to/output
@@ -29,6 +32,8 @@ class EnvImageConfig:
     position: tuple[int, int] = (0, 0)
     # Scale factor (maintains aspect ratio)
     scale: float = 1.0
+    # Path to existing image file to use instead of generating one
+    existing_image_path: Path | str | None = None
 
 
 # Combined image settings
@@ -176,13 +181,14 @@ ENV_CONFIGS = [
         position=(0, 600),
         scale=0.17,
     ),
-    # EnvImageConfig(
-    #     env_id="prbench/tidybot-namo-o1-v0",
-    #     seed=42,
-    #     crop=None,
-    #     position=(171, 600),
-    #     scale=0.17,
-    # ),
+    EnvImageConfig(
+        env_id="prbench/tidybot-namo-o1-v0",
+        seed=42,
+        crop=None,
+        position=(171, 600),
+        scale=0.17,
+        existing_image_path="docs/env_images/TidyBot3D-namo-o1-v0.png",
+    ),
     EnvImageConfig(
         env_id="prbench/TidyBot3D-dynamic-lab2-o1-toss_the_blocks_into_the_bin-v0",
         seed=42,
@@ -224,7 +230,27 @@ ENV_CONFIGS = [
 def generate_image(
     config: EnvImageConfig, output_dir: Path
 ) -> tuple[Path, Image.Image]:
-    """Generate an image for a single environment."""
+    """Generate an image for a single environment or load from existing file."""
+    env_name = config.env_id.replace("prbench/", "").replace("/", "_")
+    output_path = output_dir / f"{env_name}.png"
+
+    if config.existing_image_path is not None:
+        # Load existing image instead of generating
+        existing_path = Path(config.existing_image_path)
+        if not existing_path.is_absolute():
+            # Resolve relative paths from the script's parent directory
+            existing_path = Path(__file__).parent.parent / existing_path
+
+        img = Image.open(existing_path)
+
+        if config.crop is not None:
+            img = img.crop(config.crop)
+
+        # Save to output directory for consistency
+        img.save(output_path)
+        return output_path, img
+
+    # Generate from environment
     env = prbench.make(config.env_id, render_mode="rgb_array")
     env.reset(seed=config.seed)
     img_array: NDArray[np.uint8] = env.render()  # type: ignore[assignment]
@@ -235,8 +261,6 @@ def generate_image(
     if config.crop is not None:
         img = img.crop(config.crop)
 
-    env_name = config.env_id.replace("prbench/", "").replace("/", "_")
-    output_path = output_dir / f"{env_name}.png"
     img.save(output_path)
 
     return output_path, img
@@ -293,7 +317,10 @@ def main() -> None:
 
     images: list[Image.Image] = []
     for config in ENV_CONFIGS:
-        print(f"Generating image for {config.env_id}...")
+        if config.existing_image_path is not None:
+            print(f"Using existing image for {config.env_id}...")
+        else:
+            print(f"Generating image for {config.env_id}...")
         output_path, img = generate_image(config, args.output_dir)
         images.append(img)
         print(f"  Saved to {output_path}")
