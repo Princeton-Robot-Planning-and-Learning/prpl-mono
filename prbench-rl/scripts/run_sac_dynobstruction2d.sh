@@ -10,7 +10,7 @@
 # # Activate the monorepo virtual environment
 # source "$(dirname "$0")/../../.venv/bin/activate"
 
-for seed in 300 301 302 303 304
+for seed in 302 301 299
 do
 python experiments/run_experiment.py \
     agent=sac_dynobstruction2d \
