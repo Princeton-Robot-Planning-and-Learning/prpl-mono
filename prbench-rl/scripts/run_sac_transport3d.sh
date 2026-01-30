@@ -15,7 +15,7 @@ do
 python experiments/run_experiment.py \
     agent=sac_transport3d \
     env_id="prbench/Transport3D-o2-v0" \
-    max_episode_steps=200 \
+    max_episode_steps=1200 \
     eval_episodes=50 \
     seed=${seed} \
     agent.args.num_envs=16 \
