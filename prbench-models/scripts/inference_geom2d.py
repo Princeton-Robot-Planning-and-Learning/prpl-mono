@@ -238,6 +238,8 @@ def run_inference(
             traj_rewards: List[float] = []
             
             start_time = time.time()
+            if "Transport3D" in env_name:
+                gripper_closed = False
             for step_idx in range(max_steps):
                 # Enforce desired control frequency
                 step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD
@@ -246,7 +248,10 @@ def run_inference(
 
                 # Get robot state
                 robot = state.get_object_from_name("robot")
-
+                if "Transport3D" in env_name:
+                    gripper_state = state.get(robot, "finger_state")
+                    if gripper_state > 0.1:
+                        gripper_closed = True
                 if "BaseMotion3D" in env_name or "Transport3D" in env_name:
                     all_images = env.unwrapped._object_centric_env.render_all_cameras()
                     overview_image = all_images["overview"]
@@ -402,7 +407,11 @@ def run_inference(
                         successes += 1
                     episode_lengths.append(step_idx + 1)
                     break
-
+                if "Transport3D" in env_name and step_idx > 300 and not gripper_closed:
+                    # Max steps reached without termination
+                    episode_lengths.append(max_steps)
+                    print(f"No progress made in the last 300 steps, saving episode with max steps ({max_steps})")
+                    break
             else:
                 # Max steps reached without termination
                 episode_lengths.append(max_steps)
