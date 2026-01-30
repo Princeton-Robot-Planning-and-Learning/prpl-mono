@@ -5,7 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 
 from prbench.envs.dynamic3d.objects.robocasa_objects import RoboCasaObject
-from prbench.envs.dynamic3d.objects.utils import euler_to_quat
+from prbench.envs.dynamic3d.utils import euler_to_quat
 
 
 class ReplicaObject(RoboCasaObject):
