@@ -66,7 +66,6 @@ def test_straight_base_motion():
 
     env.close()
 
-
 @pytest.mark.skipif(
     not MIMICLABS_SCENES_DIR.exists(),
     reason="MimicLabs scenes not downloaded. "
