@@ -1,9 +1,0 @@
-env_name,reward_type,agent_type,num_seeds,total_episodes,success_rate_mean,success_rate_std,successful_return_mean,successful_return_std,inference_time_mean,inference_time_std
-BaseMotion3D-v0,sparse,ppo,5,306,0.008,0.01788854381999832,-2.5,0.0,,
-BaseMotion3D-v0,sparse,sac,5,262,0.6779054916985952,0.44227609218866326,-5.784571428571428,3.846098792070654,,
-DynObstruction2D-o1-v0,sparse,ppo,5,253,0.11014177978883861,0.04800651408319962,-22.525,11.630187014833425,,
-DynPushPullHook2D-o5-v0,sparse,ppo,5,320,0.0,0.0,,,,
-TidyBot3D-cupboard_real-o1-v0,sparse,ppo,4,256,0.0,0.0,,,,
-TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0,sparse,ppo,5,320,0.0,0.0,,,,
-Transport3D-o2-v0,sparse,ppo,5,320,0.0,0.0,,,,
-Transport3D-o2-v0,sparse,sac,3,192,0.0,0.0,,,,
