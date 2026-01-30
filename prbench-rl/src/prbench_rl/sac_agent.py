@@ -56,6 +56,7 @@ class SACArgs:
     """Whether to save model into the `runs/{run_name}` folder."""
     save_model_freq: int = 50000
     """Frequency to save the model (in timesteps)."""
+    async_envs: bool = True
 
     # Environment specific arguments
     num_envs: int = 1
