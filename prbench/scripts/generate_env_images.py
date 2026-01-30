@@ -21,7 +21,7 @@ from PIL import Image
 import prbench
 
 # Global toggle: if True, use existing images from docs/env_images instead of generating
-USE_EXISTING_IMAGES = True
+USE_EXISTING_IMAGES = False
 
 
 @dataclass
@@ -186,13 +186,13 @@ ENV_CONFIGS = [
         position=(1, 601),
         scale=0.2,
     ),
-    EnvImageConfig(
-        env_id="prbench/TidyBot3D-namo-o1-v0",
-        seed=42,
-        crop=None,
-        position=(180, 601),
-        scale=0.1,
-    ),
+    # EnvImageConfig(
+    #     env_id="prbench/TidyBot3D-namo-o1-v0",
+    #     seed=42,
+    #     crop=None,
+    #     position=(180, 601),
+    #     scale=0.1,
+    # ),
     EnvImageConfig(
         env_id="prbench/TidyBot3D-dynamic-lab2-o1-toss_the_blocks_into_the_bin-v0",
         seed=42,
@@ -267,7 +267,18 @@ def generate_image(
         return existing_path, img
 
     # Generate from environment
-    env = prbench.make(config.env_id, render_mode="rgb_array")
+    # Only pass scene_bg=True for dynamic3d environments
+    env_classes = prbench.get_env_classes()
+    is_dynamic3d = any(
+        config.env_id in metadata["variants"] and metadata["category"] == "Dynamic3D"
+        for metadata in env_classes.values()
+    )
+
+    if is_dynamic3d:
+        env = prbench.make(config.env_id, render_mode="rgb_array", scene_bg=True)
+    else:
+        env = prbench.make(config.env_id, render_mode="rgb_array")
+
     env.reset(seed=config.seed)
     img_array: NDArray[np.uint8] = env.render()  # type: ignore[assignment]
     env.close()  # type: ignore[no-untyped-call]
