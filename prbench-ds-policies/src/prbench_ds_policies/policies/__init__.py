@@ -3,16 +3,13 @@
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Callable
 
-from numpy.typing import NDArray
+from prbench_ds_policies.policies.base import StatefulPolicy
 
-__all__ = ["create_domain_specific_policy"]
-
-Policy = Callable[[NDArray], NDArray]
+__all__ = ["create_domain_specific_policy", "StatefulPolicy"]
 
 
-def create_domain_specific_policy(env_name: str, **kwargs) -> Policy:
+def create_domain_specific_policy(env_name: str, **kwargs) -> StatefulPolicy:
     """Load domain-specific policy for the given environment.
 
     Args:

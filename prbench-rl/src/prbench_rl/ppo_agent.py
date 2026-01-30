@@ -105,6 +105,10 @@ class PPOArgs:
     dense_reward_scale: float = 0.1
     """Scale factor for dense reward."""
 
+    # Parallelization settings
+    async_envs: bool = False
+    """Use AsyncVectorEnv instead of SyncVectorEnv for parallel environments."""
+
     # to be filled in runtime
     batch_size: int = 0
     """The batch size (computed in runtime)"""
@@ -365,18 +369,21 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         # env setup
         episodic_returns = []
         # Create training environments (no video recording during training)
-        envs = gym.vector.SyncVectorEnv(
-            [
-                make_env_ppo(
-                    self.env_id,
-                    self.max_episode_steps,
-                    gamma=self.args.gamma,
-                    dense_reward=self.args.dense_reward,
-                    dense_reward_scale=self.args.dense_reward_scale,
-                )
-                for i in range(self.args.num_envs)
-            ]
-        )
+        env_fns = [
+            make_env_ppo(
+                self.env_id,
+                self.max_episode_steps,
+                gamma=self.args.gamma,
+                dense_reward=self.args.dense_reward,
+                dense_reward_scale=self.args.dense_reward_scale,
+            )
+            for i in range(self.args.num_envs)
+        ]
+        if self.args.async_envs:
+            logging.info("Using AsyncVectorEnv for parallel environments")
+            envs = gym.vector.AsyncVectorEnv(env_fns)
+        else:
+            envs = gym.vector.SyncVectorEnv(env_fns)
         assert isinstance(
             envs.single_action_space, gym.spaces.Box
         ), "only continuous action space is supported"
