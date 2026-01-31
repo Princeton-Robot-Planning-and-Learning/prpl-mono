@@ -21,7 +21,7 @@ from PIL import Image
 import prbench
 
 # Global toggle: if True, use existing images from docs/env_images instead of generating
-USE_EXISTING_IMAGES = True
+USE_EXISTING_IMAGES = False
 
 
 @dataclass
