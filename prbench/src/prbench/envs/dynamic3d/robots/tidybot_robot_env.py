@@ -77,6 +77,11 @@ class TidyBotRobotEnv(RobotEnv):
             arm_kd: Custom derivative gains for arm PD controller (7 values).
         """
 
+        robot_camera_names = [f"{name}_base", f"{name}_wrist"]
+        if camera_names is None:
+            camera_names = []
+        camera_names.extend(robot_camera_names)
+
         super().__init__(
             control_frequency,
             horizon=horizon,
@@ -103,17 +108,25 @@ class TidyBotRobotEnv(RobotEnv):
         assert self.sim is not None, "Simulation must be initialized."
 
         # Joint names for the base and arm
-        base_joint_names: list[str] = ["joint_x", "joint_y", "joint_th"]
-        arm_joint_names: list[str] = [
-            "joint_1",
-            "joint_2",
-            "joint_3",
-            "joint_4",
-            "joint_5",
-            "joint_6",
-            "joint_7",
+        base_joint_names: list[str] = [
+            f"{self.name}_joint_x",
+            f"{self.name}_joint_y",
+            f"{self.name}_joint_th",
         ]
-        gripper_joint_names = ["right_driver_joint", "left_driver_joint"]
+        arm_joint_names: list[str] = [
+            f"{self.name}_joint_1",
+            f"{self.name}_joint_2",
+            f"{self.name}_joint_3",
+            f"{self.name}_joint_4",
+            f"{self.name}_joint_5",
+            f"{self.name}_joint_6",
+            f"{self.name}_joint_7",
+        ]
+        gripper_joint_names = [
+            f"{self.name}_right_driver_joint",
+            f"{self.name}_left_driver_joint",
+        ]
+        gripper_ctrl_joint_names = [f"{self.name}_fingers_actuator"]
 
         # Joint positions: joint_id corresponds to qpos index
         base_qpos_indices = [
@@ -148,7 +161,7 @@ class TidyBotRobotEnv(RobotEnv):
         ]
         gripper_ctrl_indices = [
             self.sim.model._actuator_name2id[name]  # pylint: disable=protected-access
-            for name in ["fingers_actuator"]
+            for name in gripper_ctrl_joint_names
         ]
 
         # Verify indices are contiguous for slicing
