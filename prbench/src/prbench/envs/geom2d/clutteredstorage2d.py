@@ -403,7 +403,10 @@ The robot has a movable circular base and a retractable arm with a rectangular v
         total = self._num_init_shelf_blocks + self._num_init_outside_blocks
         if total == 1:
             return "This variant has 1 block to store."
-        return f"This variant has {total} blocks ({self._num_init_shelf_blocks} initially in the shelf, {self._num_init_outside_blocks} initially outside)."
+        return (
+            f"This variant has {total} blocks ({self._num_init_shelf_blocks} initially "
+            f"in the shelf, {self._num_init_outside_blocks} initially outside)."
+        )
 
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until termination, which occurs when all blocks are inside the shelf.\n"  # pylint: disable=line-too-long

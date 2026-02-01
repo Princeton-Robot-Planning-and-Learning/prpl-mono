@@ -254,7 +254,8 @@ def generate_markdown(
             .replace("-v0", "")
         )
         variant_filename = sanitize_env_id(variant_id)
-        md += f"- [`{variant_id}`](variants/{class_name}/{variant_filename}.md) ({variant_suffix})\n"
+        link = f"variants/{class_name}/{variant_filename}.md"
+        md += f"- [`{variant_id}`]({link}) ({variant_suffix})\n"
     md += "\n"
 
     md += "## Initial State Distribution\n"

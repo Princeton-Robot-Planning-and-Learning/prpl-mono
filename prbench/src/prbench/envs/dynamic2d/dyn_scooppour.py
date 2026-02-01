@@ -663,7 +663,10 @@ All objects include physics properties like mass, moment of inertia, and color i
         total = self._num_small_circles + self._num_small_squares
         if total == 1:
             return "This variant has 1 small object to scoop."
-        return f"This variant has {total} small objects ({self._num_small_circles} circles, {self._num_small_squares} squares)."
+        return (
+            f"This variant has {total} small objects "
+            f"({self._num_small_circles} circles, {self._num_small_squares} squares)."
+        )
 
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
