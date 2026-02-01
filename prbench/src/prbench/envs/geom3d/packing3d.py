@@ -733,6 +733,10 @@ class ObjectCentricPacking3DEnv(
 class Packing3DEnv(ConstantObjectPRBenchEnv):
     """Packing 3D env with a constant number of objects."""
 
+    def __init__(self, num_parts: int = 2, **kwargs) -> None:
+        self._num_parts = num_parts
+        super().__init__(num_parts=num_parts, **kwargs)
+
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom3DRobotEnv:
@@ -767,12 +771,9 @@ The task requires planning to grasp and place each part into the rack while avoi
         return "The number of parts to pack differs between environment variants. For example, Packing3D-p1 has 1 part, while Packing3D-p3 has 3 parts."
 
     def _create_variant_specific_description(self) -> str:
-        num_parts = (
-            self._object_centric_env._num_parts
-        )  # pylint: disable=protected-access
-        if num_parts == 1:
+        if self._num_parts == 1:
             return "This variant has 1 part to pack into the rack."
-        return f"This variant has {num_parts} parts to pack into the rack."
+        return f"This variant has {self._num_parts} parts to pack into the rack."
 
     def _create_action_space_markdown_description(self) -> str:
         """Create action space description."""

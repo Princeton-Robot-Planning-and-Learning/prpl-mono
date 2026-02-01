@@ -253,6 +253,10 @@ class ObjectCentricTable3DEnv(
 class Table3DEnv(ConstantObjectPRBenchEnv):
     """Table 3D env with a constant number of objects."""
 
+    def __init__(self, num_cubes: int = 2, **kwargs) -> None:
+        self._num_cubes = num_cubes
+        super().__init__(num_cubes=num_cubes, **kwargs)
+
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom3DRobotEnv:
@@ -278,12 +282,9 @@ class Table3DEnv(ConstantObjectPRBenchEnv):
         return "The number of cubes differs between environment variants. For example, Table3D-o1 has 1 cube, while Table3D-o3 has 3 cubes."
 
     def _create_variant_specific_description(self) -> str:
-        num_cubes = (
-            self._object_centric_env._num_cubes
-        )  # pylint: disable=protected-access
-        if num_cubes == 1:
+        if self._num_cubes == 1:
             return "This variant has 1 cube on the table."
-        return f"This variant has {num_cubes} cubes on the table."
+        return f"This variant has {self._num_cubes} cubes on the table."
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""

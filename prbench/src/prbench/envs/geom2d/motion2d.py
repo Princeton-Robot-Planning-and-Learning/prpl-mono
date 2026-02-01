@@ -278,6 +278,10 @@ class ObjectCentricMotion2DEnv(ObjectCentricGeom2DRobotEnv[Motion2DEnvConfig]):
 class Motion2DEnv(ConstantObjectPRBenchEnv):
     """Motion 2D env with a constant number of objects."""
 
+    def __init__(self, num_passages: int = 3, **kwargs) -> None:
+        self._num_passages = num_passages
+        super().__init__(num_passages=num_passages, **kwargs)
+
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom2DRobotEnv:
@@ -306,14 +310,11 @@ The robot has a movable circular base and a retractable arm with a rectangular v
         return "The number of narrow passages differs between environment variants. For example, Motion2D-p0 has no passages (open space), while Motion2D-p5 has 5 narrow passages."
 
     def _create_variant_specific_description(self) -> str:
-        num_passages = (
-            self._object_centric_env._num_passages
-        )  # pylint: disable=protected-access
-        if num_passages == 0:
+        if self._num_passages == 0:
             return "This variant has no narrow passages (open space)."
-        if num_passages == 1:
+        if self._num_passages == 1:
             return "This variant has 1 narrow passage."
-        return f"This variant has {num_passages} narrow passages."
+        return f"This variant has {self._num_passages} narrow passages."
 
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until termination, which occurs when the robot's position is within the target region.\n"  # pylint: disable=line-too-long
