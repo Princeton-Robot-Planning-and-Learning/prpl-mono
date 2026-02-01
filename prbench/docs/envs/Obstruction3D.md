@@ -21,11 +21,11 @@ The task requires planning to grasp and move obstructions out of the way, then p
 ## Available Variants
 The number of obstructions differs between environment variants. For example, Obstruction3D-o0 has no obstructions, while Obstruction3D-o4 has 4 obstructions.
 
-- `prbench/Obstruction3D-o0-v0` (o0)
-- `prbench/Obstruction3D-o1-v0` (o1)
-- `prbench/Obstruction3D-o2-v0` (o2)
-- `prbench/Obstruction3D-o3-v0` (o3)
-- `prbench/Obstruction3D-o4-v0` (o4)
+- [`prbench/Obstruction3D-o0-v0`](variants/Obstruction3D-o0.md) (o0)
+- [`prbench/Obstruction3D-o1-v0`](variants/Obstruction3D-o1.md) (o1)
+- [`prbench/Obstruction3D-o2-v0`](variants/Obstruction3D-o2.md) (o2)
+- [`prbench/Obstruction3D-o3-v0`](variants/Obstruction3D-o3.md) (o3)
+- [`prbench/Obstruction3D-o4-v0`](variants/Obstruction3D-o4.md) (o4)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Obstruction3D.gif)
@@ -34,84 +34,28 @@ The number of obstructions differs between environment variants. For example, Ob
 *(No demonstration GIFs available)*
 
 ## Observation Space
-The entries of an array in this Box space correspond to the following object features:
-| **Index** | **Object** | **Feature** |
-| --- | --- | --- |
-| 0 | robot | pos_base_x |
-| 1 | robot | pos_base_y |
-| 2 | robot | pos_base_rot |
-| 3 | robot | joint_1 |
-| 4 | robot | joint_2 |
-| 5 | robot | joint_3 |
-| 6 | robot | joint_4 |
-| 7 | robot | joint_5 |
-| 8 | robot | joint_6 |
-| 9 | robot | joint_7 |
-| 10 | robot | finger_state |
-| 11 | robot | grasp_active |
-| 12 | robot | grasp_tf_x |
-| 13 | robot | grasp_tf_y |
-| 14 | robot | grasp_tf_z |
-| 15 | robot | grasp_tf_qx |
-| 16 | robot | grasp_tf_qy |
-| 17 | robot | grasp_tf_qz |
-| 18 | robot | grasp_tf_qw |
-| 19 | target_region | pose_x |
-| 20 | target_region | pose_y |
-| 21 | target_region | pose_z |
-| 22 | target_region | pose_qx |
-| 23 | target_region | pose_qy |
-| 24 | target_region | pose_qz |
-| 25 | target_region | pose_qw |
-| 26 | target_region | grasp_active |
-| 27 | target_region | object_type |
-| 28 | target_region | half_extent_x |
-| 29 | target_region | half_extent_y |
-| 30 | target_region | half_extent_z |
-| 31 | target_block | pose_x |
-| 32 | target_block | pose_y |
-| 33 | target_block | pose_z |
-| 34 | target_block | pose_qx |
-| 35 | target_block | pose_qy |
-| 36 | target_block | pose_qz |
-| 37 | target_block | pose_qw |
-| 38 | target_block | grasp_active |
-| 39 | target_block | object_type |
-| 40 | target_block | half_extent_x |
-| 41 | target_block | half_extent_y |
-| 42 | target_block | half_extent_z |
-| 43 | obstruction0 | pose_x |
-| 44 | obstruction0 | pose_y |
-| 45 | obstruction0 | pose_z |
-| 46 | obstruction0 | pose_qx |
-| 47 | obstruction0 | pose_qy |
-| 48 | obstruction0 | pose_qz |
-| 49 | obstruction0 | pose_qw |
-| 50 | obstruction0 | grasp_active |
-| 51 | obstruction0 | object_type |
-| 52 | obstruction0 | half_extent_x |
-| 53 | obstruction0 | half_extent_y |
-| 54 | obstruction0 | half_extent_z |
-| 55 | obstruction1 | pose_x |
-| 56 | obstruction1 | pose_y |
-| 57 | obstruction1 | pose_z |
-| 58 | obstruction1 | pose_qx |
-| 59 | obstruction1 | pose_qy |
-| 60 | obstruction1 | pose_qz |
-| 61 | obstruction1 | pose_qw |
-| 62 | obstruction1 | grasp_active |
-| 63 | obstruction1 | object_type |
-| 64 | obstruction1 | half_extent_x |
-| 65 | obstruction1 | half_extent_y |
-| 66 | obstruction1 | half_extent_z |
-
+*(Differs per variant, see individual variant pages)*
 
 ## Action Space
-An action space for a 7 DOF robot that can open and close its gripper.
+An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+Actions are bounded relative base position, rotation, and joint positions, and open / close.
 
-    The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
+| **Index** | **Description** |
+| --- | --- |
+| 0 | delta base x |
+| 1 | delta base y |
+| 2 | delta base rotation |
+| 3 | delta joint 1 |
+| 4 | delta joint 2 |
+| 5 | delta joint 3 |
+| 6 | delta joint 4 |
+| 7 | delta joint 5 |
+| 8 | delta joint 6 |
+| 9 | delta joint 7 |
+| 10 | gripper open/close |
+
+The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
 
 
 ## Rewards

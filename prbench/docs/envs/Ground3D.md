@@ -10,9 +10,9 @@ A 3D environment where the goal is to pick up a cube from the ground.
 ## Available Variants
 The number of cubes differs between environment variants. For example, Ground3D-o1 has 1 cube, while Ground3D-o3 has 3 cubes.
 
-- `prbench/Ground3D-o1-v0` (o1)
-- `prbench/Ground3D-o2-v0` (o2)
-- `prbench/Ground3D-o3-v0` (o3)
+- [`prbench/Ground3D-o1-v0`](variants/Ground3D-o1.md) (o1)
+- [`prbench/Ground3D-o2-v0`](variants/Ground3D-o2.md) (o2)
+- [`prbench/Ground3D-o3-v0`](variants/Ground3D-o3.md) (o3)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Ground3D.gif)
@@ -21,60 +21,28 @@ The number of cubes differs between environment variants. For example, Ground3D-
 *(No demonstration GIFs available)*
 
 ## Observation Space
-The entries of an array in this Box space correspond to the following object features:
-| **Index** | **Object** | **Feature** |
-| --- | --- | --- |
-| 0 | robot | pos_base_x |
-| 1 | robot | pos_base_y |
-| 2 | robot | pos_base_rot |
-| 3 | robot | joint_1 |
-| 4 | robot | joint_2 |
-| 5 | robot | joint_3 |
-| 6 | robot | joint_4 |
-| 7 | robot | joint_5 |
-| 8 | robot | joint_6 |
-| 9 | robot | joint_7 |
-| 10 | robot | finger_state |
-| 11 | robot | grasp_active |
-| 12 | robot | grasp_tf_x |
-| 13 | robot | grasp_tf_y |
-| 14 | robot | grasp_tf_z |
-| 15 | robot | grasp_tf_qx |
-| 16 | robot | grasp_tf_qy |
-| 17 | robot | grasp_tf_qz |
-| 18 | robot | grasp_tf_qw |
-| 19 | cube0 | pose_x |
-| 20 | cube0 | pose_y |
-| 21 | cube0 | pose_z |
-| 22 | cube0 | pose_qx |
-| 23 | cube0 | pose_qy |
-| 24 | cube0 | pose_qz |
-| 25 | cube0 | pose_qw |
-| 26 | cube0 | grasp_active |
-| 27 | cube0 | object_type |
-| 28 | cube0 | half_extent_x |
-| 29 | cube0 | half_extent_y |
-| 30 | cube0 | half_extent_z |
-| 31 | cube1 | pose_x |
-| 32 | cube1 | pose_y |
-| 33 | cube1 | pose_z |
-| 34 | cube1 | pose_qx |
-| 35 | cube1 | pose_qy |
-| 36 | cube1 | pose_qz |
-| 37 | cube1 | pose_qw |
-| 38 | cube1 | grasp_active |
-| 39 | cube1 | object_type |
-| 40 | cube1 | half_extent_x |
-| 41 | cube1 | half_extent_y |
-| 42 | cube1 | half_extent_z |
-
+*(Differs per variant, see individual variant pages)*
 
 ## Action Space
-An action space for a 7 DOF robot that can open and close its gripper.
+An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+Actions are bounded relative base position, rotation, and joint positions, and open / close.
 
-    The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
+| **Index** | **Description** |
+| --- | --- |
+| 0 | delta base x |
+| 1 | delta base y |
+| 2 | delta base rotation |
+| 3 | delta joint 1 |
+| 4 | delta joint 2 |
+| 5 | delta joint 3 |
+| 6 | delta joint 4 |
+| 7 | delta joint 5 |
+| 8 | delta joint 6 |
+| 9 | delta joint 7 |
+| 10 | gripper open/close |
+
+The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
 
 
 ## Rewards
