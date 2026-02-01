@@ -1,7 +1,37 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 import io
+import os
+import urllib.request
+import zipfile
+import tempfile
+
+# Download and register Inter font
+def setup_inter_font():
+    font_dir = os.path.expanduser("~/.local/share/fonts")
+    os.makedirs(font_dir, exist_ok=True)
+    inter_path = os.path.join(font_dir, "Inter-Regular.ttf")
+
+    if not os.path.exists(inter_path):
+        print("Downloading Inter font...")
+        url = "https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            zip_path = os.path.join(tmpdir, "inter.zip")
+            urllib.request.urlretrieve(url, zip_path)
+            with zipfile.ZipFile(zip_path, 'r') as z:
+                for name in z.namelist():
+                    if name.endswith("Inter-Regular.ttf"):
+                        z.extract(name, tmpdir)
+                        extracted = os.path.join(tmpdir, name)
+                        os.rename(extracted, inter_path)
+                        break
+
+    fm.fontManager.addfont(inter_path)
+    plt.rcParams['font.family'] = 'Inter'
+
+setup_inter_font()
 
 # 1. Setup the data
 data = """Description    Category    Core Challenges
@@ -66,6 +96,16 @@ row_order = [
 ]
 pivot_df = pivot_df.reindex(row_order)
 
+# Rename row labels with line breaks
+row_labels = {
+    "Basic Spatial Relations": "Basic Spatial\nRelations",
+    "Nonprehensile Multi-Object Manipulation": "Nonprehensile\nMulti-Object",
+    "Tool Use": "Tool Use",
+    "Combinatorial Geometric Constraints": "Combinatorial\nGeometric",
+    "Dynamic Constraints": "Dynamic\nConstraints",
+}
+pivot_df = pivot_df.rename(index=row_labels)
+
 # 4. Create Category Colors for the Top Bar
 # Generate a color palette for the unique categories
 unique_categories = ["Kinematic2D", "Dynamic2D", "Kinematic3D", "Dynamic3D"]
@@ -97,18 +137,28 @@ g = sns.clustermap(
 g.ax_row_dendrogram.set_visible(False)
 
 # Rotate the task names on the bottom X-axis
-plt.setp(g.ax_heatmap.get_xticklabels(), rotation=45, ha="right", fontsize=10)
-plt.setp(g.ax_heatmap.get_yticklabels(), rotation=0, fontsize=11, fontweight='bold')
+from matplotlib.transforms import ScaledTranslation
+dx, dy = 10/72., 0  # 10 points to the right
+offset = ScaledTranslation(dx, dy, g.fig.dpi_scale_trans)
+for label in g.ax_heatmap.get_xticklabels():
+    label.set_transform(label.get_transform() + offset)
+plt.setp(g.ax_heatmap.get_xticklabels(), rotation=45, ha="right", fontsize=12)
+plt.setp(g.ax_heatmap.get_yticklabels(), rotation=0, fontsize=13, fontweight='bold')
+
+# Add left padding for the legend
+g.fig.subplots_adjust(left=0.08)
 
 # Add a Custom Legend for the Categories
 from matplotlib.patches import Patch
 handles = [Patch(facecolor=cat_color_map[key], edgecolor='w', label=key) for key in unique_categories]
-plt.legend(
+legend = g.ax_heatmap.legend(
     handles=handles,
     title="Category",
-    bbox_to_anchor=(1.15, -0.45),
-    loc='lower left',
-    borderaxespad=0
+    bbox_to_anchor=(-0.02, 0.5),
+    loc='center right',
+    borderaxespad=0,
+    fontsize=12,
+    title_fontsize=13
 )
 
 # Cleanup
@@ -117,4 +167,5 @@ g.ax_heatmap.set_ylabel("")
 
 # Save and show plot
 plt.savefig("prbench/scripts/core_challenge_coverage.png", dpi=300, bbox_inches='tight')
+plt.savefig("prbench/scripts/core_challenge_coverage.pdf", bbox_inches='tight')
 plt.show()
