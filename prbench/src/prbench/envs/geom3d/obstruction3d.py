@@ -425,6 +425,10 @@ class ObjectCentricObstruction3DEnv(
 class Obstruction3DEnv(ConstantObjectPRBenchEnv):
     """Obstruction 3D env with a constant number of objects."""
 
+    def __init__(self, num_obstructions: int = 2, **kwargs) -> None:
+        self._num_obstructions = num_obstructions
+        super().__init__(num_obstructions=num_obstructions, **kwargs)
+
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom3DRobotEnv:
@@ -460,6 +464,13 @@ The task requires planning to grasp and move obstructions out of the way, then p
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "The number of obstructions differs between environment variants. For example, Obstruction3D-o0 has no obstructions, while Obstruction3D-o4 has 4 obstructions."
+
+    def _create_variant_specific_description(self) -> str:
+        if self._num_obstructions == 0:
+            return "This variant has no obstructions."
+        if self._num_obstructions == 1:
+            return "This variant has 1 obstruction to clear."
+        return f"This variant has {self._num_obstructions} obstructions to clear."
 
     def _create_action_space_markdown_description(self) -> str:
         """Create action space description."""

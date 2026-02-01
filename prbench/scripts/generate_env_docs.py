@@ -159,6 +159,43 @@ def create_initial_state_gif(
         return False
 
 
+def generate_variant_markdown(variant_id: str, env: gymnasium.Env) -> str:
+    """Generate markdown for a single environment variant.
+
+    Args:
+        variant_id: The full variant ID (e.g., "prbench/ClutteredStorage2D-b1-v0")
+        env: The environment instance for this specific variant
+
+    Returns:
+        The markdown content as a string
+    """
+    # Extract the variant name without prbench/ prefix and version suffix
+    variant_name = sanitize_env_id(variant_id)
+
+    md = f"# {variant_name}\n\n"
+
+    md += "## Usage\n"
+    md += "```python\n"
+    md += "import prbench\n"
+    md += f'env = prbench.make("{variant_id}")\n'
+    md += "```\n\n"
+
+    md += "## Description\n"
+    variant_specific = env.metadata.get("variant_specific_description", "")
+    if (
+        variant_specific
+        and variant_specific != "No variant-specific description available."
+    ):
+        md += f"{variant_specific}\n\n"
+    else:
+        md += "No variant-specific description available.\n\n"
+
+    md += "## Observation Space\n"
+    md += env.metadata["observation_space_description"] + "\n\n"
+
+    return md.rstrip() + "\n"
+
+
 def generate_markdown(
     class_name: str,
     env: gymnasium.Env,
@@ -204,7 +241,7 @@ def generate_markdown(
     description = env.metadata.get("description", "No description defined.")
     md += f"## Description\n{description}\n\n"
 
-    # List all available variants
+    # List all available variants with links to their individual docs
     md += "## Available Variants\n"
     variant_description = env.metadata.get("variant_description", "")
     if variant_description and variant_description != "Variant description not defined":
@@ -216,7 +253,9 @@ def generate_markdown(
             .replace(f"{class_name}-", "")
             .replace("-v0", "")
         )
-        md += f"- `{variant_id}` ({variant_suffix})\n"
+        variant_filename = sanitize_env_id(variant_id)
+        link = f"variants/{class_name}/{variant_filename}.md"
+        md += f"- [`{variant_id}`]({link}) ({variant_suffix})\n"
     md += "\n"
 
     md += "## Initial State Distribution\n"
@@ -279,7 +318,7 @@ def generate_markdown(
         md += "*(No demonstration GIFs available)*\n\n"
 
     md += "## Observation Space\n"
-    md += env.metadata["observation_space_description"] + "\n\n"
+    md += "*(Differs per variant, see individual variant pages)*\n\n"
     md += "## Action Space\n"
     md += env.metadata["action_space_description"] + "\n\n"
     md += "## Rewards\n"
@@ -363,6 +402,18 @@ def _main() -> None:
             filename = OUTPUT_DIR / f"{class_filename}.md"
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(md)
+
+            # Generate individual variant markdown files
+            variant_dir = OUTPUT_DIR / "variants" / class_name
+            variant_dir.mkdir(parents=True, exist_ok=True)
+            for variant_id in variants:
+                variant_env = prbench.make(variant_id, render_mode="rgb_array")
+                variant_md = generate_variant_markdown(variant_id, variant_env)
+                variant_filename = sanitize_env_id(variant_id)
+                variant_file = variant_dir / f"{variant_filename}.md"
+                with open(variant_file, "w", encoding="utf-8") as f:
+                    f.write(variant_md)
+
             regenerated_classes += 1
         else:
             print(f"  Skipping {class_name} (no changes detected)")

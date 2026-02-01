@@ -619,6 +619,17 @@ class ObjectCentricDynScoopPourEnv(
 class DynScoopPourEnv(ConstantObjectPRBenchEnv):
     """Dynamic Scoop-Pour 2D env with a constant number of objects."""
 
+    def __init__(
+        self, num_small_circles: int = 10, num_small_squares: int = 0, **kwargs
+    ) -> None:
+        self._num_small_circles = num_small_circles
+        self._num_small_squares = num_small_squares
+        super().__init__(
+            num_small_circles=num_small_circles,
+            num_small_squares=num_small_squares,
+            **kwargs,
+        )
+
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricDynScoopPourEnv:
@@ -647,6 +658,15 @@ All objects include physics properties like mass, moment of inertia, and color i
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "The number of small objects differs between environment variants. For example, DynScoopPour-o10 has 10 small objects, while DynScoopPour-o50 has 50 small objects."
+
+    def _create_variant_specific_description(self) -> str:
+        total = self._num_small_circles + self._num_small_squares
+        if total == 1:
+            return "This variant has 1 small object to scoop."
+        return (
+            f"This variant has {total} small objects "
+            f"({self._num_small_circles} circles, {self._num_small_squares} squares)."
+        )
 
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
