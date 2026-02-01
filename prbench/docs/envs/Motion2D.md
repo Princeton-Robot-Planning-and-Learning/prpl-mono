@@ -15,12 +15,12 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 ## Available Variants
 The number of narrow passages differs between environment variants. For example, Motion2D-p0 has no passages (open space), while Motion2D-p5 has 5 narrow passages.
 
-- [`prbench/Motion2D-p0-v0`](variants/Motion2D-p0.md) (p0)
-- [`prbench/Motion2D-p1-v0`](variants/Motion2D-p1.md) (p1)
-- [`prbench/Motion2D-p2-v0`](variants/Motion2D-p2.md) (p2)
-- [`prbench/Motion2D-p3-v0`](variants/Motion2D-p3.md) (p3)
-- [`prbench/Motion2D-p4-v0`](variants/Motion2D-p4.md) (p4)
-- [`prbench/Motion2D-p5-v0`](variants/Motion2D-p5.md) (p5)
+- [`prbench/Motion2D-p0-v0`](variants/Motion2D/Motion2D-p0.md) (p0)
+- [`prbench/Motion2D-p1-v0`](variants/Motion2D/Motion2D-p1.md) (p1)
+- [`prbench/Motion2D-p2-v0`](variants/Motion2D/Motion2D-p2.md) (p2)
+- [`prbench/Motion2D-p3-v0`](variants/Motion2D/Motion2D-p3.md) (p3)
+- [`prbench/Motion2D-p4-v0`](variants/Motion2D/Motion2D-p4.md) (p4)
+- [`prbench/Motion2D-p5-v0`](variants/Motion2D/Motion2D-p5.md) (p5)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Motion2D.gif)

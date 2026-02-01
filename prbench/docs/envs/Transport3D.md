@@ -10,8 +10,8 @@ A 3D environment where the goal is to place all objects, including one or more s
 ## Available Variants
 The number of cubes differs between environment variants. For example, Transport3D-o1 has 1 cube, while Transport3D-o2 has 2 cubes.
 
-- [`prbench/Transport3D-o1-v0`](variants/Transport3D-o1.md) (o1)
-- [`prbench/Transport3D-o2-v0`](variants/Transport3D-o2.md) (o2)
+- [`prbench/Transport3D-o1-v0`](variants/Transport3D/Transport3D-o1.md) (o1)
+- [`prbench/Transport3D-o2-v0`](variants/Transport3D/Transport3D-o2.md) (o2)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Transport3D.gif)

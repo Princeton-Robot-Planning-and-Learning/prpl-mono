@@ -10,7 +10,7 @@ A very simple environment where only base motion planning is needed to reach a g
 ## Available Variants
 This environment has only one variant.
 
-- [`prbench/BaseMotion3D-v0`](variants/BaseMotion3D.md) (v0)
+- [`prbench/BaseMotion3D-v0`](variants/BaseMotion3D/BaseMotion3D.md) (v0)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/BaseMotion3D.gif)

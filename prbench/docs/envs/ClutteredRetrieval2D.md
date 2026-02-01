@@ -15,9 +15,9 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 ## Available Variants
 The number of obstructions differs between environment variants. For example, ClutteredRetrieval2D-o5 has 5 obstructions.
 
-- [`prbench/ClutteredRetrieval2D-o1-v0`](variants/ClutteredRetrieval2D-o1.md) (o1)
-- [`prbench/ClutteredRetrieval2D-o10-v0`](variants/ClutteredRetrieval2D-o10.md) (o10)
-- [`prbench/ClutteredRetrieval2D-o25-v0`](variants/ClutteredRetrieval2D-o25.md) (o25)
+- [`prbench/ClutteredRetrieval2D-o1-v0`](variants/ClutteredRetrieval2D/ClutteredRetrieval2D-o1.md) (o1)
+- [`prbench/ClutteredRetrieval2D-o10-v0`](variants/ClutteredRetrieval2D/ClutteredRetrieval2D-o10.md) (o10)
+- [`prbench/ClutteredRetrieval2D-o25-v0`](variants/ClutteredRetrieval2D/ClutteredRetrieval2D-o25.md) (o25)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/ClutteredRetrieval2D.gif)

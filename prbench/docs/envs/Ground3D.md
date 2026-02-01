@@ -10,9 +10,9 @@ A 3D environment where the goal is to pick up a cube from the ground.
 ## Available Variants
 The number of cubes differs between environment variants. For example, Ground3D-o1 has 1 cube, while Ground3D-o3 has 3 cubes.
 
-- [`prbench/Ground3D-o1-v0`](variants/Ground3D-o1.md) (o1)
-- [`prbench/Ground3D-o2-v0`](variants/Ground3D-o2.md) (o2)
-- [`prbench/Ground3D-o3-v0`](variants/Ground3D-o3.md) (o3)
+- [`prbench/Ground3D-o1-v0`](variants/Ground3D/Ground3D-o1.md) (o1)
+- [`prbench/Ground3D-o2-v0`](variants/Ground3D/Ground3D-o2.md) (o2)
+- [`prbench/Ground3D-o3-v0`](variants/Ground3D/Ground3D-o3.md) (o3)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Ground3D.gif)

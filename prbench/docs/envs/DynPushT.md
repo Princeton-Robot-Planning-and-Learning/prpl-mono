@@ -13,7 +13,7 @@ The T-shaped block must be positioned within small position and orientation thre
 ## Available Variants
 This environment has only one variant.
 
-- [`prbench/DynPushT-t1-v0`](variants/DynPushT-t1.md) (t1)
+- [`prbench/DynPushT-t1-v0`](variants/DynPushT/DynPushT-t1.md) (t1)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/DynPushT.gif)

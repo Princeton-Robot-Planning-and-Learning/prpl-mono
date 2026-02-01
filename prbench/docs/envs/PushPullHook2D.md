@@ -10,7 +10,7 @@ A 2D environment with a robot, a hook (L-shape), a movable button, and a target 
 ## Available Variants
 This environment has only one variant.
 
-- [`prbench/PushPullHook2D-v0`](variants/PushPullHook2D.md) (v0)
+- [`prbench/PushPullHook2D-v0`](variants/PushPullHook2D/PushPullHook2D.md) (v0)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/PushPullHook2D.gif)

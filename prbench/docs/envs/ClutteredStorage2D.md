@@ -13,10 +13,10 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 ## Available Variants
 The number of blocks differs between environment variants. For example, ClutteredStorage2D-b1 has 1 block, while ClutteredStorage2D-b15 has 15 blocks.
 
-- [`prbench/ClutteredStorage2D-b1-v0`](variants/ClutteredStorage2D-b1.md) (b1)
-- [`prbench/ClutteredStorage2D-b3-v0`](variants/ClutteredStorage2D-b3.md) (b3)
-- [`prbench/ClutteredStorage2D-b7-v0`](variants/ClutteredStorage2D-b7.md) (b7)
-- [`prbench/ClutteredStorage2D-b15-v0`](variants/ClutteredStorage2D-b15.md) (b15)
+- [`prbench/ClutteredStorage2D-b1-v0`](variants/ClutteredStorage2D/ClutteredStorage2D-b1.md) (b1)
+- [`prbench/ClutteredStorage2D-b3-v0`](variants/ClutteredStorage2D/ClutteredStorage2D-b3.md) (b3)
+- [`prbench/ClutteredStorage2D-b7-v0`](variants/ClutteredStorage2D/ClutteredStorage2D-b7.md) (b7)
+- [`prbench/ClutteredStorage2D-b15-v0`](variants/ClutteredStorage2D/ClutteredStorage2D-b15.md) (b15)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/ClutteredStorage2D.gif)

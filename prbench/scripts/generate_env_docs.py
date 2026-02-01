@@ -254,7 +254,7 @@ def generate_markdown(
             .replace("-v0", "")
         )
         variant_filename = sanitize_env_id(variant_id)
-        md += f"- [`{variant_id}`](variants/{variant_filename}.md) ({variant_suffix})\n"
+        md += f"- [`{variant_id}`](variants/{class_name}/{variant_filename}.md) ({variant_suffix})\n"
     md += "\n"
 
     md += "## Initial State Distribution\n"
@@ -351,7 +351,6 @@ def _main() -> None:
     OUTPUT_DIR.mkdir(exist_ok=True)
     (OUTPUT_DIR / "assets" / "random_action_gifs").mkdir(parents=True, exist_ok=True)
     (OUTPUT_DIR / "assets" / "initial_state_gifs").mkdir(parents=True, exist_ok=True)
-    (OUTPUT_DIR / "variants").mkdir(parents=True, exist_ok=True)
 
     prbench.register_all_environments()
 
@@ -404,11 +403,13 @@ def _main() -> None:
                 f.write(md)
 
             # Generate individual variant markdown files
+            variant_dir = OUTPUT_DIR / "variants" / class_name
+            variant_dir.mkdir(parents=True, exist_ok=True)
             for variant_id in variants:
                 variant_env = prbench.make(variant_id, render_mode="rgb_array")
                 variant_md = generate_variant_markdown(variant_id, variant_env)
                 variant_filename = sanitize_env_id(variant_id)
-                variant_file = OUTPUT_DIR / "variants" / f"{variant_filename}.md"
+                variant_file = variant_dir / f"{variant_filename}.md"
                 with open(variant_file, "w", encoding="utf-8") as f:
                     f.write(variant_md)
 

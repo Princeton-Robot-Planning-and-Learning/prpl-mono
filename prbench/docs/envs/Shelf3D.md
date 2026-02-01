@@ -10,11 +10,11 @@ A 3D environment where the goal is to pick up objects from the ground and place 
 ## Available Variants
 The number of objects differs between environment variants. For example, Shelf3D-o1 has 1 object, while Shelf3D-o10 has 10 objects.
 
-- [`prbench/Shelf3D-o1-v0`](variants/Shelf3D-o1.md) (o1)
-- [`prbench/Shelf3D-o2-v0`](variants/Shelf3D-o2.md) (o2)
-- [`prbench/Shelf3D-o3-v0`](variants/Shelf3D-o3.md) (o3)
-- [`prbench/Shelf3D-o5-v0`](variants/Shelf3D-o5.md) (o5)
-- [`prbench/Shelf3D-o10-v0`](variants/Shelf3D-o10.md) (o10)
+- [`prbench/Shelf3D-o1-v0`](variants/Shelf3D/Shelf3D-o1.md) (o1)
+- [`prbench/Shelf3D-o2-v0`](variants/Shelf3D/Shelf3D-o2.md) (o2)
+- [`prbench/Shelf3D-o3-v0`](variants/Shelf3D/Shelf3D-o3.md) (o3)
+- [`prbench/Shelf3D-o5-v0`](variants/Shelf3D/Shelf3D-o5.md) (o5)
+- [`prbench/Shelf3D-o10-v0`](variants/Shelf3D/Shelf3D-o10.md) (o10)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Shelf3D.gif)

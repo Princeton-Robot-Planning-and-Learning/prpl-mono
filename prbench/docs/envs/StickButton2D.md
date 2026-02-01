@@ -15,11 +15,11 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 ## Available Variants
 The number of buttons differs between environment variants. For example, StickButton2D-b1 has 1 button, while StickButton2D-b10 has 10 buttons.
 
-- [`prbench/StickButton2D-b1-v0`](variants/StickButton2D-b1.md) (b1)
-- [`prbench/StickButton2D-b2-v0`](variants/StickButton2D-b2.md) (b2)
-- [`prbench/StickButton2D-b3-v0`](variants/StickButton2D-b3.md) (b3)
-- [`prbench/StickButton2D-b5-v0`](variants/StickButton2D-b5.md) (b5)
-- [`prbench/StickButton2D-b10-v0`](variants/StickButton2D-b10.md) (b10)
+- [`prbench/StickButton2D-b1-v0`](variants/StickButton2D/StickButton2D-b1.md) (b1)
+- [`prbench/StickButton2D-b2-v0`](variants/StickButton2D/StickButton2D-b2.md) (b2)
+- [`prbench/StickButton2D-b3-v0`](variants/StickButton2D/StickButton2D-b3.md) (b3)
+- [`prbench/StickButton2D-b5-v0`](variants/StickButton2D/StickButton2D-b5.md) (b5)
+- [`prbench/StickButton2D-b10-v0`](variants/StickButton2D/StickButton2D-b10.md) (b10)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/StickButton2D.gif)

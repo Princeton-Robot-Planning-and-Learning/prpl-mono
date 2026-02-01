@@ -18,9 +18,9 @@ The task requires planning to grasp and place each part into the rack while avoi
 ## Available Variants
 The number of parts to pack differs between environment variants. For example, Packing3D-p1 has 1 part, while Packing3D-p3 has 3 parts.
 
-- [`prbench/Packing3D-p1-v0`](variants/Packing3D-p1.md) (p1)
-- [`prbench/Packing3D-p2-v0`](variants/Packing3D-p2.md) (p2)
-- [`prbench/Packing3D-p3-v0`](variants/Packing3D-p3.md) (p3)
+- [`prbench/Packing3D-p1-v0`](variants/Packing3D/Packing3D-p1.md) (p1)
+- [`prbench/Packing3D-p2-v0`](variants/Packing3D/Packing3D-p2.md) (p2)
+- [`prbench/Packing3D-p3-v0`](variants/Packing3D/Packing3D-p3.md) (p3)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Packing3D.gif)

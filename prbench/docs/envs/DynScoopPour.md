@@ -15,10 +15,10 @@ All objects include physics properties like mass, moment of inertia, and color i
 ## Available Variants
 The number of small objects differs between environment variants. For example, DynScoopPour-o10 has 10 small objects, while DynScoopPour-o50 has 50 small objects.
 
-- [`prbench/DynScoopPour-o10-v0`](variants/DynScoopPour-o10.md) (o10)
-- [`prbench/DynScoopPour-o20-v0`](variants/DynScoopPour-o20.md) (o20)
-- [`prbench/DynScoopPour-o30-v0`](variants/DynScoopPour-o30.md) (o30)
-- [`prbench/DynScoopPour-o50-v0`](variants/DynScoopPour-o50.md) (o50)
+- [`prbench/DynScoopPour-o10-v0`](variants/DynScoopPour/DynScoopPour-o10.md) (o10)
+- [`prbench/DynScoopPour-o20-v0`](variants/DynScoopPour/DynScoopPour-o20.md) (o20)
+- [`prbench/DynScoopPour-o30-v0`](variants/DynScoopPour/DynScoopPour-o30.md) (o30)
+- [`prbench/DynScoopPour-o50-v0`](variants/DynScoopPour/DynScoopPour-o50.md) (o50)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/DynScoopPour.gif)

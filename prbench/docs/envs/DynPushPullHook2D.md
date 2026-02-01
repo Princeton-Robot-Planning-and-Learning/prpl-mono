@@ -17,9 +17,9 @@ Each object includes physics properties like mass, moment of inertia (for dynami
 ## Available Variants
 The number of obstructions differs between environment variants. For example, DynPushPullHook2D-o0 has no obstructions, while DynPushPullHook2D-o5 has 5 obstructions.
 
-- [`prbench/DynPushPullHook2D-o0-v0`](variants/DynPushPullHook2D-o0.md) (o0)
-- [`prbench/DynPushPullHook2D-o1-v0`](variants/DynPushPullHook2D-o1.md) (o1)
-- [`prbench/DynPushPullHook2D-o5-v0`](variants/DynPushPullHook2D-o5.md) (o5)
+- [`prbench/DynPushPullHook2D-o0-v0`](variants/DynPushPullHook2D/DynPushPullHook2D-o0.md) (o0)
+- [`prbench/DynPushPullHook2D-o1-v0`](variants/DynPushPullHook2D/DynPushPullHook2D-o1.md) (o1)
+- [`prbench/DynPushPullHook2D-o5-v0`](variants/DynPushPullHook2D/DynPushPullHook2D-o5.md) (o5)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/DynPushPullHook2D.gif)

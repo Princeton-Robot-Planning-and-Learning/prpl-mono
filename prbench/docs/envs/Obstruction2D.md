@@ -15,11 +15,11 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 ## Available Variants
 The number of obstructions differs between environment variants. For example, Obstruction2D-o0 has no obstructions, while Obstruction2D-o4 has 4 obstructions.
 
-- [`prbench/Obstruction2D-o0-v0`](variants/Obstruction2D-o0.md) (o0)
-- [`prbench/Obstruction2D-o1-v0`](variants/Obstruction2D-o1.md) (o1)
-- [`prbench/Obstruction2D-o2-v0`](variants/Obstruction2D-o2.md) (o2)
-- [`prbench/Obstruction2D-o3-v0`](variants/Obstruction2D-o3.md) (o3)
-- [`prbench/Obstruction2D-o4-v0`](variants/Obstruction2D-o4.md) (o4)
+- [`prbench/Obstruction2D-o0-v0`](variants/Obstruction2D/Obstruction2D-o0.md) (o0)
+- [`prbench/Obstruction2D-o1-v0`](variants/Obstruction2D/Obstruction2D-o1.md) (o1)
+- [`prbench/Obstruction2D-o2-v0`](variants/Obstruction2D/Obstruction2D-o2.md) (o2)
+- [`prbench/Obstruction2D-o3-v0`](variants/Obstruction2D/Obstruction2D-o3.md) (o3)
+- [`prbench/Obstruction2D-o4-v0`](variants/Obstruction2D/Obstruction2D-o4.md) (o4)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Obstruction2D.gif)
