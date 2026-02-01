@@ -305,6 +305,16 @@ The robot has a movable circular base and a retractable arm with a rectangular v
         # pylint: disable=line-too-long
         return "The number of narrow passages differs between environment variants. For example, Motion2D-p0 has no passages (open space), while Motion2D-p5 has 5 narrow passages."
 
+    def _create_variant_specific_description(self) -> str:
+        num_passages = (
+            self._object_centric_env._num_passages
+        )  # pylint: disable=protected-access
+        if num_passages == 0:
+            return "This variant has no narrow passages (open space)."
+        if num_passages == 1:
+            return "This variant has 1 narrow passage."
+        return f"This variant has {num_passages} narrow passages."
+
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until termination, which occurs when the robot's position is within the target region.\n"  # pylint: disable=line-too-long
 

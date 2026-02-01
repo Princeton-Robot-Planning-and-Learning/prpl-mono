@@ -461,6 +461,16 @@ The task requires planning to grasp and move obstructions out of the way, then p
         # pylint: disable=line-too-long
         return "The number of obstructions differs between environment variants. For example, Obstruction3D-o0 has no obstructions, while Obstruction3D-o4 has 4 obstructions."
 
+    def _create_variant_specific_description(self) -> str:
+        num_obstructions = (
+            self._object_centric_env._num_obstructions
+        )  # pylint: disable=protected-access
+        if num_obstructions == 0:
+            return "This variant has no obstructions."
+        if num_obstructions == 1:
+            return "This variant has 1 obstruction to clear."
+        return f"This variant has {num_obstructions} obstructions to clear."
+
     def _create_action_space_markdown_description(self) -> str:
         """Create action space description."""
         # pylint: disable=line-too-long

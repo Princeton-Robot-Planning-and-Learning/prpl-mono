@@ -625,6 +625,16 @@ Each object includes physics properties like mass, moment of inertia (for dynami
         # pylint: disable=line-too-long
         return "The number of obstructions differs between environment variants. For example, DynObstruction2D-o0 has no obstructions, while DynObstruction2D-o3 has 3 obstructions."
 
+    def _create_variant_specific_description(self) -> str:
+        num_obstructions = (
+            self._object_centric_env._num_obstructions
+        )  # pylint: disable=protected-access
+        if num_obstructions == 0:
+            return "This variant has no obstructions."
+        if num_obstructions == 1:
+            return "This variant has 1 obstruction."
+        return f"This variant has {num_obstructions} obstructions."
+
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return """A penalty of -1.0 is given at every time step until termination, which occurs when the target block is completely "on" the target surface. The "on" condition requires that the bottom vertices of the target block are within the bounds of the target surface.

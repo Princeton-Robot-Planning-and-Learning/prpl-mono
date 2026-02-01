@@ -7,7 +7,7 @@ env = prbench.make("prbench/TidyBot3D-sort-lab2-o20-sort_the_cluttered_blocks_in
 ```
 
 ## Description
-No variant-specific description available.
+This variant uses the 'lab2' scene type with 20 objects.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

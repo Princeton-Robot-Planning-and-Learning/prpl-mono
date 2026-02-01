@@ -7,7 +7,7 @@ env = prbench.make("prbench/ClutteredStorage2D-b3-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant has 3 blocks (1 initially in the shelf, 2 initially outside).
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

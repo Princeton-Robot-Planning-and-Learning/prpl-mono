@@ -648,6 +648,15 @@ All objects include physics properties like mass, moment of inertia, and color i
         # pylint: disable=line-too-long
         return "The number of small objects differs between environment variants. For example, DynScoopPour-o10 has 10 small objects, while DynScoopPour-o50 has 50 small objects."
 
+    def _create_variant_specific_description(self) -> str:
+        # pylint: disable=protected-access
+        num_circles = self._object_centric_env._num_small_circles
+        num_squares = self._object_centric_env._num_small_squares
+        total = num_circles + num_squares
+        if total == 1:
+            return "This variant has 1 small object to scoop."
+        return f"This variant has {total} small objects ({num_circles} circles, {num_squares} squares)."
+
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return """A penalty of -1.0 is given at every time step until termination, which occurs when at least 50% of the small objects have been moved to the right side of the middle wall."""

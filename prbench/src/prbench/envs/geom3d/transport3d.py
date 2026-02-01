@@ -438,6 +438,14 @@ class Transport3DEnv(ConstantObjectPRBenchEnv):
         # pylint: disable=line-too-long
         return "The number of cubes differs between environment variants. For example, Transport3D-o1 has 1 cube, while Transport3D-o2 has 2 cubes."
 
+    def _create_variant_specific_description(self) -> str:
+        # pylint: disable=protected-access
+        num_cubes = self._object_centric_env._num_cubes
+        num_boxes = self._object_centric_env._num_boxes
+        cube_str = "1 cube" if num_cubes == 1 else f"{num_cubes} cubes"
+        box_str = "1 box" if num_boxes == 1 else f"{num_boxes} boxes"
+        return f"This variant has {cube_str} and {box_str} to transport onto the table."
+
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long

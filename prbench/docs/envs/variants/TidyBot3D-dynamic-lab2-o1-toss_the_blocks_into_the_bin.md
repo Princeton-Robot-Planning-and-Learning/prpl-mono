@@ -7,7 +7,7 @@ env = prbench.make("prbench/TidyBot3D-dynamic-lab2-o1-toss_the_blocks_into_the_b
 ```
 
 ## Description
-No variant-specific description available.
+This variant uses the 'lab2' scene type with 1 object.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

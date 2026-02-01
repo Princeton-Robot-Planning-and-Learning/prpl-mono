@@ -7,7 +7,7 @@ env = prbench.make("prbench/PushPullHook2D-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant has one hook, one movable button, and one target button.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

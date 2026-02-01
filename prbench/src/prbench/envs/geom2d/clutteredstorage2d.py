@@ -394,6 +394,15 @@ The robot has a movable circular base and a retractable arm with a rectangular v
         # pylint: disable=line-too-long
         return "The number of blocks differs between environment variants. For example, ClutteredStorage2D-b1 has 1 block, while ClutteredStorage2D-b15 has 15 blocks."
 
+    def _create_variant_specific_description(self) -> str:
+        # pylint: disable=protected-access
+        num_in_shelf = self._object_centric_env._num_init_shelf_blocks
+        num_outside = self._object_centric_env._num_init_outside_blocks
+        total = num_in_shelf + num_outside
+        if total == 1:
+            return "This variant has 1 block to store."
+        return f"This variant has {total} blocks ({num_in_shelf} initially in the shelf, {num_outside} initially outside)."
+
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until termination, which occurs when all blocks are inside the shelf.\n"  # pylint: disable=line-too-long
 

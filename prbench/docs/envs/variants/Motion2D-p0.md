@@ -7,7 +7,7 @@ env = prbench.make("prbench/Motion2D-p0-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant has no narrow passages (open space).
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

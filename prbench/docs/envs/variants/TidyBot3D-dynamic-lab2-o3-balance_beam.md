@@ -7,7 +7,7 @@ env = prbench.make("prbench/TidyBot3D-dynamic-lab2-o3-balance_beam-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant uses the 'lab2' scene type with 3 objects.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

@@ -385,6 +385,16 @@ The robot has a movable circular base and a retractable arm with a rectangular v
         # pylint: disable=line-too-long
         return "The number of obstructions differs between environment variants. For example, ClutteredRetrieval2D-o5 has 5 obstructions."
 
+    def _create_variant_specific_description(self) -> str:
+        num_obstructions = (
+            self._object_centric_env._num_obstructions
+        )  # pylint: disable=protected-access
+        if num_obstructions == 0:
+            return "This variant has no obstructions."
+        if num_obstructions == 1:
+            return "This variant has 1 obstruction."
+        return f"This variant has {num_obstructions} obstructions."
+
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until termination, which occurs when the target block is inside the target region.\n"  # pylint: disable=line-too-long
 

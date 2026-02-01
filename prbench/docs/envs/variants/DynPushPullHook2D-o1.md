@@ -7,7 +7,7 @@ env = prbench.make("prbench/DynPushPullHook2D-o1-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant has 1 obstruction.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

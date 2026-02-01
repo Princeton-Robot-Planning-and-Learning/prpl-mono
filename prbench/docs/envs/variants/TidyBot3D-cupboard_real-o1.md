@@ -7,7 +7,7 @@ env = prbench.make("prbench/TidyBot3D-cupboard_real-o1-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant uses the 'cupboard_real' scene type with 1 object.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

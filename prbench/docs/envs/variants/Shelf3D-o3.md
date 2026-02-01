@@ -7,7 +7,7 @@ env = prbench.make("prbench/Shelf3D-o3-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant has 3 objects to place on the shelf.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

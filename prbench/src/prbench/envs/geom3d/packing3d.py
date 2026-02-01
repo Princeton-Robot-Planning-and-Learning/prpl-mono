@@ -766,6 +766,14 @@ The task requires planning to grasp and place each part into the rack while avoi
         # pylint: disable=line-too-long
         return "The number of parts to pack differs between environment variants. For example, Packing3D-p1 has 1 part, while Packing3D-p3 has 3 parts."
 
+    def _create_variant_specific_description(self) -> str:
+        num_parts = (
+            self._object_centric_env._num_parts
+        )  # pylint: disable=protected-access
+        if num_parts == 1:
+            return "This variant has 1 part to pack into the rack."
+        return f"This variant has {num_parts} parts to pack into the rack."
+
     def _create_action_space_markdown_description(self) -> str:
         """Create action space description."""
         # pylint: disable=line-too-long

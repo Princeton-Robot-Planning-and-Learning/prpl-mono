@@ -7,7 +7,7 @@ env = prbench.make("prbench/TidyBot3D-ground-o7-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant uses the 'ground' scene type with 7 objects.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

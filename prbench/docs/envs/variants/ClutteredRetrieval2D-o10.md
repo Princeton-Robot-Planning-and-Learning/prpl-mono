@@ -7,7 +7,7 @@ env = prbench.make("prbench/ClutteredRetrieval2D-o10-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant has 10 obstructions.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

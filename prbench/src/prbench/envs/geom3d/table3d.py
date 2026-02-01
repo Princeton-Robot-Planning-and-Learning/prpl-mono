@@ -277,6 +277,14 @@ class Table3DEnv(ConstantObjectPRBenchEnv):
         # pylint: disable=line-too-long
         return "The number of cubes differs between environment variants. For example, Table3D-o1 has 1 cube, while Table3D-o3 has 3 cubes."
 
+    def _create_variant_specific_description(self) -> str:
+        num_cubes = (
+            self._object_centric_env._num_cubes
+        )  # pylint: disable=protected-access
+        if num_cubes == 1:
+            return "This variant has 1 cube on the table."
+        return f"This variant has {num_cubes} cubes on the table."
+
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long

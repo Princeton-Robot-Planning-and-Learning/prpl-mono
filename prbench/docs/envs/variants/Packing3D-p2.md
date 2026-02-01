@@ -7,7 +7,7 @@ env = prbench.make("prbench/Packing3D-p2-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant has 2 parts to pack into the rack.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

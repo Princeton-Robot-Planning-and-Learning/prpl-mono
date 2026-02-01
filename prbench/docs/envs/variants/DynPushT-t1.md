@@ -7,7 +7,7 @@ env = prbench.make("prbench/DynPushT-t1-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant has a T-shaped block to push to a goal pose.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

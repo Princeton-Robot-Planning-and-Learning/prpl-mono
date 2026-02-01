@@ -7,7 +7,7 @@ env = prbench.make("prbench/Transport3D-o2-v0")
 ```
 
 ## Description
-No variant-specific description available.
+This variant has 2 cubes and 1 box to transport onto the table.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

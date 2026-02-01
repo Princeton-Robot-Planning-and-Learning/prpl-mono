@@ -368,6 +368,14 @@ The robot has a movable circular base and a retractable arm with a rectangular v
         # pylint: disable=line-too-long
         return "The number of buttons differs between environment variants. For example, StickButton2D-b1 has 1 button, while StickButton2D-b10 has 10 buttons."
 
+    def _create_variant_specific_description(self) -> str:
+        num_buttons = (
+            self._object_centric_env._num_buttons
+        )  # pylint: disable=protected-access
+        if num_buttons == 1:
+            return "This variant has 1 button to press."
+        return f"This variant has {num_buttons} buttons to press."
+
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until all buttons have been pressed (termination).\n"  # pylint: disable=line-too-long
 

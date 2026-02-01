@@ -474,6 +474,9 @@ class PushPullHook2DEnv(ConstantObjectPRBenchEnv):
         # pylint: disable=line-too-long
         return "This environment has only one variant."
 
+    def _create_variant_specific_description(self) -> str:
+        return "This variant has one hook, one movable button, and one target button."
+
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return (

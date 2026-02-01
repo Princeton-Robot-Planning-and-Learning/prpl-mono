@@ -7,7 +7,7 @@ env = prbench.make("prbench/TidyBot3D-tool_use-lab2_kitchen-o5-scoop_the_blocks_
 ```
 
 ## Description
-No variant-specific description available.
+This variant uses the 'lab2_kitchen' scene type with 5 objects.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

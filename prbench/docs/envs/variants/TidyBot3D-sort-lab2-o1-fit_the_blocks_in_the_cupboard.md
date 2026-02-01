@@ -7,7 +7,7 @@ env = prbench.make("prbench/TidyBot3D-sort-lab2-o1-fit_the_blocks_in_the_cupboar
 ```
 
 ## Description
-No variant-specific description available.
+This variant uses the 'lab2' scene type with 1 object.
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
