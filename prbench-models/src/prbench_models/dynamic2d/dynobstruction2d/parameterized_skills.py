@@ -44,7 +44,7 @@ class GroundPickController(Dynamic2dRobotController):
         # Sample grasp ratio and side
         # grasp_ratio: determines position along the side ([0.0, 1.0])
         # we assume we will always pick from the top side
-        grasp_ratio = rng.uniform(0.0, 0.1)
+        grasp_ratio = rng.uniform(0.0, 0.05)
         side = rng.uniform(0.5, 0.75)
         max_arm_length = x.get(self._robot, "arm_length")
         min_arm_length = (
@@ -296,13 +296,8 @@ class GroundPlaceTgtSurfaceController(Dynamic2dRobotController):
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
     ) -> float:
-        # Sample a random orientation
-        abs_theta = rng.uniform(-np.pi, np.pi)
-
-        # Relative orientation
-        rel_theta = (abs_theta + np.pi) / (2 * np.pi)
-
-        return rel_theta
+        # Always return 0.25
+        return 0.25
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
         """Get gripper actions for move-to: keep current gap during movement,
@@ -339,7 +334,7 @@ class GroundPlaceTgtSurfaceController(Dynamic2dRobotController):
         target_theta = wrap_angle(params * 2 * np.pi - np.pi)
         tgt_pose_center = SE2Pose(
             target_region_pose.x - tgt_width / 2,
-            target_region_pose.y + tgt_height / 2,
+            target_region_pose.y + tgt_height,
             target_theta,
         )
 
