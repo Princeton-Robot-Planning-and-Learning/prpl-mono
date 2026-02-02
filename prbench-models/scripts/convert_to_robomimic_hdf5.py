@@ -55,7 +55,7 @@ def main(
                     if k not in observations:
                         observations[k] = []
                     if args.obs_discrete_gripper:
-                        if k == 'gripper_pos' and v[0] > 0.01:
+                        if k == "gripper_pos" and v[0] > 0.01:
                             v[0] = 1.0
                     observations[k].append(v)
 
@@ -92,6 +92,7 @@ def main(
                 episode_group.create_dataset(f"obs/{k}", data=np.array(v))
             # print('actions', actions)
             episode_group.create_dataset("actions", data=np.array(actions))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

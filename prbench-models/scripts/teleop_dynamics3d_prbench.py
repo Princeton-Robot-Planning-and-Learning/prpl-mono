@@ -1,7 +1,7 @@
 """Teleoperation script for prbench dynamics3d environments.
 
-Saves demonstrations in the same format as collect_demos_ds.py for compatibility
-with generate_demo_video.py and other prbench tools.
+Saves demonstrations in the same format as collect_demos_ds.py for compatibility with
+generate_demo_video.py and other prbench tools.
 """
 
 import argparse
@@ -17,8 +17,7 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench_models.dynamic3d.fk_solver import TidybotFKSolver
 from prbench_models.dynamic3d.ik_solver import TidybotIKSolver
 from prbench_models.policy_constants import POLICY_CONTROL_PERIOD
-from prbench_models.teleop_utils import TeleopPolicy
-from prbench_models.teleop_utils import _visualize_image_in_window
+from prbench_models.teleop_utils import TeleopPolicy, _visualize_image_in_window
 
 prbench.register_all_environments()
 
@@ -32,8 +31,8 @@ _DEFAULT_DEMOS_DIR = _SCRIPT_DIR.parent.parent / "prbench" / "demos"
 def sanitize_env_id(env_id: str) -> str:
     """Remove unnecessary stuff from the env ID.
 
-    Mirrors the function in prbench/scripts/generate_env_docs.py and
-    collect_demos_ds.py for consistent directory naming.
+    Mirrors the function in prbench/scripts/generate_env_docs.py and collect_demos_ds.py
+    for consistent directory naming.
     """
     if env_id.startswith("prbench/"):
         env_id = env_id[len("prbench/") :]

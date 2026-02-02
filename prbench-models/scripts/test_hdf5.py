@@ -2,6 +2,7 @@
 """Quick script to inspect HDF5 file structure and shapes."""
 
 import argparse
+
 import h5py  # type: ignore
 
 

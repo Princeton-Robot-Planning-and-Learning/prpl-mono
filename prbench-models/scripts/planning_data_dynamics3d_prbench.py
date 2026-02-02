@@ -29,8 +29,8 @@ _DEFAULT_DEMOS_DIR = _SCRIPT_DIR.parent.parent / "prbench" / "demos"
 def sanitize_env_id(env_id: str) -> str:
     """Remove unnecessary stuff from the env ID.
 
-    Mirrors the function in prbench/scripts/generate_env_docs.py and
-    collect_demos_ds.py for consistent directory naming.
+    Mirrors the function in prbench/scripts/generate_env_docs.py and collect_demos_ds.py
+    for consistent directory naming.
     """
     if env_id.startswith("prbench/"):
         env_id = env_id[len("prbench/") :]
@@ -93,11 +93,7 @@ def collect_data(
     demo_dir = Path(output_dir)
 
     # Create the environment.
-    env = prbench.make(
-        f"prbench/{env_name}", render_mode="rgb_array", scene_bg=True
-    )
-
-    
+    env = prbench.make(f"prbench/{env_name}", render_mode="rgb_array", scene_bg=True)
 
     # Reset the environment and get the initial state.
     obs, _ = env.reset(seed=seed)  # type: ignore
@@ -142,21 +138,24 @@ def collect_data(
 
         for step_idx in range(400):
             action = controller.step()
-            
-            
+
             if show_images:
                 robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
                 env.unwrapped._object_centric_env.set_render_camera("agentview_1")
                 overview_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
+                env.unwrapped._object_centric_env.set_render_camera(
+                    robot_name + "_base"
+                )
                 base_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_wrist")
+                env.unwrapped._object_centric_env.set_render_camera(
+                    robot_name + "_wrist"
+                )
                 wrist_image = env.unwrapped._object_centric_env.render()
                 _visualize_image_in_window(overview_image, "agentview_1")
                 _visualize_image_in_window(base_image, "base")
                 _visualize_image_in_window(wrist_image, "wrist")
             # Record observation and action before stepping
-            
+
             obs, reward, ep_terminated, ep_truncated, _ = env.step(  # type: ignore
                 action
             )
@@ -202,21 +201,24 @@ def collect_data(
                 return
             for step_idx in range(400):
                 action = controller.step()
-                
-                
+
                 if show_images:
                     robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
                     env.unwrapped._object_centric_env.set_render_camera("agentview_1")
                     overview_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
+                    env.unwrapped._object_centric_env.set_render_camera(
+                        robot_name + "_base"
+                    )
                     base_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(robot_name + "_wrist")
+                    env.unwrapped._object_centric_env.set_render_camera(
+                        robot_name + "_wrist"
+                    )
                     wrist_image = env.unwrapped._object_centric_env.render()
                     _visualize_image_in_window(overview_image, "agentview_1")
                     _visualize_image_in_window(base_image, "base")
                     _visualize_image_in_window(wrist_image, "wrist")
                 # Record observation and action before stepping
-                
+
                 obs, reward, ep_terminated, ep_truncated, _ = env.step(  # type: ignore
                     action
                 )
@@ -257,7 +259,6 @@ def collect_data(
         print(f"  Observations: {len(observations)}, Actions: {len(actions)}")
     elif save:
         print("No actions recorded, episode not saved")
-
 
     env.close()  # type: ignore
 

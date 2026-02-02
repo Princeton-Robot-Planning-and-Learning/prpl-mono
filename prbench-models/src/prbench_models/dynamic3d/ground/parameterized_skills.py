@@ -28,8 +28,8 @@ from pybullet_helpers.inverse_kinematics import (
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
+    remap_joint_position_plan_to_constant_distance,
     run_motion_planning,
-    remap_joint_position_plan_to_constant_distance
 )
 from pybullet_helpers.robots import SingleArmPyBulletRobot, create_pybullet_robot
 from pybullet_helpers.utils import (
@@ -1040,7 +1040,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             self._pybullet_sim.robot,
             max_distance=0.4,
         )
-        
+
         # Remap the plan to ensure we stay within action limits.
         retract_plan = remap_joint_position_plan_to_constant_distance(
             retract_plan,
@@ -1360,7 +1360,6 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             base_link_to_held_obj=self._pybullet_sim.base_link_to_held_obj,
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
-        
 
         retract_plan = run_motion_planning(
             self._pybullet_sim.robot,
@@ -1520,7 +1519,9 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             return GRASP_CLOSE_THRESHOLD
         return 0.0
 
-    def _robot_is_close_to_conf(self, conf: JointPositions, atol: float = WAYPOINT_TOL) -> bool:
+    def _robot_is_close_to_conf(
+        self, conf: JointPositions, atol: float = WAYPOINT_TOL
+    ) -> bool:
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)

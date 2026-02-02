@@ -8,17 +8,19 @@ from pathlib import Path
 from typing import Any, List
 
 import matplotlib
-matplotlib.use('Agg')  # Force non-interactive backend
-import matplotlib.pyplot as plt
 
+matplotlib.use("Agg")  # Force non-interactive backend
+import gc
+
+import cv2 as cv
 import dill as pkl
 import imageio as iio
-import cv2 as cv
+import matplotlib.pyplot as plt
 import numpy as np
 import prbench
 import zmq
+from prpl_utils.utils import sample_seed_from_rng
 from relational_structs.spaces import ObjectCentricBoxSpace
-import gc
 
 from prbench_models.policy_constants import (
     POLICY_CONTROL_PERIOD,
@@ -28,9 +30,9 @@ from prbench_models.policy_constants import (
     POLICY_SERVER_PORT,
 )
 from prbench_models.teleop_utils import _visualize_image_in_window
-from prpl_utils.utils import sample_seed_from_rng
 
 prbench.register_all_environments()
+
 
 class RemotePolicy:
     """Execute policy running on remote server via ZMQ."""
@@ -147,7 +149,6 @@ def run_inference(
         remove_velocity: Whether to remove velocity from the policy.
         save_trajectories: Whether to save trajectory pickle files.
     """
-    
 
     # Episode tracking
     successes = 0
@@ -158,7 +159,7 @@ def run_inference(
     episode_seeds = []
     episode_avg_inference_times = []
     executed_action_steps = 8
-    
+
     try:
         seed_dir = output_dir / f"seed_{seed}"
         seed_dir.mkdir(parents=True, exist_ok=True)
@@ -180,7 +181,7 @@ def run_inference(
 
         for episode_idx in range(num_episodes):
             this_episode_inference_times = []
-            
+
             # Create episode directory for videos/trajectories
             episode_dir = seed_dir / f"eval_episode_{episode_idx}"
             if save_videos or save_trajectories:
@@ -209,13 +210,22 @@ def run_inference(
             state = env.observation_space.devectorize(obs)
 
             # Target object for this episode (can be detected or specified)
-            if "DynPushPullHook2D" in env_name or "DynObstruction2D" in env_name or "Motion2D" in env_name or "StickButton2D" in env_name:
+            if (
+                "DynPushPullHook2D" in env_name
+                or "DynObstruction2D" in env_name
+                or "Motion2D" in env_name
+                or "StickButton2D" in env_name
+            ):
                 target_object_key = "target_agent"
             elif "Shelf3D" in env_name or "Ground3D" in env_name:
                 target_object_key = f"cube{num_cubes - 1}"
             elif "Transport3D" in env_name:
                 target_object_key = "box0"
-            elif "BaseMotion3D" in env_name or "TidyBot" in env_name or "Transport3D" in env_name:
+            elif (
+                "BaseMotion3D" in env_name
+                or "TidyBot" in env_name
+                or "Transport3D" in env_name
+            ):
                 target_object_key = "target"
             elif "Motion3D" in env_name:
                 target_object_key = "target"
@@ -231,12 +241,12 @@ def run_inference(
             episode_reward = 0.0
             ep_terminated = False
             ep_truncated = False
-            
+
             # Trajectory collection (same format as collect_demos_ds.py)
             traj_observations: List[Any] = [obs.copy()]  # Start with initial obs
             traj_actions: List[Any] = []
             traj_rewards: List[float] = []
-            
+
             start_time = time.time()
             if "Transport3D" in env_name:
                 gripper_closed = False
@@ -269,9 +279,13 @@ def run_inference(
                     robot_name = env.unwrapped._object_centric_env.robot_name
                     env.unwrapped._object_centric_env.set_render_camera("agentview_1")
                     overview_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
+                    env.unwrapped._object_centric_env.set_render_camera(
+                        robot_name + "_base"
+                    )
                     base_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
+                    env.unwrapped._object_centric_env.set_render_camera(
+                        robot_name + "_wrist"
+                    )
                     wrist_image = env.unwrapped._object_centric_env.render()
                     if save_videos:
                         overview_images.append(overview_image)
@@ -290,51 +304,81 @@ def run_inference(
 
                 # Create observation dict for policy
                 if use_env_state:
-                    if "TidyBot" in env_name or "BaseMotion3D" in env_name or "Transport3D" in env_name:
+                    if (
+                        "TidyBot" in env_name
+                        or "BaseMotion3D" in env_name
+                        or "Transport3D" in env_name
+                    ):
                         if remove_velocity and "TidyBot" in env_name:
                             obs_dict = {
-                                "robot_state": env.observation_space.get_object_subvector(obs, "robot")[:11],
-                                "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
+                                "robot_state": env.observation_space.get_object_subvector(
+                                    obs, "robot"
+                                )[
+                                    :11
+                                ],
+                                "env_state": env.observation_space.get_vector_excluding_object(
+                                    obs, "robot"
+                                ),
                                 "overview_image": overview_image,
                                 "base_image": base_image,
                                 "wrist_image": wrist_image,
                             }
                         else:
                             obs_dict = {
-                                "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
-                                "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
+                                "robot_state": env.observation_space.get_object_subvector(
+                                    obs, "robot"
+                                ),
+                                "env_state": env.observation_space.get_vector_excluding_object(
+                                    obs, "robot"
+                                ),
                                 "overview_image": overview_image,
                                 "base_image": base_image,
                                 "wrist_image": wrist_image,
                             }
                     else:
                         obs_dict = {
-                            "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
-                            "env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
+                            "robot_state": env.observation_space.get_object_subvector(
+                                obs, "robot"
+                            ),
+                            "env_state": env.observation_space.get_vector_excluding_object(
+                                obs, "robot"
+                            ),
                             "image": image,
                         }
                 else:
-                    if "TidyBot" in env_name or "BaseMotion3D" in env_name or "Transport3D" in env_name:
+                    if (
+                        "TidyBot" in env_name
+                        or "BaseMotion3D" in env_name
+                        or "Transport3D" in env_name
+                    ):
                         if remove_velocity and "TidyBot" in env_name:
                             obs_dict = {
-                                "robot_state": env.observation_space.get_object_subvector(obs, "robot")[:11],
+                                "robot_state": env.observation_space.get_object_subvector(
+                                    obs, "robot"
+                                )[
+                                    :11
+                                ],
                                 "overview_image": overview_image,
                                 "base_image": base_image,
                                 "wrist_image": wrist_image,
                             }
                         else:
                             obs_dict = {
-                                "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
+                                "robot_state": env.observation_space.get_object_subvector(
+                                    obs, "robot"
+                                ),
                                 "overview_image": overview_image,
                                 "base_image": base_image,
                                 "wrist_image": wrist_image,
                             }
                     else:
                         obs_dict = {
-                            "robot_state": env.observation_space.get_object_subvector(obs, "robot"),
+                            "robot_state": env.observation_space.get_object_subvector(
+                                obs, "robot"
+                            ),
                             "image": image,
                         }
-                
+
                 if "TidyBot" in env_name:
                     if remove_velocity:
                         assert obs_dict["robot_state"].shape == obs[-22:-11].shape
@@ -358,23 +402,28 @@ def run_inference(
                     assert obs_dict["robot_state"].shape == obs[:9].shape
                     if "env_state" in obs_dict:
                         assert obs_dict["env_state"].shape == obs[9:].shape
-                
+
                 # Get action from policy
                 action_dict = policy.step(obs_dict)
                 del obs_dict
 
-                
                 if action_dict is None:
                     action_dict = {
-                        "robot_actions": np.zeros(env.action_space.shape[0], dtype=np.float32),
-                        "inference_time": 0.0
+                        "robot_actions": np.zeros(
+                            env.action_space.shape[0], dtype=np.float32
+                        ),
+                        "inference_time": 0.0,
                     }
-                
+
                 action = action_dict["robot_actions"]
                 inference_time = action_dict["inference_time"]
                 epsilon = 1e-4
                 if "2D" in env_name:
-                    action = np.clip(action, env.action_space.low + epsilon, env.action_space.high - epsilon)
+                    action = np.clip(
+                        action,
+                        env.action_space.low + epsilon,
+                        env.action_space.high - epsilon,
+                    )
                 if "BaseMotion3D" in env_name:
                     action[3:] = 0.0
 
@@ -392,7 +441,9 @@ def run_inference(
                 traj_actions.append(action.copy())
                 traj_rewards.append(float(reward))
 
-                this_episode_inference_times.append(inference_time/executed_action_steps)
+                this_episode_inference_times.append(
+                    inference_time / executed_action_steps
+                )
 
                 # Check for episode end
                 if terminated or truncated:
@@ -410,18 +461,22 @@ def run_inference(
                 if "Transport3D" in env_name and step_idx > 300 and not gripper_closed:
                     # Max steps reached without termination
                     episode_lengths.append(max_steps)
-                    print(f"No progress made in the last 300 steps, saving episode with max steps ({max_steps})")
+                    print(
+                        f"No progress made in the last 300 steps, saving episode with max steps ({max_steps})"
+                    )
                     break
             else:
                 # Max steps reached without termination
                 episode_lengths.append(max_steps)
                 print(f"Episode reached max steps ({max_steps})")
-            
+
             # Log episode results (runs for both break and normal completion)
             episode_rewards.append(episode_reward)
             episode_terminated.append(ep_terminated)
             episode_truncated.append(ep_truncated)
-            episode_avg_inference_times.append(np.sum(this_episode_inference_times)/episode_lengths[-1])
+            episode_avg_inference_times.append(
+                np.sum(this_episode_inference_times) / episode_lengths[-1]
+            )
             if save_videos:
                 if len(overview_images) > 0:
                     overview_video_path = episode_dir / "overview.mp4"
@@ -437,7 +492,7 @@ def run_inference(
                     iio.mimsave(image_video_path, images_2d, fps=fps)
                 # Clear image lists to free memory immediately
                 del overview_images, base_images, wrist_images, images_2d
-            
+
             # Save trajectory pickle (same format as collect_demos_ds.py)
             if save_trajectories:
                 timestamp = int(time.time())
@@ -455,17 +510,18 @@ def run_inference(
                 with open(traj_path, "wb") as f:
                     pkl.dump(traj_data, f)
                 print(f"Trajectory saved to {traj_path}")
-            
+
             # Clear trajectory data to free memory
             del traj_observations, traj_actions, traj_rewards
-            
-            print(f"Episode {episode_idx + 1}: reward={episode_reward:.3f}, "
-                  f"terminated={ep_terminated}, truncated={ep_truncated}")
+
+            print(
+                f"Episode {episode_idx + 1}: reward={episode_reward:.3f}, "
+                f"terminated={ep_terminated}, truncated={ep_truncated}"
+            )
             policy.close()  # type: ignore
-            plt.close('all')
+            plt.close("all")
             gc.collect()
             del policy
-            
 
     finally:
         env.close()  # type: ignore
@@ -481,11 +537,13 @@ def run_inference(
 
         if episode_avg_inference_times:
             print(f"\nAverage Inference Time Statistics (All Episodes):")
-            print(f"  Average inference time: {np.mean(episode_avg_inference_times):.3f}")
+            print(
+                f"  Average inference time: {np.mean(episode_avg_inference_times):.3f}"
+            )
             print(f"  Std inference time: {np.std(episode_avg_inference_times):.3f}")
             print(f"  Min inference time: {np.min(episode_avg_inference_times):.3f}")
             print(f"  Max inference time: {np.max(episode_avg_inference_times):.3f}")
-        
+
         if episode_rewards:
             print(f"\nReward Statistics (All Episodes):")
             print(f"  Total rewards: {episode_rewards}")
@@ -493,33 +551,39 @@ def run_inference(
             print(f"  Std reward: {np.std(episode_rewards):.3f}")
             print(f"  Min reward: {np.min(episode_rewards):.3f}")
             print(f"  Max reward: {np.max(episode_rewards):.3f}")
-        
+
         # if episode_lengths:
         #     print(f"\nEpisode Length Statistics (All Episodes):")
         #     print(f"  Average length: {np.mean(episode_lengths):.1f}")
         #     print(f"  Min length: {np.min(episode_lengths)}")
         #     print(f"  Max length: {np.max(episode_lengths)}")
-        
+
         # Calculate stats for successful episodes only
-        successful_rewards = [r for r, t in zip(episode_rewards, episode_terminated) if t]
-        successful_lengths = [l for l, t in zip(episode_lengths, episode_terminated) if t]
-        
+        successful_rewards = [
+            r for r, t in zip(episode_rewards, episode_terminated) if t
+        ]
+        successful_lengths = [
+            l for l, t in zip(episode_lengths, episode_terminated) if t
+        ]
+
         if successful_rewards:
             print(f"\nReward Statistics (Successful Episodes Only):")
             print(f"  Average reward: {np.mean(successful_rewards):.3f}")
             print(f"  Std reward: {np.std(successful_rewards):.3f}")
             print(f"  Min reward: {np.min(successful_rewards):.3f}")
             print(f"  Max reward: {np.max(successful_rewards):.3f}")
-        
+
         # if successful_lengths:
         #     print(f"\nEpisode Length Statistics (Successful Episodes Only):")
         #     print(f"  Average length: {np.mean(successful_lengths):.1f}")
         #     print(f"  Min length: {np.min(successful_lengths)}")
         #     print(f"  Max length: {np.max(successful_lengths)}")
-        
-        print(f"\nTerminated: {sum(episode_terminated)}, Truncated: {sum(episode_truncated)}")
+
+        print(
+            f"\nTerminated: {sum(episode_terminated)}, Truncated: {sum(episode_truncated)}"
+        )
         print("=" * 50)
-        
+
         # Save logs to JSON file
         logs = {
             "environment": env_name,
@@ -534,12 +598,30 @@ def run_inference(
             "episode_lengths": [int(l) for l in episode_lengths],
             "episode_terminated": [bool(t) for t in episode_terminated],
             "episode_truncated": [bool(t) for t in episode_truncated],
-            "episode_avg_inference_times": [float(t) for t in episode_avg_inference_times],
+            "episode_avg_inference_times": [
+                float(t) for t in episode_avg_inference_times
+            ],
             "inference_time_stats": {
-                "mean": float(np.mean(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
-                "std": float(np.std(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
-                "min": float(np.min(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
-                "max": float(np.max(episode_avg_inference_times)) if episode_avg_inference_times else 0.0,
+                "mean": (
+                    float(np.mean(episode_avg_inference_times))
+                    if episode_avg_inference_times
+                    else 0.0
+                ),
+                "std": (
+                    float(np.std(episode_avg_inference_times))
+                    if episode_avg_inference_times
+                    else 0.0
+                ),
+                "min": (
+                    float(np.min(episode_avg_inference_times))
+                    if episode_avg_inference_times
+                    else 0.0
+                ),
+                "max": (
+                    float(np.max(episode_avg_inference_times))
+                    if episode_avg_inference_times
+                    else 0.0
+                ),
             },
             "reward_stats": {
                 "mean": float(np.mean(episode_rewards)) if episode_rewards else 0.0,
@@ -553,33 +635,36 @@ def run_inference(
                 "max": int(np.max(episode_lengths)) if episode_lengths else 0,
             },
             "successful_reward_stats": {
-                "mean": float(np.mean(successful_rewards)) if successful_rewards else 0.0,
+                "mean": (
+                    float(np.mean(successful_rewards)) if successful_rewards else 0.0
+                ),
                 "std": float(np.std(successful_rewards)) if successful_rewards else 0.0,
                 "min": float(np.min(successful_rewards)) if successful_rewards else 0.0,
                 "max": float(np.max(successful_rewards)) if successful_rewards else 0.0,
             },
             "successful_length_stats": {
-                "mean": float(np.mean(successful_lengths)) if successful_lengths else 0.0,
+                "mean": (
+                    float(np.mean(successful_lengths)) if successful_lengths else 0.0
+                ),
                 "min": int(np.min(successful_lengths)) if successful_lengths else 0,
                 "max": int(np.max(successful_lengths)) if successful_lengths else 0,
             },
         }
-        
+
         logs_path = seed_dir / "evaluation_logs.json"
         with open(logs_path, "w") as f:
             json.dump(logs, f, indent=2)
         print(f"\nLogs saved to: {logs_path}")
 
-def run_summary(
-    output_dir: Path
-):
+
+def run_summary(output_dir: Path):
     """Aggregate evaluation logs from all seed directories and print summary."""
     # Find all seed directories
     seed_dirs = sorted(output_dir.glob("seed_*"))
     if not seed_dirs:
         print("No seed directories found.")
         return
-    
+
     # Load all evaluation logs
     all_logs = []
     for seed_dir in seed_dirs:
@@ -591,11 +676,11 @@ def run_summary(
                 print(f"Loaded: {logs_path}")
         else:
             print(f"Warning: {logs_path} not found")
-    
+
     if not all_logs:
         print("No evaluation logs found.")
         return
-    
+
     # Calculate per-seed statistics first, then aggregate across seeds
     all_success_rates = [log["success_rate"] for log in all_logs]
     per_seed_mean_rewards = []
@@ -605,31 +690,35 @@ def run_summary(
     per_seed_mean_successful_lengths = []
     total_successes = 0
     total_episodes = 0
-    
+
     for log in all_logs:
         episode_rewards = log.get("episode_rewards", [])
         episode_lengths = log.get("episode_lengths", [])
         episode_terminated = log.get("episode_terminated", [])
         episode_inference_times = log.get("episode_avg_inference_times", [])
-        
+
         if episode_rewards:
             per_seed_mean_rewards.append(np.mean(episode_rewards))
         if episode_lengths:
             per_seed_mean_lengths.append(np.mean(episode_lengths))
         if episode_inference_times:
             per_seed_mean_inference_times.append(np.mean(episode_inference_times))
-        
+
         # Calculate stats for successful episodes only
-        successful_rewards = [r for r, t in zip(episode_rewards, episode_terminated) if t]
-        successful_lengths = [l for l, t in zip(episode_lengths, episode_terminated) if t]
+        successful_rewards = [
+            r for r, t in zip(episode_rewards, episode_terminated) if t
+        ]
+        successful_lengths = [
+            l for l, t in zip(episode_lengths, episode_terminated) if t
+        ]
         if successful_rewards:
             per_seed_mean_successful_rewards.append(np.mean(successful_rewards))
         if successful_lengths:
             per_seed_mean_successful_lengths.append(np.mean(successful_lengths))
-        
+
         total_successes += log.get("successes", 0)
         total_episodes += log.get("episodes_completed", 0)
-    
+
     # Print aggregated summary
     print("\n" + "=" * 60)
     print("AGGREGATED SUMMARY ACROSS ALL SEEDS")
@@ -638,50 +727,54 @@ def run_summary(
     print(f"Total episodes: {total_episodes}")
     print(f"Total successes: {total_successes}")
     print(f"Overall success rate: {total_successes / max(total_episodes, 1):.2%}")
-    
+
     print(f"\nSuccess Rate Across Seeds:")
     print(f"  Mean: {np.mean(all_success_rates):.2%}")
     print(f"  Std: {np.std(all_success_rates):.2%}")
     print(f"  Min: {np.min(all_success_rates):.2%}")
     print(f"  Max: {np.max(all_success_rates):.2%}")
-    
+
     if per_seed_mean_rewards:
         print(f"\nReward Statistics (Mean per Seed, Aggregated Across Seeds):")
         print(f"  Mean: {np.mean(per_seed_mean_rewards):.3f}")
         print(f"  Std: {np.std(per_seed_mean_rewards):.3f}")
         print(f"  Min: {np.min(per_seed_mean_rewards):.3f}")
         print(f"  Max: {np.max(per_seed_mean_rewards):.3f}")
-    
+
     if per_seed_mean_lengths:
         print(f"\nEpisode Length Statistics (Mean per Seed, Aggregated Across Seeds):")
         print(f"  Mean: {np.mean(per_seed_mean_lengths):.1f}")
         print(f"  Std: {np.std(per_seed_mean_lengths):.1f}")
         print(f"  Min: {np.min(per_seed_mean_lengths):.1f}")
         print(f"  Max: {np.max(per_seed_mean_lengths):.1f}")
-    
+
     if per_seed_mean_inference_times:
         print(f"\nInference Time Statistics (Mean per Seed, Aggregated Across Seeds):")
         print(f"  Mean: {np.mean(per_seed_mean_inference_times):.6f}")
         print(f"  Std: {np.std(per_seed_mean_inference_times):.6f}")
         print(f"  Min: {np.min(per_seed_mean_inference_times):.6f}")
         print(f"  Max: {np.max(per_seed_mean_inference_times):.6f}")
-    
+
     if per_seed_mean_successful_rewards:
-        print(f"\nSuccessful Episode Reward Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print(
+            f"\nSuccessful Episode Reward Statistics (Mean per Seed, Aggregated Across Seeds):"
+        )
         print(f"  Mean: {np.mean(per_seed_mean_successful_rewards):.3f}")
         print(f"  Std: {np.std(per_seed_mean_successful_rewards):.3f}")
         print(f"  Min: {np.min(per_seed_mean_successful_rewards):.3f}")
         print(f"  Max: {np.max(per_seed_mean_successful_rewards):.3f}")
-    
+
     if per_seed_mean_successful_lengths:
-        print(f"\nSuccessful Episode Length Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print(
+            f"\nSuccessful Episode Length Statistics (Mean per Seed, Aggregated Across Seeds):"
+        )
         print(f"  Mean: {np.mean(per_seed_mean_successful_lengths):.1f}")
         print(f"  Std: {np.std(per_seed_mean_successful_lengths):.1f}")
         print(f"  Min: {np.min(per_seed_mean_successful_lengths):.1f}")
         print(f"  Max: {np.max(per_seed_mean_successful_lengths):.1f}")
-    
+
     print("=" * 60)
-    
+
     # Save aggregated summary
     summary = {
         "num_seeds": len(all_logs),
@@ -691,7 +784,9 @@ def run_summary(
         "success_rate_per_seed": [float(r) for r in all_success_rates],
         "per_seed_mean_rewards": [float(r) for r in per_seed_mean_rewards],
         "per_seed_mean_lengths": [float(l) for l in per_seed_mean_lengths],
-        "per_seed_mean_inference_times": [float(t) for t in per_seed_mean_inference_times],
+        "per_seed_mean_inference_times": [
+            float(t) for t in per_seed_mean_inference_times
+        ],
         "success_rate_stats": {
             "mean": float(np.mean(all_success_rates)),
             "std": float(np.std(all_success_rates)),
@@ -699,50 +794,120 @@ def run_summary(
             "max": float(np.max(all_success_rates)),
         },
         "reward_stats": {
-            "mean": float(np.mean(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0,
-            "std": float(np.std(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0,
-            "min": float(np.min(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0,
-            "max": float(np.max(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0,
+            "mean": (
+                float(np.mean(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0
+            ),
+            "std": (
+                float(np.std(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0
+            ),
+            "min": (
+                float(np.min(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0
+            ),
+            "max": (
+                float(np.max(per_seed_mean_rewards)) if per_seed_mean_rewards else 0.0
+            ),
         },
         "length_stats": {
-            "mean": float(np.mean(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0,
-            "std": float(np.std(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0,
-            "min": float(np.min(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0,
-            "max": float(np.max(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0,
+            "mean": (
+                float(np.mean(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0
+            ),
+            "std": (
+                float(np.std(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0
+            ),
+            "min": (
+                float(np.min(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0
+            ),
+            "max": (
+                float(np.max(per_seed_mean_lengths)) if per_seed_mean_lengths else 0.0
+            ),
         },
         "inference_time_stats": {
-            "mean": float(np.mean(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
-            "std": float(np.std(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
-            "min": float(np.min(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
-            "max": float(np.max(per_seed_mean_inference_times)) if per_seed_mean_inference_times else 0.0,
+            "mean": (
+                float(np.mean(per_seed_mean_inference_times))
+                if per_seed_mean_inference_times
+                else 0.0
+            ),
+            "std": (
+                float(np.std(per_seed_mean_inference_times))
+                if per_seed_mean_inference_times
+                else 0.0
+            ),
+            "min": (
+                float(np.min(per_seed_mean_inference_times))
+                if per_seed_mean_inference_times
+                else 0.0
+            ),
+            "max": (
+                float(np.max(per_seed_mean_inference_times))
+                if per_seed_mean_inference_times
+                else 0.0
+            ),
         },
-        "per_seed_mean_successful_rewards": [float(r) for r in per_seed_mean_successful_rewards],
-        "per_seed_mean_successful_lengths": [float(l) for l in per_seed_mean_successful_lengths],
+        "per_seed_mean_successful_rewards": [
+            float(r) for r in per_seed_mean_successful_rewards
+        ],
+        "per_seed_mean_successful_lengths": [
+            float(l) for l in per_seed_mean_successful_lengths
+        ],
         "successful_reward_stats": {
-            "mean": float(np.mean(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
-            "std": float(np.std(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
-            "min": float(np.min(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
-            "max": float(np.max(per_seed_mean_successful_rewards)) if per_seed_mean_successful_rewards else 0.0,
+            "mean": (
+                float(np.mean(per_seed_mean_successful_rewards))
+                if per_seed_mean_successful_rewards
+                else 0.0
+            ),
+            "std": (
+                float(np.std(per_seed_mean_successful_rewards))
+                if per_seed_mean_successful_rewards
+                else 0.0
+            ),
+            "min": (
+                float(np.min(per_seed_mean_successful_rewards))
+                if per_seed_mean_successful_rewards
+                else 0.0
+            ),
+            "max": (
+                float(np.max(per_seed_mean_successful_rewards))
+                if per_seed_mean_successful_rewards
+                else 0.0
+            ),
         },
         "successful_length_stats": {
-            "mean": float(np.mean(per_seed_mean_successful_lengths)) if per_seed_mean_successful_lengths else 0.0,
-            "std": float(np.std(per_seed_mean_successful_lengths)) if per_seed_mean_successful_lengths else 0.0,
-            "min": float(np.min(per_seed_mean_successful_lengths)) if per_seed_mean_successful_lengths else 0.0,
-            "max": float(np.max(per_seed_mean_successful_lengths)) if per_seed_mean_successful_lengths else 0.0,
+            "mean": (
+                float(np.mean(per_seed_mean_successful_lengths))
+                if per_seed_mean_successful_lengths
+                else 0.0
+            ),
+            "std": (
+                float(np.std(per_seed_mean_successful_lengths))
+                if per_seed_mean_successful_lengths
+                else 0.0
+            ),
+            "min": (
+                float(np.min(per_seed_mean_successful_lengths))
+                if per_seed_mean_successful_lengths
+                else 0.0
+            ),
+            "max": (
+                float(np.max(per_seed_mean_successful_lengths))
+                if per_seed_mean_successful_lengths
+                else 0.0
+            ),
         },
     }
-    
+
     summary_path = output_dir / "aggregated_summary.json"
     with open(summary_path, "w") as f:
         json.dump(summary, f, indent=2)
     print(f"\nAggregated summary saved to: {summary_path}")
-    
+
 
 def main() -> None:
     """Main function to run policy inference in prbench."""
     parser = argparse.ArgumentParser(description="Run policy inference in prbench")
     parser.add_argument(
-        "--output-dir", default="data/evaluations_final", help="Directory to save episodes"
+        "--output-dir",
+        default="data/evaluations_final",
+        help="Directory to save episodes",
     )
     parser.add_argument(
         "--seed", type=int, default=301, help="Random seed for reproducibility"
@@ -779,21 +944,57 @@ def main() -> None:
         default=False,
         help="Show images in a window",
     )
-    parser.add_argument("--save-videos", action="store_true", default=False, help="Save videos for evaluation")
-    parser.add_argument("--save-trajectories", action="store_true", default=True, help="Save trajectory pickle files")
-    parser.add_argument("--render", action="store_true", default=True, help="Render the environment")
-    parser.add_argument("--use-qpos", action="store_true", default=False, help="Use qpos for the policy")
-    parser.add_argument("--use-delta-qpos", action="store_true", default=False, help="Use delta qpos for the policy")
-    parser.add_argument("--use-env-state", action="store_true", default=False, help="Use env state for the policy")
-    parser.add_argument("--remove_velocity", action="store_true", default=False, help="remove velocity from the policy")
-    parser.add_argument("--summary_only", action="store_true", default=False, help="only run the summary")
+    parser.add_argument(
+        "--save-videos",
+        action="store_true",
+        default=False,
+        help="Save videos for evaluation",
+    )
+    parser.add_argument(
+        "--save-trajectories",
+        action="store_true",
+        default=True,
+        help="Save trajectory pickle files",
+    )
+    parser.add_argument(
+        "--render", action="store_true", default=True, help="Render the environment"
+    )
+    parser.add_argument(
+        "--use-qpos", action="store_true", default=False, help="Use qpos for the policy"
+    )
+    parser.add_argument(
+        "--use-delta-qpos",
+        action="store_true",
+        default=False,
+        help="Use delta qpos for the policy",
+    )
+    parser.add_argument(
+        "--use-env-state",
+        action="store_true",
+        default=False,
+        help="Use env state for the policy",
+    )
+    parser.add_argument(
+        "--remove_velocity",
+        action="store_true",
+        default=False,
+        help="remove velocity from the policy",
+    )
+    parser.add_argument(
+        "--summary_only",
+        action="store_true",
+        default=False,
+        help="only run the summary",
+    )
     args = parser.parse_args()
 
     if args.summary_only:
         # Find the most recent matching directory
         output_base = Path(args.output_dir)
         pattern = f"videos_{args.env_name}_*"
-        matching_dirs = sorted(output_base.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)
+        matching_dirs = sorted(
+            output_base.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True
+        )
         if not matching_dirs:
             print(f"No directories matching '{pattern}' found in {output_base}")
             return
@@ -822,10 +1023,8 @@ def main() -> None:
                 save_trajectories=args.save_trajectories,
                 remove_velocity=args.remove_velocity,
             )
-    
-    run_summary(
-        output_dir=video_parent_dir
-    )
+
+    run_summary(output_dir=video_parent_dir)
 
 
 if __name__ == "__main__":

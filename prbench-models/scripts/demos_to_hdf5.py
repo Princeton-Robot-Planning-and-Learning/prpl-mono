@@ -28,11 +28,10 @@ Usage:
 import argparse
 from pathlib import Path
 
+import cv2 as cv
 import h5py  # type: ignore
 import imageio as iio
 import numpy as np
-import cv2 as cv
-
 from prbench_imitation_learning.dataset import (
     iter_teleop_episodes,
 )
@@ -81,7 +80,10 @@ def convert(
 
         # Iterate over episodes one at a time (memory-efficient)
         for ep_idx, ep_frames, metadata in iter_teleop_episodes(
-            teleop_data_dir, render_images=render_images, use_geom3d=use_geom3d, use_dynamics3d=use_dynamics3d,
+            teleop_data_dir,
+            render_images=render_images,
+            use_geom3d=use_geom3d,
+            use_dynamics3d=use_dynamics3d,
         ):
             # Write metadata once (from first episode)
             if not metadata_written:
@@ -105,29 +107,59 @@ def convert(
 
             for fr in ep_frames:
                 if use_velocity_state and use_dynamics3d:
-                    robot_observation = np.array(fr["observation.robot_state"][:11], dtype=np.float32)
-                    env_observations = np.array(fr["observation.env_state"], dtype=np.float32)
+                    robot_observation = np.array(
+                        fr["observation.robot_state"][:11], dtype=np.float32
+                    )
+                    env_observations = np.array(
+                        fr["observation.env_state"], dtype=np.float32
+                    )
                 else:
-                    robot_observation = np.array(fr["observation.robot_state"], dtype=np.float32)
-                    env_observations = np.array(fr["observation.env_state"], dtype=np.float32)
+                    robot_observation = np.array(
+                        fr["observation.robot_state"], dtype=np.float32
+                    )
+                    env_observations = np.array(
+                        fr["observation.env_state"], dtype=np.float32
+                    )
                 if use_dynamics3d:
                     if use_velocity_state:
-                        robot_observation.shape == np.array(fr["observation.state"][-22:-11], dtype=np.float32).shape
+                        robot_observation.shape == np.array(
+                            fr["observation.state"][-22:-11], dtype=np.float32
+                        ).shape
                     else:
-                        robot_observation.shape == np.array(fr["observation.state"][-22:], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][:-22], dtype=np.float32).shape
+                        robot_observation.shape == np.array(
+                            fr["observation.state"][-22:], dtype=np.float32
+                        ).shape
+                    env_observations.shape == np.array(
+                        fr["observation.state"][:-22], dtype=np.float32
+                    ).shape
                 elif use_geom3d:
-                    robot_observation.shape == np.array(fr["observation.state"][:19], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][19:], dtype=np.float32).shape
+                    robot_observation.shape == np.array(
+                        fr["observation.state"][:19], dtype=np.float32
+                    ).shape
+                    env_observations.shape == np.array(
+                        fr["observation.state"][19:], dtype=np.float32
+                    ).shape
                 elif use_pushpull2d:
-                    robot_observation.shape == np.array(fr["observation.state"][:24], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][24:], dtype=np.float32).shape
+                    robot_observation.shape == np.array(
+                        fr["observation.state"][:24], dtype=np.float32
+                    ).shape
+                    env_observations.shape == np.array(
+                        fr["observation.state"][24:], dtype=np.float32
+                    ).shape
                 elif use_dynamic2d:
-                    robot_observation.shape == np.array(fr["observation.state"][-24:], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][:-24], dtype=np.float32).shape
+                    robot_observation.shape == np.array(
+                        fr["observation.state"][-24:], dtype=np.float32
+                    ).shape
+                    env_observations.shape == np.array(
+                        fr["observation.state"][:-24], dtype=np.float32
+                    ).shape
                 else:
-                    robot_observation.shape == np.array(fr["observation.state"][:9], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][9:], dtype=np.float32).shape
+                    robot_observation.shape == np.array(
+                        fr["observation.state"][:9], dtype=np.float32
+                    ).shape
+                    env_observations.shape == np.array(
+                        fr["observation.state"][9:], dtype=np.float32
+                    ).shape
                 action = np.array(fr["action"], dtype=np.float32)
                 env_states.append(env_observations)
                 robot_states.append(robot_observation)
@@ -138,15 +170,21 @@ def convert(
                 if use_geom3d or use_dynamics3d:
                     overview_image = fr["observation.overview_image"]
                     if isinstance(overview_image, np.ndarray):
-                        overview_image = cv.resize(overview_image, (resize_constant, resize_constant))
+                        overview_image = cv.resize(
+                            overview_image, (resize_constant, resize_constant)
+                        )
                         overview_images.append(overview_image)
                     wrist_image = fr["observation.wrist_image"]
                     if isinstance(wrist_image, np.ndarray):
-                        wrist_image = cv.resize(wrist_image, (resize_constant, resize_constant))
+                        wrist_image = cv.resize(
+                            wrist_image, (resize_constant, resize_constant)
+                        )
                         wrist_images.append(wrist_image)
                     base_image = fr["observation.base_image"]
                     if isinstance(base_image, np.ndarray):
-                        base_image = cv.resize(base_image, (resize_constant, resize_constant))
+                        base_image = cv.resize(
+                            base_image, (resize_constant, resize_constant)
+                        )
                         base_images.append(base_image)
                 elif has_images and "observation.image" in fr:
                     image = fr["observation.image"]
@@ -178,15 +216,19 @@ def convert(
                 )
                 if save_videos and overview_images:
                     # Create video output directory next to the HDF5 file
-                    video_dir = output_path.parent / f"videos_{teleop_data_dir.name}" / f"demo_{ep_idx}" 
+                    video_dir = (
+                        output_path.parent
+                        / f"videos_{teleop_data_dir.name}"
+                        / f"demo_{ep_idx}"
+                    )
                     video_dir.mkdir(parents=True, exist_ok=True)
-                    
+
                     # Save videos for each camera view
                     fps = 30
                     overview_video_path = video_dir / "overview.mp4"
                     wrist_video_path = video_dir / "wrist.mp4"
                     base_video_path = video_dir / "base.mp4"
-                    
+
                     iio.mimsave(overview_video_path, overview_images, fps=fps)
                     iio.mimsave(wrist_video_path, wrist_images, fps=fps)
                     iio.mimsave(base_video_path, base_images, fps=fps)
@@ -197,9 +239,13 @@ def convert(
                 )
                 if save_videos and images:
                     # Create video output directory next to the HDF5 file
-                    video_dir = output_path.parent / f"videos_{teleop_data_dir.name}" / f"demo_{ep_idx}" 
+                    video_dir = (
+                        output_path.parent
+                        / f"videos_{teleop_data_dir.name}"
+                        / f"demo_{ep_idx}"
+                    )
                     video_dir.mkdir(parents=True, exist_ok=True)
-                    
+
                     # Save videos for each camera view
                     fps = 30
                     image_video_path = video_dir / "image.mp4"

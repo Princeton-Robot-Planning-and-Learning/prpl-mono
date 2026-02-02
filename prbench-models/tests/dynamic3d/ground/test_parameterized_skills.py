@@ -805,6 +805,7 @@ def test_pick_place_skill():
 
     env.close()
 
+
 def test_pick_place_two_cubes_skill():
     """Test pick and place skill in ground environment with 1 cube."""
 
@@ -1026,7 +1027,9 @@ def test_pick_toss():
     # Create the environment.
     num_cubes = 1
     env = prbench.make(
-        f"prbench/TidyBot3D-dynamic-lab2-o{num_cubes}-toss_the_blocks_into_the_bin-v0", render_mode="rgb_array", scene_bg=True
+        f"prbench/TidyBot3D-dynamic-lab2-o{num_cubes}-toss_the_blocks_into_the_bin-v0",
+        render_mode="rgb_array",
+        scene_bg=True,
     )
     if MAKE_VIDEOS:
         env.unwrapped._object_centric_env.set_render_camera("task_view")

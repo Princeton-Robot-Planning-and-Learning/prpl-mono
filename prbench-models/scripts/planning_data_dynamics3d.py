@@ -100,7 +100,6 @@ def collect_data(
         # print('current_orientation: ', current_orientation)
         # print('action: ', action)
 
-        
         env.unwrapped._object_centric_env.set_render_camera("overview")
         overview_image = env.unwrapped._object_centric_env.render()
         env.unwrapped._object_centric_env.set_render_camera("base")

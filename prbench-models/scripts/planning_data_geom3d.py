@@ -19,6 +19,7 @@ from prbench_models.teleop_utils import _visualize_image_in_window
 
 prbench.register_all_environments()
 
+
 def collect_data(
     output_dir: str = "data/demos",
     num_cubes: int = 1,
@@ -167,20 +168,24 @@ def collect_data(
         # Record observation and action before stepping
         if writer is not None:
             target_shelf = state.get_object_from_name("shelf")
-            target_cube_list = [state.get_object_from_name(f"cube{i}") for i in range(num_cubes)]
+            target_cube_list = [
+                state.get_object_from_name(f"cube{i}") for i in range(num_cubes)
+            ]
             target_cube_list_pose = []
             for cube in target_cube_list:
-                target_cube_list_pose.append(np.array(
-                    [
-                        state.get(cube, "pose_x"),
-                        state.get(cube, "pose_y"),
-                        state.get(cube, "pose_z"),
-                        state.get(cube, "pose_qx"),
-                        state.get(cube, "pose_qy"),
-                        state.get(cube, "pose_qz"),
-                        state.get(cube, "pose_qw"),
-                    ]
-                ))
+                target_cube_list_pose.append(
+                    np.array(
+                        [
+                            state.get(cube, "pose_x"),
+                            state.get(cube, "pose_y"),
+                            state.get(cube, "pose_z"),
+                            state.get(cube, "pose_qx"),
+                            state.get(cube, "pose_qy"),
+                            state.get(cube, "pose_qz"),
+                            state.get(cube, "pose_qw"),
+                        ]
+                    )
+                )
             target_shelf_pose = np.array(
                 [
                     state.get(target_shelf, "pose_x"),
@@ -261,7 +266,7 @@ def collect_data(
         print("Warning: Pick controller did not terminate within 400 steps")
 
     add_place = True
-    
+
     if add_place:
         lifted_controller = controllers["place"]
         robot = state.get_object_from_name("robot")
@@ -310,20 +315,24 @@ def collect_data(
             # Record observation and action before stepping
             if writer is not None:
                 target_shelf = state.get_object_from_name("shelf")
-                target_cube_list = [state.get_object_from_name(f"cube{i}") for i in range(num_cubes)]
+                target_cube_list = [
+                    state.get_object_from_name(f"cube{i}") for i in range(num_cubes)
+                ]
                 target_cube_list_pose = []
                 for cube in target_cube_list:
-                    target_cube_list_pose.append(np.array(
-                        [
-                            state.get(cube, "pose_x"),
-                            state.get(cube, "pose_y"),
-                            state.get(cube, "pose_z"),
-                            state.get(cube, "pose_qx"),
-                            state.get(cube, "pose_qy"),
-                            state.get(cube, "pose_qz"),
-                            state.get(cube, "pose_qw"),
-                        ]
-                    ))
+                    target_cube_list_pose.append(
+                        np.array(
+                            [
+                                state.get(cube, "pose_x"),
+                                state.get(cube, "pose_y"),
+                                state.get(cube, "pose_z"),
+                                state.get(cube, "pose_qx"),
+                                state.get(cube, "pose_qy"),
+                                state.get(cube, "pose_qz"),
+                                state.get(cube, "pose_qw"),
+                            ]
+                        )
+                    )
                 target_shelf_pose = np.array(
                     [
                         state.get(target_shelf, "pose_x"),
