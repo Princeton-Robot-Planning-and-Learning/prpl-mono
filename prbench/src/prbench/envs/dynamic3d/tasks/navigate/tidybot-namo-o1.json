@@ -112,7 +112,11 @@
     "goal_state": [
         [
             "on",
+<<<<<<< HEAD
             "robot_0",
+=======
+            "robot",
+>>>>>>> main
             "ground_goal_region"
         ]
     ]

@@ -17,6 +17,7 @@ from prbench.envs.dynamic3d.objects.base import (
     MujocoObject,
     register_object,
 )
+from prbench.envs.dynamic3d.objects.utils import euler_to_quat
 
 # Get the path to the robocasa objects directory relative to this file
 ROBOCASA_OBJECTS_DIR = (
