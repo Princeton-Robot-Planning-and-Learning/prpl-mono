@@ -725,6 +725,10 @@ class ObjectCentricDynPushPullHook2DEnv(
 class DynPushPullHook2DEnv(ConstantObjectPRBenchEnv):
     """Dynamic Push-Pull Hook 2D env with a constant number of objects."""
 
+    def __init__(self, num_obstructions: int = 3, **kwargs) -> None:
+        self._num_obstructions = num_obstructions
+        super().__init__(num_obstructions=num_obstructions, **kwargs)
+
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricDynPushPullHook2DEnv:
@@ -753,6 +757,13 @@ Each object includes physics properties like mass, moment of inertia (for dynami
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "The number of obstructions differs between environment variants. For example, DynPushPullHook2D-o0 has no obstructions, while DynPushPullHook2D-o5 has 5 obstructions."
+
+    def _create_variant_specific_description(self) -> str:
+        if self._num_obstructions == 0:
+            return "This variant has no obstructions."
+        if self._num_obstructions == 1:
+            return "This variant has 1 obstruction."
+        return f"This variant has {self._num_obstructions} obstructions."
 
     def _create_reward_markdown_description(self) -> str:
         # pylint: disable=line-too-long

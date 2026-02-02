@@ -256,6 +256,10 @@ class ObjectCentricShelf3DEnv(
 class Shelf3DEnv(ConstantObjectPRBenchEnv):
     """Table 3D env with a constant number of objects."""
 
+    def __init__(self, num_cubes: int = 2, **kwargs) -> None:
+        self._num_cubes = num_cubes
+        super().__init__(num_cubes=num_cubes, **kwargs)
+
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom3DRobotEnv:
@@ -278,6 +282,11 @@ class Shelf3DEnv(ConstantObjectPRBenchEnv):
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "The number of objects differs between environment variants. For example, Shelf3D-o1 has 1 object, while Shelf3D-o10 has 10 objects."
+
+    def _create_variant_specific_description(self) -> str:
+        if self._num_cubes == 1:
+            return "This variant has 1 object to place on the shelf."
+        return f"This variant has {self._num_cubes} objects to place on the shelf."
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""

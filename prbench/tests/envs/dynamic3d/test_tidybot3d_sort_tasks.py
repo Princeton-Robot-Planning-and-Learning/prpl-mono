@@ -11,8 +11,8 @@ from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 def test_tidybot_lab2_fit_blocks_in_cupboard_goals():
     """Test that tidybot-lab2-o6-fit_the_blocks_in_the_cupboard achieves goals.
 
-    Initializes the environment, places all cuboids in their goal regions,
-    and verifies that env._check_goals() returns True.
+    Initializes the environment, places all cuboids in their goal regions, and verifies
+    that env._check_goals() returns True.
     """
     tasks_root = (
         Path(prbench.__path__[0]).parent / "prbench" / "envs" / "dynamic3d" / "tasks"
@@ -125,20 +125,20 @@ def test_tidybot_lab2_fit_blocks_in_cupboard_goals():
             state_after.get(cuboid.symbolic_object, "z"),
         ]
 
-        assert isinstance(cuboid_pos[0], (int, float)), (
-            f"Cuboid {cuboid_name} X position should be numeric"
-        )
-        assert isinstance(cuboid_pos[1], (int, float)), (
-            f"Cuboid {cuboid_name} Y position should be numeric"
-        )
-        assert isinstance(cuboid_pos[2], (int, float)), (
-            f"Cuboid {cuboid_name} Z position should be numeric"
-        )
+        assert isinstance(
+            cuboid_pos[0], (int, float)
+        ), f"Cuboid {cuboid_name} X position should be numeric"
+        assert isinstance(
+            cuboid_pos[1], (int, float)
+        ), f"Cuboid {cuboid_name} Y position should be numeric"
+        assert isinstance(
+            cuboid_pos[2], (int, float)
+        ), f"Cuboid {cuboid_name} Z position should be numeric"
 
     # Now check that goals are satisfied
     goals_satisfied = env._check_goals()  # pylint: disable=protected-access
-    assert goals_satisfied, (
-        "Goals should be satisfied after placing all cuboids in their goal regions"
-    )
+    assert (
+        goals_satisfied
+    ), "Goals should be satisfied after placing all cuboids in their goal regions"
 
     env.close()
