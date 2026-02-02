@@ -143,7 +143,11 @@ def process_experiment(
 
     # Find all seed directories
     seed_dirs = sorted(
-        [d for d in env_outputs_dir.iterdir() if d.is_dir() and d.name.startswith("seed")]
+        [
+            d
+            for d in env_outputs_dir.iterdir()
+            if d.is_dir() and d.name.startswith("seed")
+        ]
     )
 
     if not seed_dirs:
@@ -189,7 +193,9 @@ def process_experiment(
 
         # Measure inference time using checkpoint from runs directory
         # Checkpoint path: runs/{env}/{seed}/{reward_type}/{agent}_{env}/final_ckpt.pt
-        checkpoint_dir = env_runs_dir / seed_dir.name / reward_type / f"{agent_type}_{env_name}"
+        checkpoint_dir = (
+            env_runs_dir / seed_dir.name / reward_type / f"{agent_type}_{env_name}"
+        )
         checkpoint_path = checkpoint_dir / "final_ckpt.pt"
 
         if checkpoint_path.exists():
@@ -208,7 +214,9 @@ def process_experiment(
                 episode_inference_times = df["step_length"] * avg_step_time
                 seed_inference_times.append(episode_inference_times.mean())
             except Exception as e:
-                print(f"Warning: Failed to measure inference time for {checkpoint_path}: {e}")
+                print(
+                    f"Warning: Failed to measure inference time for {checkpoint_path}: {e}"
+                )
                 seed_inference_times.append(np.nan)
         else:
             seed_inference_times.append(np.nan)
@@ -224,14 +232,18 @@ def process_experiment(
         "num_seeds": len(seed_success_rates),
         "total_episodes": total_episodes,
         "success_rate_mean": np.mean(seed_success_rates),
-        "success_rate_std": np.std(seed_success_rates, ddof=1) if len(seed_success_rates) > 1 else 0.0,
+        "success_rate_std": (
+            np.std(seed_success_rates, ddof=1) if len(seed_success_rates) > 1 else 0.0
+        ),
     }
 
     # Calculate successful return statistics
     valid_returns = [r for r in seed_successful_returns if not np.isnan(r)]
     if valid_returns:
         stats["successful_return_mean"] = np.mean(valid_returns)
-        stats["successful_return_std"] = np.std(valid_returns, ddof=1) if len(valid_returns) > 1 else 0.0
+        stats["successful_return_std"] = (
+            np.std(valid_returns, ddof=1) if len(valid_returns) > 1 else 0.0
+        )
     else:
         stats["successful_return_mean"] = np.nan
         stats["successful_return_std"] = np.nan
@@ -240,7 +252,9 @@ def process_experiment(
     valid_times = [t for t in seed_inference_times if not np.isnan(t)]
     if valid_times:
         stats["inference_time_mean"] = np.mean(valid_times)
-        stats["inference_time_std"] = np.std(valid_times, ddof=1) if len(valid_times) > 1 else 0.0
+        stats["inference_time_std"] = (
+            np.std(valid_times, ddof=1) if len(valid_times) > 1 else 0.0
+        )
     else:
         stats["inference_time_mean"] = np.nan
         stats["inference_time_std"] = np.nan

@@ -1,8 +1,9 @@
 """Compare step speed between TidyBot3D environments with parallelization."""
 
 import time
-import numpy as np
+
 import gymnasium as gym
+import numpy as np
 import prbench
 
 prbench.register_all_environments()
@@ -18,8 +19,10 @@ NUM_ENVS_LIST = [1, 2, 4, 8]
 
 def make_env(env_id):
     """Factory function for creating environments."""
+
     def thunk():
         return prbench.make(env_id, render_mode="rgb_array")
+
     return thunk
 
 
@@ -67,7 +70,9 @@ def test_sync_vector_env(env_id, num_envs):
         obs, reward, term, trunc, info = envs.step(actions)
     elapsed = time.time() - start
     total_steps = NUM_STEPS * num_envs
-    print(f"  {NUM_STEPS} batches ({total_steps} total steps): {elapsed:.2f}s ({total_steps/elapsed:.1f} steps/sec)")
+    print(
+        f"  {NUM_STEPS} batches ({total_steps} total steps): {elapsed:.2f}s ({total_steps/elapsed:.1f} steps/sec)"
+    )
 
     envs.close()
 
@@ -87,11 +92,15 @@ def test_async_vector_env(env_id, num_envs):
 
         start = time.time()
         for i in range(NUM_STEPS):
-            actions = np.array([envs.single_action_space.sample() for _ in range(num_envs)])
+            actions = np.array(
+                [envs.single_action_space.sample() for _ in range(num_envs)]
+            )
             obs, reward, term, trunc, info = envs.step(actions)
         elapsed = time.time() - start
         total_steps = NUM_STEPS * num_envs
-        print(f"  {NUM_STEPS} batches ({total_steps} total steps): {elapsed:.2f}s ({total_steps/elapsed:.1f} steps/sec)")
+        print(
+            f"  {NUM_STEPS} batches ({total_steps} total steps): {elapsed:.2f}s ({total_steps/elapsed:.1f} steps/sec)"
+        )
 
         envs.close()
     except Exception as e:

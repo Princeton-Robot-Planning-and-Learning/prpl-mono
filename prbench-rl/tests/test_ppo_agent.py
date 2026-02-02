@@ -1,13 +1,12 @@
 """Tests for the PPO agent."""
 
-import pytest
 import gymnasium
+import imageio.v2 as iio
 import numpy as np
 import prbench
-import imageio.v2 as iio
+import pytest
 from gymnasium import spaces
 from omegaconf import DictConfig
-
 from prbench.envs.geom2d.stickbutton2d import StickButton2DEnv
 
 from prbench_rl.ppo_agent import PPOAgent
@@ -217,6 +216,7 @@ def test_ppo_agent_training_with_fixed_environment():
     assert mean_r_after > -300.0, f"Agent did not improve: mean return {mean_r_after}"
     agent.close()
 
+
 @pytest.mark.skip(reason="The script takes too long to run in CI.")
 def test_ppo_agent_training_with_fixed_environment_basemotion3d():
     """Test PPO agent can overfit on fixed BaseMotion3D environment."""
@@ -280,7 +280,7 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
             robot = obj_map.get("robot")
             target = obj_map.get("target")
             if robot is None or target is None:
-                return float('inf')
+                return float("inf")
 
             # Robot base position
             robot_x = state.get(robot, "pos_base_x")
@@ -316,34 +316,33 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
 
         def render(self):
             return self.env.render()
-        
+
         def compute_reward(self, obs, terminated):
             # 1. Terminal Bonus
             if terminated:
                 return 100.0
-                
+
             current_distance = self.compute_distance(obs)
-            
+
             # 2. Distance Shaping (The "Guide")
             # Formula: (Old - New)
             # If we get closer, (Old > New), result is Positive.
-            raw_shaping = (self.curr_distance - current_distance)
-            
-            # Scale this up! 
-            # Since your world is 0.1 units wide, a step might be 0.001. 
+            raw_shaping = self.curr_distance - current_distance
+
+            # Scale this up!
+            # Since your world is 0.1 units wide, a step might be 0.001.
             # Multiply by 100 or 1000 so the gradient is felt by the network.
-            shaping_reward = raw_shaping * 100.0 
-            
+            shaping_reward = raw_shaping * 100.0
+
             # 3. Time Penalty (The "Clock")
-            # Forces the agent to not loiter. 
+            # Forces the agent to not loiter.
             # Must be small enough that moving closer (shaping) > penalty.
             time_penalty = -0.1
-            
+
             # Update state
             self.curr_distance = current_distance
-            
-            return shaping_reward + time_penalty
 
+            return shaping_reward + time_penalty
 
     # Register the wrapped environment with a custom ID
     def make_fixed_env(render_mode=None):
@@ -414,7 +413,9 @@ def test_dense_reward_wrapper_basemotion3d():
 
     # Test that BaseMotion3D has dense reward implemented
     env = prbench.make("prbench/BaseMotion3D-v0")
-    wrapped_env = wrap_with_dense_reward(env, "prbench/BaseMotion3D-v0", reward_scale=0.1)
+    wrapped_env = wrap_with_dense_reward(
+        env, "prbench/BaseMotion3D-v0", reward_scale=0.1
+    )
 
     wrapped_env.reset(seed=42)
     action = wrapped_env.action_space.sample()

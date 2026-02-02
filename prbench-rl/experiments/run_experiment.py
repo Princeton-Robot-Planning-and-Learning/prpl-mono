@@ -89,7 +89,9 @@ def _print_results_summary(metrics: dict, cfg: DictConfig) -> None:
         # Assuming -1 reward per step, success means finishing early
         threshold = cfg.max_episode_steps
         successes = sum(1 for l in eval_lengths if l < threshold)
-        print(f"  Success rate (step < {threshold:.0f}): {successes}/{len(eval_returns)} ({100*successes/len(eval_returns):.1f}%)")
+        print(
+            f"  Success rate (step < {threshold:.0f}): {successes}/{len(eval_returns)} ({100*successes/len(eval_returns):.1f}%)"
+        )
 
     print("=" * 60 + "\n")
 

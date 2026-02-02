@@ -111,8 +111,7 @@ def _main(
         aggregated_df = combined_df.groupby(group_cols).agg(agg_dict).reset_index()
         # Flatten column names
         aggregated_df.columns = [
-            f"{col[0]}_{col[1]}" if col[1] else col[0]
-            for col in aggregated_df.columns
+            f"{col[0]}_{col[1]}" if col[1] else col[0] for col in aggregated_df.columns
         ]
     else:
         aggregated_df = combined_df
