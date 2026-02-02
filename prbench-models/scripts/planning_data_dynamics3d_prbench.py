@@ -141,16 +141,16 @@ def collect_data(
 
             if show_images:
                 robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
-                env.unwrapped._object_centric_env.set_render_camera("agentview_1")
-                overview_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(
+                env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
                     robot_name + "_base"
-                )
-                base_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(
+                )  # type: ignore # pylint: disable=protected-access
+                base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
                     robot_name + "_wrist"
-                )
-                wrist_image = env.unwrapped._object_centric_env.render()
+                )  # type: ignore # pylint: disable=protected-access
+                wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
                 _visualize_image_in_window(overview_image, "agentview_1")
                 _visualize_image_in_window(base_image, "base")
                 _visualize_image_in_window(wrist_image, "wrist")
@@ -204,16 +204,16 @@ def collect_data(
 
                 if show_images:
                     robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
-                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")
-                    overview_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(
+                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                    overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
                         robot_name + "_base"
                     )
-                    base_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(
+                    base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
                         robot_name + "_wrist"
                     )
-                    wrist_image = env.unwrapped._object_centric_env.render()
+                    wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
                     _visualize_image_in_window(overview_image, "agentview_1")
                     _visualize_image_in_window(base_image, "base")
                     _visualize_image_in_window(wrist_image, "wrist")

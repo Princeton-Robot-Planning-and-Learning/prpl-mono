@@ -272,7 +272,7 @@ def collect_data(
         robot = state.get_object_from_name("robot")
         target = state.get_object_from_name(target_object_key)
         target_shelf = state.get_object_from_name("shelf")
-        object_parameters = (robot, target, target_shelf)
+        object_parameters = (robot, target, target_shelf)  # type: ignore
         controller = lifted_controller.ground(object_parameters)
 
         params = np.array([0.0, -0.10])

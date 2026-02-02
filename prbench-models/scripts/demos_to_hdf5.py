@@ -32,7 +32,7 @@ import cv2 as cv
 import h5py  # type: ignore
 import imageio as iio
 import numpy as np
-from prbench_imitation_learning.dataset import (
+from prbench_imitation_learning.dataset import (  # type: ignore
     iter_teleop_episodes,
 )
 
@@ -229,9 +229,9 @@ def convert(
                     wrist_video_path = video_dir / "wrist.mp4"
                     base_video_path = video_dir / "base.mp4"
 
-                    iio.mimsave(overview_video_path, overview_images, fps=fps)
-                    iio.mimsave(wrist_video_path, wrist_images, fps=fps)
-                    iio.mimsave(base_video_path, base_images, fps=fps)
+                    iio.mimsave(overview_video_path, overview_images, fps=fps)  # type: ignore
+                    iio.mimsave(wrist_video_path, wrist_images, fps=fps)  # type: ignore
+                    iio.mimsave(base_video_path, base_images, fps=fps)  # type: ignore
                     print(f"  Saved videos for episode {ep_idx}")
             elif images:
                 episode_group.create_dataset(
@@ -249,7 +249,7 @@ def convert(
                     # Save videos for each camera view
                     fps = 30
                     image_video_path = video_dir / "image.mp4"
-                    iio.mimsave(image_video_path, images, fps=fps)
+                    iio.mimsave(image_video_path, images, fps=fps)  # type: ignore
                     print(f"  Saved video for episode {ep_idx}")
 
             # Store episode length as attribute

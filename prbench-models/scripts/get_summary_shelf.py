@@ -105,7 +105,7 @@ def get_observation_space(env_id: str) -> Optional[ObjectCentricBoxSpace]:
     try:
         env = prbench.make(env_id, render_mode=None)
         obs_space = env.observation_space
-        env.close()
+        env.close()  # type: ignore
         if isinstance(obs_space, ObjectCentricBoxSpace):
             return obs_space
         return None
@@ -134,7 +134,7 @@ def format_attribute_value(value: Any) -> str:
         return str(value)
 
 
-def format_object_state(state, indent: str = "    ") -> str:
+def format_object_state(state, indent: str = "    ") -> bool:
     """Format an object-centric state for printing.
 
     Uses the same access patterns as planning_data_dynamics3d_prbench.py:

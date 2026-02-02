@@ -38,9 +38,6 @@ def main(
             observations: dict[str, list[np.ndarray]] = {}
             for i in range(len(reader.observations)):
                 obs = reader.observations[i]
-                if args.navigation_only:
-                    if i > max_nav_steps:
-                        break
                 for k, v in obs.items():
                     if v.ndim == 3:
                         # Resize image

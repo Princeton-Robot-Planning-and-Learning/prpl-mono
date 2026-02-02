@@ -260,7 +260,7 @@ def run_inference(
                 action_dict = policy.step(obs_dict)
 
                 if action_dict is None:
-                    if use_qpos:
+                    if use_qpos:  # type: ignore
                         action_dict: dict[str, np.ndarray] = {  # type: ignore
                             "base_pose": obs_dict["base_pose"] - obs_dict["base_pose"],
                             "arm_qpos": obs_dict["arm_qpos"] - obs_dict["arm_qpos"],

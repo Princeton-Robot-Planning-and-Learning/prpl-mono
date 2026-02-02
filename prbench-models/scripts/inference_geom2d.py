@@ -262,8 +262,9 @@ def run_inference(
                     gripper_state = state.get(robot, "finger_state")
                     if gripper_state > 0.1:
                         gripper_closed = True
+
                 if "BaseMotion3D" in env_name or "Transport3D" in env_name:
-                    all_images = env.unwrapped._object_centric_env.render_all_cameras()
+                    all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
                     overview_image = all_images["overview"]
                     base_image = all_images["base"]
                     wrist_image = all_images["wrist"]
@@ -276,17 +277,17 @@ def run_inference(
                         _visualize_image_in_window(base_image, "base")
                         _visualize_image_in_window(wrist_image, "wrist")
                 elif "TidyBot" in env_name:
-                    robot_name = env.unwrapped._object_centric_env.robot_name
-                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")
-                    overview_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(
+                    robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                    overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
                         robot_name + "_base"
                     )
-                    base_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(
+                    base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
                         robot_name + "_wrist"
                     )
-                    wrist_image = env.unwrapped._object_centric_env.render()
+                    wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
                     if save_videos:
                         overview_images.append(overview_image)
                         base_images.append(base_image)
@@ -296,7 +297,7 @@ def run_inference(
                         _visualize_image_in_window(base_image, "base")
                         _visualize_image_in_window(wrist_image, "wrist")
                 else:
-                    image = env.unwrapped._object_centric_env.render()
+                    image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
                     if save_videos:
                         images_2d.append(image)
                     if show_images:
@@ -408,7 +409,7 @@ def run_inference(
                 del obs_dict
 
                 if action_dict is None:
-                    action_dict = {
+                    action_dict = {  # type: ignore
                         "robot_actions": np.zeros(
                             env.action_space.shape[0], dtype=np.float32
                         ),
@@ -421,8 +422,8 @@ def run_inference(
                 if "2D" in env_name:
                     action = np.clip(
                         action,
-                        env.action_space.low + epsilon,
-                        env.action_space.high - epsilon,
+                        env.action_space.low + epsilon,  # type: ignore
+                        env.action_space.high - epsilon,  # type: ignore
                     )
                 if "BaseMotion3D" in env_name:
                     action[3:] = 0.0
@@ -432,7 +433,7 @@ def run_inference(
                 obs, reward, terminated, truncated, _ = env.step(  # type: ignore # pylint: disable=line-too-long
                     action
                 )
-                episode_reward += reward
+                episode_reward += float(reward)
                 next_state = env.observation_space.devectorize(obs)
                 state = next_state
 
