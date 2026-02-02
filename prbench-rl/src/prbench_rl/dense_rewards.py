@@ -51,7 +51,7 @@ class BaseDenseRewardWrapper(gym.Wrapper):
         info["sparse_reward"] = sparse_reward
         info["dense_reward"] = dense_reward
 
-        total_reward = sparse_reward + self.reward_scale * dense_reward
+        total_reward = float(sparse_reward) + self.reward_scale * dense_reward
         return obs, total_reward, terminated, truncated, info
 
     def _compute_dense_reward(self, obs: Any, terminated: bool) -> float:
@@ -78,8 +78,9 @@ class BaseMotion3DDenseReward(BaseDenseRewardWrapper):
 
         return obs, info
 
-    def compute_distance(self, obs):
-        state = self.env.observation_space.devectorize(obs)
+    def compute_distance(self, obs: Any) -> float:
+        """Compute distance from robot to target."""
+        state = self.env.observation_space.devectorize(obs)  # type: ignore[attr-defined]
         obj_map = {o.name: o for o in state.data.keys()}
 
         robot = obj_map.get("robot")

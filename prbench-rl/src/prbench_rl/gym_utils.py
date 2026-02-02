@@ -316,7 +316,7 @@ class ReplayBuffer(BaseBuffer):
 
         self.actions = np.zeros(
             (self.buffer_size, self.n_envs, self.action_dim),
-            dtype=self._maybe_cast_dtype(action_space.dtype),
+            dtype=self._maybe_cast_dtype(action_space.dtype),  # type: ignore[arg-type]
         )
 
         self.rewards = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)

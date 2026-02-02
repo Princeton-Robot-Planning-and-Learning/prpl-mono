@@ -108,7 +108,11 @@ def _main(
         for col in numeric_cols:
             agg_dict[col] = ["mean", "std", "min", "max", "count"]
 
-        aggregated_df = combined_df.groupby(group_cols).agg(agg_dict).reset_index()
+        aggregated_df = (
+            combined_df.groupby(group_cols)
+            .agg(agg_dict)  # type: ignore[arg-type]
+            .reset_index()
+        )
         # Flatten column names
         aggregated_df.columns = [
             f"{col[0]}_{col[1]}" if col[1] else col[0] for col in aggregated_df.columns
@@ -165,14 +169,14 @@ if __name__ == "__main__":
         "--columns",
         nargs="*",
         default=["episodic_return", "step_length"],
-        help="Specific metric columns to include (default: episodic_return, step_length)",
+        help="Metric columns to include (default: episodic_return, step_length)",
     )
 
     parser.add_argument(
         "--config_columns",
         nargs="*",
         default=["agent.name", "env_id", "seed", "max_episode_steps"],
-        help="Config columns to include for grouping (default: agent.name, env_id, seed, max_episode_steps)",
+        help="Config columns for grouping (default: agent.name, env_id, seed)",
     )
 
     parser.add_argument(

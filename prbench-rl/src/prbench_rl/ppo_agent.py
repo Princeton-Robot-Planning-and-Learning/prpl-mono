@@ -379,6 +379,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
             )
             for i in range(self.args.num_envs)
         ]
+        envs: gym.vector.VectorEnv
         if self.args.async_envs:
             logging.info("Using AsyncVectorEnv for parallel environments")
             envs = gym.vector.AsyncVectorEnv(env_fns)

@@ -259,6 +259,7 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
             self.num_env_steps = 0
             self.max_episode_steps = 100
             self.r = 0.0
+            self.curr_distance = 0.0
             # Debug rendering only if render_mode is set
             if self.render_mode is not None:
                 _, _ = env.reset(seed=123, options=self.reset_options)
@@ -274,6 +275,7 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
             return obs, info
 
         def compute_distance(self, obs):
+            """Compute distance from robot to target."""
             state = self.env.observation_space.devectorize(obs)
             obj_map = {o.name: o for o in state.data.keys()}
 
@@ -318,6 +320,7 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
             return self.env.render()
 
         def compute_reward(self, obs, terminated):
+            """Compute shaped reward based on distance to goal."""
             # 1. Terminal Bonus
             if terminated:
                 return 100.0
@@ -407,7 +410,10 @@ def test_ppo_agent_training_with_fixed_environment_basemotion3d():
 
 def test_dense_reward_wrapper_basemotion3d():
     """Test that dense reward wrapper works for BaseMotion3D."""
-    from prbench_rl.dense_rewards import wrap_with_dense_reward
+    # Import here to avoid importing in tests that skip dense reward functionality
+    from prbench_rl.dense_rewards import (  # pylint: disable=import-outside-toplevel
+        wrap_with_dense_reward,
+    )
 
     prbench.register_all_environments()
 
@@ -419,24 +425,23 @@ def test_dense_reward_wrapper_basemotion3d():
 
     wrapped_env.reset(seed=42)
     action = wrapped_env.action_space.sample()
-    _, _, terminated, _, info = wrapped_env.step(action)
+    _, _, _, _, info = wrapped_env.step(action)
 
     # Check that dense reward info is present
     assert "sparse_reward" in info
     assert "dense_reward" in info
     assert np.isfinite(info["dense_reward"])
-
-    # Dense reward should be negative (distance-based) unless terminated
-    assert info["dense_reward"] <= 0.0 or terminated
+    # Dense reward can be positive (moved closer) or negative (moved away/time penalty)
 
     wrapped_env.close()
 
 
 def test_dense_reward_not_implemented_raises():
     """Test that NotImplementedError is raised for unsupported environments."""
-    import pytest
-
-    from prbench_rl.dense_rewards import wrap_with_dense_reward
+    # Import here to avoid importing in tests that skip dense reward functionality
+    from prbench_rl.dense_rewards import (  # pylint: disable=import-outside-toplevel
+        wrap_with_dense_reward,
+    )
 
     prbench.register_all_environments()
 

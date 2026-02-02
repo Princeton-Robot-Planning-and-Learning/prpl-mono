@@ -1,4 +1,4 @@
-"""Script to generate comprehensive results across all environments, seeds, and agents.
+"""Script to generate comprehensive results across all environments.
 
 This script:
 1. For each environment, reward type (sparse/dense), and agent (ppo/sac):
@@ -7,7 +7,7 @@ This script:
 2. Measures inference time by loading checkpoints and running 100 steps
 
 Usage:
-    python experiments/gen_results.py --outputs_dir prbench-rl/outputs --runs_dir prbench-rl/runs
+    python experiments/gen_results.py --outputs_dir outputs --runs_dir runs
 """
 
 import argparse
@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import prbench
 import torch
-import yaml
+import yaml  # type: ignore[import-untyped]
 from omegaconf import DictConfig
 
 from prbench_rl.ppo_agent import PPOAgent
@@ -64,6 +64,7 @@ def measure_inference_time(
     # Create agent with minimal config (no logging)
     cfg = DictConfig({"tf_log": False, "cuda": False})
 
+    agent: PPOAgent | SACAgent
     if agent_type == "ppo":
         agent = PPOAgent(
             seed=seed,
@@ -84,9 +85,9 @@ def measure_inference_time(
 
     # Set to eval mode
     if agent_type == "ppo":
-        agent.agent.eval()
+        agent.agent.eval()  # type: ignore[union-attr]
     else:
-        agent.actor.eval()
+        agent.actor.eval()  # type: ignore[union-attr]
 
     # Run timing
     obs, _ = env.reset(seed=seed)
@@ -98,9 +99,13 @@ def measure_inference_time(
         start_time = time.perf_counter()
         with torch.no_grad():
             if agent_type == "ppo":
-                action = agent.agent.get_action(obs_tensor, deterministic=True)
+                action = agent.agent.get_action(  # type: ignore[union-attr]
+                    obs_tensor, deterministic=True
+                )
             else:
-                action, _, _ = agent.actor.get_action(obs_tensor, deterministic=True)
+                action, _, _ = agent.actor.get_action(  # type: ignore[union-attr]
+                    obs_tensor, deterministic=True
+                )
         end_time = time.perf_counter()
 
         inference_times.append(end_time - start_time)
@@ -113,7 +118,7 @@ def measure_inference_time(
 
     env.close()
 
-    return np.mean(inference_times)
+    return float(np.mean(inference_times))
 
 
 def process_experiment(
@@ -122,7 +127,7 @@ def process_experiment(
     agent_type: str,
     outputs_dir: Path,
     runs_dir: Path,
-) -> dict:
+) -> dict | None:
     """Process results for a single experiment configuration.
 
     Args:
@@ -168,7 +173,7 @@ def process_experiment(
             continue
 
         # Load config to get max_episode_steps and env_id
-        with open(config_file) as f:
+        with open(config_file, encoding="utf-8") as f:
             config = yaml.safe_load(f)
 
         max_episode_steps = config["max_episode_steps"]
@@ -215,7 +220,7 @@ def process_experiment(
                 seed_inference_times.append(episode_inference_times.mean())
             except Exception as e:
                 print(
-                    f"Warning: Failed to measure inference time for {checkpoint_path}: {e}"
+                    f"Warning: Failed to measure inference for {checkpoint_path}: {e}"
                 )
                 seed_inference_times.append(np.nan)
         else:
@@ -297,11 +302,14 @@ def main(outputs_dir: Path, runs_dir: Path, output_file: Path | None = None):
 
                 if stats is not None:
                     all_results.append(stats)
+                    sr_mean = stats["success_rate_mean"]
+                    sr_std = stats["success_rate_std"]
+                    ret_mean = stats["successful_return_mean"]
+                    time_ms = stats["inference_time_mean"] * 1000
                     print(
                         f"  {reward_type}/{agent_type}: "
-                        f"success={stats['success_rate_mean']:.2%} ± {stats['success_rate_std']:.2%}, "
-                        f"return={stats['successful_return_mean']:.2f}, "
-                        f"time={stats['inference_time_mean']*1000:.2f}ms"
+                        f"success={sr_mean:.2%} +/- {sr_std:.2%}, "
+                        f"return={ret_mean:.2f}, time={time_ms:.2f}ms"
                     )
 
     # Create DataFrame

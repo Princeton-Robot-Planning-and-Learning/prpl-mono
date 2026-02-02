@@ -1,6 +1,7 @@
 """Compare step speed between TidyBot3D environments with parallelization."""
 
 import time
+from typing import Callable
 
 import gymnasium as gym
 import numpy as np
@@ -10,100 +11,107 @@ prbench.register_all_environments()
 
 ENVS = [
     "prbench/TidyBot3D-base_motion-o1-v0",
-    "prbench/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0",
+    (
+        "prbench/TidyBot3D-tool_use-lab2_kitchen-o5-"
+        "sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0"
+    ),
 ]
 
 NUM_STEPS = 100
 NUM_ENVS_LIST = [1, 2, 4, 8]
 
 
-def make_env(env_id):
+def make_env(env_name: str) -> Callable[[], gym.Env]:
     """Factory function for creating environments."""
 
-    def thunk():
-        return prbench.make(env_id, render_mode="rgb_array")
+    def thunk() -> gym.Env:
+        return prbench.make(env_name, render_mode="rgb_array")
 
     return thunk
 
 
-def test_single_env(env_id):
+def test_single_env(env_name: str) -> None:
     """Test single environment speed."""
-    print(f"\n  [Single Env]")
+    print("\n  [Single Env]")
 
     start = time.time()
-    env = prbench.make(env_id, render_mode="rgb_array")
+    env = prbench.make(env_name, render_mode="rgb_array")
     print(f"  Create: {time.time() - start:.3f}s")
     print(f"  Obs space: {env.observation_space}")
     print(f"  Action space: {env.action_space}")
 
     start = time.time()
-    obs, info = env.reset()
+    env.reset()
     print(f"  Reset: {time.time() - start:.3f}s")
 
     start = time.time()
-    for i in range(NUM_STEPS):
+    for _ in range(NUM_STEPS):
         action = env.action_space.sample()
-        obs, reward, terminated, truncated, info = env.step(action)
+        _, _, terminated, truncated, _ = env.step(action)
         if terminated or truncated:
-            obs, info = env.reset()
+            env.reset()
     elapsed = time.time() - start
     print(f"  {NUM_STEPS} steps: {elapsed:.2f}s ({NUM_STEPS/elapsed:.1f} steps/sec)")
 
-    env.close()
+    env.close()  # type: ignore[no-untyped-call]
 
 
-def test_sync_vector_env(env_id, num_envs):
+def test_sync_vector_env(env_name: str, n_envs: int) -> None:
     """Test SyncVectorEnv speed."""
-    print(f"\n  [SyncVectorEnv x{num_envs}]")
+    print(f"\n  [SyncVectorEnv x{n_envs}]")
 
     start = time.time()
-    envs = gym.vector.SyncVectorEnv([make_env(env_id) for _ in range(num_envs)])
+    envs = gym.vector.SyncVectorEnv([make_env(env_name) for _ in range(n_envs)])
     print(f"  Create: {time.time() - start:.3f}s")
 
     start = time.time()
-    obs, info = envs.reset()
+    envs.reset()
     print(f"  Reset: {time.time() - start:.3f}s")
 
     start = time.time()
-    for i in range(NUM_STEPS):
-        actions = np.array([envs.single_action_space.sample() for _ in range(num_envs)])
-        obs, reward, term, trunc, info = envs.step(actions)
+    for _ in range(NUM_STEPS):
+        actions = np.array([envs.single_action_space.sample() for _ in range(n_envs)])
+        envs.step(actions)
     elapsed = time.time() - start
-    total_steps = NUM_STEPS * num_envs
+    total_steps = NUM_STEPS * n_envs
+    steps_per_sec = total_steps / elapsed
     print(
-        f"  {NUM_STEPS} batches ({total_steps} total steps): {elapsed:.2f}s ({total_steps/elapsed:.1f} steps/sec)"
+        f"  {NUM_STEPS} batches ({total_steps} total): "
+        f"{elapsed:.2f}s ({steps_per_sec:.1f} steps/sec)"
     )
 
-    envs.close()
+    envs.close()  # type: ignore[no-untyped-call]
 
 
-def test_async_vector_env(env_id, num_envs):
+def test_async_vector_env(env_name: str, n_envs: int) -> None:
     """Test AsyncVectorEnv speed."""
-    print(f"\n  [AsyncVectorEnv x{num_envs}]")
+    print(f"\n  [AsyncVectorEnv x{n_envs}]")
 
     try:
         start = time.time()
-        envs = gym.vector.AsyncVectorEnv([make_env(env_id) for _ in range(num_envs)])
+        envs = gym.vector.AsyncVectorEnv([make_env(env_name) for _ in range(n_envs)])
         print(f"  Create: {time.time() - start:.3f}s")
 
         start = time.time()
-        obs, info = envs.reset()
+        envs.reset()
         print(f"  Reset: {time.time() - start:.3f}s")
 
         start = time.time()
-        for i in range(NUM_STEPS):
+        for _ in range(NUM_STEPS):
             actions = np.array(
-                [envs.single_action_space.sample() for _ in range(num_envs)]
+                [envs.single_action_space.sample() for _ in range(n_envs)]
             )
-            obs, reward, term, trunc, info = envs.step(actions)
+            envs.step(actions)
         elapsed = time.time() - start
-        total_steps = NUM_STEPS * num_envs
+        total_steps = NUM_STEPS * n_envs
+        steps_per_sec = total_steps / elapsed
         print(
-            f"  {NUM_STEPS} batches ({total_steps} total steps): {elapsed:.2f}s ({total_steps/elapsed:.1f} steps/sec)"
+            f"  {NUM_STEPS} batches ({total_steps} total): "
+            f"{elapsed:.2f}s ({steps_per_sec:.1f} steps/sec)"
         )
 
-        envs.close()
-    except Exception as e:
+        envs.close()  # type: ignore[no-untyped-call]
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"  Error: {e}")
 
 

@@ -89,8 +89,10 @@ def _print_results_summary(metrics: dict, cfg: DictConfig) -> None:
         # Assuming -1 reward per step, success means finishing early
         threshold = cfg.max_episode_steps
         successes = sum(1 for l in eval_lengths if l < threshold)
+        success_pct = 100 * successes / len(eval_returns)
         print(
-            f"  Success rate (step < {threshold:.0f}): {successes}/{len(eval_returns)} ({100*successes/len(eval_returns):.1f}%)"
+            f"  Success rate (step < {threshold:.0f}): "
+            f"{successes}/{len(eval_returns)} ({success_pct:.1f}%)"
         )
 
     print("=" * 60 + "\n")
@@ -133,7 +135,7 @@ def _main(cfg: DictConfig) -> None:
 
     # Save trained agent to our custom output directory
     agent_path = output_dir / "agent.pkl"
-    agent.save(agent_path)
+    agent.save(str(agent_path))
     logging.info(f"Saved trained agent to {agent_path}")
 
     # Save training metrics
