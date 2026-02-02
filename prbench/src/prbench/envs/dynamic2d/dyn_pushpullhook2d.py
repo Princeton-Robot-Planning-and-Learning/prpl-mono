@@ -673,7 +673,7 @@ class ObjectCentricDynPushPullHook2DEnv(
                 # Update object state from body
                 state.set(obj, "x", pymunk_body.position.x)
                 state.set(obj, "y", pymunk_body.position.y)
-                
+
                 state.set(obj, "theta", pymunk_body.angle)
                 state.set(obj, "vx", pymunk_body.velocity.x)
                 state.set(obj, "vy", pymunk_body.velocity.y)

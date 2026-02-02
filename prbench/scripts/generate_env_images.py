@@ -30,7 +30,8 @@ class EnvImageConfig:
 
     env_id: str
     seed: int = 0
-    # Crop values: (left_px, top_px, right_px, bottom_px) pixels to crop from each edge, or None for no cropping
+    # Crop values: (left_px, top_px, right_px, bottom_px) pixels to crop from
+    # each edge, or None for no cropping
     crop: tuple[int, int, int, int] | None = None
     # Position in combined image: (x, y) from top-left
     position: tuple[int, int] = (0, 0)
@@ -38,7 +39,7 @@ class EnvImageConfig:
     scale: float = 1.0
     # Path to existing image file to use instead of generating one
     existing_image_path: Path | str | None = None
-    # Number of steps to take before rendering (default 0 = render immediately after reset)
+    # Number of steps to take before rendering (default 0 = render after reset)
     num_steps: int = 0
 
 
@@ -69,7 +70,7 @@ ENV_CONFIGS = [
     EnvImageConfig(
         env_id="prbench/Obstruction2D-o4-v0",
         seed=42,
-        crop=(20,0,20,0),
+        crop=(20, 0, 20, 0),
         position=(330, -15),
         scale=0.8,
     ),
@@ -112,21 +113,21 @@ ENV_CONFIGS = [
     EnvImageConfig(
         env_id="prbench/Obstruction3D-o4-v0",
         seed=42,
-        crop=(80,0,80,0),
+        crop=(80, 0, 80, 0),
         position=(430, 231),
         scale=0.35,
     ),
     EnvImageConfig(
         env_id="prbench/Packing3D-p3-v0",
         seed=42,
-        crop=(80,0,80,0),
+        crop=(80, 0, 80, 0),
         position=(631, 231),
         scale=0.35,
     ),
     EnvImageConfig(
         env_id="prbench/Table3D-o3-v0",
         seed=42,
-        crop=(80,0,80,0),
+        crop=(80, 0, 80, 0),
         position=(831, 231),
         scale=0.35,
     ),
@@ -141,14 +142,14 @@ ENV_CONFIGS = [
     EnvImageConfig(
         env_id="prbench/Transport3D-o2-v0",
         seed=42,
-        crop=(80,0,80,0),
+        crop=(80, 0, 80, 0),
         position=(1, 401),
         scale=0.35,
     ),
     EnvImageConfig(
         env_id="prbench/BaseMotion3D-v0",
         seed=42,
-        crop=(80,0,80,0),
+        crop=(80, 0, 80, 0),
         position=(201, 401),
         scale=0.35,
     ),
@@ -162,19 +163,24 @@ ENV_CONFIGS = [
     EnvImageConfig(
         env_id="prbench/Shelf3D-o10-v0",
         seed=42,
-        crop=(80,0,80,0),
+        crop=(80, 0, 80, 0),
         position=(580, 401),
         scale=0.35,
     ),
     EnvImageConfig(
-        env_id="prbench/TidyBot3D-sort-lab2-o20-sort_the_cluttered_blocks_into_bowls-v0",
+        env_id=(
+            "prbench/TidyBot3D-sort-lab2-o20-" "sort_the_cluttered_blocks_into_bowls-v0"
+        ),
         seed=42,
         crop=None,
         position=(780, 381),
         scale=0.35,
     ),
     EnvImageConfig(
-        env_id="prbench/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl-v0",
+        env_id=(
+            "prbench/TidyBot3D-rearrange-lab2_kitchen-o2-"
+            "put_the_boxed_drink_and_the_can_next_to_the_bowl-v0"
+        ),
         seed=42,
         crop=None,
         position=(980, 391),
@@ -182,7 +188,10 @@ ENV_CONFIGS = [
     ),
     # Row 4: 6 3D TidyBot environments (y=601, 198px width, scale 0.25)
     EnvImageConfig(
-        env_id="prbench/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_left_side_of_the_kitchen_island-v0",
+        env_id=(
+            "prbench/TidyBot3D-tool_use-lab2_kitchen-o50-"
+            "sweep_the_blocks_to_the_left_side_of_the_kitchen_island-v0"
+        ),
         seed=42,
         crop=None,
         position=(1, 601),
@@ -210,7 +219,10 @@ ENV_CONFIGS = [
         scale=0.15,
     ),
     EnvImageConfig(
-        env_id="prbench/TidyBot3D-tool_use-lab2_kitchen-o5-scoop_the_blocks_from_the_yellow_bin_to_the_green_bin-v0",
+        env_id=(
+            "prbench/TidyBot3D-tool_use-lab2_kitchen-o5-"
+            "scoop_the_blocks_from_the_yellow_bin_to_the_green_bin-v0"
+        ),
         seed=42,
         crop=None,
         position=(660, 601),
@@ -224,7 +236,10 @@ ENV_CONFIGS = [
         scale=0.3,
     ),
     EnvImageConfig(
-        env_id="prbench/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0",
+        env_id=(
+            "prbench/TidyBot3D-tool_use-lab2_kitchen-o5-"
+            "sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0"
+        ),
         seed=42,
         crop=None,
         position=(1031, 601),
@@ -254,16 +269,18 @@ def generate_image(
 
         if not existing_path.is_absolute():
             # Resolve relative paths from the script's parent directory
-            existing_path = Path(__file__).parent.parent / "docs" / "env_images" / existing_path
+            existing_path = (
+                Path(__file__).parent.parent / "docs" / "env_images" / existing_path
+            )
 
         img = Image.open(existing_path)
 
         if config.crop is not None:
             # Apply cropping in-memory without saving
-            # Convert from (left_px, top_px, right_px, bottom_px) edge crops to absolute coordinates
+            # Convert from edge crops (left, top, right, bottom) to absolute coords
             left, top, right, bottom = config.crop
             crop_box = (left, top, img.width - right, img.height - bottom)
-            img = img.crop(crop_box)
+            img = img.crop(crop_box)  # type: ignore[assignment]
 
         # Use existing image as-is (or cropped in-memory), no need to save
         return existing_path, img
@@ -283,7 +300,9 @@ def generate_image(
 
     env.reset(seed=config.seed)
     if is_dynamic3d:
-        env.unwrapped._object_centric_env.set_render_camera("task_view")
+        # pylint: disable-next=protected-access
+        oc_env = env.unwrapped._object_centric_env  # type: ignore[attr-defined]
+        oc_env.set_render_camera("task_view")
         # Step the environment if requested
         for _ in range(20):
             action = env.action_space.sample()  # Random action
@@ -292,13 +311,13 @@ def generate_image(
     img_array: NDArray[np.uint8] = env.render()  # type: ignore[assignment]
     env.close()  # type: ignore[no-untyped-call]
 
-    img = Image.fromarray(img_array)
+    img = Image.fromarray(img_array)  # type: ignore[assignment]
 
     if config.crop is not None:
-        # Convert from (left_px, top_px, right_px, bottom_px) edge crops to absolute coordinates
+        # Convert from edge crops (left, top, right, bottom) to absolute coords
         left, top, right, bottom = config.crop
         crop_box = (left, top, img.width - right, img.height - bottom)
-        img = img.crop(crop_box)
+        img = img.crop(crop_box)  # type: ignore[assignment]
 
     img.save(output_path)
 
