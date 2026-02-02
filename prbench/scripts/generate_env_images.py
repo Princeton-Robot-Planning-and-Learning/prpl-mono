@@ -189,7 +189,7 @@ ENV_CONFIGS = [
         scale=0.2,
     ),
     EnvImageConfig(
-        env_id="prbench/TidyBot3D-namo-o1-v0",
+        env_id="prbench/TidyBot3D-navigate-namo-o12-v0",
         seed=42,
         crop=None,
         position=(180, 601),

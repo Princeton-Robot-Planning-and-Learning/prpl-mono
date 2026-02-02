@@ -1,0 +1,167 @@
+{
+    "robots": {
+        "tidybot": {
+            "robot_0": {}
+        }
+    },
+    "scene": {
+        "simple": {
+            "position": [0, 0, 0]
+        },
+        "mimiclabs-lab2": {
+            "position": [0, 0, 0],
+            "wall_collision": true
+        }
+    },
+    "fixtures": {},
+    "regions": {
+        "chair_1_init_region": {
+            "target": "ground",
+            "ranges": [[2.1, 2.1, 2.5, 2.5]],
+            "rgba": [1, 0, 0, 0.0]
+        },
+        "chair_2_init_region": {
+            "target": "ground",
+            "ranges": [[1.3, 2.4, 1.7, 2.7]],
+            "rgba": [0, 0, 1, 0.0]
+        },
+        "chair_3_init_region": {
+            "target": "ground",
+            "ranges": [[2.4, 1.3, 2.7,1.7]],
+            "rgba": [1, 1, 0, 0.0]
+        },
+        "chair_4_init_region": {
+            "target": "ground",
+            "ranges": [[0.5, 0.5, 0.8, 0.8]],
+            "rgba": [1, 0.5, 0, 0.0]
+        },
+        "chair_5_init_region": {
+            "target": "ground",
+            "ranges": [[1.3, 1.3, 1.7, 1.7]],
+            "rgba": [0.5, 0, 1, 0.0]
+        },
+        "chair_6_init_region": {
+            "target": "ground",
+            "ranges": [[0.5, 1.3, 0.8, 1.7]],
+            "rgba": [0, 1, 1, 0.0]
+        },
+        "chair_7_init_region": {
+            "target": "ground",
+            "ranges": [[1.3, 0.5, 1.7, 0.8]],
+            "rgba": [1, 0, 1, 0.0]
+        },
+        "chair_8_init_region": {
+            "target": "ground",
+            "ranges": [[-0.3, 0.5, 0.1, 0.9]],
+            "rgba": [0.5, 0.5, 0, 0.0]
+        },
+        "chair_9_init_region": {
+            "target": "ground",
+            "ranges": [[-0.3, 1.2, 0.1, 1.6]],
+            "rgba": [0, 0.5, 0.5, 0.0]
+        },
+        "chair_10_init_region": {
+            "target": "ground",
+            "ranges": [[2.4, 0.6, 2.7, 1.0]],
+            "rgba": [0.5, 0, 0.5, 0.0]
+        },
+        "chair_11_init_region": {
+            "target": "ground",
+            "ranges": [[2.3, 0.0, 2.7, 0.5]],
+            "rgba": [0.5, 0, 0.5, 0.0]
+        },
+        "ground_goal_region": {
+            "target": "ground",
+            "ranges": [[2.3, 2.3, 2.8, 2.8]],
+            "rgba": [0, 1, 0, 0.6]
+        }
+    },
+    "objects": {
+        "robocasafrlapartmentchair01": {
+            "obstacle_chair_1": {
+                "pos_z": 0.55,
+                "euler": [90, 0, 0]
+            },
+            "obstacle_chair_4": {
+                "pos_z": 0.55,
+                "euler": [90, 0, 0]
+            },
+            "obstacle_chair_5": {
+                "pos_z": 0.55,
+                "euler": [90, 0, 0]
+            },
+            "obstacle_chair_6": {
+                "pos_z": 0.55,
+                "euler": [90, 0, 0]
+            },
+            "obstacle_chair_7": {
+                "pos_z": 0.55,
+                "euler": [90, 0, 0]
+            },
+            "obstacle_chair_11": {
+                "pos_z": 0.55,
+                "euler": [90, 0, 0]
+            }
+        },
+        "robocasafrlapartmentchair04": {
+            "obstacle_chair_2": {
+                "pos_z": 0.55,
+                "euler": [0.0, 0, 0]
+            },
+            "obstacle_chair_8": {
+                "pos_z": 0.55,
+                "euler": [90, 0, 0]
+            },
+            "obstacle_chair_9": {
+                "pos_z": 0.55,
+                "euler": [45, 0, 0]
+            }
+        },
+        "robocasafrlapartmentchair05": {
+            "obstacle_chair_3": {
+                "pos_z": 0.55,
+                "euler": [90, 0, 0]
+            },
+            "obstacle_chair_10": {
+                "pos_z": 0.55,
+                "euler": [60, 0, 0]
+            }
+        }
+    },
+    "cameras": {
+        "agentview_1": {
+            "position": [2.0, 2.0, 3.0],
+            "lookat": [1.2, 0, 0],
+            "fovy": 50,
+            "resolution": [640, 480]
+        },
+        "agentview_2": {
+            "position": [2.0, -2.0, 3.0],
+            "lookat": [1.2, 0, 0],
+            "fovy": 50,
+            "resolution": [640, 480]
+        },
+        "topdown": {
+            "position": [1.2, 0, 4.0],
+            "lookat": [1.2, 0, 0],
+            "fovy": 70,
+            "resolution": [640, 480]
+        }
+    },
+    "initial_state": [
+        ["on", "obstacle_chair_1", "chair_1_init_region"],
+        ["on", "obstacle_chair_2", "chair_2_init_region"],
+        ["on", "obstacle_chair_3", "chair_3_init_region"],
+        ["on", "obstacle_chair_4", "chair_4_init_region"],
+        ["on", "obstacle_chair_5", "chair_5_init_region"],
+        ["on", "obstacle_chair_6", "chair_6_init_region"],
+        ["on", "obstacle_chair_7", "chair_7_init_region"],
+        ["on", "obstacle_chair_8", "chair_8_init_region"],
+        ["on", "obstacle_chair_9", "chair_9_init_region"],
+        ["on", "obstacle_chair_10", "chair_10_init_region"],
+        ["on", "obstacle_chair_11", "chair_11_init_region"]
+    ],
+    "goal_state": [
+        ["on", "robot_0", "ground_goal_region"]
+    ]
+}

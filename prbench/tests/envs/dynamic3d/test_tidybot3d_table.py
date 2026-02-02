@@ -112,7 +112,7 @@ def test_tidybot3d_table_mimiclabs_scene_position():
 
     # Verify robot and objects are created (not affected by scene position)
     state = env.observation_space.devectorize(obs)
-    robot = state.get_object_from_name("robot")
+    robot = state.get_object_from_name("robot_0")
     assert robot is not None
 
     # Verify we can step in the environment

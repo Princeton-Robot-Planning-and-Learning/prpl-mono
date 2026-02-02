@@ -22,6 +22,9 @@ from prbench.envs.dynamic3d.objects.base import (
 ROBOCASA_OBJECTS_DIR = (
     Path(__file__).parent.parent / "models" / "assets" / "robocasa_objects"
 )
+REPLICA_OBJECTS_DIR = (
+    Path(__file__).parent.parent / "models" / "assets" / "replica_objects"
+)
 
 
 class RoboCasaObject(MujocoObject):
@@ -379,6 +382,13 @@ class RoboCasaObject(MujocoObject):
         )
 
 
+# Import ReplicaObject after RoboCasaObject is defined to avoid circular import
+# pylint: disable=wrong-import-position
+from prbench.envs.dynamic3d.objects.imported_objects import (  # noqa: E402
+    ReplicaObject,
+)
+
+
 # Dynamically create and register classes for each object directory
 def _create_robocasa_object_classes() -> None:
     """Scan the robocasa_objects directory and create classes for each object."""
@@ -429,6 +439,49 @@ def _create_robocasa_object_classes() -> None:
             # pylint: disable=global-variable-undefined
             globals()[class_name] = new_class
 
+    for object_dir in sorted(REPLICA_OBJECTS_DIR.iterdir()):
+        if not object_dir.is_dir():
+            continue
+
+        # Check if model.xml exists
+        model_xml = object_dir / "model.xml"
+        if not model_xml.exists():
+            continue
+
+        # Extract object type name (directory name)
+        object_type_name = object_dir.name
+
+        # Create a class name (convert snake_case to PascalCase)
+        # e.g., "frl_apartment_chair_01" -> "RobocasaFrlApartmentChair01"
+        # Note: We keep the "Robocasa" prefix for backwards compatibility
+        class_name_parts = ["Robocasa"] + [
+            part.capitalize() for part in object_type_name.split("_")
+        ]
+        class_name = "".join(class_name_parts)
+
+        # Create a new class dynamically, inheriting from ReplicaObject
+        # to support pos_z and euler options
+        new_class = type(
+            class_name,
+            (ReplicaObject,),
+            {
+                "object_type_name": object_type_name,
+                "model_dir": object_dir,
+                "__module__": __name__,
+            },
+        )
+
+        # Register the class with multiple names for flexibility
+        register_object(new_class)  # Registers as lowercase class name
+
+        # Also register with the exact object type name (e.g., "frl_apartment_chair_01")
+        # and with "robocasa_" prefix for backwards compatibility
+        REGISTERED_OBJECTS[object_type_name] = new_class
+        REGISTERED_OBJECTS[f"robocasa_{object_type_name}"] = new_class
+
+        # Add to module globals so it can be imported
+        globals()[class_name] = new_class
+
 
 # Auto-generate classes on module import
 _create_robocasa_object_classes()
@@ -439,7 +492,7 @@ _create_robocasa_object_classes()
 _dynamic_exports = [
     name
     for name in globals()
-    if name.startswith("Robocasa") and name != "RoboCasaObject"
+    if name.startswith("Robocasa") and name not in ("RoboCasaObject", "ReplicaObject")
 ]
 __all__ = [
     "RoboCasaObject",

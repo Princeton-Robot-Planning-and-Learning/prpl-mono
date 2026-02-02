@@ -1,0 +1,21 @@
+<mujoco model="frl_apartment_chair_01">
+  <default>
+    <default class="visual">
+      <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+    </default>
+    <default class="collision">
+      <geom group="3" type="mesh"/>
+    </default>
+  </default>
+  <asset>
+    <texture type="2d" name="Material_419" file="Material_419.png"/>
+    <material name="Material_419" texture="Material_419" specular="0.5" shininess="0.5"/>
+    <mesh file="frl_apartment_chair_01.obj"/>
+  </asset>
+  <worldbody>
+    <body name="frl_apartment_chair_01">
+      <geom material="Material_419" mesh="frl_apartment_chair_01" class="visual"/>
+      <geom mesh="frl_apartment_chair_01" class="collision"/>
+    </body>
+  </worldbody>
+</mujoco>
