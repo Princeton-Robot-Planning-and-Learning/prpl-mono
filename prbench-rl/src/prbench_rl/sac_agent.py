@@ -56,6 +56,7 @@ class SACArgs:
     """Whether to save model into the `runs/{run_name}` folder."""
     save_model_freq: int = 50000
     """Frequency to save the model (in timesteps)."""
+    async_envs: bool = True
 
     # Environment specific arguments
     num_envs: int = 1
@@ -90,6 +91,12 @@ class SACArgs:
     """Entropy regularization coefficient."""
     autotune: bool = True
     """Automatic tuning of the entropy coefficient."""
+
+    # Dense reward settings
+    dense_reward: bool = False
+    """Whether to use dense reward shaping."""
+    dense_reward_scale: float = 0.1
+    """Scale factor for dense reward."""
 
 
 # ALGO LOGIC: initialize agent here:
@@ -358,7 +365,8 @@ class SACAgent(BaseRLAgent[_O, _U]):
         obs, _ = train_envs.reset()
         episodic_returns: list[float] = []
         step_lengths: list[int] = []
-        step_length = 0
+        # Track step count per environment
+        step_counts = [0] * train_envs.num_envs
 
         while len(episodic_returns) < eval_episodes:
             with torch.no_grad():
@@ -367,19 +375,27 @@ class SACAgent(BaseRLAgent[_O, _U]):
                 actions = action.cpu().numpy()
 
             obs, _, _, _, infos = train_envs.step(actions)
-            step_length += 1
+            # Increment step count for all environments
+            step_counts = [s + 1 for s in step_counts]
 
             if "final_info" in infos:
-                for info in infos["final_info"]:
+                for env_idx, info in enumerate(infos["final_info"]):
                     if info is None or "episode" not in info:
                         continue
+                    raw_return = info["episode"]["r"]
+                    episode_return = (
+                        raw_return.item()
+                        if hasattr(raw_return, "item")
+                        else float(raw_return)
+                    )
                     logging.info(
                         f"eval_episode={len(episodic_returns)}, "
-                        f"episodic_return={info['episode']['r']}"
+                        f"episodic_return={episode_return}"
                     )
-                    episodic_returns.append(info["episode"]["r"])
-                    step_lengths.append(step_length)
-                    step_length = 0
+                    episodic_returns.append(episode_return)
+                    step_lengths.append(step_counts[env_idx])
+                    # Reset step count for this environment only
+                    step_counts[env_idx] = 0
 
         eval_metrics = {
             "episodic_return": episodic_returns,
@@ -400,15 +416,22 @@ class SACAgent(BaseRLAgent[_O, _U]):
         # env setup
         episodic_returns: list[float] = []
         # Create training environments (no video recording during training)
-        envs = gym.vector.SyncVectorEnv(
-            [
-                make_env_sac(
-                    self.env_id,
-                    self.max_episode_steps,
-                )
-                for i in range(self.args.num_envs)
-            ]
-        )
+        env_fns = [
+            make_env_sac(
+                self.env_id,
+                self.max_episode_steps,
+                gamma=self.args.gamma,
+                dense_reward=self.args.dense_reward,
+                dense_reward_scale=self.args.dense_reward_scale,
+            )
+            for i in range(self.args.num_envs)
+        ]
+        envs: gym.vector.VectorEnv
+        if self.args.async_envs:
+            logging.info("Using AsyncVectorEnv for parallel environments")
+            envs = gym.vector.AsyncVectorEnv(env_fns)
+        else:
+            envs = gym.vector.SyncVectorEnv(env_fns)
         assert isinstance(
             envs.single_action_space, gym.spaces.Box
         ), "only continuous action space is supported"
@@ -428,8 +451,11 @@ class SACAgent(BaseRLAgent[_O, _U]):
 
         # TRY NOT TO MODIFY: start the game
         obs, _ = envs.reset(seed=self.args.seed)
-        for global_step in range(self.args.total_timesteps):
+        global_step = 0
+        while global_step < self.args.total_timesteps:
             # ALGO LOGIC: put action logic here
+            if global_step % 1024 == 0:
+                logging.info(f"Global Step: {global_step}")
             if global_step < self.args.learning_starts:
                 actions = np.array(
                     [envs.single_action_space.sample() for _ in range(envs.num_envs)]
@@ -443,26 +469,38 @@ class SACAgent(BaseRLAgent[_O, _U]):
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
+            global_step += envs.num_envs
 
             # TRY NOT TO MODIFY: record rewards for plotting purposes
             if "final_info" in infos:
                 for info in infos["final_info"]:
                     if info and "episode" in info:
-                        episode_return = info["episode"]["r"]
+                        raw_return = info["episode"]["r"]
+                        episode_return = (
+                            raw_return.item()
+                            if hasattr(raw_return, "item")
+                            else float(raw_return)
+                        )
+                        raw_length = info["episode"]["l"]
+                        episode_length = (
+                            raw_length.item()
+                            if hasattr(raw_length, "item")
+                            else int(raw_length)
+                        )
                         logging.info(
                             f"global_step={global_step}, "
                             f"episodic_return={episode_return}"
                         )
-                        episodic_returns.append(info["episode"]["r"])
+                        episodic_returns.append(episode_return)
                         if self.writer is not None:
                             self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                 "charts/episodic_return",
-                                info["episode"]["r"],
+                                episode_return,
                                 global_step,
                             )
                             self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                 "charts/episodic_length",
-                                info["episode"]["l"],
+                                episode_length,
                                 global_step,
                             )
 

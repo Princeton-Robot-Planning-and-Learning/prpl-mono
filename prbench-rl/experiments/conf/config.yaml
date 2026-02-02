@@ -12,3 +12,10 @@ eval_episodes: 50
 
 # Random seed
 seed: 0
+
+# Hydra configuration - disable default output directory
+# Our experiment runner manages output directories instead
+hydra:
+  output_subdir: null
+  run:
+    dir: .

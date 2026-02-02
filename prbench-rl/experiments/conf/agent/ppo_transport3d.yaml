@@ -1,0 +1,18 @@
+# PPO agent configuration for Transport3D
+name: ppo
+
+# Core training parameters
+args:
+  total_timesteps: 1000000
+  num_envs: 8
+  num_steps: 256
+  num_eval_envs: 1
+  hidden_size: 128
+
+# Training settings
+torch_deterministic: true
+cuda: false
+
+# Logging settings
+exp_name: "ppo_transport3d_train"
+tb_log_dir: "runs"

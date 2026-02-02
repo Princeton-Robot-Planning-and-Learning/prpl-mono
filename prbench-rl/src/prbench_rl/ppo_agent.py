@@ -99,6 +99,16 @@ class PPOArgs:
     reward_scale: float = 1.0
     """Scale the reward by this factor."""
 
+    # Dense reward settings
+    dense_reward: bool = False
+    """Whether to use dense reward shaping."""
+    dense_reward_scale: float = 0.1
+    """Scale factor for dense reward."""
+
+    # Parallelization settings
+    async_envs: bool = False
+    """Use AsyncVectorEnv instead of SyncVectorEnv for parallel environments."""
+
     # to be filled in runtime
     batch_size: int = 0
     """The batch size (computed in runtime)"""
@@ -312,7 +322,8 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         obs, _ = train_envs.reset()
         episodic_returns: list[float] = []
         step_lengths: list[int] = []
-        step_length = 0
+        # Track step count per environment
+        step_counts = [0] * train_envs.num_envs
 
         while len(episodic_returns) < eval_episodes:
             with torch.no_grad():
@@ -321,19 +332,27 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 actions = action.cpu().numpy()
 
             obs, _, _, _, infos = train_envs.step(actions)
-            step_length += 1
+            # Increment step count for all environments
+            step_counts = [s + 1 for s in step_counts]
 
             if "final_info" in infos:
-                for info in infos["final_info"]:
+                for env_idx, info in enumerate(infos["final_info"]):
                     if info is None or "episode" not in info:
                         continue
+                    raw_return = info["episode"]["r"]
+                    episode_return = (
+                        raw_return.item()
+                        if hasattr(raw_return, "item")
+                        else float(raw_return)
+                    )
                     logging.info(
                         f"eval_episode={len(episodic_returns)}, "
-                        f"episodic_return={info['episode']['r']}"
+                        f"episodic_return={episode_return}"
                     )
-                    episodic_returns.append(info["episode"]["r"])
-                    step_lengths.append(step_length)
-                    step_length = 0
+                    episodic_returns.append(episode_return)
+                    step_lengths.append(step_counts[env_idx])
+                    # Reset step count for this environment only
+                    step_counts[env_idx] = 0
 
         eval_metrics = {
             "episodic_return": episodic_returns,
@@ -350,15 +369,22 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         # env setup
         episodic_returns = []
         # Create training environments (no video recording during training)
-        envs = gym.vector.SyncVectorEnv(
-            [
-                make_env_ppo(
-                    self.env_id,
-                    self.max_episode_steps,
-                )
-                for i in range(self.args.num_envs)
-            ]
-        )
+        env_fns = [
+            make_env_ppo(
+                self.env_id,
+                self.max_episode_steps,
+                gamma=self.args.gamma,
+                dense_reward=self.args.dense_reward,
+                dense_reward_scale=self.args.dense_reward_scale,
+            )
+            for i in range(self.args.num_envs)
+        ]
+        envs: gym.vector.VectorEnv
+        if self.args.async_envs:
+            logging.info("Using AsyncVectorEnv for parallel environments")
+            envs = gym.vector.AsyncVectorEnv(env_fns)
+        else:
+            envs = gym.vector.SyncVectorEnv(env_fns)
         assert isinstance(
             envs.single_action_space, gym.spaces.Box
         ), "only continuous action space is supported"
@@ -394,7 +420,7 @@ class PPOAgent(BaseRLAgent[_O, _U]):
         start_time = time.time()
 
         for iteration in range(1, self.args.num_iterations + 1):
-            logging.info(f"Epoch: {iteration}, global_step={global_step}")
+            print(f"Epoch: {iteration}, global_step={global_step}")
             if self.args.save_model and iteration % self.args.save_model_freq == 1:
                 model_path = self.log_path / f"policies/ckpt_{global_step}.pt"
                 base_path = Path(self.log_path) / "policies"
@@ -436,21 +462,32 @@ class PPOAgent(BaseRLAgent[_O, _U]):
                 if "final_info" in infos:
                     for info in infos["final_info"]:
                         if info and "episode" in info:
-                            episode_return = info["episode"]["r"]
-                            logging.info(
+                            raw_return = info["episode"]["r"]
+                            episode_return = (
+                                raw_return.item()
+                                if hasattr(raw_return, "item")
+                                else float(raw_return)
+                            )
+                            raw_length = info["episode"]["l"]
+                            episode_length = (
+                                raw_length.item()
+                                if hasattr(raw_length, "item")
+                                else int(raw_length)
+                            )
+                            print(
                                 f"global_step={global_step}, "
                                 f"episodic_return={episode_return}"
                             )
-                            episodic_returns.append(info["episode"]["r"])
+                            episodic_returns.append(episode_return)
                             if self.writer is not None:
                                 self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                     "charts/episodic_return",
-                                    info["episode"]["r"],
+                                    episode_return,
                                     global_step,
                                 )
                                 self.writer.add_scalar(  # type: ignore[no-untyped-call]
                                     "charts/episodic_length",
-                                    info["episode"]["l"],
+                                    episode_length,
                                     global_step,
                                 )
 
