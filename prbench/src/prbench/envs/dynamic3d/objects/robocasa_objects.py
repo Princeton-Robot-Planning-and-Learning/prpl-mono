@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import numpy as np
 from numpy.typing import NDArray
@@ -207,7 +207,7 @@ class RoboCasaObject(MujocoObject):
 
         # Look for site elements that define the bounding box
         # Sites are typically named: bottom_site, top_site, horizontal_radius_site
-        sites = {}
+        sites: dict[str, Any] = {}
         for body in worldbody.iter("body"):
             for site in body.findall("site"):
                 site_name = site.attrib.get("name", "")
@@ -292,7 +292,9 @@ class RoboCasaObject(MujocoObject):
             ]
 
         # Load the model and calculate bounding box dimensions
-        model_dir: Path = object_class.model_dir  # type: ignore[assignment]
+        model_dir = getattr(object_class, "model_dir", Path())
+        if not isinstance(model_dir, Path):
+            model_dir = Path(str(model_dir))
         model_xml_path = model_dir / "model.xml"
 
         if not model_xml_path.exists():
@@ -316,22 +318,22 @@ class RoboCasaObject(MujocoObject):
                 raise ValueError("No worldbody found in model.xml")
 
             # Extract sites to calculate bounding box
-            sites = {}
+            sites_dict: dict[str, Any] = {}
             for body in worldbody.iter("body"):
                 for site in body.findall("site"):
                     site_name = site.attrib.get("name", "")
                     pos_str = site.attrib.get("pos", "0 0 0")
                     site_pos = np.array([float(x) for x in pos_str.split()])
-                    sites[site_name] = site_pos
+                    sites_dict[site_name] = site_pos
 
             # Calculate dimensions from sites
-            if "bottom_site" in sites and "top_site" in sites:
-                height = abs(sites["top_site"][2] - sites["bottom_site"][2])
+            if "bottom_site" in sites_dict and "top_site" in sites_dict:
+                height = abs(sites_dict["top_site"][2] - sites_dict["bottom_site"][2])
             else:
                 height = 0.05
 
-            if "horizontal_radius_site" in sites:
-                radius_pos = sites["horizontal_radius_site"]
+            if "horizontal_radius_site" in sites_dict:
+                radius_pos = sites_dict["horizontal_radius_site"]
                 width = 2 * abs(radius_pos[0])
                 depth = 2 * abs(radius_pos[1])
             else:
@@ -352,8 +354,10 @@ class RoboCasaObject(MujocoObject):
                 float(pos[1]) + half_depth,
                 float(pos[2]) + half_height,
             ]
-        except Exception:
-            # Fallback to default dimensions on any error
+        except (ValueError, OSError, ET.ParseError) as e:
+            # Fallback to default dimensions on error (parsing or file access issues)
+            # pylint: disable=unused-variable
+            _ = e
             return [
                 float(pos[0]) - 0.05,
                 float(pos[1]) - 0.05,
@@ -469,46 +473,46 @@ def _create_robocasa_object_classes() -> None:
         return
 
     # Iterate through all directories in the robocasa_objects folder
-    for object_dir in sorted(ROBOCASA_OBJECTS_DIR.iterdir()):
-        if not object_dir.is_dir():
-            continue
+    for object_type_dir in sorted(ROBOCASA_OBJECTS_DIR.iterdir()):
+        for object_dir in sorted(object_type_dir.iterdir()):
+            if not object_dir.is_dir():
+                continue
 
-        # Check if model.xml exists
-        model_xml = object_dir / "model.xml"
-        if not model_xml.exists():
-            continue
+            # Check if model.xml exists
+            model_xml = object_dir / "model.xml"
+            if not model_xml.exists():
+                continue
 
-        # Extract object type name (directory name)
-        object_type_name = object_dir.name
+            # Extract object type name (directory name)
+            object_type_name = object_dir.name
 
-        # Create a class name (convert snake_case to PascalCase)
-        # e.g., "apple_0" -> "RobocasaApple0"
-        class_name_parts = ["Robocasa"] + [
-            part.capitalize() for part in object_type_name.split("_")
-        ]
-        class_name = "".join(class_name_parts)
+            # Create a class name (convert snake_case to PascalCase)
+            # e.g., "apple_0" -> "RobocasaApple0"
+            class_name_parts = ["Robocasa"] + [
+                part.capitalize() for part in object_type_name.split("_")
+            ]
+            class_name = "".join(class_name_parts)
 
-        # Create a new class dynamically
-        new_class = type(
-            class_name,
-            (RoboCasaObject,),
-            {
-                "object_type_name": object_type_name,
-                "model_dir": object_dir,
-                "__module__": __name__,
-            },
-        )
+            # Create a new class dynamically
+            new_class = type(
+                class_name,
+                (RoboCasaObject,),
+                {
+                    "object_type_name": object_type_name,
+                    "model_dir": object_dir,
+                    "__module__": __name__,
+                },
+            )
 
-        # Register the class with multiple names for flexibility
-        register_object(new_class)  # Registers as lowercase class name
+            # Register the class with robocasa_ prefix (e.g., "robocasa_apple_0")
+            # pylint: disable=too-many-locals
+            register_fn = register_object(name=f"robocasa_{object_type_name}")
+            registered = register_fn(new_class)  # type: ignore
+            new_class = registered
 
-        # Also register with the exact object type name (e.g., "apple_0")
-        # and with "robocasa_" prefix (e.g., "robocasa_apple_0")
-        REGISTERED_OBJECTS[object_type_name] = new_class
-        REGISTERED_OBJECTS[f"robocasa_{object_type_name}"] = new_class
-
-        # Add to module globals so it can be imported
-        globals()[class_name] = new_class
+            # Add to module globals so it can be imported
+            # pylint: disable=global-variable-undefined
+            globals()[class_name] = new_class
 
     for object_dir in sorted(REPLICA_OBJECTS_DIR.iterdir()):
         if not object_dir.is_dir():
@@ -559,13 +563,13 @@ _create_robocasa_object_classes()
 
 
 # Export all dynamically created classes
-__all__ = [
-    "RoboCasaObject",
-    "ReplicaObject",
-    "ROBOCASA_OBJECTS_DIR",
-    "REPLICA_OBJECTS_DIR",
-] + [
+# pylint: disable=unused-variable
+_dynamic_exports = [
     name
     for name in globals()
     if name.startswith("Robocasa") and name not in ("RoboCasaObject", "ReplicaObject")
 ]
+__all__ = [
+    "RoboCasaObject",
+    "ROBOCASA_OBJECTS_DIR",
+] + _dynamic_exports

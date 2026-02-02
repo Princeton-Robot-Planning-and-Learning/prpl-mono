@@ -340,6 +340,10 @@ class ObjectCentricStickButton2DEnv(
 class StickButton2DEnv(ConstantObjectPRBenchEnv):
     """Stick button 2D env with a constant number of objects."""
 
+    def __init__(self, num_buttons: int = 3, **kwargs) -> None:
+        self._num_buttons = num_buttons
+        super().__init__(num_buttons=num_buttons, **kwargs)
+
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom2DRobotEnv:
@@ -367,6 +371,11 @@ The robot has a movable circular base and a retractable arm with a rectangular v
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "The number of buttons differs between environment variants. For example, StickButton2D-b1 has 1 button, while StickButton2D-b10 has 10 buttons."
+
+    def _create_variant_specific_description(self) -> str:
+        if self._num_buttons == 1:
+            return "This variant has 1 button to press."
+        return f"This variant has {self._num_buttons} buttons to press."
 
     def _create_reward_markdown_description(self) -> str:
         return "A penalty of -1.0 is given at every time step until all buttons have been pressed (termination).\n"  # pylint: disable=line-too-long
