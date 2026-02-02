@@ -56,6 +56,7 @@ class SACArgs:
     """Whether to save model into the `runs/{run_name}` folder."""
     save_model_freq: int = 50000
     """Frequency to save the model (in timesteps)."""
+    async_envs: bool = True
 
     # Environment specific arguments
     num_envs: int = 1
@@ -415,18 +416,21 @@ class SACAgent(BaseRLAgent[_O, _U]):
         # env setup
         episodic_returns: list[float] = []
         # Create training environments (no video recording during training)
-        envs = gym.vector.SyncVectorEnv(
-            [
-                make_env_sac(
-                    self.env_id,
-                    self.max_episode_steps,
-                    gamma=self.args.gamma,
-                    dense_reward=self.args.dense_reward,
-                    dense_reward_scale=self.args.dense_reward_scale,
-                )
-                for i in range(self.args.num_envs)
-            ]
-        )
+        env_fns = [
+            make_env_sac(
+                self.env_id,
+                self.max_episode_steps,
+                gamma=self.args.gamma,
+                dense_reward=self.args.dense_reward,
+                dense_reward_scale=self.args.dense_reward_scale,
+            )
+            for i in range(self.args.num_envs)
+        ]
+        if self.args.async_envs:
+            logging.info("Using AsyncVectorEnv for parallel environments")
+            envs = gym.vector.AsyncVectorEnv(env_fns)
+        else:
+            envs = gym.vector.SyncVectorEnv(env_fns)
         assert isinstance(
             envs.single_action_space, gym.spaces.Box
         ), "only continuous action space is supported"
@@ -446,8 +450,11 @@ class SACAgent(BaseRLAgent[_O, _U]):
 
         # TRY NOT TO MODIFY: start the game
         obs, _ = envs.reset(seed=self.args.seed)
-        for global_step in range(self.args.total_timesteps):
+        global_step = 0
+        while global_step < self.args.total_timesteps:
             # ALGO LOGIC: put action logic here
+            if global_step % 1024 == 0:
+                logging.info(f"Global Step: {global_step}")
             if global_step < self.args.learning_starts:
                 actions = np.array(
                     [envs.single_action_space.sample() for _ in range(envs.num_envs)]
@@ -461,6 +468,7 @@ class SACAgent(BaseRLAgent[_O, _U]):
 
             # TRY NOT TO MODIFY: execute the game and log data.
             next_obs, rewards, terminations, truncations, infos = envs.step(actions)
+            global_step += envs.num_envs
 
             # TRY NOT TO MODIFY: record rewards for plotting purposes
             if "final_info" in infos:
