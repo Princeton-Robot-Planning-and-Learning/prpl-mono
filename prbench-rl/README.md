@@ -150,6 +150,87 @@ EVALUATION:
 ============================================================
 ```
 
+## Reproducing RL Baseline Experiments
+
+The `scripts/` directory contains shell scripts to reproduce all RL baseline experiments from the paper. Each script runs training across multiple random seeds (typically 5) for statistical significance.
+
+### Quick Start
+
+```bash
+cd prbench-rl
+
+# Run all experiments with a single command
+./scripts/run_all_experiments.sh [seed]  # default seed=0
+```
+
+### Individual Environment Scripts
+
+All scripts should be run from the `prbench-rl` directory.
+
+#### 2D Geometric Environments
+
+| Script | Environment | Seeds | Description |
+|--------|-------------|-------|-------------|
+| `./scripts/run_ppo_motion2d.sh` | Motion2D-p0, Motion2D-p2 | 0-4 | PPO on 0 and 2 passages |
+| `./scripts/run_sac_motion2d.sh` | Motion2D-p0, Motion2D-p2 | 0-4 | SAC on 0 and 2 passages |
+| `./scripts/run_ppo_stickbutton2d.sh` | StickButton2D-b1, StickButton2D-b3 | 0-4 | PPO on 1 and 3 buttons |
+| `./scripts/run_sac_stickbutton2d.sh` | StickButton2D-b1, StickButton2D-b3 | 0-4 | SAC on 1 and 3 buttons |
+
+#### 2D Dynamic Environments
+
+| Script | Environment | Seeds | Description |
+|--------|-------------|-------|-------------|
+| `./scripts/run_ppo_dynobstruction2d.sh` | DynObstruction2D-o1 | 0-4 | PPO training |
+| `./scripts/run_sac_dynobstruction2d.sh [n] [seed]` | DynObstruction2D-o{n} | custom | SAC (n=num obstructions, default 1) |
+| `./scripts/run_ppo_dynpushpullhook2d.sh` | DynPushPullHook2D-o5 | 301-305 | PPO training |
+| `./scripts/run_sac_dynpushpullhook2d.sh [n] [seed]` | DynPushPullHook2D-o{n} | custom | SAC (n=num cubes, default 1) |
+
+#### 3D Geometric Environments
+
+| Script | Environment | Seeds | Description |
+|--------|-------------|-------|-------------|
+| `./scripts/run_ppo_basemotion3d.sh` | BaseMotion3D | 0-4 | PPO training |
+| `./scripts/run_sac_basemotion3d.sh` | BaseMotion3D | 0-4 | SAC training |
+| `./scripts/run_ppo_basemotion3d_dense.sh` | BaseMotion3D | 0-4 | PPO with dense reward |
+| `./scripts/run_sac_basemotion3d_dense.sh` | BaseMotion3D | 0-4 | SAC with dense reward |
+| `./scripts/run_ppo_transport3d.sh [n] [seed]` | Transport3D-o{n} | custom | PPO (n=num cubes, default 1) |
+| `./scripts/run_sac_transport3d.sh [n] [seed]` | Transport3D-o{n} | custom | SAC (n=num cubes, default 1) |
+
+#### TidyBot3D Environments
+
+| Script | Environment | Seeds | Description |
+|--------|-------------|-------|-------------|
+| `./scripts/run_ppo_shelf3d.sh` | TidyBot3D-cupboard_real-o1 | 300-304 | PPO on cupboard task |
+| `./scripts/run_sac_shelf3d.sh` | TidyBot3D-tool_use (sweep) | 300-304 | SAC on sweep blocks task |
+| `./scripts/run_ppo_sweep3d.sh` | TidyBot3D-tool_use (sweep) | 300-304 | PPO on sweep blocks task |
+| `./scripts/run_sac_sweep3d.sh` | TidyBot3D-tool_use (sweep) | 300-304 | SAC on sweep blocks task |
+
+### Script Details
+
+Most scripts automatically loop over 5 random seeds. Scripts with `[n] [seed]` arguments run a single experiment with configurable parameters:
+
+```bash
+# Scripts with automatic seed loops (just run directly):
+./scripts/run_ppo_motion2d.sh
+./scripts/run_ppo_basemotion3d.sh
+./scripts/run_ppo_shelf3d.sh
+
+# Scripts with configurable arguments:
+./scripts/run_sac_dynobstruction2d.sh 2 42    # 2 obstructions, seed 42
+./scripts/run_ppo_transport3d.sh 1 0          # 1 cube, seed 0
+./scripts/run_sac_transport3d.sh 3 123        # 3 cubes, seed 123
+```
+
+### Benchmarking Environment Speed
+
+To test environment parallelization performance:
+
+```bash
+python scripts/test_env_speed.py
+```
+
+This compares single-env, SyncVectorEnv, and AsyncVectorEnv speeds across TidyBot3D environments.
+
 ## Running Tests
 
 ```bash
