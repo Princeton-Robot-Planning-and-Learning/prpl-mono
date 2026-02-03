@@ -1,16 +1,16 @@
-# DynPushT-t1
+# DynPushT2D-t1
 
 ## Usage
 ```python
 import prbench
-env = prbench.make("prbench/DynPushT-t1-v0")
+env = prbench.make("prbench/DynPushT2D-t1-v0")
 ```
 
 ## Description
 This variant has a T-shaped block to push to a goal pose.
 
 ## Example Demonstration
-![demo GIF](../../assets/demo_gifs/DynPushT-t1/DynPushT-t1.gif)
+![demo GIF](../../assets/demo_gifs/DynPushT2D-t1/DynPushT2D-t1.gif)
 
 **Demo Stats**: Total Reward: -576.00, Success: Yes, Steps: 576
 

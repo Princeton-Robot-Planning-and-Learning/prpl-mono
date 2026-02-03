@@ -1,9 +1,9 @@
-# DynScoopPour-o20
+# DynScoopPour2D-o20
 
 ## Usage
 ```python
 import prbench
-env = prbench.make("prbench/DynScoopPour-o20-v0")
+env = prbench.make("prbench/DynScoopPour2D-o20-v0")
 ```
 
 ## Description

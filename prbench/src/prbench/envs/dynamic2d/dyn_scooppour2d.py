@@ -46,8 +46,8 @@ Dynamic2DRobotEnvTypeFeatures[HookType] = list(
 
 
 @dataclass(frozen=True)
-class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
-    """Scene config for DynScoopPourEnv()."""
+class DynScoopPour2DEnvConfig(Dynamic2DRobotEnvConfig):
+    """Scene config for DynScoopPour2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
     world_min_x: float = 0.0
@@ -146,8 +146,8 @@ class DynScoopPourEnvConfig(Dynamic2DRobotEnvConfig):
     render_dpi: int = 100
 
 
-class ObjectCentricDynScoopPourEnv(
-    ObjectCentricDynamic2DRobotEnv[DynScoopPourEnvConfig]
+class ObjectCentricDynScoopPour2DEnv(
+    ObjectCentricDynamic2DRobotEnv[DynScoopPour2DEnvConfig]
 ):
     """Object-centric dynamic 2D scoop-pour environment.
 
@@ -159,7 +159,7 @@ class ObjectCentricDynScoopPourEnv(
         self,
         num_small_circles: int = 15,
         num_small_squares: int = 15,
-        config: DynScoopPourEnvConfig = DynScoopPourEnvConfig(),
+        config: DynScoopPour2DEnvConfig = DynScoopPour2DEnvConfig(),
         **kwargs,
     ) -> None:
         super().__init__(config, **kwargs)
@@ -616,7 +616,7 @@ class ObjectCentricDynScoopPourEnv(
         return -1.0, terminated
 
 
-class DynScoopPourEnv(ConstantObjectPRBenchEnv):
+class DynScoopPour2DEnv(ConstantObjectPRBenchEnv):
     """Dynamic Scoop-Pour 2D env with a constant number of objects."""
 
     def __init__(
@@ -632,8 +632,8 @@ class DynScoopPourEnv(ConstantObjectPRBenchEnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricDynScoopPourEnv:
-        return ObjectCentricDynScoopPourEnv(*args, **kwargs)
+    ) -> ObjectCentricDynScoopPour2DEnv:
+        return ObjectCentricDynScoopPour2DEnv(*args, **kwargs)
 
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState
@@ -657,7 +657,7 @@ All objects include physics properties like mass, moment of inertia, and color i
 
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
-        return "The number of small objects differs between environment variants. For example, DynScoopPour-o10 has 10 small objects, while DynScoopPour-o50 has 50 small objects."
+        return "The number of small objects differs between environment variants. For example, DynScoopPour2D-o10 has 10 small objects, while DynScoopPour2D-o50 has 50 small objects."
 
     def _create_variant_specific_description(self) -> str:
         total = self._num_small_circles + self._num_small_squares

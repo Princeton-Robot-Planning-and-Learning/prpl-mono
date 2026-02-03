@@ -1,4 +1,4 @@
-"""Tests for dyn_scooppour.py."""
+"""Tests for dyn_scooppour2d.py."""
 
 from gymnasium.spaces import Box
 
@@ -10,13 +10,13 @@ from prbench.envs.dynamic2d.object_types import (
 )
 
 
-def test_dyn_scooppour_observation_random_actions():
+def test_dyn_scooppour2d_observation_random_actions():
     """Tests that observations are vectors with fixed dimensionality.
 
     Also tests env creation and random actions.
     """
     prbench.register_all_environments()
-    env = prbench.make("prbench/DynScoopPour-o30-v0")
+    env = prbench.make("prbench/DynScoopPour2D-o30-v0")
     assert isinstance(env.observation_space, Box)
     for _ in range(3):
         obs, _ = env.reset()
@@ -28,12 +28,12 @@ def test_dyn_scooppour_observation_random_actions():
     env.close()
 
 
-def test_dyn_scooppour_object_counts():
+def test_dyn_scooppour2d_object_counts():
     """Test that the correct number of objects are created."""
     prbench.register_all_environments()
 
     # Test with default 30 objects (15 circles + 15 squares)
-    env = prbench.make("prbench/DynScoopPour-o30-v0")
+    env = prbench.make("prbench/DynScoopPour2D-o30-v0")
     obs, _ = env.reset()
 
     # Use public API to access object-centric state
@@ -50,10 +50,10 @@ def test_dyn_scooppour_object_counts():
     env.close()
 
 
-def test_dyn_scooppour_initial_positions():
+def test_dyn_scooppour2d_initial_positions():
     """Test that small objects are initially on the left side."""
     prbench.register_all_environments()
-    env = prbench.make("prbench/DynScoopPour-o30-v0")
+    env = prbench.make("prbench/DynScoopPour2D-o30-v0")
     obs, _ = env.reset()
 
     # Use public API to access object-centric state

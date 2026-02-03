@@ -1,16 +1,16 @@
-# DynScoopPour-o30
+# DynScoopPour2D-o30
 
 ## Usage
 ```python
 import prbench
-env = prbench.make("prbench/DynScoopPour-o30-v0")
+env = prbench.make("prbench/DynScoopPour2D-o30-v0")
 ```
 
 ## Description
 This variant has 30 small objects (15 circles, 15 squares).
 
 ## Example Demonstration
-![demo GIF](../../assets/demo_gifs/DynScoopPour-o30/DynScoopPour-o30.gif)
+![demo GIF](../../assets/demo_gifs/DynScoopPour2D-o30/DynScoopPour2D-o30.gif)
 
 **Demo Stats**: Total Reward: -810.00, Success: No, Steps: 810
 
