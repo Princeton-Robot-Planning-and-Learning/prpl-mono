@@ -805,6 +805,7 @@ def test_pick_place_skill():
 
     env.close()
 
+
 def test_velocity_tracking_mode():
     """Test pick and place in ground environment with 1 cube."""
 
