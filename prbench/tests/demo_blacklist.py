@@ -14,7 +14,7 @@ DETERMINISTIC_REPLAY_BLACKLIST = {
         "Non-deterministic behavior in physics simulation. "
         "Test passes on local machines but fails inconsistently on GitHub Actions CI."
     ),
-    "TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0": ( # pylint: disable=line-too-long
+    "TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0": (  # pylint: disable=line-too-long
         "Non-deterministic behavior in physics simulation. "
         "Test passes on local machines but fails inconsistently on GitHub Actions CI."
     ),
