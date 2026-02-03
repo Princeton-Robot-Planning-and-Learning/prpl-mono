@@ -187,13 +187,19 @@ def create_variant_initial_state_gif(
             env.reset(seed=seed + i)
             imgs.append(env.render())
         outfile = (
-            OUTPUT_DIR / "assets" / "initial_state_gifs" / "variants" / f"{variant_name}.gif"
+            OUTPUT_DIR
+            / "assets"
+            / "initial_state_gifs"
+            / "variants"
+            / f"{variant_name}.gif"
         )
         iio.mimsave(outfile, imgs, fps=fps, loop=0)
         optimize_gif(outfile)
         return True
     except Exception as e:
-        print(f"    Warning: Failed to create initial state GIF for {variant_name}: {e}")
+        print(
+            f"    Warning: Failed to create initial state GIF for {variant_name}: {e}"
+        )
         return False
 
 
@@ -241,7 +247,11 @@ def create_variant_random_action_gif(
                 break
 
         outfile = (
-            OUTPUT_DIR / "assets" / "random_action_gifs" / "variants" / f"{variant_name}.gif"
+            OUTPUT_DIR
+            / "assets"
+            / "random_action_gifs"
+            / "variants"
+            / f"{variant_name}.gif"
         )
         fps = env.metadata.get("render_fps", default_fps)
         iio.mimsave(outfile, imgs, fps=fps, loop=0)
@@ -254,7 +264,9 @@ def create_variant_random_action_gif(
         }
         return True, stats
     except Exception as e:
-        print(f"    Warning: Failed to create random action GIF for {variant_name}: {e}")
+        print(
+            f"    Warning: Failed to create random action GIF for {variant_name}: {e}"
+        )
         return False, {}
 
 
@@ -300,13 +312,15 @@ def generate_variant_markdown(
 
     md += "## Initial State Distribution\n"
     if has_initial_gif:
-        md += f"![initial state GIF](../../assets/initial_state_gifs/variants/{variant_name}.gif)\n\n"
+        gif_path = f"../../assets/initial_state_gifs/variants/{variant_name}.gif"
+        md += f"![initial state GIF]({gif_path})\n\n"
     else:
         md += "*(Initial state GIF not available)*\n\n"
 
     md += "## Random Action Behavior\n"
     if has_random_gif:
-        md += f"![random action GIF](../../assets/random_action_gifs/variants/{variant_name}.gif)\n\n"
+        gif_path = f"../../assets/random_action_gifs/variants/{variant_name}.gif"
+        md += f"![random action GIF]({gif_path})\n\n"
         if random_action_stats:
             total_reward = random_action_stats.get("total_reward", 0.0)
             success = random_action_stats.get("terminated_successfully", False)
@@ -470,10 +484,12 @@ def _main() -> None:
         print("Checking for changes using git diff origin/main...")
 
     OUTPUT_DIR.mkdir(exist_ok=True)
-    (OUTPUT_DIR / "assets" / "random_action_gifs").mkdir(parents=True, exist_ok=True)
-    (OUTPUT_DIR / "assets" / "random_action_gifs" / "variants").mkdir(parents=True, exist_ok=True)
-    (OUTPUT_DIR / "assets" / "initial_state_gifs").mkdir(parents=True, exist_ok=True)
-    (OUTPUT_DIR / "assets" / "initial_state_gifs" / "variants").mkdir(parents=True, exist_ok=True)
+    random_gifs_dir = OUTPUT_DIR / "assets" / "random_action_gifs"
+    initial_gifs_dir = OUTPUT_DIR / "assets" / "initial_state_gifs"
+    random_gifs_dir.mkdir(parents=True, exist_ok=True)
+    (random_gifs_dir / "variants").mkdir(parents=True, exist_ok=True)
+    initial_gifs_dir.mkdir(parents=True, exist_ok=True)
+    (initial_gifs_dir / "variants").mkdir(parents=True, exist_ok=True)
 
     prbench.register_all_environments()
 
@@ -534,9 +550,10 @@ def _main() -> None:
                 variant_has_initial_gif = create_variant_initial_state_gif(
                     variant_name, variant_env
                 )
-                variant_has_random_gif, variant_random_stats = create_variant_random_action_gif(
-                    variant_name, variant_env
-                )
+                (
+                    variant_has_random_gif,
+                    variant_random_stats,
+                ) = create_variant_random_action_gif(variant_name, variant_env)
                 variant_md = generate_variant_markdown(
                     variant_id,
                     variant_env,
