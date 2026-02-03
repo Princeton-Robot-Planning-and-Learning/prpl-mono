@@ -29,7 +29,9 @@ def real2sim() -> None:
         # Create the environment.
         num_cubes = 1
         env = prbench.make(
-            f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0", render_mode="rgb_array", scene_bg=True
+            f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0",
+            render_mode="rgb_array",
+            scene_bg=True,
         )
 
         env = RecordVideo(

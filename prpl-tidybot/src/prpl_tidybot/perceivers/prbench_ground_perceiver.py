@@ -5,14 +5,14 @@ from prbench.envs.dynamic3d.object_types import (
     MujocoObjectTypeFeatures,
     MujocoTidyBotRobotObjectType,
 )
+from prbench.envs.geom3d.ground3d import Ground3DObjectCentricState
 from prbench.envs.geom3d.object_types import (
     Geom3DCuboidType,
     Geom3DEnvTypeFeatures,
     Geom3DRobotType,
 )
-from prbench.envs.geom3d.utils import Geom3DObjectCentricState
-from prbench.envs.geom3d.ground3d import Ground3DObjectCentricState
 from prbench.envs.geom3d.transport3d import Transport3DObjectCentricState
+from prbench.envs.geom3d.utils import Geom3DObjectCentricState
 from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
@@ -87,6 +87,7 @@ class PRBenchGroundPerceiver(Perceiver[ObjectCentricState]):
 
         return create_state_from_dict(state_dict, MujocoObjectTypeFeatures)
 
+
 class PRBenchGeom3DPerceiver(Perceiver[ObjectCentricState]):
     """A perceiver for the PRBench Geom3D Ground environment."""
 
@@ -148,6 +149,7 @@ class PRBenchGeom3DPerceiver(Perceiver[ObjectCentricState]):
         return create_state_from_dict(
             state_dict, Geom3DEnvTypeFeatures, state_cls=Ground3DObjectCentricState
         )
+
 
 class PRBenchTransport3DPerceiver(Perceiver[ObjectCentricState]):
     """A perceiver for the PRBench Geom3D Transport3D environment."""

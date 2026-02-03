@@ -116,9 +116,7 @@ class GroundPickController(
     def get_base_motion_plan(self) -> None:
         self._sim.set_state(self._current_state)
 
-        target_pose = self._current_state.get_object_pose(
-            self.objects[1].name
-        ).to_se2()
+        target_pose = self._current_state.get_object_pose(self.objects[1].name).to_se2()
         target_base_pose = get_target_robot_pose_from_parameters(
             target_pose, self._current_params[0], self._current_params[1]
         )
@@ -238,7 +236,7 @@ class GroundPickController(
 
         # Store the plan (excluding the first state which is the current state).
         self._current_arm_joint_plan = joint_plan[1:]
-    
+
     def get_retract_motion_plan(self, real: bool = False) -> None:
         self._sim.set_state(self._current_state)
 
@@ -290,8 +288,7 @@ class GroundPickController(
 
         # Store the plan (excluding the first state which is the current state).
         self._current_retract_plan = joint_plan[1:]
-    
-    
+
     def step(self) -> np.ndarray:
         assert self._current_state is not None
         assert self._current_params is not None
@@ -323,7 +320,7 @@ class GroundPickController(
             # Generate the motion plan if it doesn't exist yet.
             if self._current_arm_joint_plan is None:
                 self.get_arm_motion_plan()
-            
+
             # Pop the next target joint positions from the plan.
             assert self._current_arm_joint_plan is not None
             target_joints = self._current_arm_joint_plan.pop(0)
@@ -361,7 +358,7 @@ class GroundPickController(
             # Generate the motion plan if it doesn't exist yet.
             if self._current_retract_plan is None:
                 self.get_retract_motion_plan()
-                
+
             # Pop the next target joint positions from the plan.
             assert self._current_retract_plan is not None
             target_joints = self._current_retract_plan.pop(0)
@@ -428,9 +425,7 @@ class GroundPlaceController(BasePlaceController):
 
         # Compute the desired object placement pose (where the held object
         # should end up). The object should be placed upright.
-        target_surface_pose = self._current_state.get_object_pose(
-            self.objects[2].name
-        )
+        target_surface_pose = self._current_state.get_object_pose(self.objects[2].name)
         if "box" in self.objects[1].name and "table" in self.objects[2].name:
             # Place box on table: box center should be at table surface
             # + box bottom thickness + half box height.
@@ -486,7 +481,7 @@ class GroundPlaceController(BasePlaceController):
         # Compute EE pose from desired object pose using the grasp transform.
         # object_pose = ee_pose * grasped_object_transform
         # => ee_pose = object_pose * grasped_object_transform.invert()
-       
+
         self._target_place_pose_world = multiply_poses(
             desired_object_pose, grasped_object_transform.invert()
         )
@@ -560,7 +555,7 @@ class GroundPlaceController(BasePlaceController):
         # Generate the motion plan if it doesn't exist yet.
         if self._current_plan is None:
             self.get_base_motion_plan()
-        
+
         if not self._navigated:
             return self.navigate()
 

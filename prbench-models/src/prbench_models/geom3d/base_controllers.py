@@ -224,8 +224,7 @@ class BasePlaceController(
 
         # Store the plan (excluding the first state which is the current state).
         self._current_retract_plan = joint_plan[1:]
-    
-    
+
     def pre_place(self, collision_ids: set[int] | None = None) -> np.ndarray:
         """Pre-place the object."""
         if collision_ids is None:
@@ -235,7 +234,7 @@ class BasePlaceController(
         # Generate the motion plan if it doesn't exist yet.
         if self._current_arm_joint_plan is None:
             self.get_arm_motion_plan()
-        
+
         # Pop the next target joint positions from the plan.
         assert self._current_arm_joint_plan is not None
         target_joints = self._current_arm_joint_plan.pop(0)

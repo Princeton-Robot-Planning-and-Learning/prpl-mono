@@ -118,9 +118,7 @@ class GroundPickController(
         """Get the base motion plan to the target pose."""
         self._sim.set_state(self._current_state)
 
-        target_pose = self._current_state.get_object_pose(
-            self.objects[1].name
-        ).to_se2()
+        target_pose = self._current_state.get_object_pose(self.objects[1].name).to_se2()
         target_base_pose = get_target_robot_pose_from_parameters(
             target_pose, self._current_params[0], self._current_params[1]
         )
@@ -150,7 +148,7 @@ class GroundPickController(
 
         if real:
             GRASP_TRANSFORM_TO_OBJECT = Pose((0.0, 0, 0.045), (0.707, 0.707, 0, 0))
-        
+
         target_end_effector_pose = multiply_poses(
             target_grasp_pose_world,
             GRASP_TRANSFORM_TO_OBJECT,
@@ -191,7 +189,7 @@ class GroundPickController(
 
         # Store the plan (excluding the first state which is the current state).
         self._current_arm_joint_plan = joint_plan[1:]
-    
+
     def get_retract_motion_plan(self, real=False):
         """Get the retract motion plan to the home joint positions."""
         self._sim.set_state(self._current_state)
@@ -242,8 +240,7 @@ class GroundPickController(
 
         # Store the plan (excluding the first state which is the current state).
         self._current_retract_plan = joint_plan[1:]
-    
-    
+
     def step(self) -> np.ndarray:
         assert self._current_state is not None
         assert self._current_params is not None
@@ -509,7 +506,7 @@ class GroundPlaceController(
 
         # Store the plan (excluding the first state which is the current state).
         self._current_arm_joint_plan = joint_plan[1:]
-    
+
     def get_retract_motion_plan(self):
         """Get the retract motion plan to the home joint positions."""
         self._sim.set_state(self._current_state)
@@ -536,7 +533,6 @@ class GroundPlaceController(
 
         # Store the plan (excluding the first state which is the current state).
         self._current_retract_plan = joint_plan[1:]
-    
 
     def step(self) -> np.ndarray:
         assert self._current_state is not None

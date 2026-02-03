@@ -6,15 +6,14 @@ import time
 import numpy as np
 import prbench
 from gymnasium.wrappers import RecordVideo
+from prbench.envs.geom3d.transport3d import ObjectCentricTransport3DEnv
 from prbench_models.geom3d.transport3d.parameterized_skills import (
     create_lifted_controllers,
 )
+from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
 from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2
 
-from prbench.envs.geom3d.transport3d import ObjectCentricTransport3DEnv
-
-from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
 from prpl_tidybot.base_movement import reach_target_pose
 from prpl_tidybot.constants import POLICY_CONTROL_PERIOD
 from prpl_tidybot.coord_converter import CoordFrameConverter
@@ -111,6 +110,7 @@ def real2sim() -> None:
         env.close()  # type: ignore
         interface.close()
 
+
 def real2sim2real() -> None:
     """Test move-base-arm to the target object in ground environment with 1 cube."""
 
@@ -163,7 +163,7 @@ def real2sim2real() -> None:
         controller.reset(state, params)
 
         controller.get_base_motion_plan()
-        
+
         # real execution
         for t in range(
             1, len(controller._current_plan)  # type: ignore  # pylint: disable=protected-access
@@ -214,7 +214,7 @@ def real2sim2real() -> None:
             )
             interface.execute_arm_action(tidybot_action)
             time.sleep(POLICY_CONTROL_PERIOD)
-        
+
         time.sleep(POLICY_CONTROL_PERIOD)
 
         time.sleep(POLICY_CONTROL_PERIOD)
@@ -240,7 +240,7 @@ def real2sim2real() -> None:
         target_object_pose = state.get_object_pose("cube0")
         controller._sim._grasped_object_transform = multiply_poses(
             controller._sim.robot.arm.get_end_effector_pose().invert(),
-            target_object_pose
+            target_object_pose,
         )
         controller.get_retract_motion_plan(real=True)
 
@@ -271,7 +271,7 @@ def real2sim2real() -> None:
         controller.reset(state, params)
 
         controller.get_base_motion_plan(real=True)
-        
+
         # real execution
         for t in range(
             1, len(controller._current_plan)  # type: ignore  # pylint: disable=protected-access
@@ -333,7 +333,7 @@ def real2sim2real() -> None:
             )
             interface.execute_gripper_action(tidybot_action)
             time.sleep(POLICY_CONTROL_PERIOD)
-        
+
         controller.get_retract_motion_plan()
 
         # real execution
@@ -349,9 +349,8 @@ def real2sim2real() -> None:
             )
             interface.execute_arm_action(tidybot_action)
             time.sleep(POLICY_CONTROL_PERIOD)
-        
-        time.sleep(POLICY_CONTROL_PERIOD)
 
+        time.sleep(POLICY_CONTROL_PERIOD)
 
     finally:
         env.close()  # type: ignore
