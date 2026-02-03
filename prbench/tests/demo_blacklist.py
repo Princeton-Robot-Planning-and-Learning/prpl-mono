@@ -10,7 +10,7 @@ from pathlib import Path
 # Format: {pattern: reason}
 # Pattern can be any substring that appears in the demo path
 DETERMINISTIC_REPLAY_BLACKLIST = {
-    "DynScoopPour": (
+    "DynScoopPour2D": (
         "Non-deterministic behavior in physics simulation. "
         "Test passes on local machines but fails inconsistently on GitHub Actions CI."
     ),
@@ -22,7 +22,7 @@ DETERMINISTIC_REPLAY_BLACKLIST = {
         "Non-deterministic behavior in physics simulation. "
         "Test passes on local machines but fails inconsistently on GitHub Actions CI."
     ),
-    "DynPushT-t1/0/1759591501.p": (
+    "DynPushT2D-t1/0/1759591501.p": (
         "Numerical precision issue at step 302. "
         "Difference (0.000197) slightly exceeds tolerance (0.0001)."
     ),

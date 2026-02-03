@@ -1,6 +1,6 @@
-# DynPushT
+# DynPushT2D
 
-![random action GIF](assets/random_action_gifs/DynPushT.gif)
+![random action GIF](assets/random_action_gifs/DynPushT2D.gif)
 
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
@@ -13,10 +13,10 @@ The T-shaped block must be positioned within small position and orientation thre
 ## Available Variants
 This environment has only one variant.
 
-- [`prbench/DynPushT-t1-v0`](variants/DynPushT/DynPushT-t1.md) (t1)
+- [`prbench/DynPushT2D-t1-v0`](variants/DynPushT2D/DynPushT2D-t1.md) (t1)
 
 ## Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/DynPushT.gif)
+![initial state GIF](assets/initial_state_gifs/DynPushT2D.gif)
 
 ## Example Demonstration
 *(No demonstration GIFs available)*
