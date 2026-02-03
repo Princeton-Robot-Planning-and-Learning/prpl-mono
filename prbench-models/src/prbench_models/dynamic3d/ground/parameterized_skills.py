@@ -884,7 +884,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         self._current_retract_plan: list[JointPositions] | None = None
         self._current_base_motion_plan: list[SE2] | None = None
         self._pybullet_sim: PyBulletSim | None = pybullet_sim
-        self._navigated: bool = True
+        self._navigated: bool = False
         self._pre_grasp: bool = False
         self._closed_gripper: bool = False
         self._lifted: bool = False

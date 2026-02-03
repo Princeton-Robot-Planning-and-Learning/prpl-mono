@@ -806,6 +806,130 @@ def test_pick_place_skill():
     env.close()
 
 
+def test_pick_place_two_cubes_skill():
+    """Test pick and place skill in ground environment with 1 cube."""
+
+    # Create the environment.
+    num_cubes = 2
+    env = prbench.make(
+        f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0", render_mode="rgb_array"
+    )
+    if MAKE_VIDEOS:
+        env = RecordVideo(
+            env, "unit_test_videos", name_prefix=f"TidyBot3D-cupboard-o{num_cubes}-real"
+        )
+
+    # Reset the environment and get the initial state.
+    obs, _ = env.reset(seed=123)
+    for _ in range(5):
+        obs, _, _, _, _ = env.step(np.zeros(11))
+    assert isinstance(env.observation_space, ObjectCentricBoxSpace)
+    state = env.observation_space.devectorize(obs)
+
+    assert state is not None
+    pybullet_sim = PyBulletSim(state, rendering=False)
+
+    # Create the move-base controller.
+    controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim)
+    # create the pick ground controller.
+    lifted_controller = controllers["pick_ground"]
+    robot = state.get_object_from_name("robot")
+    cube = state.get_object_from_name("cube1")
+    object_parameters = (robot, cube)
+    controller = lifted_controller.ground(object_parameters)
+    target_distance = 0.6
+    target_rotation = 0.0
+    params = np.array([target_distance, target_rotation])
+
+    # Reset and execute the controller until it terminates.
+    controller.reset(state, params)
+    for _ in range(400):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    # create the place ground controller.
+    lifted_controller = controllers["place_ground"]
+    robot = state.get_object_from_name("robot")
+    cube = state.get_object_from_name("cube1")
+    cupboard = state.get_object_from_name("cupboard_1")
+    object_parameters = (robot, cube, cupboard)
+    controller = lifted_controller.ground(object_parameters)
+    target_distance = 0.85
+    offset = 0.0
+    target_rotation = -np.pi / 2
+    params = np.array([target_distance, offset, target_rotation])
+
+    # Reset and execute the controller until it terminates.
+    controller.reset(state, params)
+    for _ in range(800):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    # create the pick ground controller.
+    lifted_controller = controllers["pick_ground"]
+    robot = state.get_object_from_name("robot")
+    cube = state.get_object_from_name("cube2")
+    object_parameters = (robot, cube)
+    controller = lifted_controller.ground(object_parameters)
+    target_distance = 0.6
+    target_rotation = 0.0
+    params = np.array([target_distance, target_rotation])
+
+    # Reset and execute the controller until it terminates.
+    controller.reset(state, params)
+    for _ in range(400):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    # create the place ground controller.
+    lifted_controller = controllers["place_ground"]
+    robot = state.get_object_from_name("robot")
+    cube = state.get_object_from_name("cube2")
+    cupboard = state.get_object_from_name("cupboard_1")
+    object_parameters = (robot, cube, cupboard)
+    controller = lifted_controller.ground(object_parameters)
+    target_distance = 0.92
+    offset = 0.0
+    target_rotation = -np.pi / 2
+    params = np.array([target_distance, offset, target_rotation])
+
+    # Reset and execute the controller until it terminates.
+    controller.reset(state, params)
+    for _ in range(400):
+        action = controller.step()
+        obs, _, _, _, _ = env.step(action)
+        next_state = env.observation_space.devectorize(obs)
+        controller.observe(next_state)
+        state = next_state
+        if controller.terminated():
+            break
+    else:
+        assert False, "Controller did not terminate"
+
+    env.close()
+
+
 def test_velocity_tracking_mode():
     """Test pick and place in ground environment with 1 cube."""
 
