@@ -561,6 +561,9 @@ The T-shaped block must be positioned within small position and orientation thre
         # pylint: disable=line-too-long
         return "This environment has only one variant."
 
+    def _create_variant_specific_description(self) -> str:
+        return "This variant has a T-shaped block to push to a goal pose."
+
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""
         # pylint: disable=line-too-long
