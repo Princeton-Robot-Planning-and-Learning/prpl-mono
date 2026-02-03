@@ -71,7 +71,7 @@ class GroundPickController(
         self._current_retract_plan: list[JointPositions] | None = None
         self._current_plan: list[SE2Pose] | None = None
         self._current_state: ObjectCentricState | None = None
-        self._navigated: bool = True
+        self._navigated: bool = False
         self._pre_grasp: bool = False
         self._closed_gripper: bool = False
         self._lifted: bool = False
