@@ -413,6 +413,11 @@ class ObjectCentricTransport3DEnv(
 class Transport3DEnv(ConstantObjectPRBenchEnv):
     """Table Box 3D env with a constant number of objects."""
 
+    def __init__(self, num_cubes: int = 2, num_boxes: int = 1, **kwargs) -> None:
+        self._num_cubes = num_cubes
+        self._num_boxes = num_boxes
+        super().__init__(num_cubes=num_cubes, num_boxes=num_boxes, **kwargs)
+
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricGeom3DRobotEnv:
@@ -437,6 +442,11 @@ class Transport3DEnv(ConstantObjectPRBenchEnv):
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "The number of cubes differs between environment variants. For example, Transport3D-o1 has 1 cube, while Transport3D-o2 has 2 cubes."
+
+    def _create_variant_specific_description(self) -> str:
+        cube_str = "1 cube" if self._num_cubes == 1 else f"{self._num_cubes} cubes"
+        box_str = "1 box" if self._num_boxes == 1 else f"{self._num_boxes} boxes"
+        return f"This variant has {cube_str} and {box_str} to transport onto the table."
 
     def _create_reward_markdown_description(self) -> str:
         """Create reward description."""

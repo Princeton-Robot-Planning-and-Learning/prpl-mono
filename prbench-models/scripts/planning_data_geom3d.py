@@ -19,6 +19,7 @@ from prbench_models.teleop_utils import _visualize_image_in_window
 
 prbench.register_all_environments()
 
+
 def collect_data(
     output_dir: str = "data/demos",
     num_cubes: int = 1,
@@ -167,31 +168,24 @@ def collect_data(
         # Record observation and action before stepping
         if writer is not None:
             target_shelf = state.get_object_from_name("shelf")
-            target_cube_list = [state.get_object_from_name(f"cube{i}") for i in range(num_cubes)]
+            target_cube_list = [
+                state.get_object_from_name(f"cube{i}") for i in range(num_cubes)
+            ]
             target_cube_list_pose = []
             for cube in target_cube_list:
-                target_cube_list_pose.append(np.array(
-                    [
-                        state.get(cube, "pose_x"),
-                        state.get(cube, "pose_y"),
-                        state.get(cube, "pose_z"),
-                        state.get(cube, "pose_qx"),
-                        state.get(cube, "pose_qy"),
-                        state.get(cube, "pose_qz"),
-                        state.get(cube, "pose_qw"),
-                    ]
-                ))
-            target_shelf_pose = np.array(
-                [
-                    state.get(target_shelf, "pose_x"),
-                    state.get(target_shelf, "pose_y"),
-                    state.get(target_shelf, "pose_z"),
-                    state.get(target_shelf, "pose_qx"),
-                    state.get(target_shelf, "pose_qy"),
-                    state.get(target_shelf, "pose_qz"),
-                    state.get(target_shelf, "pose_qw"),
-                ]
-            )
+                target_cube_list_pose.append(
+                    np.array(
+                        [
+                            state.get(cube, "pose_x"),
+                            state.get(cube, "pose_y"),
+                            state.get(cube, "pose_z"),
+                            state.get(cube, "pose_qx"),
+                            state.get(cube, "pose_qy"),
+                            state.get(cube, "pose_qz"),
+                            state.get(cube, "pose_qw"),
+                        ]
+                    )
+                )
 
             # Create observation dict with state vector and images
             if use_qpos:
@@ -261,13 +255,13 @@ def collect_data(
         print("Warning: Pick controller did not terminate within 400 steps")
 
     add_place = True
-    
+
     if add_place:
         lifted_controller = controllers["place"]
         robot = state.get_object_from_name("robot")
         target = state.get_object_from_name(target_object_key)
         target_shelf = state.get_object_from_name("shelf")
-        object_parameters = (robot, target, target_shelf)
+        object_parameters = (robot, target, target_shelf)  # type: ignore
         controller = lifted_controller.ground(object_parameters)
 
         params = np.array([0.0, -0.10])
@@ -310,31 +304,24 @@ def collect_data(
             # Record observation and action before stepping
             if writer is not None:
                 target_shelf = state.get_object_from_name("shelf")
-                target_cube_list = [state.get_object_from_name(f"cube{i}") for i in range(num_cubes)]
+                target_cube_list = [
+                    state.get_object_from_name(f"cube{i}") for i in range(num_cubes)
+                ]
                 target_cube_list_pose = []
                 for cube in target_cube_list:
-                    target_cube_list_pose.append(np.array(
-                        [
-                            state.get(cube, "pose_x"),
-                            state.get(cube, "pose_y"),
-                            state.get(cube, "pose_z"),
-                            state.get(cube, "pose_qx"),
-                            state.get(cube, "pose_qy"),
-                            state.get(cube, "pose_qz"),
-                            state.get(cube, "pose_qw"),
-                        ]
-                    ))
-                target_shelf_pose = np.array(
-                    [
-                        state.get(target_shelf, "pose_x"),
-                        state.get(target_shelf, "pose_y"),
-                        state.get(target_shelf, "pose_z"),
-                        state.get(target_shelf, "pose_qx"),
-                        state.get(target_shelf, "pose_qy"),
-                        state.get(target_shelf, "pose_qz"),
-                        state.get(target_shelf, "pose_qw"),
-                    ]
-                )
+                    target_cube_list_pose.append(
+                        np.array(
+                            [
+                                state.get(cube, "pose_x"),
+                                state.get(cube, "pose_y"),
+                                state.get(cube, "pose_z"),
+                                state.get(cube, "pose_qx"),
+                                state.get(cube, "pose_qy"),
+                                state.get(cube, "pose_qz"),
+                                state.get(cube, "pose_qw"),
+                            ]
+                        )
+                    )
 
                 # Create observation dict with state vector and images
                 if use_qpos:
@@ -393,7 +380,7 @@ def collect_data(
                     }
                 writer.step(obs_dict, action_dict, target_object_key)
 
-                obs, reward, terminated, truncated, info = env.step(action)  # type: ignore
+                obs, _, terminated, truncated, _ = env.step(action)  # type: ignore
                 next_state = env.observation_space.devectorize(obs)
                 controller.observe(next_state)
                 state = next_state

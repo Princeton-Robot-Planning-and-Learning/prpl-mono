@@ -4,7 +4,7 @@
 import pickle
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Generator, List, Tuple
 
 import gymnasium as gym
 import numpy as np
@@ -244,9 +244,6 @@ def group_by_episode(frames: List[Dict[str, Any]]) -> Dict[int, List[Dict[str, A
     return dict(sorted(buckets.items(), key=lambda kv: kv[0]))
 
 
-from typing import Generator, Iterator
-
-
 def iter_teleop_episodes(
     teleop_data_dir: Path,
     render_images: bool = False,
@@ -335,23 +332,43 @@ def iter_teleop_episodes(
 
             env.reset(seed=seed)
             if use_dynamics3d:
-                robot_name = env.unwrapped._object_centric_env.robot_name
-                env.unwrapped._object_centric_env.set_render_camera("agentview_1")
-                overview_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
-                base_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
-                wrist_image = env.unwrapped._object_centric_env.render()
-                episode_images = [{"overview": overview_image, "base": base_image, "wrist": wrist_image}]
+                robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                    robot_name + "_base"
+                )
+                base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                    robot_name + "_wrist"
+                )
+                wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                episode_images = [
+                    {
+                        "overview": overview_image,
+                        "base": base_image,
+                        "wrist": wrist_image,
+                    }
+                ]
                 for action in actions:
                     env.step(action)
-                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")
-                    overview_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
-                    base_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(robot_name+ "_wrist")
-                    wrist_image = env.unwrapped._object_centric_env.render()
-                    episode_images.append({"overview": overview_image, "base": base_image, "wrist": wrist_image})
+                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                    overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                        robot_name + "_base"
+                    )
+                    base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                        robot_name + "_wrist"
+                    )
+                    wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    episode_images.append(
+                        {
+                            "overview": overview_image,
+                            "base": base_image,
+                            "wrist": wrist_image,
+                        }
+                    )
                     # for debugging
                     # from prbench_models.teleop_utils import _visualize_image_in_window
                     # _visualize_image_in_window(overview_image, "overview")
@@ -370,25 +387,29 @@ def iter_teleop_episodes(
                     # _visualize_image_in_window(all_images["base"], "base")
                     # _visualize_image_in_window(all_images["wrist"], "wrist")
             else:
-                rendered = env.render()
+                rendered = env.render()  # type: ignore
                 if rendered.shape[-1] == 4:  # type: ignore
                     rendered = rendered[:, :, :3]  # type: ignore
-                episode_images = [rendered]
+                episode_images = [rendered]  # type: ignore
 
                 for action in actions:
                     env.step(action)
                     rendered = env.render()
                     if rendered.shape[-1] == 4:  # type: ignore
                         rendered = rendered[:, :, :3]  # type: ignore
-                    episode_images.append(rendered)
+                    episode_images.append(rendered)  # type: ignore
 
         # Create frames for this episode only
         frames = []
         for frame_idx, (obs, act) in enumerate(zip(observations[:-1], actions)):
             frame = {
                 "observation.state": obs,
-                "observation.robot_state": env.observation_space.get_object_subvector(obs, "robot"),
-                "observation.env_state": env.observation_space.get_vector_excluding_object(obs, "robot"),
+                "observation.robot_state": env.observation_space.get_object_subvector(  # type: ignore # pylint: disable=line-too-long
+                    obs, "robot"
+                ),
+                "observation.env_state": env.observation_space.get_vector_excluding_object(  # type: ignore # pylint: disable=line-too-long
+                    obs, "robot"
+                ),
                 "action": act,
                 "episode_index": ep_idx,
                 "frame_index": frame_idx,
@@ -396,8 +417,12 @@ def iter_teleop_episodes(
 
             if episode_images is not None and frame_idx < len(episode_images):
                 if use_geom3d or use_dynamics3d:
-                    frame["observation.overview_image"] = episode_images[frame_idx]["overview"]
-                    frame["observation.wrist_image"] = episode_images[frame_idx]["wrist"]
+                    frame["observation.overview_image"] = episode_images[frame_idx][
+                        "overview"
+                    ]
+                    frame["observation.wrist_image"] = episode_images[frame_idx][
+                        "wrist"
+                    ]
                     frame["observation.base_image"] = episode_images[frame_idx]["base"]
                 else:
                     frame["observation.image"] = episode_images[frame_idx]

@@ -29,8 +29,8 @@ _DEFAULT_DEMOS_DIR = _SCRIPT_DIR.parent.parent / "prbench" / "demos"
 def sanitize_env_id(env_id: str) -> str:
     """Remove unnecessary stuff from the env ID.
 
-    Mirrors the function in prbench/scripts/generate_env_docs.py and
-    collect_demos_ds.py for consistent directory naming.
+    Mirrors the function in prbench/scripts/generate_env_docs.py and collect_demos_ds.py
+    for consistent directory naming.
     """
     if env_id.startswith("prbench/"):
         env_id = env_id[len("prbench/") :]
@@ -93,11 +93,7 @@ def collect_data(
     demo_dir = Path(output_dir)
 
     # Create the environment.
-    env = prbench.make(
-        f"prbench/{env_name}", render_mode="rgb_array", scene_bg=True
-    )
-
-    
+    env = prbench.make(f"prbench/{env_name}", render_mode="rgb_array", scene_bg=True)
 
     # Reset the environment and get the initial state.
     obs, _ = env.reset(seed=seed)  # type: ignore
@@ -142,24 +138,25 @@ def collect_data(
 
         for step_idx in range(400):
             action = controller.step()
-            
-            
+
             if show_images:
                 robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
-                env.unwrapped._object_centric_env.set_render_camera("agentview_1")
-                overview_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
-                base_image = env.unwrapped._object_centric_env.render()
-                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_wrist")
-                wrist_image = env.unwrapped._object_centric_env.render()
+                env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                    robot_name + "_base"
+                )  # type: ignore # pylint: disable=protected-access
+                base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                    robot_name + "_wrist"
+                )  # type: ignore # pylint: disable=protected-access
+                wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
                 _visualize_image_in_window(overview_image, "agentview_1")
                 _visualize_image_in_window(base_image, "base")
                 _visualize_image_in_window(wrist_image, "wrist")
             # Record observation and action before stepping
-            
-            obs, reward, ep_terminated, ep_truncated, _ = env.step(  # type: ignore
-                action
-            )
+
+            obs, reward, _, _, _ = env.step(action)  # type: ignore
 
             # Record data for demo (same format as collect_demos_ds.py)
             observations.append(obs)
@@ -175,6 +172,11 @@ def collect_data(
         else:
             raise ValueError("Pick controller did not terminate within 400 steps")
 
+        cube_z = state.get(cube, "z")
+        if cube_z < 0.1:
+            print("Cube is too low. Not saving.")
+            env.close()  # type: ignore
+            return
         if not grasping_only:
             # Create the place ground controller.
             lifted_controller = controllers["place_ground"]
@@ -184,36 +186,38 @@ def collect_data(
             object_parameters = (robot, cube, cupboard)  # type: ignore
             controller = lifted_controller.ground(object_parameters)
             # params = np.array([0.91823519, -0.13385369, -1.57079633])
-            params = np.array([0.88823519, -0.13385369, -1.57079633])
+            # params = np.array([0.88823519, -0.13385369, -1.57079633])
+            params = np.array([0.86823519, -0.13385369, -1.57079633])
 
             # Reset and execute the controller until it terminates.
             try:
                 controller.reset(state, params)
             except ValueError as e:
                 print(e)
-                print("Pick controller reset failed. Not saving.")
+                print("Place controller reset failed. Not saving.")
                 env.close()  # type: ignore
                 return
             for step_idx in range(400):
                 action = controller.step()
-                
-                
+
                 if show_images:
                     robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
-                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")
-                    overview_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")
-                    base_image = env.unwrapped._object_centric_env.render()
-                    env.unwrapped._object_centric_env.set_render_camera(robot_name + "_wrist")
-                    wrist_image = env.unwrapped._object_centric_env.render()
+                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                    overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                        robot_name + "_base"
+                    )
+                    base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                        robot_name + "_wrist"
+                    )
+                    wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
                     _visualize_image_in_window(overview_image, "agentview_1")
                     _visualize_image_in_window(base_image, "base")
                     _visualize_image_in_window(wrist_image, "wrist")
                 # Record observation and action before stepping
-                
-                obs, reward, ep_terminated, ep_truncated, _ = env.step(  # type: ignore
-                    action
-                )
+
+                obs, reward, _, _, _ = env.step(action)  # type: ignore
 
                 # Record data for demo (same format as collect_demos_ds.py)
                 observations.append(obs)
@@ -252,7 +256,6 @@ def collect_data(
     elif save:
         print("No actions recorded, episode not saved")
 
-
     env.close()  # type: ignore
 
 
@@ -266,7 +269,7 @@ def main() -> None:
     )
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
     parser.add_argument("--save", type=bool, default=True)
-    parser.add_argument("--grasping-only", type=bool, default=False)
+    parser.add_argument("--grasping-only", action="store_true", default=False)
     parser.add_argument("--show-images", action="store_true", default=False)
     parser.add_argument("--no-save", dest="save", action="store_false")
     parser.add_argument(

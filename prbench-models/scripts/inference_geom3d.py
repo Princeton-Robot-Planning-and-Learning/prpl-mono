@@ -132,7 +132,6 @@ def run_inference(
         use_qpos: Whether to use qpos for the policy.
         use_delta_qpos: Whether to use delta qpos for the policy.
     """
-    
 
     successes = 0
     try:
@@ -195,14 +194,14 @@ def run_inference(
 
                 # Get robot state
                 robot = state.get_object_from_name("robot")
-                target_cube = state.get_object_from_name(target_object_key)
-                target_cube_pos = np.array(
-                    [
-                        state.get(target_cube, "pose_x"),
-                        state.get(target_cube, "pose_y"),
-                        state.get(target_cube, "pose_z"),
-                    ]
-                )
+                # target_cube = state.get_object_from_name(target_object_key)
+                # target_cube_pos = np.array(
+                #     [
+                #         state.get(target_cube, "pose_x"),
+                #         state.get(target_cube, "pose_y"),
+                #         state.get(target_cube, "pose_z"),
+                #     ]
+                # )
                 # if target_cube_pos[2] > 0.3:
                 #     successes += 1
                 #     break
@@ -261,7 +260,7 @@ def run_inference(
                 action_dict = policy.step(obs_dict)
 
                 if action_dict is None:
-                    if use_qpos:
+                    if use_qpos:  # type: ignore
                         action_dict: dict[str, np.ndarray] = {  # type: ignore
                             "base_pose": obs_dict["base_pose"] - obs_dict["base_pose"],
                             "arm_qpos": obs_dict["arm_qpos"] - obs_dict["arm_qpos"],
@@ -274,8 +273,6 @@ def run_inference(
                             "arm_quat": obs_dict["arm_quat"],
                             "gripper_pos": obs_dict["gripper_pos"],
                         }
-
-                
 
                 if use_delta_qpos:
                     delta_qpos = (
@@ -290,7 +287,11 @@ def run_inference(
                     )
                 elif use_qpos:
                     delta_qpos = (
-                        np.mod(action_dict["arm_qpos"] - obs_dict["arm_qpos"] + np.pi, 2 * np.pi) - np.pi
+                        np.mod(
+                            action_dict["arm_qpos"] - obs_dict["arm_qpos"] + np.pi,
+                            2 * np.pi,
+                        )
+                        - np.pi
                     )  # Unwrapped joint angles
                     action = np.concatenate(
                         [
@@ -394,8 +395,15 @@ def main() -> None:
         help="Show images in a window",
     )
     parser.add_argument("--render", action="store_true", help="Render the environment")
-    parser.add_argument("--use-qpos", action="store_true", default=False, help="Use qpos for the policy")
-    parser.add_argument("--use-delta-qpos", action="store_true", default=False, help="Use delta qpos for the policy")
+    parser.add_argument(
+        "--use-qpos", action="store_true", default=False, help="Use qpos for the policy"
+    )
+    parser.add_argument(
+        "--use-delta-qpos",
+        action="store_true",
+        default=False,
+        help="Use delta qpos for the policy",
+    )
     args = parser.parse_args()
 
     run_inference(

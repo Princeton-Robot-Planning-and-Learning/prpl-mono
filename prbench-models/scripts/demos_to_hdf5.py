@@ -28,12 +28,11 @@ Usage:
 import argparse
 from pathlib import Path
 
+import cv2 as cv
 import h5py  # type: ignore
 import imageio as iio
 import numpy as np
-import cv2 as cv
-
-from prbench_imitation_learning.dataset import (
+from prbench_imitation_learning.dataset import (  # type: ignore
     iter_teleop_episodes,
 )
 
@@ -47,6 +46,7 @@ def convert(
     use_dynamics3d: bool = False,
     use_pushpull2d: bool = False,
     save_videos: bool = False,
+    use_velocity_state: bool = False,
 ) -> None:
     """Convert expert or teleoperated data to HDF5 format.
 
@@ -62,6 +62,7 @@ def convert(
         use_dynamics3d: If True, use dynamics3d environment
         use_pushpull2d: If True, use pushpull2d environment
         save_videos: If True, save videos for teleoperated demos
+        use_velocity_state: If True, use dynamics3d velocity state
     """
     if teleop_data_dir is None:
         raise ValueError("teleop_data_dir must be provided")
@@ -79,7 +80,10 @@ def convert(
 
         # Iterate over episodes one at a time (memory-efficient)
         for ep_idx, ep_frames, metadata in iter_teleop_episodes(
-            teleop_data_dir, render_images=render_images, use_geom3d=use_geom3d, use_dynamics3d=use_dynamics3d,
+            teleop_data_dir,
+            render_images=render_images,
+            use_geom3d=use_geom3d,
+            use_dynamics3d=use_dynamics3d,
         ):
             # Write metadata once (from first episode)
             if not metadata_written:
@@ -102,46 +106,121 @@ def convert(
             base_images = []
 
             for fr in ep_frames:
-                robot_observation = np.array(fr["observation.robot_state"], dtype=np.float32)
-                env_observations = np.array(fr["observation.env_state"], dtype=np.float32)
-                if use_dynamics3d:
-                    robot_observation.shape == np.array(fr["observation.state"][-22:], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][:-22], dtype=np.float32).shape
-                elif use_geom3d:
-                    robot_observation.shape == np.array(fr["observation.state"][:19], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][19:], dtype=np.float32).shape
-                elif use_pushpull2d:
-                    robot_observation.shape == np.array(fr["observation.state"][:24], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][24:], dtype=np.float32).shape
-                elif use_dynamic2d:
-                    robot_observation.shape == np.array(fr["observation.state"][-24:], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][:-24], dtype=np.float32).shape
+                if use_velocity_state and use_dynamics3d:
+                    robot_observation = np.array(
+                        fr["observation.robot_state"][:11], dtype=np.float32
+                    )
+                    env_observations = np.array(
+                        fr["observation.env_state"], dtype=np.float32
+                    )
                 else:
-                    robot_observation.shape == np.array(fr["observation.state"][:9], dtype=np.float32).shape
-                    env_observations.shape == np.array(fr["observation.state"][9:], dtype=np.float32).shape
+                    robot_observation = np.array(
+                        fr["observation.robot_state"], dtype=np.float32
+                    )
+                    env_observations = np.array(
+                        fr["observation.env_state"], dtype=np.float32
+                    )
+                if use_dynamics3d:
+                    if use_velocity_state:
+                        assert (
+                            robot_observation.shape
+                            == np.array(
+                                fr["observation.state"][-22:-11], dtype=np.float32
+                            ).shape
+                        )
+                    else:
+                        assert (
+                            robot_observation.shape
+                            == np.array(
+                                fr["observation.state"][-22:], dtype=np.float32
+                            ).shape
+                        )
+                    assert (
+                        env_observations.shape
+                        == np.array(
+                            fr["observation.state"][:-22], dtype=np.float32
+                        ).shape
+                    )
+                elif use_geom3d:
+                    assert (
+                        robot_observation.shape
+                        == np.array(
+                            fr["observation.state"][:19], dtype=np.float32
+                        ).shape
+                    )
+                    assert (
+                        env_observations.shape
+                        == np.array(
+                            fr["observation.state"][19:], dtype=np.float32
+                        ).shape
+                    )
+                elif use_pushpull2d:
+                    assert (
+                        robot_observation.shape
+                        == np.array(
+                            fr["observation.state"][:24], dtype=np.float32
+                        ).shape
+                    )
+                    assert (
+                        env_observations.shape
+                        == np.array(
+                            fr["observation.state"][24:], dtype=np.float32
+                        ).shape
+                    )
+                elif use_dynamic2d:
+                    assert (
+                        robot_observation.shape
+                        == np.array(
+                            fr["observation.state"][-24:], dtype=np.float32
+                        ).shape
+                    )
+                    assert (
+                        env_observations.shape
+                        == np.array(
+                            fr["observation.state"][:-24], dtype=np.float32
+                        ).shape
+                    )
+                else:
+                    assert (
+                        robot_observation.shape
+                        == np.array(fr["observation.state"][:9], dtype=np.float32).shape
+                    )
+                    assert (
+                        env_observations.shape
+                        == np.array(fr["observation.state"][9:], dtype=np.float32).shape
+                    )
                 action = np.array(fr["action"], dtype=np.float32)
                 env_states.append(env_observations)
                 robot_states.append(robot_observation)
                 actions.append(action)
 
+                resize_constant = 84
                 # Add image if present
                 if use_geom3d or use_dynamics3d:
                     overview_image = fr["observation.overview_image"]
                     if isinstance(overview_image, np.ndarray):
-                        overview_image = cv.resize(overview_image, (224, 224))
+                        overview_image = cv.resize(  # pylint: disable=no-member
+                            overview_image, (resize_constant, resize_constant)
+                        )
                         overview_images.append(overview_image)
                     wrist_image = fr["observation.wrist_image"]
                     if isinstance(wrist_image, np.ndarray):
-                        wrist_image = cv.resize(wrist_image, (224, 224))
+                        wrist_image = cv.resize(  # pylint: disable=no-member
+                            wrist_image, (resize_constant, resize_constant)
+                        )
                         wrist_images.append(wrist_image)
                     base_image = fr["observation.base_image"]
                     if isinstance(base_image, np.ndarray):
-                        base_image = cv.resize(base_image, (224, 224))
+                        base_image = cv.resize(  # pylint: disable=no-member
+                            base_image, (resize_constant, resize_constant)
+                        )
                         base_images.append(base_image)
                 elif has_images and "observation.image" in fr:
                     image = fr["observation.image"]
                     if isinstance(image, np.ndarray):
-                        image = cv.resize(image, (224, 224))
+                        image = cv.resize(  # pylint: disable=no-member
+                            image, (resize_constant, resize_constant)
+                        )
                         images.append(image)
 
             # Write datasets for this episode
@@ -168,18 +247,22 @@ def convert(
                 )
                 if save_videos and overview_images:
                     # Create video output directory next to the HDF5 file
-                    video_dir = output_path.parent / f"videos_{teleop_data_dir.name}" / f"demo_{ep_idx}" 
+                    video_dir = (
+                        output_path.parent
+                        / f"videos_{teleop_data_dir.name}"
+                        / f"demo_{ep_idx}"
+                    )
                     video_dir.mkdir(parents=True, exist_ok=True)
-                    
+
                     # Save videos for each camera view
                     fps = 30
                     overview_video_path = video_dir / "overview.mp4"
                     wrist_video_path = video_dir / "wrist.mp4"
                     base_video_path = video_dir / "base.mp4"
-                    
-                    iio.mimsave(overview_video_path, overview_images, fps=fps)
-                    iio.mimsave(wrist_video_path, wrist_images, fps=fps)
-                    iio.mimsave(base_video_path, base_images, fps=fps)
+
+                    iio.mimsave(overview_video_path, overview_images, fps=fps)  # type: ignore # pylint: disable=line-too-long
+                    iio.mimsave(wrist_video_path, wrist_images, fps=fps)  # type: ignore
+                    iio.mimsave(base_video_path, base_images, fps=fps)  # type: ignore
                     print(f"  Saved videos for episode {ep_idx}")
             elif images:
                 episode_group.create_dataset(
@@ -187,13 +270,17 @@ def convert(
                 )
                 if save_videos and images:
                     # Create video output directory next to the HDF5 file
-                    video_dir = output_path.parent / f"videos_{teleop_data_dir.name}" / f"demo_{ep_idx}" 
+                    video_dir = (
+                        output_path.parent
+                        / f"videos_{teleop_data_dir.name}"
+                        / f"demo_{ep_idx}"
+                    )
                     video_dir.mkdir(parents=True, exist_ok=True)
-                    
+
                     # Save videos for each camera view
                     fps = 30
                     image_video_path = video_dir / "image.mp4"
-                    iio.mimsave(image_video_path, images, fps=fps)
+                    iio.mimsave(image_video_path, images, fps=fps)  # type: ignore
                     print(f"  Saved video for episode {ep_idx}")
 
             # Store episode length as attribute
@@ -263,6 +350,11 @@ def main() -> None:
         help="Use dynamics3d environment",
     )
     parser.add_argument(
+        "--use_velocity_state",
+        action="store_true",
+        help="Use dynamics3d velocity state",
+    )
+    parser.add_argument(
         "--use_pushpull2d",
         action="store_true",
         help="Use dynamicpushpull2d environment",
@@ -297,6 +389,7 @@ def main() -> None:
         use_dynamics3d=args.use_dynamics3d,
         use_pushpull2d=args.use_pushpull2d,
         save_videos=args.save_videos,
+        use_velocity_state=args.use_velocity_state,
     )
 
 
