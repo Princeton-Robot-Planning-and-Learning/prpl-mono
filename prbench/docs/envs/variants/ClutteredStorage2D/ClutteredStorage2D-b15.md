@@ -10,10 +10,12 @@ env = prbench.make("prbench/ClutteredStorage2D-b15-v0")
 This variant has 15 blocks (7 initially in the shelf, 8 initially outside).
 
 ## Initial State Distribution
-![initial state GIF](../../assets/initial_state_gifs/ClutteredStorage2D.gif)
+![initial state GIF](../../assets/initial_state_gifs/variants/ClutteredStorage2D-b15.gif)
 
 ## Random Action Behavior
-![random action GIF](../../assets/random_action_gifs/ClutteredStorage2D.gif)
+![random action GIF](../../assets/random_action_gifs/variants/ClutteredStorage2D-b15.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Example Demonstration
 *(No demonstration GIFs available)*

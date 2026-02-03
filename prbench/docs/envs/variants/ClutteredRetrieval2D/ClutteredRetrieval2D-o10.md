@@ -10,10 +10,12 @@ env = prbench.make("prbench/ClutteredRetrieval2D-o10-v0")
 This variant has 10 obstructions.
 
 ## Initial State Distribution
-![initial state GIF](../../assets/initial_state_gifs/ClutteredRetrieval2D.gif)
+![initial state GIF](../../assets/initial_state_gifs/variants/ClutteredRetrieval2D-o10.gif)
 
 ## Random Action Behavior
-![random action GIF](../../assets/random_action_gifs/ClutteredRetrieval2D.gif)
+![random action GIF](../../assets/random_action_gifs/variants/ClutteredRetrieval2D-o10.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/ClutteredRetrieval2D-o10/ClutteredRetrieval2D-o10_seed0_1767991986.gif)

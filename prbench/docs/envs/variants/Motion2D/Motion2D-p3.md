@@ -10,10 +10,12 @@ env = prbench.make("prbench/Motion2D-p3-v0")
 This variant has 3 narrow passages.
 
 ## Initial State Distribution
-![initial state GIF](../../assets/initial_state_gifs/Motion2D.gif)
+![initial state GIF](../../assets/initial_state_gifs/variants/Motion2D-p3.gif)
 
 ## Random Action Behavior
-![random action GIF](../../assets/random_action_gifs/Motion2D.gif)
+![random action GIF](../../assets/random_action_gifs/variants/Motion2D-p3.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/Motion2D-p3/Motion2D-p3.gif)

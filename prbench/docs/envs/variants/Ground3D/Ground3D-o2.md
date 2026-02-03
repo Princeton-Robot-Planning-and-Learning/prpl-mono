@@ -10,10 +10,12 @@ env = prbench.make("prbench/Ground3D-o2-v0")
 This variant has 2 cubes on the ground.
 
 ## Initial State Distribution
-![initial state GIF](../../assets/initial_state_gifs/Ground3D.gif)
+![initial state GIF](../../assets/initial_state_gifs/variants/Ground3D-o2.gif)
 
 ## Random Action Behavior
-![random action GIF](../../assets/random_action_gifs/Ground3D.gif)
+![random action GIF](../../assets/random_action_gifs/variants/Ground3D-o2.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Example Demonstration
 *(No demonstration GIFs available)*

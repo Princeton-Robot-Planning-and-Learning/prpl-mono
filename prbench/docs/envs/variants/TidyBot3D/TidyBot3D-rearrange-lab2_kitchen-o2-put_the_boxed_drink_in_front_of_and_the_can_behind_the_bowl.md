@@ -10,10 +10,12 @@ env = prbench.make("prbench/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_boxed_dr
 This variant uses the 'lab2_kitchen' scene type with 2 objects.
 
 ## Initial State Distribution
-![initial state GIF](../../assets/initial_state_gifs/TidyBot3D.gif)
+![initial state GIF](../../assets/initial_state_gifs/variants/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl.gif)
 
 ## Random Action Behavior
-![random action GIF](../../assets/random_action_gifs/TidyBot3D.gif)
+![random action GIF](../../assets/random_action_gifs/variants/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl.gif)
+
+**Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
 
 ## Example Demonstration
 *(No demonstration GIFs available)*

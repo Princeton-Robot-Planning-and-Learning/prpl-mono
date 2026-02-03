@@ -10,10 +10,12 @@ env = prbench.make("prbench/Obstruction3D-o0-v0")
 This variant has no obstructions.
 
 ## Initial State Distribution
-![initial state GIF](../../assets/initial_state_gifs/Obstruction3D.gif)
+![initial state GIF](../../assets/initial_state_gifs/variants/Obstruction3D-o0.gif)
 
 ## Random Action Behavior
-![random action GIF](../../assets/random_action_gifs/Obstruction3D.gif)
+![random action GIF](../../assets/random_action_gifs/variants/Obstruction3D-o0.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
 ## Example Demonstration
 *(No demonstration GIFs available)*

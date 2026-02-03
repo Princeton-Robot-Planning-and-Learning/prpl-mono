@@ -10,10 +10,12 @@ env = prbench.make("prbench/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks
 This variant uses the 'lab2_kitchen' scene type with 50 objects.
 
 ## Initial State Distribution
-![initial state GIF](../../assets/initial_state_gifs/TidyBot3D.gif)
+![initial state GIF](../../assets/initial_state_gifs/variants/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_left_side_of_the_kitchen_island.gif)
 
 ## Random Action Behavior
-![random action GIF](../../assets/random_action_gifs/TidyBot3D.gif)
+![random action GIF](../../assets/random_action_gifs/variants/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_left_side_of_the_kitchen_island.gif)
+
+**Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
 
 ## Example Demonstration
 *(No demonstration GIFs available)*
