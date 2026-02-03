@@ -9,8 +9,18 @@ env = prbench.make("prbench/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_
 ## Description
 This variant uses the 'lab2_kitchen' scene type with 5 objects.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island.gif)
+
+**Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
+
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](../../assets/demo_gifs/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island_1769371654.gif)
+
+**Demo Stats**: Total Reward: -5.31, Success: No, Steps: 531
 
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:

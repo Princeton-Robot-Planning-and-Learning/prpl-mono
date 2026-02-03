@@ -9,6 +9,14 @@ env = prbench.make("prbench/Motion2D-p5-v0")
 ## Description
 This variant has 5 narrow passages.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/Motion2D-p5.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/Motion2D-p5.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/Motion2D-p5/Motion2D-p5.gif)
 

@@ -9,6 +9,14 @@ env = prbench.make("prbench/TidyBot3D-balance-o4-v0")
 ## Description
 This variant uses the 'balance' scene type with 4 objects.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/TidyBot3D-balance-o4.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/TidyBot3D-balance-o4.gif)
+
+**Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

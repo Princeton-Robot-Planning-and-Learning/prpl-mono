@@ -9,6 +9,14 @@ env = prbench.make("prbench/Table3D-o3-v0")
 ## Description
 This variant has 3 cubes on the table.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/Table3D-o3.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/Table3D-o3.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 
