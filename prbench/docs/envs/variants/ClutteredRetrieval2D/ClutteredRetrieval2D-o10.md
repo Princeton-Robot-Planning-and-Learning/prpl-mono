@@ -9,6 +9,11 @@ env = prbench.make("prbench/ClutteredRetrieval2D-o10-v0")
 ## Description
 This variant has 10 obstructions.
 
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/ClutteredRetrieval2D-o10/ClutteredRetrieval2D-o10_seed0_1767991986.gif)
+
+**Demo Stats**: Total Reward: -259.00, Success: Yes, Steps: 259
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

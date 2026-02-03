@@ -9,6 +9,11 @@ env = prbench.make("prbench/StickButton2D-b10-v0")
 ## Description
 This variant has 10 buttons to press.
 
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/StickButton2D-b10/StickButton2D-b10.gif)
+
+**Demo Stats**: Total Reward: -468.00, Success: Yes, Steps: 468
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

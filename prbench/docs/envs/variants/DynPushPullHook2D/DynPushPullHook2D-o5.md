@@ -9,6 +9,11 @@ env = prbench.make("prbench/DynPushPullHook2D-o5-v0")
 ## Description
 This variant has 5 obstructions.
 
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/DynPushPullHook2D-o5/DynPushPullHook2D-o5_seed2_1768427291.gif)
+
+**Demo Stats**: Total Reward: -194.00, Success: Yes, Steps: 194
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

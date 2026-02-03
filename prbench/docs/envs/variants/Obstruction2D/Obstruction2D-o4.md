@@ -9,6 +9,11 @@ env = prbench.make("prbench/Obstruction2D-o4-v0")
 ## Description
 This variant has 4 obstructions.
 
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/Obstruction2D-o4/Obstruction2D-o4.gif)
+
+**Demo Stats**: Total Reward: -455.00, Success: Yes, Steps: 455
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

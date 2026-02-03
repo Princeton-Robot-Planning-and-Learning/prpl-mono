@@ -9,6 +9,9 @@ env = prbench.make("prbench/Ground3D-o2-v0")
 ## Description
 This variant has 2 cubes on the ground.
 
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

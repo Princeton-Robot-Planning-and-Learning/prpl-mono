@@ -9,6 +9,9 @@ env = prbench.make("prbench/TidyBot3D-tool_use-lab2_kitchen-o1-move_the_bowl_to_
 ## Description
 This variant uses the 'lab2_kitchen' scene type with 1 object.
 
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |
