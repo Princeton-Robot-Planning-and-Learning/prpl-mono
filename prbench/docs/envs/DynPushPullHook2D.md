@@ -25,9 +25,7 @@ The number of obstructions differs between environment variants. For example, Dy
 ![initial state GIF](assets/initial_state_gifs/DynPushPullHook2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynPushPullHook2D-o5/DynPushPullHook2D-o5_seed2_1768427291.gif)
-
-**Demo Stats**: Total Reward: -194.00, Success: Yes, Steps: 194
+![demo GIF](assets/group_gifs/DynPushPullHook2D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

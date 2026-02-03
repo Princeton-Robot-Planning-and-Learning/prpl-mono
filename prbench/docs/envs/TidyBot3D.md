@@ -27,6 +27,7 @@ This environment has variants that differ in scene type and number of objects. S
 - [`prbench/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_left_side_of_the_kitchen_island-v0`](variants/TidyBot3D/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_left_side_of_the_kitchen_island.md) (tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_left_side_of_the_kitchen_island)
 - [`prbench/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_right_side_of_the_kitchen_counter-v0`](variants/TidyBot3D/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_right_side_of_the_kitchen_counter.md) (tool_use-lab2_kitchen-o50-sweep_the_blocks_to_the_right_side_of_the_kitchen_counter)
 - [`prbench/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0`](variants/TidyBot3D/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island.md) (tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island)
+- [`prbench/TidyBot3D-navigate-namo-o1-v0`](variants/TidyBot3D/TidyBot3D-navigate-namo-o1.md) (navigate-namo-o1)
 - [`prbench/TidyBot3D-ground-o1-v0`](variants/TidyBot3D/TidyBot3D-ground-o1.md) (ground-o1)
 - [`prbench/TidyBot3D-cupboard_real-o1-v0`](variants/TidyBot3D/TidyBot3D-cupboard_real-o1.md) (cupboard_real-o1)
 - [`prbench/TidyBot3D-dynamic-lab2-o3-balance_beam-v0`](variants/TidyBot3D/TidyBot3D-dynamic-lab2-o3-balance_beam.md) (dynamic-lab2-o3-balance_beam)

@@ -16,9 +16,7 @@ This environment has only one variant.
 ![initial state GIF](assets/initial_state_gifs/BaseMotion3D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/BaseMotion3D/BaseMotion3D_1768757778.gif)
-
-**Demo Stats**: Total Reward: -10.00, Success: Yes, Steps: 10
+![demo GIF](assets/group_gifs/BaseMotion3D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

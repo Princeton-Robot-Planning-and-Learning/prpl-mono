@@ -9,6 +9,9 @@ env = prbench.make("prbench/Obstruction3D-o3-v0")
 ## Description
 This variant has 3 obstructions to clear.
 
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

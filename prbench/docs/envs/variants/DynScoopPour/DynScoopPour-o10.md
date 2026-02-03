@@ -9,6 +9,9 @@ env = prbench.make("prbench/DynScoopPour-o10-v0")
 ## Description
 This variant has 10 small objects (5 circles, 5 squares).
 
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

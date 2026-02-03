@@ -25,9 +25,7 @@ The number of buttons differs between environment variants. For example, StickBu
 ![initial state GIF](assets/initial_state_gifs/StickButton2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/StickButton2D-b10/StickButton2D-b10.gif)
-
-**Demo Stats**: Total Reward: -468.00, Success: Yes, Steps: 468
+![demo GIF](assets/group_gifs/StickButton2D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

@@ -19,9 +19,7 @@ This environment has only one variant.
 ![initial state GIF](assets/initial_state_gifs/DynPushT.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynPushT-t1/DynPushT-t1.gif)
-
-**Demo Stats**: Total Reward: -576.00, Success: Yes, Steps: 576
+*(No demonstration GIFs available)*
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*
