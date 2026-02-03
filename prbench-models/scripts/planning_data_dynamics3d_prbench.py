@@ -156,9 +156,7 @@ def collect_data(
                 _visualize_image_in_window(wrist_image, "wrist")
             # Record observation and action before stepping
 
-            obs, reward, _, _, _ = env.step(  # type: ignore
-                action
-            )
+            obs, reward, _, _, _ = env.step(action)  # type: ignore
 
             # Record data for demo (same format as collect_demos_ds.py)
             observations.append(obs)
@@ -219,9 +217,7 @@ def collect_data(
                     _visualize_image_in_window(wrist_image, "wrist")
                 # Record observation and action before stepping
 
-                obs, reward, _, _, _ = env.step(  # type: ignore
-                    action
-                )
+                obs, reward, _, _, _ = env.step(action)  # type: ignore
 
                 # Record data for demo (same format as collect_demos_ds.py)
                 observations.append(obs)

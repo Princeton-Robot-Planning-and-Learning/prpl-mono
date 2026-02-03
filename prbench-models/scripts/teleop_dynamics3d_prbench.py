@@ -316,7 +316,7 @@ def main() -> None:
     parser.add_argument(
         "--env-name",
         type=str,
-        default="TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0", # pylint: disable=line-too-long
+        default="TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0",  # pylint: disable=line-too-long
         help="Name of the environment",
     )
 

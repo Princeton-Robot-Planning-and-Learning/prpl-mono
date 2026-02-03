@@ -820,7 +820,9 @@ def test_pick_place_two_cubes_skill():
         )
 
     # Reset the environment and get the initial state.
-    obs, _ = env.reset(seed=123)
+    obs, _ = env.reset(seed=124)
+    for _ in range(5):
+        obs, _, _, _, _ = env.step(np.zeros(11))
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
@@ -1032,7 +1034,7 @@ def test_pick_toss():
         scene_bg=True,
     )
     if MAKE_VIDEOS:
-        env.unwrapped._object_centric_env.set_render_camera("task_view") # type: ignore # pylint: disable=protected-access
+        env.unwrapped._object_centric_env.set_render_camera("task_view")  # type: ignore # pylint: disable=protected-access
         env = RecordVideo(
             env, "unit_test_videos", name_prefix=f"TidyBot3D-ground-o{num_cubes}"
         )

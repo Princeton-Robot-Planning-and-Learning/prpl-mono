@@ -453,9 +453,7 @@ def run_inference(
                         successes += 1
                     episode_lengths.append(step_idx + 1)
                     break
-                if (
-                    "Transport3D" in env_name and step_idx > 300 and not gripper_closed
-                ):
+                if "Transport3D" in env_name and step_idx > 300 and not gripper_closed:
                     # Max steps reached without termination
                     episode_lengths.append(max_steps)
                     print(

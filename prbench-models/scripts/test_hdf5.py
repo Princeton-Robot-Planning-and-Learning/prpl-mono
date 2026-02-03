@@ -93,7 +93,7 @@ def main() -> None:
                             nested = item[nested_name]
                             if isinstance(nested, h5py.Dataset):
                                 print(
-                                    f"      {nested_name}: shape={nested.shape}, dtype={nested.dtype}" # pylint: disable=line-too-long
+                                    f"      {nested_name}: shape={nested.shape}, dtype={nested.dtype}"  # pylint: disable=line-too-long
                                 )
                             else:
                                 print(f"      {nested_name}/ (group)")
