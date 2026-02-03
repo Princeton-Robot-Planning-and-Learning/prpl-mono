@@ -4,7 +4,7 @@
 import pickle
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Generator
+from typing import Any, Dict, Generator, List, Tuple
 
 import gymnasium as gym
 import numpy as np
@@ -387,27 +387,27 @@ def iter_teleop_episodes(
                     # _visualize_image_in_window(all_images["base"], "base")
                     # _visualize_image_in_window(all_images["wrist"], "wrist")
             else:
-                rendered = env.render()
+                rendered = env.render()  # type: ignore
                 if rendered.shape[-1] == 4:  # type: ignore
                     rendered = rendered[:, :, :3]  # type: ignore
-                episode_images = [rendered]
+                episode_images = [rendered]  # type: ignore
 
                 for action in actions:
                     env.step(action)
                     rendered = env.render()
                     if rendered.shape[-1] == 4:  # type: ignore
                         rendered = rendered[:, :, :3]  # type: ignore
-                    episode_images.append(rendered)
+                    episode_images.append(rendered)  # type: ignore
 
         # Create frames for this episode only
         frames = []
         for frame_idx, (obs, act) in enumerate(zip(observations[:-1], actions)):
             frame = {
                 "observation.state": obs,
-                "observation.robot_state": env.observation_space.get_object_subvector(
+                "observation.robot_state": env.observation_space.get_object_subvector(  # type: ignore # pylint: disable=line-too-long
                     obs, "robot"
                 ),
-                "observation.env_state": env.observation_space.get_vector_excluding_object( # pylint: disable=line-too-long
+                "observation.env_state": env.observation_space.get_vector_excluding_object(  # type: ignore # pylint: disable=line-too-long
                     obs, "robot"
                 ),
                 "action": act,
