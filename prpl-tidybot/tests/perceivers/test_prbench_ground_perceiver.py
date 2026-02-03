@@ -15,7 +15,7 @@ def test_prbench_ground_perceiver():
     interface.base_interface.map_base_state = spatialmath.SE2(x=1.0, y=0.0, theta=0.0)
     perceiver = PRBenchGroundPerceiver(interface)
     state = perceiver.get_state()
-    robot_obj = state.get_object_from_name("robot")
+    robot_obj = state.get_object_from_name("robot_0")
     assert np.isclose(state.get(robot_obj, "pos_arm_joint1"), 1.0)
     assert np.isclose(state.get(robot_obj, "pos_arm_joint2"), 0.0)
     assert np.isclose(state.get(robot_obj, "pos_arm_joint3"), 0.0)
