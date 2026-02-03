@@ -1,5 +1,10 @@
 """Tests for table3d.py."""
 
+import time
+from pathlib import Path
+from typing import Any
+
+import dill as pkl  # type: ignore[import-untyped]
 import numpy as np
 import pytest
 from gymnasium.wrappers import RecordVideo
@@ -19,6 +24,62 @@ from prbench.envs.geom3d.table3d import (
     Table3DObjectCentricState,
 )
 from tests.conftest import MAKE_VIDEOS
+
+# Flag to enable trajectory saving (can be controlled like MAKE_VIDEOS)
+SAVE_TRAJECTORIES = MAKE_VIDEOS
+
+# Default demos directory: prbench/demos relative to this test file
+# Test file: prpl-mono/prbench/tests/envs/geom3d/test_table3d.py
+# Demos:     prpl-mono/prbench/demos
+_TEST_DIR = Path(__file__).resolve().parent
+_DEFAULT_DEMOS_DIR = _TEST_DIR.parent.parent.parent / "demos"
+
+
+def sanitize_env_id(env_id: str) -> str:
+    """Remove unnecessary stuff from the env ID.
+
+    Mirrors the function in prbench/scripts/generate_env_docs.py and collect_demos_ds.py
+    for consistent directory naming.
+    """
+    if env_id.startswith("prbench/"):
+        env_id = env_id[len("prbench/") :]
+    env_id = env_id.replace("/", "_")
+    if len(env_id) >= 3 and env_id[-3:-1] == "-v":
+        return env_id[:-3]
+    return env_id
+
+
+def save_demo(
+    demo_dir: Path,
+    env_id: str,
+    seed: int,
+    observations: list[Any],
+    actions: list[Any],
+    rewards: list[float],
+    terminated: bool,
+    truncated: bool,
+) -> Path:
+    """Save a demo to disk in the same format as collect_demos_ds.py.
+
+    Directory structure: {demo_dir}/{sanitized_env_id}/{seed}/{timestamp}.p
+    """
+    timestamp = int(time.time())
+    demo_subdir = demo_dir / sanitize_env_id(env_id) / str(seed)
+    demo_subdir.mkdir(parents=True, exist_ok=True)
+    demo_path = demo_subdir / f"{timestamp}.p"
+    demo_data = {
+        "env_id": env_id,
+        "timestamp": timestamp,
+        "seed": seed,
+        "observations": observations,
+        "actions": actions,
+        "rewards": rewards,
+        "terminated": terminated,
+        "truncated": truncated,
+    }
+    with open(demo_path, "wb") as f:
+        pkl.dump(demo_data, f)
+    return demo_path
 
 
 @pytest.fixture(scope="module")
@@ -58,13 +119,22 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         env.unwrapped._object_centric_env.config  # pylint: disable=protected-access
     )
 
-    vec_obs, _ = env.reset(seed=123)
+    seed = 123
+    vec_obs, _ = env.reset(seed=seed)
     oc_obs = env.observation_space.devectorize(vec_obs)
     obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
+    # Initialize trajectory collection
+    traj_observations: list[Any] = [vec_obs.copy()]
+    traj_actions: list[Any] = []
+    traj_rewards: list[float] = []
+    ep_terminated = False
+    ep_truncated = False
+
+    num_cubes = 2
     # Create a simulator for planning.
     sim = ObjectCentricTable3DEnv(
-        num_cubes=2, config=config, use_gui=False, realistic_bg=False
+        num_cubes=num_cubes, config=config, use_gui=False, realistic_bg=False
     )
     sim.set_state(obs)
 
@@ -95,7 +165,13 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         delta_lst = [delta.x, delta.y, delta.rot]
         action_lst = delta_lst + [0.0] * 7 + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
@@ -126,14 +202,26 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Step 3: Close the gripper to grasp cube1 (takes multiple steps)
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [-1.0], dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
@@ -169,7 +257,13 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
@@ -209,7 +303,13 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
             delta_lst = [wrap_angle(a) for a in delta]
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
-            vec_obs, _, _, _, _ = env.step(action)
+            vec_obs, reward, terminated, truncated, _ = env.step(action)
+            # Collect trajectory data
+            traj_observations.append(vec_obs.copy())
+            traj_actions.append(action.copy())
+            traj_rewards.append(float(reward))
+            ep_terminated = ep_terminated or terminated
+            ep_truncated = ep_truncated or truncated
             oc_obs = env.observation_space.devectorize(vec_obs)
             obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
@@ -226,8 +326,29 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     # Step 6: Open the gripper to place the cube
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     assert obs.grasped_object is None, "Object not released"
+
+    # Save trajectory to pickle file
+    if SAVE_TRAJECTORIES and len(traj_actions) > 0:
+        demo_path = save_demo(
+            demo_dir=_DEFAULT_DEMOS_DIR,
+            env_id=f"prbench/Table3D-o{num_cubes}-v0",
+            seed=seed,
+            observations=traj_observations,
+            actions=traj_actions,
+            rewards=traj_rewards,
+            terminated=ep_terminated,
+            truncated=ep_truncated,
+        )
+        print(f"Trajectory saved to {demo_path}")
+        print(f"  Observations: {len(traj_observations)}, Actions: {len(traj_actions)}")
