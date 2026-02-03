@@ -58,7 +58,7 @@ class CupboardRealStateAbstractor:
         # import ipdb; ipdb.set_trace()
 
         # Extract the relevant objects.
-        robot = state.get_object_from_name("robot")
+        robot = state.get_object_from_name("robot_0")
         fixtures = state.get_objects(MujocoFixtureObjectType)
         movables = state.get_objects(MujocoMovableObjectType)
         all_mujoco_objects = set(fixtures) | set(movables)
@@ -116,7 +116,7 @@ class CupboardRealStateAbstractor:
     def goal_deriver_grasp(self, state: ObjectCentricState) -> RelationalAbstractGoal:
         """The goal is to grasp the target."""
         target = state.get_object_from_name("cube1")
-        robot = state.get_object_from_name("robot")
+        robot = state.get_object_from_name("robot_0")
         atoms = {GroundAtom(Holding, [robot, target])}
         return RelationalAbstractGoal(atoms, self.state_abstractor)
 
@@ -124,7 +124,7 @@ class CupboardRealStateAbstractor:
         """The goal is to place the target in the cupboard."""
         target = state.get_object_from_name("cube1")
         cupboard = state.get_object_from_name("cupboard_1")
-        robot = state.get_object_from_name("robot")
+        robot = state.get_object_from_name("robot_0")
         atoms = {
             GroundAtom(HandEmpty, [robot]),
             GroundAtom(OnFixture, [target, cupboard]),
@@ -139,7 +139,7 @@ class CupboardRealStateAbstractor:
         """The goal is to place the target in the cupboard."""
         target = state.get_object_from_name("cube2")
         cupboard = state.get_object_from_name("cupboard_1")
-        robot = state.get_object_from_name("robot")
+        robot = state.get_object_from_name("robot_0")
         atoms = {
             GroundAtom(HandEmpty, [robot]),
             GroundAtom(OnFixture, [target, cupboard]),
@@ -153,7 +153,7 @@ class CupboardRealStateAbstractor:
         target = state.get_object_from_name("cube1")
         target2 = state.get_object_from_name("cube2")
         cupboard = state.get_object_from_name("cupboard_1")
-        robot = state.get_object_from_name("robot")
+        robot = state.get_object_from_name("robot_0")
         atoms = {
             GroundAtom(HandEmpty, [robot]),
             GroundAtom(OnFixture, [target, cupboard]),
@@ -166,7 +166,7 @@ class CupboardRealStateAbstractor:
     ) -> RelationalAbstractGoal:
         """The goal is to place the target in the cupboard."""
         cupboard = state.get_object_from_name("cupboard_1")
-        robot = state.get_object_from_name("robot")
+        robot = state.get_object_from_name("robot_0")
         atoms = {
             GroundAtom(HandEmpty, [robot]),
         }

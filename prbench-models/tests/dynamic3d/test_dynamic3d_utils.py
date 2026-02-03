@@ -55,7 +55,7 @@ def test_get_overhead_robot_se2_pose():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     obs, _ = env.reset(seed=123)
     state1 = env.observation_space.devectorize(obs)
-    robot = state1.get_object_from_name("robot")
+    robot = state1.get_object_from_name("robot_0")
 
     # Extract the initial SE2 pose.
     pose1 = get_overhead_robot_se2_pose(state1, robot)
@@ -77,7 +77,7 @@ def test_get_overhead_geom2ds():
     state = env.observation_space.devectorize(obs)
     geoms = get_overhead_geom2ds(state)
     assert len(geoms) == 2
-    robot_geom = geoms["robot"]
+    robot_geom = geoms["robot_0"]
     assert isinstance(robot_geom, Rectangle)
     cube_geom = geoms["cube1"]
     assert isinstance(cube_geom, Rectangle)
@@ -140,7 +140,7 @@ def test_run_base_motion_planning():
         max_y=y_bounds[1],
     )
     assert isinstance(fig, plt.Figure)
-    robot = state.get_object_from_name("robot")
+    robot = state.get_object_from_name("robot_0")
     robot_width, robot_height, _ = get_bounding_box(state, robot)
     for pose in base_motion_plan:
         robot_geom = Rectangle.from_center(
