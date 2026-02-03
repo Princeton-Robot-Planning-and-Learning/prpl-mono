@@ -31,7 +31,7 @@ The number of obstructions differs between environment variants. For example, Ob
 ![initial state GIF](assets/initial_state_gifs/Obstruction3D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/group_gifs/Obstruction3D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

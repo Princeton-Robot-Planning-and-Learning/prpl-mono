@@ -9,6 +9,11 @@ env = prbench.make("prbench/BaseMotion3D-v0")
 ## Description
 No variant-specific description available.
 
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/BaseMotion3D/BaseMotion3D_1768757778.gif)
+
+**Demo Stats**: Total Reward: -10.00, Success: Yes, Steps: 10
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

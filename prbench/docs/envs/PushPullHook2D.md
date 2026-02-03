@@ -16,9 +16,7 @@ This environment has only one variant.
 ![initial state GIF](assets/initial_state_gifs/PushPullHook2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/PushPullHook2D/PushPullHook2D_seed0_1768423887.gif)
-
-**Demo Stats**: Total Reward: -113.00, Success: Yes, Steps: 114
+![demo GIF](assets/group_gifs/PushPullHook2D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

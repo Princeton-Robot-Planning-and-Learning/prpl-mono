@@ -9,6 +9,9 @@ env = prbench.make("prbench/TidyBot3D-cupboard_real-o2-v0")
 ## Description
 This variant uses the 'cupboard_real' scene type with 2 objects.
 
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

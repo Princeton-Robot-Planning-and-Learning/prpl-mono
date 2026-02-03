@@ -9,6 +9,9 @@ env = prbench.make("prbench/TidyBot3D-tool_use-lab2_kitchen-o50-sweep_the_blocks
 ## Description
 This variant uses the 'lab2_kitchen' scene type with 50 objects.
 
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

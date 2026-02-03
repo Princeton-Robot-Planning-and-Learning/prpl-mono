@@ -9,6 +9,11 @@ env = prbench.make("prbench/Motion2D-p0-v0")
 ## Description
 This variant has no narrow passages (open space).
 
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/Motion2D-p0/Motion2D-p0.gif)
+
+**Demo Stats**: Total Reward: -43.00, Success: Yes, Steps: 43
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

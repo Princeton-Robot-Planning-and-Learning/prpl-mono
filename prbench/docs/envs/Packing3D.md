@@ -26,7 +26,7 @@ The number of parts to pack differs between environment variants. For example, P
 ![initial state GIF](assets/initial_state_gifs/Packing3D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/group_gifs/Packing3D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

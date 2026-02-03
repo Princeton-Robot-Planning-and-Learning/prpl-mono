@@ -9,6 +9,11 @@ env = prbench.make("prbench/Obstruction2D-o3-v0")
 ## Description
 This variant has 3 obstructions.
 
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/Obstruction2D-o3/Obstruction2D-o3.gif)
+
+**Demo Stats**: Total Reward: -153.00, Success: Yes, Steps: 153
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

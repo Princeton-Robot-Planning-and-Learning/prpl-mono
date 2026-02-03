@@ -24,9 +24,7 @@ The number of small objects differs between environment variants. For example, D
 ![initial state GIF](assets/initial_state_gifs/DynScoopPour.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynScoopPour-o30/DynScoopPour-o30.gif)
-
-**Demo Stats**: Total Reward: -810.00, Success: No, Steps: 810
+*(No demonstration GIFs available)*
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

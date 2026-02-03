@@ -17,9 +17,7 @@ The number of cubes differs between environment variants. For example, Transport
 ![initial state GIF](assets/initial_state_gifs/Transport3D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/Transport3D-o2/Transport3D-o2_1769088054.gif)
-
-**Demo Stats**: Total Reward: -692.00, Success: Yes, Steps: 692
+![demo GIF](assets/group_gifs/Transport3D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

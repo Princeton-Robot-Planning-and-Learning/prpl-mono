@@ -190,6 +190,37 @@ def generate_variant_markdown(variant_id: str, env: gymnasium.Env) -> str:
     else:
         md += "No variant-specific description available.\n\n"
 
+    md += "## Example Demonstration\n"
+    demo_subdir = OUTPUT_DIR / "assets" / "demo_gifs" / variant_name
+    if demo_subdir.exists():
+        canonical_gif = demo_subdir / f"{variant_name}.gif"
+        if canonical_gif.exists():
+            gif_to_use = canonical_gif
+        else:
+            gif_files = sorted(
+                [f for f in demo_subdir.iterdir() if f.suffix.lower() == ".gif"]
+            )
+            gif_to_use = gif_files[0] if gif_files else None
+
+        if gif_to_use:
+            md += f"![demo GIF](../../assets/demo_gifs/{variant_name}/{gif_to_use.name})\n\n"
+            json_file = gif_to_use.with_suffix(".json")
+            if json_file.exists():
+                with open(json_file, "r", encoding="utf-8") as f:
+                    demo_stats = json.load(f)
+                total_reward = demo_stats.get("total_reward", 0.0)
+                success = demo_stats.get("terminated_successfully", False)
+                num_steps = demo_stats.get("num_steps", 0)
+                success_text = "Yes" if success else "No"
+                md += (
+                    f"**Demo Stats**: Total Reward: {total_reward:.2f}, "
+                    f"Success: {success_text}, Steps: {num_steps}\n\n"
+                )
+        else:
+            md += "*(No demonstration GIFs available)*\n\n"
+    else:
+        md += "*(No demonstration GIFs available)*\n\n"
+
     md += "## Observation Space\n"
     md += env.metadata["observation_space_description"] + "\n\n"
 
@@ -269,51 +300,9 @@ def generate_markdown(
 
     md += "## Example Demonstration\n"
 
-    # Search for demo GIFs across all variant subdirectories
-    demo_gif_found = False
-    demo_stats = None
-    # Search backwards, assuming that later variants are "harder" and therefore more
-    # interesting to show demonstrations for.
-    for variant_id in variants[::-1]:
-        # Convert variant ID to the subdirectory name format
-        variant_subdir_name = sanitize_env_id(variant_id)
-        demo_subdir = OUTPUT_DIR / "assets" / "demo_gifs" / variant_subdir_name
-        if demo_subdir.exists():
-            # First, look for the canonical GIF (from --one-per-variant mode)
-            canonical_gif = demo_subdir / f"{variant_subdir_name}.gif"
-            if canonical_gif.exists():
-                gif_to_use = canonical_gif
-            else:
-                # Fall back to any GIF in the directory (old naming scheme)
-                gif_files = sorted(
-                    [f for f in demo_subdir.iterdir() if f.suffix.lower() == ".gif"]
-                )
-                if not gif_files:
-                    continue
-                gif_to_use = gif_files[0]
-
-            md += f"![demo GIF](assets/demo_gifs/{variant_subdir_name}/{gif_to_use.name})\n\n"  # pylint: disable=line-too-long
-            demo_gif_found = True
-
-            # Try to load stats from JSON file
-            json_file = gif_to_use.with_suffix(".json")
-            if json_file.exists():
-                with open(json_file, "r", encoding="utf-8") as f:
-                    demo_stats = json.load(f)
-            break
-
-    if demo_gif_found:
-        # Display demo stats if available
-        if demo_stats:
-            total_reward = demo_stats.get("total_reward", 0.0)
-            success = demo_stats.get("terminated_successfully", False)
-            num_steps = demo_stats.get("num_steps", 0)
-            success_text = "Yes" if success else "No"
-            stats_line = (
-                f"**Demo Stats**: Total Reward: {total_reward:.2f}, "
-                f"Success: {success_text}, Steps: {num_steps}\n\n"
-            )
-            md += stats_line
+    demo_gif = OUTPUT_DIR / "assets" / "group_gifs" / f"{class_filename}.gif"
+    if demo_gif.exists():
+        md += f"![demo GIF](assets/group_gifs/{class_filename}.gif)\n\n"
     else:
         md += "*(No demonstration GIFs available)*\n\n"
 

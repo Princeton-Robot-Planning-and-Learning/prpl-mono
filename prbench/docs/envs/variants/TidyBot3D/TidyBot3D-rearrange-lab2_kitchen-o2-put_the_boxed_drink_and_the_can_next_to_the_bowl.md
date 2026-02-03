@@ -9,6 +9,9 @@ env = prbench.make("prbench/TidyBot3D-rearrange-lab2_kitchen-o2-put_the_boxed_dr
 ## Description
 This variant uses the 'lab2_kitchen' scene type with 2 objects.
 
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

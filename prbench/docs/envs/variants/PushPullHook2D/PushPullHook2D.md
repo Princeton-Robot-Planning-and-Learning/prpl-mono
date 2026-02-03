@@ -9,6 +9,11 @@ env = prbench.make("prbench/PushPullHook2D-v0")
 ## Description
 This variant has one hook, one movable button, and one target button.
 
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/PushPullHook2D/PushPullHook2D_seed0_1768423887.gif)
+
+**Demo Stats**: Total Reward: -113.00, Success: Yes, Steps: 114
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |
