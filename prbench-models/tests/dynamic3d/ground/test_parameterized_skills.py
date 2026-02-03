@@ -1031,7 +1031,7 @@ def test_pick_toss():
     env = prbench.make(
         f"prbench/TidyBot3D-dynamic-lab2-o{num_cubes}-toss_the_blocks_into_the_bin-v0",
         render_mode="rgb_array",
-        scene_bg=True,
+        scene_bg=False,
     )
     if MAKE_VIDEOS:
         env.unwrapped._object_centric_env.set_render_camera("task_view")  # type: ignore # pylint: disable=protected-access
