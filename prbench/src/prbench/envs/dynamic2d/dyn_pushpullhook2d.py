@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pymunk
+from prpl_utils.utils import wrap_angle
 from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
@@ -39,7 +40,6 @@ from prbench.envs.utils import (
     sample_se2_pose,
     state_2d_has_collision,
 )
-from prpl_utils.utils import wrap_angle
 
 TargetBlockType = Type("target_block", parent=DynRectangleType)
 HookType = Type("hook", parent=LObjectType)

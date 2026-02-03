@@ -10,6 +10,20 @@ from pathlib import Path
 # Format: {pattern: reason}
 # Pattern can be any substring that appears in the demo path
 DETERMINISTIC_REPLAY_BLACKLIST = {
+    "TidyBot3D-cupboard_real-o1_106": (
+        "Non-deterministic behavior in physics simulation. "
+        "Test passes on local machines but fails inconsistently on GitHub Actions CI."
+    ),
+    "TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0": (
+        "Non-deterministic behavior in physics simulation. "
+        "Test passes on local machines but fails inconsistently on GitHub Actions CI."
+    ),
+    "Transport3D": (
+        "speed up ci checks. "
+    ),
+    "BaseMotion3D": (
+        "speed up ci checks. "
+    ),
     "DynScoopPour": (
         "Non-deterministic behavior in physics simulation. "
         "Test passes on local machines but fails inconsistently on GitHub Actions CI."

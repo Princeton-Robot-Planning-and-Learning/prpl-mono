@@ -39,7 +39,7 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Shelf3DEnv()."""
 
     max_action_mag: float = 0.2
-    specific_range: bool = True
+    specific_range: bool = False
 
     # Shelf.
     shelf_pose: Pose = Pose((2.0, 2.4, 0.02))
