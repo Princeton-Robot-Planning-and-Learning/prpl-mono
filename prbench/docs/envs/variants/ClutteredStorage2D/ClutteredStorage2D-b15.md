@@ -9,6 +9,9 @@ env = prbench.make("prbench/ClutteredStorage2D-b15-v0")
 ## Description
 This variant has 15 blocks (7 initially in the shelf, 8 initially outside).
 
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

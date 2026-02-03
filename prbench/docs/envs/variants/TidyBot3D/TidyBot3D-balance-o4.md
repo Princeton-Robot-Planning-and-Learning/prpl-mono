@@ -9,6 +9,9 @@ env = prbench.make("prbench/TidyBot3D-balance-o4-v0")
 ## Description
 This variant uses the 'balance' scene type with 4 objects.
 
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

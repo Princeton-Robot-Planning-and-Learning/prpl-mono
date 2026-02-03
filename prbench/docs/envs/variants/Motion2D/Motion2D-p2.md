@@ -9,6 +9,11 @@ env = prbench.make("prbench/Motion2D-p2-v0")
 ## Description
 This variant has 2 narrow passages.
 
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/Motion2D-p2/Motion2D-p2.gif)
+
+**Demo Stats**: Total Reward: -60.00, Success: Yes, Steps: 60
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

@@ -26,9 +26,7 @@ The number of narrow passages differs between environment variants. For example,
 ![initial state GIF](assets/initial_state_gifs/Motion2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/Motion2D-p5/Motion2D-p5.gif)
-
-**Demo Stats**: Total Reward: -137.00, Success: Yes, Steps: 137
+![demo GIF](assets/group_gifs/Motion2D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

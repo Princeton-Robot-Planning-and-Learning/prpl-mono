@@ -176,36 +176,36 @@ def register_all_environments() -> None:
         variant_ids=variant_ids,
     )
 
-    # DynPushT environment
-    variant_id = "prbench/DynPushT-t1-v0"
+    # DynPushT2D environment
+    variant_id = "prbench/DynPushT2D-t1-v0"
     _register(
         id=variant_id,
-        entry_point="prbench.envs.dynamic2d.dyn_pushtee:DynPushTEnv",
+        entry_point="prbench.envs.dynamic2d.dyn_pusht2d:DynPushT2DEnv",
         kwargs={"num_tee": 1},
     )
     _register_env_class(
-        class_name="DynPushT",
-        entry_point="prbench.envs.dynamic2d.dyn_pushtee:DynPushTEnv",
+        class_name="DynPushT2D",
+        entry_point="prbench.envs.dynamic2d.dyn_pusht2d:DynPushT2DEnv",
         category="Dynamic2D",
         variant_ids=[variant_id],
     )
 
-    # DynScoopPour environment with different numbers of small objects
+    # DynScoopPour2D environment with different numbers of small objects
     num_objects = [10, 20, 30, 50]
     variant_ids = []
     for num_object in num_objects:
         num_circles = num_object // 2
         num_squares = num_object - num_circles
-        variant_id = f"prbench/DynScoopPour-o{num_object}-v0"
+        variant_id = f"prbench/DynScoopPour2D-o{num_object}-v0"
         _register(
             id=variant_id,
-            entry_point="prbench.envs.dynamic2d.dyn_scooppour:DynScoopPourEnv",
+            entry_point="prbench.envs.dynamic2d.dyn_scooppour2d:DynScoopPour2DEnv",
             kwargs={"num_small_circles": num_circles, "num_small_squares": num_squares},
         )
         variant_ids.append(variant_id)
     _register_env_class(
-        class_name="DynScoopPour",
-        entry_point="prbench.envs.dynamic2d.dyn_scooppour:DynScoopPourEnv",
+        class_name="DynScoopPour2D",
+        entry_point="prbench.envs.dynamic2d.dyn_scooppour2d:DynScoopPour2DEnv",
         category="Dynamic2D",
         variant_ids=variant_ids,
     )

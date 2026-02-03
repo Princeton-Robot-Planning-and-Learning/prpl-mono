@@ -1,6 +1,6 @@
-# DynScoopPour
+# DynScoopPour2D
 
-![random action GIF](assets/random_action_gifs/DynScoopPour.gif)
+![random action GIF](assets/random_action_gifs/DynScoopPour2D.gif)
 
 **Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
 
@@ -13,20 +13,18 @@ All objects include physics properties like mass, moment of inertia, and color i
 
 
 ## Available Variants
-The number of small objects differs between environment variants. For example, DynScoopPour-o10 has 10 small objects, while DynScoopPour-o50 has 50 small objects.
+The number of small objects differs between environment variants. For example, DynScoopPour2D-o10 has 10 small objects, while DynScoopPour2D-o50 has 50 small objects.
 
-- [`prbench/DynScoopPour-o10-v0`](variants/DynScoopPour/DynScoopPour-o10.md) (o10)
-- [`prbench/DynScoopPour-o20-v0`](variants/DynScoopPour/DynScoopPour-o20.md) (o20)
-- [`prbench/DynScoopPour-o30-v0`](variants/DynScoopPour/DynScoopPour-o30.md) (o30)
-- [`prbench/DynScoopPour-o50-v0`](variants/DynScoopPour/DynScoopPour-o50.md) (o50)
+- [`prbench/DynScoopPour2D-o10-v0`](variants/DynScoopPour2D/DynScoopPour2D-o10.md) (o10)
+- [`prbench/DynScoopPour2D-o20-v0`](variants/DynScoopPour2D/DynScoopPour2D-o20.md) (o20)
+- [`prbench/DynScoopPour2D-o30-v0`](variants/DynScoopPour2D/DynScoopPour2D-o30.md) (o30)
+- [`prbench/DynScoopPour2D-o50-v0`](variants/DynScoopPour2D/DynScoopPour2D-o50.md) (o50)
 
 ## Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/DynScoopPour.gif)
+![initial state GIF](assets/initial_state_gifs/DynScoopPour2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynScoopPour-o30/DynScoopPour-o30.gif)
-
-**Demo Stats**: Total Reward: -810.00, Success: No, Steps: 810
+![demo GIF](assets/group_gifs/DynScoopPour2D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

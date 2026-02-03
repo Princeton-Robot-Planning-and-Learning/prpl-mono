@@ -41,8 +41,8 @@ Dynamic2DRobotEnvTypeFeatures[GoalTBlockType] = list(
 
 
 @dataclass(frozen=True)
-class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
-    """Scene config for DynPushTEnv()."""
+class DynPushT2DEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
+    """Scene config for DynPushT2DEnv()."""
 
     # World boundaries (scaled from original 512x512 to 0-10 range)
     world_min_x: float = 0.0
@@ -109,7 +109,7 @@ class DynPushTEnvConfig(Dynamic2DRobotEnvConfig, metaclass=FinalConfigMeta):
     render_dpi: int = 50
 
 
-class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]):
+class ObjectCentricDynPushT2DEnv(ObjectCentricDynamic2DRobotEnv[DynPushT2DEnvConfig]):
     """Dynamic PushT environment where a dot robot must push a T-shaped block to match a
     goal pose. Uses PyMunk physics simulation.
 
@@ -118,11 +118,11 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
 
     def __init__(
         self,
-        config: DynPushTEnvConfig | None = None,
+        config: DynPushT2DEnvConfig | None = None,
         num_tee: int = 1,  # noqa: ARG002
         **kwargs,
     ) -> None:
-        super().__init__(config or DynPushTEnvConfig(), **kwargs)
+        super().__init__(config or DynPushT2DEnvConfig(), **kwargs)
 
         # Override robot and controller with DotRobot
         self.num_tee = num_tee
@@ -137,7 +137,7 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         self._goal_tblock: Object | None = None
         self._goal_body: pymunk.Body | None = None
 
-    def _create_action_space(self, config: DynPushTEnvConfig) -> DotRobotActionSpace:
+    def _create_action_space(self, config: DynPushT2DEnvConfig) -> DotRobotActionSpace:
         """Override to use DotRobotActionSpace."""
         return DotRobotActionSpace(
             min_dx=config.min_dx,
@@ -523,8 +523,8 @@ class ObjectCentricDynPushTEnv(ObjectCentricDynamic2DRobotEnv[DynPushTEnvConfig]
         return get_dot_robot_action_from_gui_input(self.action_space, gui_input)
 
 
-class DynPushTEnv(ConstantObjectPRBenchEnv):
-    """Dynamic PushT env with a constant number of objects."""
+class DynPushT2DEnv(ConstantObjectPRBenchEnv):
+    """Dynamic PushT2D env with a constant number of objects."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -541,7 +541,7 @@ class DynPushTEnv(ConstantObjectPRBenchEnv):
     def _create_object_centric_env(
         self, *args, **kwargs
     ) -> ObjectCentricDynamic2DRobotEnv:
-        return ObjectCentricDynPushTEnv(*args, **kwargs)
+        return ObjectCentricDynPushT2DEnv(*args, **kwargs)
 
     def _get_constant_object_names(
         self, exemplar_state: ObjectCentricState  # noqa: ARG002
