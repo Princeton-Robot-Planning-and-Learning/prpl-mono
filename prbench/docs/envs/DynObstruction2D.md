@@ -24,9 +24,7 @@ The number of obstructions differs between environment variants. For example, Dy
 ![initial state GIF](assets/initial_state_gifs/DynObstruction2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/DynObstruction2D-o3/DynObstruction2D-o3_seed0_1768425190.gif)
-
-**Demo Stats**: Total Reward: -181.00, Success: Yes, Steps: 181
+![demo GIF](assets/group_gifs/DynObstruction2D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

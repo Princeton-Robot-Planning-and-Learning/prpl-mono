@@ -20,9 +20,7 @@ The number of objects differs between environment variants. For example, Shelf3D
 ![initial state GIF](assets/initial_state_gifs/Shelf3D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/Shelf3D-o3/Shelf3D-o3_1768761767.gif)
-
-**Demo Stats**: Total Reward: -501.00, Success: Yes, Steps: 501
+![demo GIF](assets/group_gifs/Shelf3D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

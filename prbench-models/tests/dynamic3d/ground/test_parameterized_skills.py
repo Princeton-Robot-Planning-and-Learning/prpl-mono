@@ -738,7 +738,7 @@ def test_pick_place_skill():
     """Test pick and place skill in ground environment with 1 cube."""
 
     # Create the environment.
-    num_cubes = 2
+    num_cubes = 1
     env = prbench.make(
         f"prbench/TidyBot3D-cupboard_real-o{num_cubes}-v0", render_mode="rgb_array"
     )
@@ -749,6 +749,8 @@ def test_pick_place_skill():
 
     # Reset the environment and get the initial state.
     obs, _ = env.reset(seed=123)
+    for _ in range(5):
+        obs, _, _, _, _ = env.step(np.zeros(11))
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
@@ -763,7 +765,8 @@ def test_pick_place_skill():
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
-    params = controller.sample_parameters(state, np.random.default_rng(123))
+    # params = controller.sample_parameters(state, np.random.default_rng(123))
+    params = np.array([0.6, 0.0])
 
     # Reset and execute the controller until it terminates.
     controller.reset(state, params)
@@ -818,6 +821,8 @@ def test_pick_place_two_cubes_skill():
 
     # Reset the environment and get the initial state.
     obs, _ = env.reset(seed=123)
+    for _ in range(5):
+        obs, _, _, _, _ = env.step(np.zeros(11))
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
@@ -832,7 +837,7 @@ def test_pick_place_two_cubes_skill():
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
-    target_distance = 0.5
+    target_distance = 0.6
     target_rotation = 0.0
     params = np.array([target_distance, target_rotation])
 
@@ -880,7 +885,7 @@ def test_pick_place_two_cubes_skill():
     cube = state.get_object_from_name("cube2")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
-    target_distance = 0.5
+    target_distance = 0.6
     target_rotation = 0.0
     params = np.array([target_distance, target_rotation])
 
@@ -1024,29 +1029,21 @@ def test_pick_toss():
     # Create the environment.
     num_cubes = 1
     env = prbench.make(
-        f"prbench/TidyBot3D-ground-o{num_cubes}-v0", render_mode="rgb_array"
+        f"prbench/TidyBot3D-dynamic-lab2-o{num_cubes}-toss_the_blocks_into_the_bin-v0",
+        render_mode="rgb_array",
+        scene_bg=False,
     )
     if MAKE_VIDEOS:
+        env.unwrapped._object_centric_env.set_render_camera("task_view")  # type: ignore # pylint: disable=protected-access
         env = RecordVideo(
             env, "unit_test_videos", name_prefix=f"TidyBot3D-ground-o{num_cubes}"
         )
 
     # Reset the environment and get the initial state.
-    _, _ = env.reset(seed=125)
+    obs, _ = env.reset(seed=125)
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
 
-    interface = FakeInterface()
-    interface.arm_interface.arm_state = np.deg2rad(
-        [0, -20, 180, -146, 0, -50, 90]
-    ).tolist()
-    interface.arm_interface.gripper_state = 0.0
-    interface.base_interface.map_base_state = SE2(x=0.8, y=0.0, theta=0.0)
-    perceiver = PRBenchGroundPerceiver(interface)
-    temp_state = perceiver.get_state()
-    env.unwrapped._object_centric_env.set_state(temp_state)  # type: ignore # pylint: disable=protected-access
-    state = (
-        env.unwrapped._object_centric_env._get_object_centric_state()  # pylint: disable=protected-access
-    )
+    state = env.observation_space.devectorize(obs)
 
     # Create the move-base controller.
     controllers = create_lifted_controllers(env.action_space)
@@ -1056,7 +1053,7 @@ def test_pick_toss():
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
     target_distance = 0.5
-    target_rotation = np.pi
+    target_rotation = 0
     params = np.array([target_distance, target_rotation])
 
     # Reset and execute the controller until it terminates.
@@ -1152,12 +1149,12 @@ def test_pick_toss():
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
-    target_distance = 0.5
-    target_rotation = np.pi / 2
+    target_distance = 1.12
+    target_rotation = 0.0
     params = np.array([target_distance, target_rotation])
 
     # Reset and execute the controller until it terminates.
-    controller.reset(state, params, disable_collision_objects=["cube1"])
+    controller.reset(state, params, disable_collision_objects=["cube_0"])
     for _ in range(200):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)

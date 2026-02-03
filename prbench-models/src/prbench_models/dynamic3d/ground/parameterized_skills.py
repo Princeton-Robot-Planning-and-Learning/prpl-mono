@@ -28,6 +28,7 @@ from pybullet_helpers.inverse_kinematics import (
 from pybullet_helpers.joint import JointPositions, get_jointwise_difference
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,
+    remap_joint_position_plan_to_constant_distance,
     run_motion_planning,
 )
 from pybullet_helpers.robots import SingleArmPyBulletRobot, create_pybullet_robot
@@ -53,13 +54,13 @@ MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
 GRIPPER_OPEN_THRESHOLD = 0.01
 GRASP_CLOSE_THRESHOLD = 1.0  # for stable grasp
 GRIPPER_CLOSED_THRESHOLD = 0.02
-WAYPOINT_TOL = 1e-2
+WAYPOINT_TOL = 4 * 1e-2
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi, np.pi)
 WORLD_X_BOUNDS = (-2.5, 2.5)  # we should move these later
 WORLD_Y_BOUNDS = (-2.5, 2.5)  # we should move these later
 ROBOT_ARM_POSE_TO_BASE = Pose((0.12, 0.0, 0.4))
-GRASP_TRANSFORM_TO_OBJECT = Pose((0.005, 0, 0.035), (0.707, 0.707, 0, 0))
+GRASP_TRANSFORM_TO_OBJECT = Pose((-0.005, 0, 0.01), (0.707, 0.707, 0, 0))
 BASE_DISTANCE_TO_CUPBOARD = 0.95
 ARM_MOVEMENT_CUPBOARD = Pose((0.8, 0.0, 0.25), (0.5, 0.5, 0.5, 0.5))
 PLACE_SAMPLER_COLLISION_THRESHOLD = 0.05
@@ -963,9 +964,10 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         plan_x = x.copy()
         robot = plan_x.get_object_from_name("robot_0")
         target_base_pose = self._current_base_motion_plan[-1]
-        plan_x.set(robot, "pos_base_x", target_base_pose.x)
-        plan_x.set(robot, "pos_base_y", target_base_pose.y)
-        plan_x.set(robot, "pos_base_rot", target_base_pose.theta())
+        if not self._navigated:
+            plan_x.set(robot, "pos_base_x", target_base_pose.x)
+            plan_x.set(robot, "pos_base_y", target_base_pose.y)
+            plan_x.set(robot, "pos_base_rot", target_base_pose.theta())
 
         # Reset PyBullet given the current state.
         self._pybullet_sim.set_state(plan_x)
@@ -1031,6 +1033,21 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
 
         assert plan is not None, "Motion planning failed"
         assert retract_plan is not None, "Motion planning failed"
+
+        # Remap the plan to ensure we stay within action limits.
+        plan = remap_joint_position_plan_to_constant_distance(
+            plan,
+            self._pybullet_sim.robot,
+            max_distance=0.4,
+        )
+
+        # Remap the plan to ensure we stay within action limits.
+        retract_plan = remap_joint_position_plan_to_constant_distance(
+            retract_plan,
+            self._pybullet_sim.robot,
+            max_distance=0.4,
+        )
+
         self._current_arm_joint_plan = plan
         self._current_retract_plan = retract_plan
 
@@ -1084,7 +1101,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_arm_joint_plan[0]
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot._joint_infos  # type: ignore  # pylint: disable=protected-access
+            joint_infos = self._pybullet_sim.robot.get_arm_joint_infos()[:7]  # type: ignore  # pylint: disable=protected-access
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -1108,7 +1125,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             while len(self._current_retract_plan) > 1:  # type: ignore
                 peek_conf = self._current_retract_plan[0]  # type: ignore
                 # Close enough, pop and continue.
-                if self._robot_is_close_to_conf(peek_conf):
+                if self._robot_is_close_to_conf(peek_conf, atol=0.08):
                     self._current_retract_plan.pop(0)  # type: ignore
                 # Not close enough, stop popping.
                 break
@@ -1118,7 +1135,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_retract_plan[0]  # type: ignore
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot._joint_infos  # type: ignore  # pylint: disable=protected-access
+            joint_infos = self._pybullet_sim.robot.get_arm_joint_infos()[:7]  # type: ignore  # pylint: disable=protected-access
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -1172,7 +1189,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         return 0.0
 
     def _robot_is_close_to_conf(
-        self, conf: JointPositions, atol: float = 6 * 1e-2
+        self, conf: JointPositions, atol: float = WAYPOINT_TOL
     ) -> bool:
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
@@ -1348,17 +1365,28 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             self._pybullet_sim.robot,
             target_joints,
             self.home_joints.tolist(),
-            collision_bodies=self._pybullet_sim.get_collision_bodies(
-                held_object=self._pybullet_sim._cubes[  # pylint: disable=protected-access
-                    target_object_place.name
-                ]
-            ),
+            collision_bodies=self._pybullet_sim.get_collision_bodies(),
             seed=0,  # use a constant seed to make this effectively deterministic
             physics_client_id=self._pybullet_sim.physics_client_id,
         )
 
         assert plan is not None, "Motion planning failed"
         assert retract_plan is not None, "Motion planning failed"
+
+        # Remap the plan to ensure we stay within action limits.
+        plan = remap_joint_position_plan_to_constant_distance(
+            plan,
+            self._pybullet_sim.robot,
+            max_distance=0.4,
+        )
+
+        # Remap the plan to ensure we stay within action limits.
+        retract_plan = remap_joint_position_plan_to_constant_distance(
+            retract_plan,
+            self._pybullet_sim.robot,
+            max_distance=0.4,
+        )
+
         self._current_arm_joint_plan = plan
         self._current_retract_plan = retract_plan
 
@@ -1408,7 +1436,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_arm_joint_plan[0]
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot._joint_infos  # type: ignore  # pylint: disable=protected-access
+            joint_infos = self._pybullet_sim.robot.get_arm_joint_infos()[:7]  # type: ignore  # pylint: disable=protected-access
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -1428,7 +1456,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             while len(self._current_retract_plan) > 1:  # type: ignore
                 peek_conf = self._current_retract_plan[0]  # type: ignore
                 # Close enough, pop and continue.
-                if self._robot_is_close_to_conf(peek_conf):
+                if self._robot_is_close_to_conf(peek_conf, atol=0.08):
                     self._current_retract_plan.pop(0)  # type: ignore
                 # Not close enough, stop popping.
                 break
@@ -1438,7 +1466,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             gripper_pose = self._get_current_robot_gripper_pose()
             next_conf = self._current_retract_plan[0]  # type: ignore
             action = np.zeros(11, dtype=np.float32)
-            joint_infos = self._pybullet_sim.robot._joint_infos  # type: ignore  # pylint: disable=protected-access
+            joint_infos = self._pybullet_sim.robot.get_arm_joint_infos()[:7]  # type: ignore  # pylint: disable=protected-access
             free_joints_infos = [
                 joint_info for joint_info in joint_infos if joint_info.qIndex > -1
             ]
@@ -1491,11 +1519,13 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
             return GRASP_CLOSE_THRESHOLD
         return 0.0
 
-    def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
+    def _robot_is_close_to_conf(
+        self, conf: JointPositions, atol: float = WAYPOINT_TOL
+    ) -> bool:
         current_conf = self._get_current_robot_arm_conf()
         assert self._pybullet_sim is not None
         dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 4 * 1e-2
+        return dist < atol
 
     def _robot_is_close_to_pose(self, pose: SE2, atol: float = WAYPOINT_TOL) -> bool:
         robot_pose = self._get_current_robot_pose()

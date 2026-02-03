@@ -9,6 +9,19 @@ env = prbench.make("prbench/Obstruction2D-o3-v0")
 ## Description
 This variant has 3 obstructions.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/Obstruction2D-o3.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/Obstruction2D-o3.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/Obstruction2D-o3/Obstruction2D-o3.gif)
+
+**Demo Stats**: Total Reward: -153.00, Success: Yes, Steps: 153
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

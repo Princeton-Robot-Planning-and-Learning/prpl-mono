@@ -9,6 +9,17 @@ env = prbench.make("prbench/TidyBot3D-tool_use-lab2_kitchen-o5-scoop_the_blocks_
 ## Description
 This variant uses the 'lab2_kitchen' scene type with 5 objects.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/TidyBot3D-tool_use-lab2_kitchen-o5-scoop_the_blocks_from_the_yellow_bin_to_the_green_bin.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/TidyBot3D-tool_use-lab2_kitchen-o5-scoop_the_blocks_from_the_yellow_bin_to_the_green_bin.gif)
+
+**Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
+
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

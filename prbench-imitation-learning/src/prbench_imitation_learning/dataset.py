@@ -4,7 +4,7 @@
 import pickle
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Generator, List, Tuple
 
 import gymnasium as gym
 import numpy as np
@@ -242,3 +242,210 @@ def group_by_episode(frames: List[Dict[str, Any]]) -> Dict[int, List[Dict[str, A
     for ep_idx in buckets:  # pylint: disable=consider-using-dict-items
         buckets[ep_idx].sort(key=lambda x: int(x.get("frame_index", 0)))
     return dict(sorted(buckets.items(), key=lambda kv: kv[0]))
+
+
+def iter_teleop_episodes(
+    teleop_data_dir: Path,
+    render_images: bool = False,
+    use_geom3d: bool = False,
+    use_dynamics3d: bool = False,
+) -> Generator[Tuple[int, List[Dict[str, Any]], Dict[str, Any]], None, None]:
+    """Iterate over teleoperated demonstrations one episode at a time.
+
+    This is a memory-efficient alternative to load_teleop_demonstrations.
+    Instead of loading all episodes into memory, it yields one episode at a time.
+
+    Expected structure:
+    teleop_data_dir/
+        0/
+            <timestamp>.p
+        1/
+            <timestamp>.p
+        ...
+
+    Args:
+        teleop_data_dir: Path to directory with demonstrations
+        render_images: If True, replay episodes in environment to generate images
+
+    Yields:
+        Tuple of (episode_index, frames_list, metadata)
+        - episode_index: int
+        - frames_list: List of frame dicts for this episode
+        - metadata: Dict with env info (same for all episodes)
+    """
+    # Find all episode directories (numeric subdirectories)
+    episode_dirs = sorted(
+        [d for d in teleop_data_dir.iterdir() if d.is_dir() and d.name.isdigit()],
+        key=lambda d: int(d.name),
+    )
+
+    if not episode_dirs:
+        raise ValueError(f"No episode directories found in {teleop_data_dir}")
+
+    env_id = None
+    env = None
+    total_episodes = len(episode_dirs)
+
+    # Setup environment if rendering images
+    if render_images:
+        prbench_root = teleop_data_dir.parent.parent.parent
+        prbench_src = prbench_root / "src"
+        if str(prbench_src) not in sys.path:
+            sys.path.insert(0, str(prbench_src))
+
+        try:
+            prbench.register_all_environments()
+        except ImportError as e:
+            raise ImportError(
+                f"Failed to import prbench/gymnasium for rendering: {e}\n"
+                f"Tried adding {prbench_src} to path. Make sure prbench is installed."
+            ) from e
+
+    for ep_idx, ep_dir in enumerate(episode_dirs):
+        # Find the pickle file in this episode directory
+        pickle_files = list(ep_dir.glob("*.p"))
+        if not pickle_files:
+            print(f"Warning: No pickle file found in {ep_dir}, skipping")
+            continue
+
+        pkl_path = pickle_files[0]
+        with open(pkl_path, "rb") as f:
+            ep_data = pickle.load(f)
+
+        if env_id is None:
+            env_id = ep_data.get("env_id", "Motion2D-p0")
+
+        observations = ep_data["observations"]
+        actions = ep_data["actions"]
+        seed = ep_data.get("seed", 0)
+
+        # Replay episode to generate images if requested
+        episode_images = None
+        if render_images:
+            if env is None:
+                if use_geom3d:
+                    env = gym.make(env_id, render_mode="rgb_array", realistic_bg=True)
+                elif use_dynamics3d:
+                    env = gym.make(env_id, render_mode="rgb_array", scene_bg=True)
+                else:
+                    env = gym.make(env_id, render_mode="rgb_array")
+
+            env.reset(seed=seed)
+            if use_dynamics3d:
+                robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                    robot_name + "_base"
+                )
+                base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                    robot_name + "_wrist"
+                )
+                wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                episode_images = [
+                    {
+                        "overview": overview_image,
+                        "base": base_image,
+                        "wrist": wrist_image,
+                    }
+                ]
+                for action in actions:
+                    env.step(action)
+                    env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                    overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                        robot_name + "_base"
+                    )
+                    base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                        robot_name + "_wrist"
+                    )
+                    wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                    episode_images.append(
+                        {
+                            "overview": overview_image,
+                            "base": base_image,
+                            "wrist": wrist_image,
+                        }
+                    )
+                    # for debugging
+                    # from prbench_models.teleop_utils import _visualize_image_in_window
+                    # _visualize_image_in_window(overview_image, "overview")
+                    # _visualize_image_in_window(base_image, "base")
+                    # _visualize_image_in_window(wrist_image, "wrist")
+            elif use_geom3d:
+                all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
+                episode_images = [all_images]
+
+                for action in actions:
+                    env.step(action)  # type: ignore
+                    all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
+                    episode_images.append(all_images)
+                    # from prbench_models.teleop_utils import _visualize_image_in_window
+                    # _visualize_image_in_window(all_images["overview"], "overview")
+                    # _visualize_image_in_window(all_images["base"], "base")
+                    # _visualize_image_in_window(all_images["wrist"], "wrist")
+            else:
+                rendered = env.render()  # type: ignore
+                if rendered.shape[-1] == 4:  # type: ignore
+                    rendered = rendered[:, :, :3]  # type: ignore
+                episode_images = [rendered]  # type: ignore
+
+                for action in actions:
+                    env.step(action)
+                    rendered = env.render()
+                    if rendered.shape[-1] == 4:  # type: ignore
+                        rendered = rendered[:, :, :3]  # type: ignore
+                    episode_images.append(rendered)  # type: ignore
+
+        # Create frames for this episode only
+        frames = []
+        for frame_idx, (obs, act) in enumerate(zip(observations[:-1], actions)):
+            frame = {
+                "observation.state": obs,
+                "observation.robot_state": env.observation_space.get_object_subvector(  # type: ignore # pylint: disable=line-too-long
+                    obs, "robot"
+                ),
+                "observation.env_state": env.observation_space.get_vector_excluding_object(  # type: ignore # pylint: disable=line-too-long
+                    obs, "robot"
+                ),
+                "action": act,
+                "episode_index": ep_idx,
+                "frame_index": frame_idx,
+            }
+
+            if episode_images is not None and frame_idx < len(episode_images):
+                if use_geom3d or use_dynamics3d:
+                    frame["observation.overview_image"] = episode_images[frame_idx][
+                        "overview"
+                    ]
+                    frame["observation.wrist_image"] = episode_images[frame_idx][
+                        "wrist"
+                    ]
+                    frame["observation.base_image"] = episode_images[frame_idx]["base"]
+                else:
+                    frame["observation.image"] = episode_images[frame_idx]
+
+            frames.append(frame)
+
+        # Build metadata
+        metadata = {
+            "env_name": env_id or "Motion2D",
+            "env_type": "geom2d",
+            "data_type": "teleoperated",
+            "total_episodes": total_episodes,
+        }
+
+        if (ep_idx + 1) % 10 == 0:
+            print(f"Processed {ep_idx + 1}/{total_episodes} episodes...")
+
+        yield ep_idx, frames, metadata
+
+        # Clear episode data to free memory
+        del frames
+        del episode_images
+        del ep_data
+
+    if env is not None:
+        env.close()  # type: ignore

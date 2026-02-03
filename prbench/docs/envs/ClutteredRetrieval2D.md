@@ -23,9 +23,7 @@ The number of obstructions differs between environment variants. For example, Cl
 ![initial state GIF](assets/initial_state_gifs/ClutteredRetrieval2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/ClutteredRetrieval2D-o10/ClutteredRetrieval2D-o10_seed0_1767991986.gif)
-
-**Demo Stats**: Total Reward: -259.00, Success: Yes, Steps: 259
+![demo GIF](assets/group_gifs/ClutteredRetrieval2D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

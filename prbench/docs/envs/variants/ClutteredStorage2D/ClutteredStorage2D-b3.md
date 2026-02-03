@@ -9,6 +9,17 @@ env = prbench.make("prbench/ClutteredStorage2D-b3-v0")
 ## Description
 This variant has 3 blocks (1 initially in the shelf, 2 initially outside).
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/ClutteredStorage2D-b3.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/ClutteredStorage2D-b3.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

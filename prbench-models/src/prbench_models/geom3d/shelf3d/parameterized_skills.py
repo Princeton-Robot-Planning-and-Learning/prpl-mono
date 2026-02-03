@@ -45,7 +45,6 @@ from prbench_models.geom3d.constants import (
 from prbench_models.geom3d.utils import get_target_robot_pose_from_parameters
 
 # constants
-SIDE_PLACE_TRANSFORM_TO_OBJECT = Pose((0.0, 0.0, 0.0), (0.5, 0.5, 0.5, 0.5))
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
 MOVE_TO_TARGET_ROT_BOUNDS = (-np.pi / 4, np.pi / 4)
 PLACE_X_OFFSET_BOUNDS = (-0.15, 0.15)

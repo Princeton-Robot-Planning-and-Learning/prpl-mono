@@ -12,7 +12,7 @@
                 0
             ]
         },
-        "mimiclabs-lab6": {
+        "mimiclabs-lab2": {
             "position": [
                 0,
                 0,
@@ -62,12 +62,10 @@
             "target": "ground",
             "ranges": [
                 [
-                    -0.1,
-                    -0.1,
-                    0.0,
-                    0.1,
-                    0.1,
-                    0.0
+                    0.5,
+                    -0.2,
+                    0.7,
+                    0.2
                 ]
             ],
             "yaw_ranges": [
@@ -76,6 +74,30 @@
                     0
                 ]
             ]
+        },
+        "robot_0_task_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    -0.1,
+                    -0.1,
+                    0.1,
+                    0.1
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    0,
+                    0
+                ]
+            ]
+        },
+        "cupboard_1_cube_1_goal_region": {
+            "target": "cupboard_1",
+            "shelf": 2,
+            "ranges": [[-0.3, -0.12, 0.00, 0.3, 0.12, 0.03]],
+            "rgba": [1.0, 1.0, 0.0, 0.0],
+            "yaw_ranges": [[0, 360]]
         }
     },
     "objects": {
@@ -95,12 +117,12 @@
     "cameras": {
         "agentview_1": {
             "position": [
-                1,
+                -1,
                 1,
                 2
             ],
             "lookat": [
-                0,
+                2,
                 0,
                 0
             ],
@@ -121,6 +143,14 @@
             "on",
             "cube1",
             "ground_1_object_init_region"
+        ],
+        [
+            "on",
+            "robot_0",
+            "robot_0_task_init_region"
         ]
+    ],
+    "goal_state": [
+        ["on", "cube1", "cupboard_1_cube_1_goal_region"]
     ]
 }

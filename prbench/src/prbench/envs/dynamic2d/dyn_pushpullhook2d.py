@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pymunk
+from prpl_utils.utils import wrap_angle
 from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
@@ -673,8 +674,7 @@ class ObjectCentricDynPushPullHook2DEnv(
                 # Update object state from body
                 state.set(obj, "x", pymunk_body.position.x)
                 state.set(obj, "y", pymunk_body.position.y)
-
-                state.set(obj, "theta", pymunk_body.angle)
+                state.set(obj, "theta", wrap_angle(pymunk_body.angle))
                 state.set(obj, "vx", pymunk_body.velocity.x)
                 state.set(obj, "vy", pymunk_body.velocity.y)
                 state.set(obj, "omega", pymunk_body.angular_velocity)

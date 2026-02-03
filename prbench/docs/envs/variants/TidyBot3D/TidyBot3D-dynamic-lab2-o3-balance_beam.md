@@ -9,6 +9,17 @@ env = prbench.make("prbench/TidyBot3D-dynamic-lab2-o3-balance_beam-v0")
 ## Description
 This variant uses the 'lab2' scene type with 3 objects.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/TidyBot3D-dynamic-lab2-o3-balance_beam.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/TidyBot3D-dynamic-lab2-o3-balance_beam.gif)
+
+**Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
+
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

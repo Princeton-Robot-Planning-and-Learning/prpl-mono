@@ -13,6 +13,7 @@ from prbench_models.dynamic3d.ground.parameterized_skills import (
     PyBulletSim,
     create_lifted_controllers,
 )
+from prbench_models.teleop_utils import _visualize_image_in_window
 
 prbench.register_all_environments()
 
@@ -22,6 +23,7 @@ def collect_data(
     seed: int = 123,
     save: bool = True,
     grasping_only: bool = False,
+    show_images: bool = False,
 ):
     """Collect pick and place demonstration data in ground environment.
 
@@ -41,7 +43,7 @@ def collect_data(
     writer = EpisodeWriter(output_dir) if save else None
 
     # Reset the environment and get the initial state.
-    obs, _, raw_obs = env.reset_with_images(seed=seed)  # type: ignore
+    obs, _ = env.reset(seed=seed)  # type: ignore
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
@@ -98,6 +100,16 @@ def collect_data(
         # print('current_orientation: ', current_orientation)
         # print('action: ', action)
 
+        env.unwrapped._object_centric_env.set_render_camera("overview")  # type: ignore # pylint: disable=protected-access
+        overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+        env.unwrapped._object_centric_env.set_render_camera("base")  # type: ignore # pylint: disable=protected-access
+        base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+        env.unwrapped._object_centric_env.set_render_camera("wrist")  # type: ignore # pylint: disable=protected-access
+        wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+        if show_images:
+            _visualize_image_in_window(overview_image, "overview")
+            _visualize_image_in_window(base_image, "base")
+            _visualize_image_in_window(wrist_image, "wrist")
         # Record observation and action before stepping
         if writer is not None:
             # Create observation dict with state vector and images
@@ -112,9 +124,9 @@ def collect_data(
                 "arm_pos": current_position,
                 "arm_quat": current_orientation,
                 "gripper_pos": np.array([state.get(robot, "pos_gripper")]),
-                "base_image": raw_obs["raw_obs"]["base_image"],
-                "wrist_image": raw_obs["raw_obs"]["wrist_image"],
-                "overview_image": raw_obs["raw_obs"]["overview_image"],
+                "base_image": base_image,
+                "wrist_image": wrist_image,
+                "overview_image": overview_image,
             }
             # Convert action to dict format
             action_dict = {
@@ -125,7 +137,7 @@ def collect_data(
             }
             writer.step(obs_dict, action_dict, target_object_key)
 
-        obs, _, _, _, _, raw_obs = env.step_with_images(action)  # type: ignore
+        obs, _, _, _, _, _ = env.step_with_images(action)  # type: ignore
         next_state = env.observation_space.devectorize(obs)
         controller.observe(next_state)
         state = next_state
@@ -175,6 +187,16 @@ def collect_data(
                 np.array(target_joints)
             )
 
+            env.unwrapped._object_centric_env.set_render_camera("overview")  # type: ignore # pylint: disable=protected-access
+            overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+            env.unwrapped._object_centric_env.set_render_camera("base")  # type: ignore # pylint: disable=protected-access
+            base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+            env.unwrapped._object_centric_env.set_render_camera("wrist")  # type: ignore # pylint: disable=protected-access
+            wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+            if show_images:
+                _visualize_image_in_window(overview_image, "overview")
+                _visualize_image_in_window(base_image, "base")
+                _visualize_image_in_window(wrist_image, "wrist")
             # Record observation and action before stepping
             if writer is not None:
                 # Create observation dict with state vector and images
@@ -189,9 +211,9 @@ def collect_data(
                     "arm_pos": current_position,
                     "arm_quat": current_orientation,
                     "gripper_pos": np.array([state.get(robot, "pos_gripper")]),
-                    "base_image": raw_obs["raw_obs"]["base_image"],
-                    "wrist_image": raw_obs["raw_obs"]["wrist_image"],
-                    "overview_image": raw_obs["raw_obs"]["overview_image"],
+                    "base_image": base_image,
+                    "wrist_image": wrist_image,
+                    "overview_image": overview_image,
                 }
                 # Convert action to dict format
                 action_dict = {
@@ -202,7 +224,7 @@ def collect_data(
                 }
                 writer.step(obs_dict, action_dict, target_object_key)
 
-            obs, _, _, _, _, raw_obs = env.step_with_images(action)  # type: ignore
+            obs, _, _, _, _ = env.step(action)  # type: ignore
             next_state = env.observation_space.devectorize(obs)
             controller.observe(next_state)
             state = next_state
@@ -228,6 +250,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=123, help="Random seed")
     parser.add_argument("--save", action="store_true", default=True)
     parser.add_argument("--grasping-only", action="store_true", default=True)
+    parser.add_argument("--show-images", action="store_true", default=False)
     parser.add_argument("--no-save", dest="save", action="store_false")
     parser.add_argument(
         "--n-demos", type=int, default=1, help="Number of demos to collect"
@@ -239,6 +262,7 @@ def main() -> None:
             seed=args.seed + demo_idx,
             save=args.save,
             grasping_only=args.grasping_only,
+            show_images=args.show_images,
         )
 
 

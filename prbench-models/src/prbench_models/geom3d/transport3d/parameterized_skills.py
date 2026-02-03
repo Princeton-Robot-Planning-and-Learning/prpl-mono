@@ -72,8 +72,8 @@ class GroundPickController(
         objects: Sequence[Object],
         sim: ObjectCentricTransport3DEnv,
         birrt_extend_num_interp: int = 10,
-        smooth_mp_max_time: float = 0.1,
-        smooth_mp_max_candidate_plans: int = 1,
+        smooth_mp_max_time: float = 120.0,
+        smooth_mp_max_candidate_plans: int = 50,
         base_mp_birrt_smooth_amt: int = 100,
     ) -> None:
         super().__init__(objects)

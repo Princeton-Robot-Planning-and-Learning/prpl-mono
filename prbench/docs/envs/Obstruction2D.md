@@ -25,9 +25,7 @@ The number of obstructions differs between environment variants. For example, Ob
 ![initial state GIF](assets/initial_state_gifs/Obstruction2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/Obstruction2D-o4/Obstruction2D-o4.gif)
-
-**Demo Stats**: Total Reward: -455.00, Success: Yes, Steps: 455
+![demo GIF](assets/group_gifs/Obstruction2D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

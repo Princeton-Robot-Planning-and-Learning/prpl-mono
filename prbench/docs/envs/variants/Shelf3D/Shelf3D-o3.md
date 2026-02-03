@@ -9,6 +9,19 @@ env = prbench.make("prbench/Shelf3D-o3-v0")
 ## Description
 This variant has 3 objects to place on the shelf.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/Shelf3D-o3.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/Shelf3D-o3.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/Shelf3D-o3/Shelf3D-o3_1768761767.gif)
+
+**Demo Stats**: Total Reward: -501.00, Success: Yes, Steps: 501
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

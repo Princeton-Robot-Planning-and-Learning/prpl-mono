@@ -190,7 +190,7 @@
             "target": "kitchen_island",
             "shelf": 1,
             "partition": 1,
-            "ranges": [[-0.283, -0.325, 0.283, 0.325]],
+            "ranges": [[-0.283, -0.375, 0.283, 0.375]],
             "rgba": [1.0, 0.5, 0.0, 0.0],
             "yaw_ranges": [[0, 0]]
         },
@@ -341,9 +341,15 @@
         }
     },
     "cameras": {
+        "agent_overview": {
+            "position": [1.8, -0.4, 0.5],
+            "lookat": [1, -0.25, 0.5],
+            "fovy": 42,
+            "resolution": [640, 480]
+        },
         "agentview_1": {
-            "position": [2.5, -2.5, 3.5],
-            "lookat": [0.5, 0.0, 1.0],
+            "position": [2, -1.25, 1.8],
+            "lookat": [1.2, -0.5, 1.0],
             "fovy": 42,
             "resolution": [640, 480]
         }

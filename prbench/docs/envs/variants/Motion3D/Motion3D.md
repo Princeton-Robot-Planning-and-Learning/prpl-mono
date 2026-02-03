@@ -9,6 +9,17 @@ env = prbench.make("prbench/Motion3D-v0")
 ## Description
 No variant-specific description available.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/Motion3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/Motion3D.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
+## Example Demonstration
+*(No demonstration GIFs available)*
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

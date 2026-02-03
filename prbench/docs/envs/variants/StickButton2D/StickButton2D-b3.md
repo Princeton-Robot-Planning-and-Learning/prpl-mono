@@ -9,6 +9,19 @@ env = prbench.make("prbench/StickButton2D-b3-v0")
 ## Description
 This variant has 3 buttons to press.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/variants/StickButton2D-b3.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/variants/StickButton2D-b3.gif)
+
+**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+
+## Example Demonstration
+![demo GIF](../../assets/demo_gifs/StickButton2D-b3/StickButton2D-b3.gif)
+
+**Demo Stats**: Total Reward: -121.00, Success: Yes, Steps: 121
+
 ## Observation Space
 The entries of an array in this Box space correspond to the following object features:
 | **Index** | **Object** | **Feature** |

@@ -1071,15 +1071,16 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     entity: MujocoFixture | MujocoObject
                     if target in self._fixtures_dict:
                         entity = self._fixtures_dict[target]
+                        in_region = entity.check_in_region(position, region_name)
                     elif target in self._objects_dict:
                         entity = self._objects_dict[target]
+                        in_region = entity.check_in_region(
+                            position, region_name, self._robot_env
+                        )
                     else:
                         raise ValueError(
                             f"Target '{target}' not found in fixtures or objects"
                         )
-                    in_region = entity.check_in_region(
-                        position, region_name, self._robot_env
-                    )
 
                 successes.append(in_region)
             elif pred[0] == "balanced":
@@ -1119,6 +1120,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
     def _is_terminated(self, obs: dict[str, Any]) -> bool:
         """Check if episode should terminate."""
+        # return self._check_goals()
         return self._reward_calculator.is_terminated(obs)
 
     def render(self) -> NDArray[np.uint8]:  # type: ignore
