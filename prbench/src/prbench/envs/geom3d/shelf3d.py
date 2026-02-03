@@ -39,9 +39,12 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Shelf3DEnv()."""
 
     max_action_mag: float = 0.2
+    specific_range: bool = False
 
     # Shelf.
     shelf_pose: Pose = Pose((2.0, 2.4, 0.02))
+    if specific_range:
+        shelf_pose = Pose((0.8, 0.7, 0.02))
     shelf_rgba: tuple[float, float, float, float] = (0.5, 0.5, 0.5, 1.0)
     shelf_width: float = 0.60198
     shelf_depth: float = 0.254
@@ -52,7 +55,6 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     shelf_texture: Path = Path(__file__).parent / "assets" / "dark-wood-texture.png"
 
     # World bounds.
-    specific_range: bool = False
     x_lb: float = -1.0
     x_ub: float = 1.0
     y_lb: float = -1.0

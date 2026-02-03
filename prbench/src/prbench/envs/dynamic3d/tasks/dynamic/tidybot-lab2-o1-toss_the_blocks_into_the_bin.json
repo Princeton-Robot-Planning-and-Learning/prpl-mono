@@ -23,6 +23,11 @@
             "yaw_ranges": [[-360, 360]],
             "rgba": [0.2, 0.6, 0.2, 0.0]
         },
+        "barrier_init_region": {
+            "target": "ground",
+            "ranges": [[1.3, 0.0, 1.301, 0.001]],
+            "yaw_ranges": [[0, 0]]
+        },
         "robot_init_region": {
             "target": "ground",
             "ranges": [[-0.05, -0.05, 0.05, 0.05]],
@@ -34,7 +39,15 @@
         "cube": {
             "cube_0": {
                 "size": 0.025,
-                "rgba": [0.2, 0.6, 0.2, 1]
+                "rgba": [0.2, 0.6, 0.2, 1],
+                "mass": 0.1
+            }
+        },
+        "cuboid": {
+            "cuboid_barrier": {
+                "size": [0.03, 5.0, 0.10],
+                "rgba": [0.918, 0.894, 0.835, 1.0],
+                "mass": 10.0
             }
         },
         "bin": {
@@ -58,7 +71,8 @@
     "initial_state": [
         ["on", "robot_0", "robot_init_region"],
         ["on", "cube_0", "blocks_init_region"],
-        ["on", "bin_0", "bin_init_region"]
+        ["on", "bin_0", "bin_init_region"],
+        ["on", "cuboid_barrier", "barrier_init_region"]
     ],
     "goal_state": [
         ["on", "cube_0", "blocks_goal_region"]

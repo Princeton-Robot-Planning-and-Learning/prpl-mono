@@ -186,3 +186,6 @@ datasets
 
 # third party libraries
 third_party
+
+# local test scripts
+multiple_runs.py
