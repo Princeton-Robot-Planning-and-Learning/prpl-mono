@@ -192,6 +192,7 @@ def generate_variant_markdown(variant_id: str, env: gymnasium.Env) -> str:
 
     md += "## Example Demonstration\n"
     demo_subdir = OUTPUT_DIR / "assets" / "demo_gifs" / variant_name
+    gif_to_use = None
     if demo_subdir.exists():
         canonical_gif = demo_subdir / f"{variant_name}.gif"
         if canonical_gif.exists():
@@ -200,24 +201,25 @@ def generate_variant_markdown(variant_id: str, env: gymnasium.Env) -> str:
             gif_files = sorted(
                 [f for f in demo_subdir.iterdir() if f.suffix.lower() == ".gif"]
             )
-            gif_to_use = gif_files[0] if gif_files else None
+            if gif_files:
+                gif_to_use = gif_files[0]
 
-        if gif_to_use:
-            md += f"![demo GIF](../../assets/demo_gifs/{variant_name}/{gif_to_use.name})\n\n"
-            json_file = gif_to_use.with_suffix(".json")
-            if json_file.exists():
-                with open(json_file, "r", encoding="utf-8") as f:
-                    demo_stats = json.load(f)
-                total_reward = demo_stats.get("total_reward", 0.0)
-                success = demo_stats.get("terminated_successfully", False)
-                num_steps = demo_stats.get("num_steps", 0)
-                success_text = "Yes" if success else "No"
-                md += (
-                    f"**Demo Stats**: Total Reward: {total_reward:.2f}, "
-                    f"Success: {success_text}, Steps: {num_steps}\n\n"
-                )
-        else:
-            md += "*(No demonstration GIFs available)*\n\n"
+    if gif_to_use:
+        md += (
+            f"![demo GIF](../../assets/demo_gifs/{variant_name}/{gif_to_use.name})\n\n"
+        )
+        json_file = gif_to_use.with_suffix(".json")
+        if json_file.exists():
+            with open(json_file, "r", encoding="utf-8") as f:
+                demo_stats = json.load(f)
+            total_reward = demo_stats.get("total_reward", 0.0)
+            success = demo_stats.get("terminated_successfully", False)
+            num_steps = demo_stats.get("num_steps", 0)
+            success_text = "Yes" if success else "No"
+            md += (
+                f"**Demo Stats**: Total Reward: {total_reward:.2f}, "
+                f"Success: {success_text}, Steps: {num_steps}\n\n"
+            )
     else:
         md += "*(No demonstration GIFs available)*\n\n"
 
