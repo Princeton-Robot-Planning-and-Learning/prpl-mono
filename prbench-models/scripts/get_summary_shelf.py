@@ -57,7 +57,7 @@ def get_pickle_info(pickle_path: Path) -> Tuple[str, int, int]:
     episode_idx = -1
     timestamp = int(pickle_path.stem) if pickle_path.stem.isdigit() else 0
 
-    for i, part in enumerate(parts):
+    for _, part in enumerate(parts):
         if part.startswith("seed_"):
             seed_str = part
         elif part.startswith("eval_episode_"):
@@ -126,15 +126,13 @@ def format_attribute_value(value: Any) -> str:
             return np.array2string(
                 value, precision=4, suppress_small=True, separator=", "
             )
-        else:
-            return f"array(shape={value.shape}, dtype={value.dtype})"
-    elif isinstance(value, float):
+        return f"array(shape={value.shape}, dtype={value.dtype})"
+    if isinstance(value, float):
         return f"{value:.4f}"
-    else:
-        return str(value)
+    return str(value)
 
 
-def format_object_state(state, indent: str = "    ") -> bool:
+def format_object_state(state) -> bool:
     """Format an object-centric state for printing.
 
     Uses the same access patterns as planning_data_dynamics3d_prbench.py:
@@ -144,17 +142,13 @@ def format_object_state(state, indent: str = "    ") -> bool:
 
     Args:
         state: The object-centric state to format.
-        indent: Indentation prefix for each line.
 
     Returns:
         Formatted string representation.
     """
     target_cube = state.get_object_from_name("cube1")
     target_z = state.get(target_cube, "z")
-    if target_z > 0.15:
-        return True
-    else:
-        return False
+    return target_z > 0.15
 
 
 def get_object_summary(state) -> Dict[str, Dict[str, Any]]:
@@ -211,7 +205,6 @@ def organize_by_seed(pickle_files: List[Path]) -> Dict[str, List[Path]]:
 
 def compute_seed_stats(
     pickle_files: List[Path],
-    verbose: bool = False,
     show_states: bool = False,
     obs_space: Optional[ObjectCentricBoxSpace] = None,
 ) -> Dict[str, Any]:
@@ -251,19 +244,10 @@ def compute_seed_stats(
             actions = data.get("actions", [])
             episode_lengths.append(len(actions))
 
-            if verbose:
-                seed_str, ep_idx, _ = get_pickle_info(pickle_path)
-                print(
-                    f"  Episode {ep_idx}: reward={total_reward:.3f}, "
-                    f"terminated={terminated}, truncated={truncated}, "
-                    f"length={len(actions)}"
-                )
-
             # Show object-centric states
             if show_states and obs_space is not None:
                 observations = data.get("observations", [])
                 if observations:
-                    seed_str, ep_idx, _ = get_pickle_info(pickle_path)
 
                     # Initial state - using same devectorize pattern as planning script
                     # env.observation_space.devectorize(obs) -> state
@@ -272,7 +256,7 @@ def compute_seed_stats(
                     for obs in observations:
                         current_obs = np.array(obs)
                         current_state = devectorize_observation(current_obs, obs_space)
-                        if format_object_state(current_state, indent="      ") == True:
+                        if format_object_state(current_state):
                             grasp = True
                             break
                     if grasp:
@@ -298,6 +282,7 @@ def compute_seed_stats(
 
 
 def main() -> None:
+    """Main function to summarize evaluation results from saved pickle files."""
     parser = argparse.ArgumentParser(
         description="Summarize evaluation results from saved pickle files"
     )
@@ -356,11 +341,10 @@ def main() -> None:
 
     # Compute stats for each seed
     seed_stats = []
-    for seed_str, seed_files in sorted(by_seed.items()):
+    for _, seed_files in sorted(by_seed.items()):
         seed_stats.append(
             compute_seed_stats(
                 seed_files,
-                verbose=args.verbose,
                 show_states=args.show_states,
                 obs_space=obs_space,
             )
@@ -375,10 +359,10 @@ def main() -> None:
     print(f"Grasp success rates per seed: {grasp_success_rate}")
     print(f"Final success rates per seed: {final_success_rate}")
     print(
-        f"Mean grasp success rate: {np.mean(grasp_success_rate):.4f} ± {np.std(grasp_success_rate):.4f}"
+        f"Mean grasp success rate: {np.mean(grasp_success_rate):.4f} ± {np.std(grasp_success_rate):.4f}"  # pylint: disable=line-too-long
     )
     print(
-        f"Mean final success rate: {np.mean(final_success_rate):.4f} ± {np.std(final_success_rate):.4f}"
+        f"Mean final success rate: {np.mean(final_success_rate):.4f} ± {np.std(final_success_rate):.4f}"  # pylint: disable=line-too-long
     )
 
 

@@ -1,20 +1,17 @@
 """Policy inference script for running remote policies in prbench environments."""
 
 import argparse
+import gc
 import json
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, List
 
-import matplotlib
-
-matplotlib.use("Agg")  # Force non-interactive backend
-import gc
-
 import cv2 as cv
 import dill as pkl
 import imageio as iio
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import prbench
@@ -30,6 +27,8 @@ from prbench_models.policy_constants import (
     POLICY_SERVER_PORT,
 )
 from prbench_models.teleop_utils import _visualize_image_in_window
+
+matplotlib.use("Agg")  # Force non-interactive backend
 
 prbench.register_all_environments()
 
@@ -122,8 +121,6 @@ def run_inference(
     render: bool = False,
     num_cubes: int = 1,
     show_images: bool = False,
-    use_qpos: bool = False,
-    use_delta_qpos: bool = False,
     use_env_state: bool = False,
     save_videos: bool = False,
     remove_velocity: bool = False,
@@ -142,8 +139,6 @@ def run_inference(
         render: Whether to render the environment.
         num_cubes: Number of cubes in the environment.
         show_images: Whether to show images in a window.
-        use_qpos: Whether to use qpos for the policy.
-        use_delta_qpos: Whether to use delta qpos for the policy.
         use_env_state: Whether to use env state for the policy.
         save_videos: Whether to save videos for evaluation.
         remove_velocity: Whether to remove velocity from the policy.
@@ -248,8 +243,7 @@ def run_inference(
             traj_rewards: List[float] = []
 
             start_time = time.time()
-            if "Transport3D" in env_name:
-                gripper_closed = False
+            gripper_closed = False
             for step_idx in range(max_steps):
                 # Enforce desired control frequency
                 step_end_time = start_time + step_idx * POLICY_CONTROL_PERIOD
@@ -312,12 +306,12 @@ def run_inference(
                     ):
                         if remove_velocity and "TidyBot" in env_name:
                             obs_dict = {
-                                "robot_state": env.observation_space.get_object_subvector(
+                                "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
                                     obs, "robot"
                                 )[
                                     :11
                                 ],
-                                "env_state": env.observation_space.get_vector_excluding_object(
+                                "env_state": env.observation_space.get_vector_excluding_object(  # pylint: disable=line-too-long
                                     obs, "robot"
                                 ),
                                 "overview_image": overview_image,
@@ -326,10 +320,10 @@ def run_inference(
                             }
                         else:
                             obs_dict = {
-                                "robot_state": env.observation_space.get_object_subvector(
+                                "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
                                     obs, "robot"
                                 ),
-                                "env_state": env.observation_space.get_vector_excluding_object(
+                                "env_state": env.observation_space.get_vector_excluding_object(  # pylint: disable=line-too-long
                                     obs, "robot"
                                 ),
                                 "overview_image": overview_image,
@@ -341,7 +335,7 @@ def run_inference(
                             "robot_state": env.observation_space.get_object_subvector(
                                 obs, "robot"
                             ),
-                            "env_state": env.observation_space.get_vector_excluding_object(
+                            "env_state": env.observation_space.get_vector_excluding_object(  # pylint: disable=line-too-long
                                 obs, "robot"
                             ),
                             "image": image,
@@ -354,7 +348,7 @@ def run_inference(
                     ):
                         if remove_velocity and "TidyBot" in env_name:
                             obs_dict = {
-                                "robot_state": env.observation_space.get_object_subvector(
+                                "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
                                     obs, "robot"
                                 )[
                                     :11
@@ -365,7 +359,7 @@ def run_inference(
                             }
                         else:
                             obs_dict = {
-                                "robot_state": env.observation_space.get_object_subvector(
+                                "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
                                     obs, "robot"
                                 ),
                                 "overview_image": overview_image,
@@ -459,11 +453,13 @@ def run_inference(
                         successes += 1
                     episode_lengths.append(step_idx + 1)
                     break
-                if "Transport3D" in env_name and step_idx > 300 and not gripper_closed:
+                if (
+                    "Transport3D" in env_name and step_idx > 300 and not gripper_closed
+                ):
                     # Max steps reached without termination
                     episode_lengths.append(max_steps)
                     print(
-                        f"No progress made in the last 300 steps, saving episode with max steps ({max_steps})"
+                        f"No progress made in the last 300 steps, saving episode with max steps ({max_steps})"  # pylint: disable=line-too-long
                     )
                     break
             else:
@@ -537,7 +533,7 @@ def run_inference(
         print(f"Success rate: {successes / max(len(episode_rewards), 1):.2%}")
 
         if episode_avg_inference_times:
-            print(f"\nAverage Inference Time Statistics (All Episodes):")
+            print("\nAverage Inference Time Statistics (All Episodes):")
             print(
                 f"  Average inference time: {np.mean(episode_avg_inference_times):.3f}"
             )
@@ -546,7 +542,7 @@ def run_inference(
             print(f"  Max inference time: {np.max(episode_avg_inference_times):.3f}")
 
         if episode_rewards:
-            print(f"\nReward Statistics (All Episodes):")
+            print("\nReward Statistics (All Episodes):")
             print(f"  Total rewards: {episode_rewards}")
             print(f"  Average reward: {np.mean(episode_rewards):.3f}")
             print(f"  Std reward: {np.std(episode_rewards):.3f}")
@@ -568,7 +564,7 @@ def run_inference(
         ]
 
         if successful_rewards:
-            print(f"\nReward Statistics (Successful Episodes Only):")
+            print("\nReward Statistics (Successful Episodes Only):")
             print(f"  Average reward: {np.mean(successful_rewards):.3f}")
             print(f"  Std reward: {np.std(successful_rewards):.3f}")
             print(f"  Min reward: {np.min(successful_rewards):.3f}")
@@ -581,7 +577,7 @@ def run_inference(
         #     print(f"  Max length: {np.max(successful_lengths)}")
 
         print(
-            f"\nTerminated: {sum(episode_terminated)}, Truncated: {sum(episode_truncated)}"
+            f"\nTerminated: {sum(episode_terminated)}, Truncated: {sum(episode_truncated)}"  # pylint: disable=line-too-long
         )
         print("=" * 50)
 
@@ -653,7 +649,7 @@ def run_inference(
         }
 
         logs_path = seed_dir / "evaluation_logs.json"
-        with open(logs_path, "w") as f:
+        with open(logs_path, "w") as f:  # pylint: disable=unspecified-encoding
             json.dump(logs, f, indent=2)
         print(f"\nLogs saved to: {logs_path}")
 
@@ -671,7 +667,7 @@ def run_summary(output_dir: Path):
     for seed_dir in seed_dirs:
         logs_path = seed_dir / "evaluation_logs.json"
         if logs_path.exists():
-            with open(logs_path, "r") as f:
+            with open(logs_path, "r") as f:  # pylint: disable=unspecified-encoding
                 logs = json.load(f)
                 all_logs.append(logs)
                 print(f"Loaded: {logs_path}")
@@ -729,28 +725,28 @@ def run_summary(output_dir: Path):
     print(f"Total successes: {total_successes}")
     print(f"Overall success rate: {total_successes / max(total_episodes, 1):.2%}")
 
-    print(f"\nSuccess Rate Across Seeds:")
+    print("\nSuccess Rate Across Seeds:")
     print(f"  Mean: {np.mean(all_success_rates):.2%}")
     print(f"  Std: {np.std(all_success_rates):.2%}")
     print(f"  Min: {np.min(all_success_rates):.2%}")
     print(f"  Max: {np.max(all_success_rates):.2%}")
 
     if per_seed_mean_rewards:
-        print(f"\nReward Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print("\nReward Statistics (Mean per Seed, Aggregated Across Seeds):")
         print(f"  Mean: {np.mean(per_seed_mean_rewards):.3f}")
         print(f"  Std: {np.std(per_seed_mean_rewards):.3f}")
         print(f"  Min: {np.min(per_seed_mean_rewards):.3f}")
         print(f"  Max: {np.max(per_seed_mean_rewards):.3f}")
 
     if per_seed_mean_lengths:
-        print(f"\nEpisode Length Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print("\nEpisode Length Statistics (Mean per Seed, Aggregated Across Seeds):")
         print(f"  Mean: {np.mean(per_seed_mean_lengths):.1f}")
         print(f"  Std: {np.std(per_seed_mean_lengths):.1f}")
         print(f"  Min: {np.min(per_seed_mean_lengths):.1f}")
         print(f"  Max: {np.max(per_seed_mean_lengths):.1f}")
 
     if per_seed_mean_inference_times:
-        print(f"\nInference Time Statistics (Mean per Seed, Aggregated Across Seeds):")
+        print("\nInference Time Statistics (Mean per Seed, Aggregated Across Seeds):")
         print(f"  Mean: {np.mean(per_seed_mean_inference_times):.6f}")
         print(f"  Std: {np.std(per_seed_mean_inference_times):.6f}")
         print(f"  Min: {np.min(per_seed_mean_inference_times):.6f}")
@@ -758,7 +754,7 @@ def run_summary(output_dir: Path):
 
     if per_seed_mean_successful_rewards:
         print(
-            f"\nSuccessful Episode Reward Statistics (Mean per Seed, Aggregated Across Seeds):"
+            "\nSuccessful Episode Reward Statistics (Mean per Seed, Aggregated Across Seeds):"  # pylint: disable=line-too-long
         )
         print(f"  Mean: {np.mean(per_seed_mean_successful_rewards):.3f}")
         print(f"  Std: {np.std(per_seed_mean_successful_rewards):.3f}")
@@ -767,7 +763,7 @@ def run_summary(output_dir: Path):
 
     if per_seed_mean_successful_lengths:
         print(
-            f"\nSuccessful Episode Length Statistics (Mean per Seed, Aggregated Across Seeds):"
+            "\nSuccessful Episode Length Statistics (Mean per Seed, Aggregated Across Seeds):"  # pylint: disable=line-too-long
         )
         print(f"  Mean: {np.mean(per_seed_mean_successful_lengths):.1f}")
         print(f"  Std: {np.std(per_seed_mean_successful_lengths):.1f}")
@@ -897,7 +893,7 @@ def run_summary(output_dir: Path):
     }
 
     summary_path = output_dir / "aggregated_summary.json"
-    with open(summary_path, "w") as f:
+    with open(summary_path, "w") as f:  # pylint: disable=unspecified-encoding
         json.dump(summary, f, indent=2)
     print(f"\nAggregated summary saved to: {summary_path}")
 
@@ -1017,8 +1013,6 @@ def main() -> None:
                 env_name=args.env_name,
                 render=args.render,
                 show_images=args.show_images,
-                use_qpos=args.use_qpos,
-                use_delta_qpos=args.use_delta_qpos,
                 use_env_state=args.use_env_state,
                 save_videos=args.save_videos,
                 save_trajectories=args.save_trajectories,

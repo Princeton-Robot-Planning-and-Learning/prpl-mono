@@ -194,14 +194,14 @@ def run_inference(
 
                 # Get robot state
                 robot = state.get_object_from_name("robot")
-                target_cube = state.get_object_from_name(target_object_key)
-                target_cube_pos = np.array(
-                    [
-                        state.get(target_cube, "pose_x"),
-                        state.get(target_cube, "pose_y"),
-                        state.get(target_cube, "pose_z"),
-                    ]
-                )
+                # target_cube = state.get_object_from_name(target_object_key)
+                # target_cube_pos = np.array(
+                #     [
+                #         state.get(target_cube, "pose_x"),
+                #         state.get(target_cube, "pose_y"),
+                #         state.get(target_cube, "pose_z"),
+                #     ]
+                # )
                 # if target_cube_pos[2] > 0.3:
                 #     successes += 1
                 #     break

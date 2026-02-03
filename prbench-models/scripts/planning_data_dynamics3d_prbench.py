@@ -156,7 +156,7 @@ def collect_data(
                 _visualize_image_in_window(wrist_image, "wrist")
             # Record observation and action before stepping
 
-            obs, reward, ep_terminated, ep_truncated, _ = env.step(  # type: ignore
+            obs, reward, _, _, _ = env.step(  # type: ignore
                 action
             )
 
@@ -189,7 +189,7 @@ def collect_data(
             controller = lifted_controller.ground(object_parameters)
             # params = np.array([0.91823519, -0.13385369, -1.57079633])
             # params = np.array([0.88823519, -0.13385369, -1.57079633])
-            arams = np.array([0.86823519, -0.13385369, -1.57079633])
+            params = np.array([0.86823519, -0.13385369, -1.57079633])
 
             # Reset and execute the controller until it terminates.
             try:
@@ -219,7 +219,7 @@ def collect_data(
                     _visualize_image_in_window(wrist_image, "wrist")
                 # Record observation and action before stepping
 
-                obs, reward, ep_terminated, ep_truncated, _ = env.step(  # type: ignore
+                obs, reward, _, _, _ = env.step(  # type: ignore
                     action
                 )
 

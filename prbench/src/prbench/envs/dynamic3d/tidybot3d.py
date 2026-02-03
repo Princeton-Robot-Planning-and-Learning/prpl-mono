@@ -1108,8 +1108,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
     def _is_terminated(self, obs: dict[str, Any]) -> bool:
         """Check if episode should terminate."""
-        return self._check_goals()
-        # return self._reward_calculator.is_terminated(obs)
+        # return self._check_goals()
+        return self._reward_calculator.is_terminated(obs)
 
     def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the environment."""

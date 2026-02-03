@@ -186,17 +186,6 @@ def collect_data(
                         ]
                     )
                 )
-            target_shelf_pose = np.array(
-                [
-                    state.get(target_shelf, "pose_x"),
-                    state.get(target_shelf, "pose_y"),
-                    state.get(target_shelf, "pose_z"),
-                    state.get(target_shelf, "pose_qx"),
-                    state.get(target_shelf, "pose_qy"),
-                    state.get(target_shelf, "pose_qz"),
-                    state.get(target_shelf, "pose_qw"),
-                ]
-            )
 
             # Create observation dict with state vector and images
             if use_qpos:
@@ -333,17 +322,6 @@ def collect_data(
                             ]
                         )
                     )
-                target_shelf_pose = np.array(
-                    [
-                        state.get(target_shelf, "pose_x"),
-                        state.get(target_shelf, "pose_y"),
-                        state.get(target_shelf, "pose_z"),
-                        state.get(target_shelf, "pose_qx"),
-                        state.get(target_shelf, "pose_qy"),
-                        state.get(target_shelf, "pose_qz"),
-                        state.get(target_shelf, "pose_qw"),
-                    ]
-                )
 
                 # Create observation dict with state vector and images
                 if use_qpos:
@@ -402,7 +380,7 @@ def collect_data(
                     }
                 writer.step(obs_dict, action_dict, target_object_key)
 
-                obs, reward, terminated, truncated, info = env.step(action)  # type: ignore
+                obs, _, terminated, truncated, _ = env.step(action)  # type: ignore
                 next_state = env.observation_space.devectorize(obs)
                 controller.observe(next_state)
                 state = next_state

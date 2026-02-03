@@ -1032,7 +1032,7 @@ def test_pick_toss():
         scene_bg=True,
     )
     if MAKE_VIDEOS:
-        env.unwrapped._object_centric_env.set_render_camera("task_view")
+        env.unwrapped._object_centric_env.set_render_camera("task_view") # type: ignore # pylint: disable=protected-access
         env = RecordVideo(
             env, "unit_test_videos", name_prefix=f"TidyBot3D-ground-o{num_cubes}"
         )

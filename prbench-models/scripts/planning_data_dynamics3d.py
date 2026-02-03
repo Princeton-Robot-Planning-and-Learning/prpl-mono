@@ -187,7 +187,6 @@ def collect_data(
                 np.array(target_joints)
             )
 
-            camera_names = env.unwrapped._object_centric_env.camera_names  # type: ignore # pylint: disable=protected-access
             env.unwrapped._object_centric_env.set_render_camera("overview")  # type: ignore # pylint: disable=protected-access
             overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
             env.unwrapped._object_centric_env.set_render_camera("base")  # type: ignore # pylint: disable=protected-access

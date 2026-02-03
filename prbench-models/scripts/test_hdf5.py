@@ -20,6 +20,7 @@ def print_hdf5_structure(name: str, obj) -> None:
 
 
 def main() -> None:
+    """Main function to inspect HDF5 file structure."""
     parser = argparse.ArgumentParser(description="Inspect HDF5 file structure")
     parser.add_argument(
         "hdf5_path",
@@ -69,7 +70,7 @@ def main() -> None:
             print()
 
             # Show structure of first few demos
-            for i, demo_key in enumerate(demo_keys[: args.max_demos]):
+            for _, demo_key in enumerate(demo_keys[: args.max_demos]):
                 demo = data_group[demo_key]
                 print(f"  {demo_key}/")
 
@@ -92,7 +93,7 @@ def main() -> None:
                             nested = item[nested_name]
                             if isinstance(nested, h5py.Dataset):
                                 print(
-                                    f"      {nested_name}: shape={nested.shape}, dtype={nested.dtype}"
+                                    f"      {nested_name}: shape={nested.shape}, dtype={nested.dtype}" # pylint: disable=line-too-long
                                 )
                             else:
                                 print(f"      {nested_name}/ (group)")

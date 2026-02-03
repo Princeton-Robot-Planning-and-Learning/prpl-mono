@@ -122,44 +122,73 @@ def convert(
                     )
                 if use_dynamics3d:
                     if use_velocity_state:
-                        robot_observation.shape == np.array(
-                            fr["observation.state"][-22:-11], dtype=np.float32
-                        ).shape
+                        assert (
+                            robot_observation.shape
+                            == np.array(
+                                fr["observation.state"][-22:-11], dtype=np.float32
+                            ).shape
+                        )
                     else:
-                        robot_observation.shape == np.array(
-                            fr["observation.state"][-22:], dtype=np.float32
+                        assert (
+                            robot_observation.shape
+                            == np.array(
+                                fr["observation.state"][-22:], dtype=np.float32
+                            ).shape
+                        )
+                    assert (
+                        env_observations.shape
+                        == np.array(
+                            fr["observation.state"][:-22], dtype=np.float32
                         ).shape
-                    env_observations.shape == np.array(
-                        fr["observation.state"][:-22], dtype=np.float32
-                    ).shape
+                    )
                 elif use_geom3d:
-                    robot_observation.shape == np.array(
-                        fr["observation.state"][:19], dtype=np.float32
-                    ).shape
-                    env_observations.shape == np.array(
-                        fr["observation.state"][19:], dtype=np.float32
-                    ).shape
+                    assert (
+                        robot_observation.shape
+                        == np.array(
+                            fr["observation.state"][:19], dtype=np.float32
+                        ).shape
+                    )
+                    assert (
+                        env_observations.shape
+                        == np.array(
+                            fr["observation.state"][19:], dtype=np.float32
+                        ).shape
+                    )
                 elif use_pushpull2d:
-                    robot_observation.shape == np.array(
-                        fr["observation.state"][:24], dtype=np.float32
-                    ).shape
-                    env_observations.shape == np.array(
-                        fr["observation.state"][24:], dtype=np.float32
-                    ).shape
+                    assert (
+                        robot_observation.shape
+                        == np.array(
+                            fr["observation.state"][:24], dtype=np.float32
+                        ).shape
+                    )
+                    assert (
+                        env_observations.shape
+                        == np.array(
+                            fr["observation.state"][24:], dtype=np.float32
+                        ).shape
+                    )
                 elif use_dynamic2d:
-                    robot_observation.shape == np.array(
-                        fr["observation.state"][-24:], dtype=np.float32
-                    ).shape
-                    env_observations.shape == np.array(
-                        fr["observation.state"][:-24], dtype=np.float32
-                    ).shape
+                    assert (
+                        robot_observation.shape
+                        == np.array(
+                            fr["observation.state"][-24:], dtype=np.float32
+                        ).shape
+                    )
+                    assert (
+                        env_observations.shape
+                        == np.array(
+                            fr["observation.state"][:-24], dtype=np.float32
+                        ).shape
+                    )
                 else:
-                    robot_observation.shape == np.array(
-                        fr["observation.state"][:9], dtype=np.float32
-                    ).shape
-                    env_observations.shape == np.array(
-                        fr["observation.state"][9:], dtype=np.float32
-                    ).shape
+                    assert (
+                        robot_observation.shape
+                        == np.array(fr["observation.state"][:9], dtype=np.float32).shape
+                    )
+                    assert (
+                        env_observations.shape
+                        == np.array(fr["observation.state"][9:], dtype=np.float32).shape
+                    )
                 action = np.array(fr["action"], dtype=np.float32)
                 env_states.append(env_observations)
                 robot_states.append(robot_observation)
@@ -170,26 +199,28 @@ def convert(
                 if use_geom3d or use_dynamics3d:
                     overview_image = fr["observation.overview_image"]
                     if isinstance(overview_image, np.ndarray):
-                        overview_image = cv.resize(
+                        overview_image = cv.resize(  # pylint: disable=no-member
                             overview_image, (resize_constant, resize_constant)
                         )
                         overview_images.append(overview_image)
                     wrist_image = fr["observation.wrist_image"]
                     if isinstance(wrist_image, np.ndarray):
-                        wrist_image = cv.resize(
+                        wrist_image = cv.resize(  # pylint: disable=no-member
                             wrist_image, (resize_constant, resize_constant)
                         )
                         wrist_images.append(wrist_image)
                     base_image = fr["observation.base_image"]
                     if isinstance(base_image, np.ndarray):
-                        base_image = cv.resize(
+                        base_image = cv.resize(  # pylint: disable=no-member
                             base_image, (resize_constant, resize_constant)
                         )
                         base_images.append(base_image)
                 elif has_images and "observation.image" in fr:
                     image = fr["observation.image"]
                     if isinstance(image, np.ndarray):
-                        image = cv.resize(image, (resize_constant, resize_constant))
+                        image = cv.resize(  # pylint: disable=no-member
+                            image, (resize_constant, resize_constant)
+                        )
                         images.append(image)
 
             # Write datasets for this episode
@@ -229,7 +260,7 @@ def convert(
                     wrist_video_path = video_dir / "wrist.mp4"
                     base_video_path = video_dir / "base.mp4"
 
-                    iio.mimsave(overview_video_path, overview_images, fps=fps)  # type: ignore
+                    iio.mimsave(overview_video_path, overview_images, fps=fps)  # type: ignore # pylint: disable=line-too-long
                     iio.mimsave(wrist_video_path, wrist_images, fps=fps)  # type: ignore
                     iio.mimsave(base_video_path, base_images, fps=fps)  # type: ignore
                     print(f"  Saved videos for episode {ep_idx}")
