@@ -9,6 +9,12 @@ env = prbench.make("prbench/TidyBot3D-sort-lab2-o12-sort_the_blocks_into_the_cup
 ## Description
 This variant uses the 'lab2' scene type with 12 objects.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/TidyBot3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/TidyBot3D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

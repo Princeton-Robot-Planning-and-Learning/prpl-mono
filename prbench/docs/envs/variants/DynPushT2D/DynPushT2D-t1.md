@@ -9,6 +9,12 @@ env = prbench.make("prbench/DynPushT2D-t1-v0")
 ## Description
 This variant has a T-shaped block to push to a goal pose.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/DynPushT2D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/DynPushT2D.gif)
+
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/DynPushT2D-t1/DynPushT2D-t1.gif)
 

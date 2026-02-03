@@ -9,6 +9,12 @@ env = prbench.make("prbench/DynObstruction2D-o0-v0")
 ## Description
 This variant has no obstructions.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/DynObstruction2D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/DynObstruction2D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

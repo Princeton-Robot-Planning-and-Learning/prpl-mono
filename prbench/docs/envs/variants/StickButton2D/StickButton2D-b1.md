@@ -9,6 +9,12 @@ env = prbench.make("prbench/StickButton2D-b1-v0")
 ## Description
 This variant has 1 button to press.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/StickButton2D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/StickButton2D.gif)
+
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/StickButton2D-b1/StickButton2D-b1.gif)
 

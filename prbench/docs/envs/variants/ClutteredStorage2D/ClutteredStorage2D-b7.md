@@ -9,6 +9,12 @@ env = prbench.make("prbench/ClutteredStorage2D-b7-v0")
 ## Description
 This variant has 7 blocks (3 initially in the shelf, 4 initially outside).
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/ClutteredStorage2D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/ClutteredStorage2D.gif)
+
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/ClutteredStorage2D-b7/ClutteredStorage2D-b7_seed2_1768253526.gif)
 

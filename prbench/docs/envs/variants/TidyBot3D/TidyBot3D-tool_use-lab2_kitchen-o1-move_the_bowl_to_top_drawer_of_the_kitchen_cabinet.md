@@ -9,6 +9,12 @@ env = prbench.make("prbench/TidyBot3D-tool_use-lab2_kitchen-o1-move_the_bowl_to_
 ## Description
 This variant uses the 'lab2_kitchen' scene type with 1 object.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/TidyBot3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/TidyBot3D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

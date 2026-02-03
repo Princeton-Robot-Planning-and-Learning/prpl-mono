@@ -9,6 +9,12 @@ env = prbench.make("prbench/Motion3D-v0")
 ## Description
 No variant-specific description available.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/Motion3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/Motion3D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

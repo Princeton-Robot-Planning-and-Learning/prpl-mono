@@ -9,6 +9,12 @@ env = prbench.make("prbench/PushPullHook2D-v0")
 ## Description
 This variant has one hook, one movable button, and one target button.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/PushPullHook2D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/PushPullHook2D.gif)
+
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/PushPullHook2D/PushPullHook2D_seed0_1768423887.gif)
 

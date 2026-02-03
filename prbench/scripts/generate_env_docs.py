@@ -159,12 +159,17 @@ def create_initial_state_gif(
         return False
 
 
-def generate_variant_markdown(variant_id: str, env: gymnasium.Env) -> str:
+def generate_variant_markdown(
+    variant_id: str,
+    env: gymnasium.Env,
+    class_name: str,
+) -> str:
     """Generate markdown for a single environment variant.
 
     Args:
         variant_id: The full variant ID (e.g., "prbench/ClutteredStorage2D-b1-v0")
         env: The environment instance for this specific variant
+        class_name: The environment class name (e.g., "ClutteredStorage2D")
 
     Returns:
         The markdown content as a string
@@ -189,6 +194,22 @@ def generate_variant_markdown(variant_id: str, env: gymnasium.Env) -> str:
         md += f"{variant_specific}\n\n"
     else:
         md += "No variant-specific description available.\n\n"
+
+    class_filename = sanitize_class_name(class_name)
+
+    md += "## Initial State Distribution\n"
+    initial_gif = OUTPUT_DIR / "assets" / "initial_state_gifs" / f"{class_filename}.gif"
+    if initial_gif.exists():
+        md += f"![initial state GIF](../../assets/initial_state_gifs/{class_filename}.gif)\n\n"
+    else:
+        md += "*(Initial state GIF not available)*\n\n"
+
+    md += "## Random Action Behavior\n"
+    random_gif = OUTPUT_DIR / "assets" / "random_action_gifs" / f"{class_filename}.gif"
+    if random_gif.exists():
+        md += f"![random action GIF](../../assets/random_action_gifs/{class_filename}.gif)\n\n"
+    else:
+        md += "*(Random action GIF not available)*\n\n"
 
     md += "## Example Demonstration\n"
     demo_subdir = OUTPUT_DIR / "assets" / "demo_gifs" / variant_name
@@ -399,7 +420,7 @@ def _main() -> None:
             variant_dir.mkdir(parents=True, exist_ok=True)
             for variant_id in variants:
                 variant_env = prbench.make(variant_id, render_mode="rgb_array")
-                variant_md = generate_variant_markdown(variant_id, variant_env)
+                variant_md = generate_variant_markdown(variant_id, variant_env, class_name)
                 variant_filename = sanitize_env_id(variant_id)
                 variant_file = variant_dir / f"{variant_filename}.md"
                 with open(variant_file, "w", encoding="utf-8") as f:

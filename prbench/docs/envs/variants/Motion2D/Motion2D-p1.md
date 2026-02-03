@@ -9,6 +9,12 @@ env = prbench.make("prbench/Motion2D-p1-v0")
 ## Description
 This variant has 1 narrow passage.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/Motion2D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/Motion2D.gif)
+
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/Motion2D-p1/Motion2D-p1.gif)
 

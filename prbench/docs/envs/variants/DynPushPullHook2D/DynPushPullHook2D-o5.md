@@ -9,6 +9,12 @@ env = prbench.make("prbench/DynPushPullHook2D-o5-v0")
 ## Description
 This variant has 5 obstructions.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/DynPushPullHook2D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/DynPushPullHook2D.gif)
+
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/DynPushPullHook2D-o5/DynPushPullHook2D-o5_seed2_1768427291.gif)
 

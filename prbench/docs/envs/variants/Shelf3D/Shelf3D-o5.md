@@ -9,6 +9,12 @@ env = prbench.make("prbench/Shelf3D-o5-v0")
 ## Description
 This variant has 5 objects to place on the shelf.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/Shelf3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/Shelf3D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

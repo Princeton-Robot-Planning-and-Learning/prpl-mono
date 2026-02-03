@@ -9,6 +9,12 @@ env = prbench.make("prbench/TidyBot3D-cupboard_real-o1-v0")
 ## Description
 This variant uses the 'cupboard_real' scene type with 1 object.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/TidyBot3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/TidyBot3D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

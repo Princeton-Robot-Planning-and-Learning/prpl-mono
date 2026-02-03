@@ -9,6 +9,12 @@ env = prbench.make("prbench/Packing3D-p3-v0")
 ## Description
 This variant has 3 parts to pack into the rack.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/Packing3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/Packing3D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

@@ -9,6 +9,12 @@ env = prbench.make("prbench/DynScoopPour2D-o10-v0")
 ## Description
 This variant has 10 small objects (5 circles, 5 squares).
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/DynScoopPour2D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/DynScoopPour2D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

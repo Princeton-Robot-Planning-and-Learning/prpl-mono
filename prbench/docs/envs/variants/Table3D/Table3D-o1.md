@@ -9,6 +9,12 @@ env = prbench.make("prbench/Table3D-o1-v0")
 ## Description
 This variant has 1 cube on the table.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/Table3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/Table3D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 

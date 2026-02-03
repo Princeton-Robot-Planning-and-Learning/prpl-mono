@@ -9,6 +9,12 @@ env = prbench.make("prbench/Obstruction2D-o3-v0")
 ## Description
 This variant has 3 obstructions.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/Obstruction2D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/Obstruction2D.gif)
+
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/Obstruction2D-o3/Obstruction2D-o3.gif)
 

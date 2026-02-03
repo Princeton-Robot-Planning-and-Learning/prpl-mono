@@ -9,6 +9,12 @@ env = prbench.make("prbench/Transport3D-o2-v0")
 ## Description
 This variant has 2 cubes and 1 box to transport onto the table.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/Transport3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/Transport3D.gif)
+
 ## Example Demonstration
 ![demo GIF](../../assets/demo_gifs/Transport3D-o2/Transport3D-o2_1769088054.gif)
 

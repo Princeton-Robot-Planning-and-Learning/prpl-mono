@@ -9,6 +9,12 @@ env = prbench.make("prbench/TidyBot3D-dynamic-lab2-o1-toss_the_blocks_into_the_b
 ## Description
 This variant uses the 'lab2' scene type with 1 object.
 
+## Initial State Distribution
+![initial state GIF](../../assets/initial_state_gifs/TidyBot3D.gif)
+
+## Random Action Behavior
+![random action GIF](../../assets/random_action_gifs/TidyBot3D.gif)
+
 ## Example Demonstration
 *(No demonstration GIFs available)*
 
@@ -48,25 +54,41 @@ The entries of an array in this Box space correspond to the following object fea
 | 29 | cube_0 | bb_x |
 | 30 | cube_0 | bb_y |
 | 31 | cube_0 | bb_z |
-| 32 | robot | pos_base_x |
-| 33 | robot | pos_base_y |
-| 34 | robot | pos_base_rot |
-| 35 | robot | pos_arm_joint1 |
-| 36 | robot | pos_arm_joint2 |
-| 37 | robot | pos_arm_joint3 |
-| 38 | robot | pos_arm_joint4 |
-| 39 | robot | pos_arm_joint5 |
-| 40 | robot | pos_arm_joint6 |
-| 41 | robot | pos_arm_joint7 |
-| 42 | robot | pos_gripper |
-| 43 | robot | vel_base_x |
-| 44 | robot | vel_base_y |
-| 45 | robot | vel_base_rot |
-| 46 | robot | vel_arm_joint1 |
-| 47 | robot | vel_arm_joint2 |
-| 48 | robot | vel_arm_joint3 |
-| 49 | robot | vel_arm_joint4 |
-| 50 | robot | vel_arm_joint5 |
-| 51 | robot | vel_arm_joint6 |
-| 52 | robot | vel_arm_joint7 |
-| 53 | robot | vel_gripper |
+| 32 | cuboid_barrier | x |
+| 33 | cuboid_barrier | y |
+| 34 | cuboid_barrier | z |
+| 35 | cuboid_barrier | qw |
+| 36 | cuboid_barrier | qx |
+| 37 | cuboid_barrier | qy |
+| 38 | cuboid_barrier | qz |
+| 39 | cuboid_barrier | vx |
+| 40 | cuboid_barrier | vy |
+| 41 | cuboid_barrier | vz |
+| 42 | cuboid_barrier | wx |
+| 43 | cuboid_barrier | wy |
+| 44 | cuboid_barrier | wz |
+| 45 | cuboid_barrier | bb_x |
+| 46 | cuboid_barrier | bb_y |
+| 47 | cuboid_barrier | bb_z |
+| 48 | robot | pos_base_x |
+| 49 | robot | pos_base_y |
+| 50 | robot | pos_base_rot |
+| 51 | robot | pos_arm_joint1 |
+| 52 | robot | pos_arm_joint2 |
+| 53 | robot | pos_arm_joint3 |
+| 54 | robot | pos_arm_joint4 |
+| 55 | robot | pos_arm_joint5 |
+| 56 | robot | pos_arm_joint6 |
+| 57 | robot | pos_arm_joint7 |
+| 58 | robot | pos_gripper |
+| 59 | robot | vel_base_x |
+| 60 | robot | vel_base_y |
+| 61 | robot | vel_base_rot |
+| 62 | robot | vel_arm_joint1 |
+| 63 | robot | vel_arm_joint2 |
+| 64 | robot | vel_arm_joint3 |
+| 65 | robot | vel_arm_joint4 |
+| 66 | robot | vel_arm_joint5 |
+| 67 | robot | vel_arm_joint6 |
+| 68 | robot | vel_arm_joint7 |
+| 69 | robot | vel_gripper |
