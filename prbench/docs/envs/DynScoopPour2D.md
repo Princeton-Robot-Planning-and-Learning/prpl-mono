@@ -24,7 +24,7 @@ The number of small objects differs between environment variants. For example, D
 ![initial state GIF](assets/initial_state_gifs/DynScoopPour2D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/group_gifs/DynScoopPour2D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*
