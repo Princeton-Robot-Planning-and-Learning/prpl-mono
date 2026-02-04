@@ -5,8 +5,10 @@ import numpy as np
 from prbench.envs.dynamic3d.utils import (
     bboxes_overlap,
     compute_camera_euler,
+    euler2mat_rzxy,
     point_in_bbox_3d,
     rotate_bounding_box_2d,
+    rotate_bounding_box_3d,
     sample_pose_in_bbox_3d,
     translate_bounding_box,
 )
