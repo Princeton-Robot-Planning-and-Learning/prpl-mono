@@ -93,6 +93,6 @@ def test_deterministic_demo_replay(demo_path: Path):
                 f"got {reward}, expected {expected_reward}"
             )
         # Stop if episode ended early
-        if terminated or truncated:
+        if terminated or truncated or i == len(expected_observations) - 2:
             break
     env.close()  # type: ignore[no-untyped-call]

@@ -68,6 +68,12 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     part_triangle_side_lb: float = 0.1  # min side length for triangle parts
     part_triangle_side_ub: float = 0.1  # max side length for triangle parts
 
+    # Realistic background settings.
+    realistic_bg: bool = True
+    realistic_bg_position: tuple[float, float, float] = (0.7, -1.5, -0.37)
+    realistic_bg_euler: tuple[float, float, float] = (np.pi / 2, 0, 0.0)
+    realistic_bg_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+
     # Probability a part is triangular
     part_triangular_prob: float = 0.5
 
