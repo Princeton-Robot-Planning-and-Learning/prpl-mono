@@ -89,7 +89,7 @@ def test_tidybot_lab2_fit_blocks_in_cupboard_goals():
 
         # Get the region object and compute the center of its bbox
         region = cupboard.region_objects[region_name][0]
-        region.env = env._robot_env  # Set env for region
+        region.env = env._robot_env  # pylint: disable=protected-access
         bbox = region.bbox
         goal_pos = (
             (bbox[0] + bbox[3]) / 2.0,

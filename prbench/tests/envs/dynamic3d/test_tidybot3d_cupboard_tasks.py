@@ -68,10 +68,8 @@ def test_tidybot_cupboard_real_o1_goals():
     modified_state = current_state.copy()
 
     # Get the goal region bbox
-    goal_region = cupboard.region_objects["cupboard_1_cube_1_goal_region"][
-        0
-    ]
-    goal_region.env = env._robot_env  # Set env for region
+    goal_region = cupboard.region_objects["cupboard_1_cube_1_goal_region"][0]
+    goal_region.env = env._robot_env  # pylint: disable=protected-access
     bbox = goal_region.bbox
     goal_pos = (
         (bbox[0] + bbox[3]) / 2.0,
@@ -257,7 +255,7 @@ def test_tidybot_lab2_kitchen_o5_sweep_blocks_goal():
         "kitchen_island_shelf_1_partition_1_region"
     ]
     goal_region = goal_region_list[0]
-    goal_region.env = env._robot_env  # Set env for region
+    goal_region.env = env._robot_env  # pylint: disable=protected-access
     bbox = goal_region.bbox
     goal_pos = (
         (bbox[0] + bbox[3]) / 2.0,
