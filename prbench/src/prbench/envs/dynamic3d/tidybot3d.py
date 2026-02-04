@@ -1058,7 +1058,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                     if target in self._fixtures_dict:
                         entity = self._fixtures_dict[target]
                         in_region = entity.check_in_region(
-                            position, region_name
+                            position, region_name, self._robot_env
                         )
                     elif target in self._objects_dict:
                         entity = self._objects_dict[target]
