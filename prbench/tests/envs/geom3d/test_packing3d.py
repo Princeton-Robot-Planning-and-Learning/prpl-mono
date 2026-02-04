@@ -20,8 +20,8 @@ from prbench.envs.geom3d.packing3d import (
     Packing3DEnv,
     Packing3DObjectCentricState,
 )
-from tests.conftest import MAKE_VIDEOS
 from prbench.envs.geom3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
+from tests.conftest import MAKE_VIDEOS
 
 # Flag to enable trajectory saving (can be controlled like MAKE_VIDEOS)
 SAVE_TRAJECTORIES = MAKE_VIDEOS
