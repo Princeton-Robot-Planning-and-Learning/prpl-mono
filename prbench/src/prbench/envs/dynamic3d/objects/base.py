@@ -63,9 +63,12 @@ class Region:
         self.parent_yaw = parent_yaw
 
         # Get bbox in world frame at origin
-        size_str = self.site_element.get("size", "0 0 0")
-        size = np.array([float(v) for v in size_str.split()])
-        self.bbox_at_origin = np.concatenate((-size, size))
+        if self.site_element is None:
+            self.bbox_at_origin = np.array([-0.0, -0.0, -0.0, 0.0, 0.0, 0.0])
+        else:
+            size_str = self.site_element.get("size", "0 0 0")
+            size = np.array([float(v) for v in size_str.split()])
+            self.bbox_at_origin = np.concatenate((-size, size))
 
     @property
     def bbox(self) -> list[float]:
@@ -100,9 +103,14 @@ class Region:
                     pos = self.env.sim.data.get_site_xpos(site_name)
 
                     # Compute current bbox
-                    bbox_curr = utils.rotate_bounding_box_3d(
-                        self.bbox_at_origin, rot_mat
+                    bbox_list: list[float] = self.bbox_at_origin.tolist()
+                    rot_mat_float64: NDArray[np.float64] = np.array(
+                        rot_mat, dtype=np.float64
                     )
+                    rotated_bbox: list[float] = utils.rotate_bounding_box_3d(
+                        bbox_list, rot_mat_float64
+                    )
+                    bbox_curr = np.array(rotated_bbox, dtype=np.float64)
                     bbox_curr += np.tile(pos, 2)
                     return bbox_curr.tolist()
 
