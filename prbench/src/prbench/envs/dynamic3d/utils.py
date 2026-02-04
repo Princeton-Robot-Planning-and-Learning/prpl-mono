@@ -380,3 +380,71 @@ def rotate_bounding_box_2d(
         max(y_coords),  # y_max
         bbox[5],  # z_max (unchanged)
     ]
+
+
+def rotate_bounding_box_3d(
+    bbox: list[float],
+    rotation_matrix: NDArray[np.float64],
+    center: tuple[float, float, float] | None = None,
+) -> list[float]:
+    """Rotate a bounding box in 3D around a center point using a rotation matrix.
+
+    This function rotates the bounding box corners and computes the new axis-aligned
+    bounding box that contains all rotated corners.
+
+    Args:
+        bbox: Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+        rotation_matrix: 3x3 rotation matrix (numpy array)
+        center: Center of rotation as (cx, cy, cz). If None, uses the center of bbox.
+
+    Returns:
+        Rotated bounding box as [x_min, y_min, z_min, x_max, y_max, z_max]
+    """
+    # Get all 8 corners of the 3D bounding box
+    corners = [
+        (bbox[0], bbox[1], bbox[2]),  # 0: (min, min, min)
+        (bbox[3], bbox[1], bbox[2]),  # 1: (max, min, min)
+        (bbox[3], bbox[4], bbox[2]),  # 2: (max, max, min)
+        (bbox[0], bbox[4], bbox[2]),  # 3: (min, max, min)
+        (bbox[0], bbox[1], bbox[5]),  # 4: (min, min, max)
+        (bbox[3], bbox[1], bbox[5]),  # 5: (max, min, max)
+        (bbox[3], bbox[4], bbox[5]),  # 6: (max, max, max)
+        (bbox[0], bbox[4], bbox[5]),  # 7: (min, max, max)
+    ]
+
+    # Use center of bbox if not provided
+    if center is None:
+        cx = (bbox[0] + bbox[3]) / 2.0
+        cy = (bbox[1] + bbox[4]) / 2.0
+        cz = (bbox[2] + bbox[5]) / 2.0
+        center = (cx, cy, cz)
+
+    cx, cy, cz = center
+
+    # Rotate each corner around the center
+    rotated_corners = []
+    for _x, _y, _z in corners:
+        # Translate to origin
+        point = np.array([_x - cx, _y - cy, _z - cz], dtype=np.float64)
+
+        # Rotate
+        rotated_point = rotation_matrix @ point
+
+        # Translate back
+        rotated_corners.append(
+            (rotated_point[0] + cx, rotated_point[1] + cy, rotated_point[2] + cz)
+        )
+
+    # Find the new axis-aligned bounding box
+    x_coords = [corner[0] for corner in rotated_corners]
+    y_coords = [corner[1] for corner in rotated_corners]
+    z_coords = [corner[2] for corner in rotated_corners]
+
+    return [
+        float(min(x_coords)),  # x_min
+        float(min(y_coords)),  # y_min
+        float(min(z_coords)),  # z_min
+        float(max(x_coords)),  # x_max
+        float(max(y_coords)),  # y_max
+        float(max(z_coords)),  # z_max
+    ]
