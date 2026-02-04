@@ -62,6 +62,14 @@ class Region:
         )
         self.parent_yaw = parent_yaw
 
+        # Get bbox in world frame at origin
+        if self.site_element is None:
+            self.bbox_at_origin = np.array([-0.0, -0.0, -0.0, 0.0, 0.0, 0.0])
+        else:
+            size_str = self.site_element.get("size", "0 0 0")
+            size = np.array([float(v) for v in size_str.split()])
+            self.bbox_at_origin = np.concatenate((-size, size))
+
     @property
     def bbox(self) -> list[float]:
         """Compute bounding box in world coordinates.
@@ -91,15 +99,21 @@ class Region:
             site_name = self.site_element.get("name")
             if site_name is not None:
                 try:
+                    rot_mat = self.env.sim.data.get_site_xmat(site_name)
                     pos = self.env.sim.data.get_site_xpos(site_name)
-                    # Compute bbox around the simulated position
-                    x_min = pos[0] - size[0]
-                    y_min = pos[1] - size[1]
-                    z_min = pos[2] - size[2]
-                    x_max = pos[0] + size[0]
-                    y_max = pos[1] + size[1]
-                    z_max = pos[2] + size[2]
-                    return [x_min, y_min, z_min, x_max, y_max, z_max]
+
+                    # Compute current bbox
+                    bbox_list: list[float] = self.bbox_at_origin.tolist()
+                    rot_mat_float64: NDArray[np.float64] = np.array(
+                        rot_mat, dtype=np.float64
+                    )
+                    rotated_bbox: list[float] = utils.rotate_bounding_box_3d(
+                        bbox_list, rot_mat_float64
+                    )
+                    bbox_curr = np.array(rotated_bbox, dtype=np.float64)
+                    bbox_curr += np.tile(pos, 2)
+                    return bbox_curr.tolist()
+
                 except ValueError:
                     # Fall through to XML-based computation
                     pass

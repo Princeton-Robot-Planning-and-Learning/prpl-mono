@@ -36,7 +36,7 @@ def test_tidybot_lab2_fit_blocks_in_cupboard_goals():
     )
 
     # Reset the environment
-    env.reset()
+    env.reset(seed=0)
 
     # After reset, goals should not be satisfied
     assert (
@@ -89,12 +89,15 @@ def test_tidybot_lab2_fit_blocks_in_cupboard_goals():
 
         # Get the region object and compute the center of its bbox
         region = cupboard.region_objects[region_name][0]
+        region.env = env._robot_env  # pylint: disable=protected-access
         bbox = region.bbox
         goal_pos = (
             (bbox[0] + bbox[3]) / 2.0,
             (bbox[1] + bbox[4]) / 2.0,
             (bbox[2] + bbox[5]) / 2.0,
         )
+        goal_pos = list(goal_pos)
+        goal_pos[0] -= 0.1  # slight offset in x to fit better
 
         # Set position in the modified state
         modified_state.set(cuboid.symbolic_object, "x", goal_pos[0])
