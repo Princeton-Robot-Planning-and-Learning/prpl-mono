@@ -21,7 +21,7 @@ from prbench.envs.geom3d.table3d import (
     Table3DObjectCentricState,
 )
 from tests.conftest import MAKE_VIDEOS
-from tests.envs.geom3d.utils import DEFAULT_DEMOS_DIR, save_demo
+from prbench.envs.geom3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
 
 # Flag to enable trajectory saving (can be controlled like MAKE_VIDEOS)
 SAVE_TRAJECTORIES = MAKE_VIDEOS
