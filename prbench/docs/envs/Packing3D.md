@@ -18,83 +18,39 @@ The task requires planning to grasp and place each part into the rack while avoi
 ## Available Variants
 The number of parts to pack differs between environment variants. For example, Packing3D-p1 has 1 part, while Packing3D-p3 has 3 parts.
 
-- `prbench/Packing3D-p1-v0` (p1)
-- `prbench/Packing3D-p2-v0` (p2)
-- `prbench/Packing3D-p3-v0` (p3)
+- [`prbench/Packing3D-p1-v0`](variants/Packing3D/Packing3D-p1.md) (p1)
+- [`prbench/Packing3D-p2-v0`](variants/Packing3D/Packing3D-p2.md) (p2)
+- [`prbench/Packing3D-p3-v0`](variants/Packing3D/Packing3D-p3.md) (p3)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Packing3D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/group_gifs/Packing3D.gif)
 
 ## Observation Space
-The entries of an array in this Box space correspond to the following object features:
-| **Index** | **Object** | **Feature** |
-| --- | --- | --- |
-| 0 | robot | pos_base_x |
-| 1 | robot | pos_base_y |
-| 2 | robot | pos_base_rot |
-| 3 | robot | joint_1 |
-| 4 | robot | joint_2 |
-| 5 | robot | joint_3 |
-| 6 | robot | joint_4 |
-| 7 | robot | joint_5 |
-| 8 | robot | joint_6 |
-| 9 | robot | joint_7 |
-| 10 | robot | finger_state |
-| 11 | robot | grasp_active |
-| 12 | robot | grasp_tf_x |
-| 13 | robot | grasp_tf_y |
-| 14 | robot | grasp_tf_z |
-| 15 | robot | grasp_tf_qx |
-| 16 | robot | grasp_tf_qy |
-| 17 | robot | grasp_tf_qz |
-| 18 | robot | grasp_tf_qw |
-| 19 | rack | pose_x |
-| 20 | rack | pose_y |
-| 21 | rack | pose_z |
-| 22 | rack | pose_qx |
-| 23 | rack | pose_qy |
-| 24 | rack | pose_qz |
-| 25 | rack | pose_qw |
-| 26 | rack | grasp_active |
-| 27 | rack | object_type |
-| 28 | rack | half_extent_x |
-| 29 | rack | half_extent_y |
-| 30 | rack | half_extent_z |
-| 31 | part0 | pose_x |
-| 32 | part0 | pose_y |
-| 33 | part0 | pose_z |
-| 34 | part0 | pose_qx |
-| 35 | part0 | pose_qy |
-| 36 | part0 | pose_qz |
-| 37 | part0 | pose_qw |
-| 38 | part0 | grasp_active |
-| 39 | part0 | object_type |
-| 40 | part0 | half_extent_x |
-| 41 | part0 | half_extent_y |
-| 42 | part0 | half_extent_z |
-| 43 | part1 | pose_x |
-| 44 | part1 | pose_y |
-| 45 | part1 | pose_z |
-| 46 | part1 | pose_qx |
-| 47 | part1 | pose_qy |
-| 48 | part1 | pose_qz |
-| 49 | part1 | pose_qw |
-| 50 | part1 | grasp_active |
-| 51 | part1 | triangle_type |
-| 52 | part1 | side_a |
-| 53 | part1 | side_b |
-| 54 | part1 | depth |
-
+*(Differs per variant, see individual variant pages)*
 
 ## Action Space
-An action space for a 7 DOF robot that can open and close its gripper.
+An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
 
-    Actions are bounded relative joint positions and open / close.
+Actions are bounded relative base position, rotation, and joint positions, and open / close.
 
-    The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
+| **Index** | **Description** |
+| --- | --- |
+| 0 | delta base x |
+| 1 | delta base y |
+| 2 | delta base rotation |
+| 3 | delta joint 1 |
+| 4 | delta joint 2 |
+| 5 | delta joint 3 |
+| 6 | delta joint 4 |
+| 7 | delta joint 5 |
+| 8 | delta joint 6 |
+| 9 | delta joint 7 |
+| 10 | gripper open/close |
+
+The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
 
 
 ## Rewards

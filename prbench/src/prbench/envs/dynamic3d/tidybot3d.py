@@ -282,6 +282,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 "type": "mimiclabs",
                 "lab": lab_num,
                 "position": position,
+                "wall_collision": scene_config.get("wall_collision", False),
             }
         else:
             raise ValueError(
@@ -1033,14 +1034,27 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                 obj_name = pred[1]
                 region_name = pred[2]
                 obj = state.get_object_from_name(obj_name)
-                position = np.array(
-                    [
-                        state.get(obj, "x"),
-                        state.get(obj, "y"),
-                        state.get(obj, "z"),
-                    ],
-                    dtype=np.float32,
-                )
+
+                # Handle robot objects specially (they have pos_base_x/y instead
+                # of x/y/z)
+                if obj_name == "robot":
+                    position = np.array(
+                        [
+                            state.get(obj, "pos_base_x"),
+                            state.get(obj, "pos_base_y"),
+                            0.0,  # Robot base is on the ground
+                        ],
+                        dtype=np.float32,
+                    )
+                else:
+                    position = np.array(
+                        [
+                            state.get(obj, "x"),
+                            state.get(obj, "y"),
+                            state.get(obj, "z"),
+                        ],
+                        dtype=np.float32,
+                    )
                 region_config = self.task_config["regions"][region_name]
 
                 if region_config["target"] == "ground":
@@ -1108,6 +1122,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
     def _is_terminated(self, obs: dict[str, Any]) -> bool:
         """Check if episode should terminate."""
+        # return self._check_goals()
         return self._reward_calculator.is_terminated(obs)
 
     def render(self) -> NDArray[np.uint8]:  # type: ignore
@@ -1280,6 +1295,14 @@ The robot can control:
         # pylint: disable=line-too-long
         return "This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants."
 
+    def _create_variant_specific_description(self) -> str:
+        env = self._object_centric_env
+        assert isinstance(env, ObjectCentricTidyBot3DEnv)
+        scene_type = env.scene_type
+        num_objects = env.num_objects
+        obj_str = "1 object" if num_objects == 1 else f"{num_objects} objects"
+        return f"This variant uses the '{scene_type}' scene type with {obj_str}."
+
     def _create_obs_markdown_description(self) -> str:
         """Create observation space description."""
         return """Observation includes:
@@ -1412,6 +1435,14 @@ The robot can control:
     def _create_variant_markdown_description(self) -> str:
         # pylint: disable=line-too-long
         return "This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants."
+
+    def _create_variant_specific_description(self) -> str:
+        env = self._object_centric_env
+        assert isinstance(env, ObjectCentricRBY1A3DEnv)
+        scene_type = env.scene_type
+        num_objects = env.num_objects
+        obj_str = "1 object" if num_objects == 1 else f"{num_objects} objects"
+        return f"This variant uses the '{scene_type}' scene type with {obj_str}."
 
     def _create_obs_markdown_description(self) -> str:
         """Create observation space description."""

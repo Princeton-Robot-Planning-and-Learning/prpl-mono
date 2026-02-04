@@ -151,7 +151,14 @@ def generate_demo_video(
 
     # Create the environment.
     prbench.register_all_environments()
-    env = prbench.make(env_id, render_mode="rgb_array")
+    if "TidyBot" in env_id:
+        env = prbench.make(
+            env_id,
+            render_mode="rgb_array",
+            scene_bg=True,
+        )
+    else:
+        env = prbench.make(env_id, render_mode="rgb_array")
 
     # Get FPS from environment metadata if not specified.
     if fps is None:
@@ -178,6 +185,8 @@ def generate_demo_video(
     total_reward = 0.0
     terminated_successfully = False
 
+    if "TidyBot" in env_id:
+        env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
     # Add initial frame.
     initial_frame = env.render()  # type: ignore
     frames.append(initial_frame)
@@ -188,6 +197,8 @@ def generate_demo_video(
             _, reward, terminated, truncated, _ = env.step(action)
             total_reward += float(reward)
 
+            if "TidyBot" in env_id:
+                env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
             frame = env.render()  # type: ignore
             frames.append(frame)
 

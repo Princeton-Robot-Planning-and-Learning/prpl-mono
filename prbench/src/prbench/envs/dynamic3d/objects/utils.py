@@ -7,6 +7,36 @@ import numpy as np
 from numpy.typing import NDArray
 
 
+def euler_to_quat(euler: list[float]) -> str:
+    """Convert euler angles (roll, pitch, yaw) in degrees to MuJoCo quaternion string.
+
+    Args:
+        euler: [roll, pitch, yaw] in degrees
+
+    Returns:
+        Quaternion string "w x y z" for MuJoCo
+    """
+    # Convert degrees to radians
+    roll = np.radians(euler[0])
+    pitch = np.radians(euler[1])
+    yaw = np.radians(euler[2])
+
+    # Calculate quaternion components
+    cy = np.cos(yaw * 0.5)
+    sy = np.sin(yaw * 0.5)
+    cp = np.cos(pitch * 0.5)
+    sp = np.sin(pitch * 0.5)
+    cr = np.cos(roll * 0.5)
+    sr = np.sin(roll * 0.5)
+
+    w = cr * cp * cy + sr * sp * sy
+    x = sr * cp * cy - cr * sp * sy
+    y = cr * sp * cy + sr * cp * sy
+    z = cr * cp * sy - sr * sp * cy
+
+    return f"{w} {x} {y} {z}"
+
+
 def save_mesh(
     vertices: NDArray[np.float32],
     faces: NDArray[np.int32],

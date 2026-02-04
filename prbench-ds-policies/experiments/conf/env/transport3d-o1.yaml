@@ -8,3 +8,6 @@ make_kwargs:
 # Passed into create_domain_specific_policy() to create the policy.
 policy_kwargs:
   num_cubes: 1
+  birrt_extend_num_interp: 10      # was 25
+  smooth_mp_max_time: 1.0          # was 120.0 (!)
+  smooth_mp_max_candidate_plans: 1 # was 20

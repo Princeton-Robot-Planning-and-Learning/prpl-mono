@@ -73,7 +73,7 @@ def test_straight_base_motion():
     "Run: python scripts/download_mimiclabs_assets.py",
 )
 @pytest.mark.parametrize(
-    "view", ["agentview_1", "agentview_2", "robot_0_base", "robot_0_wrist"]
+    "view", ["frontview", "agentview_1", "agentview_2", "robot_0_base", "robot_0_wrist"]
 )
 def test_straight_base_motion_mimiclabs(view):
     """Test base motion with MimicLabs background scene (uses lab5 for base_motion)."""

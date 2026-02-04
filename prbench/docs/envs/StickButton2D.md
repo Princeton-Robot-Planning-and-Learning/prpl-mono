@@ -15,71 +15,20 @@ The robot has a movable circular base and a retractable arm with a rectangular v
 ## Available Variants
 The number of buttons differs between environment variants. For example, StickButton2D-b1 has 1 button, while StickButton2D-b10 has 10 buttons.
 
-- `prbench/StickButton2D-b1-v0` (b1)
-- `prbench/StickButton2D-b2-v0` (b2)
-- `prbench/StickButton2D-b3-v0` (b3)
-- `prbench/StickButton2D-b5-v0` (b5)
-- `prbench/StickButton2D-b10-v0` (b10)
+- [`prbench/StickButton2D-b1-v0`](variants/StickButton2D/StickButton2D-b1.md) (b1)
+- [`prbench/StickButton2D-b2-v0`](variants/StickButton2D/StickButton2D-b2.md) (b2)
+- [`prbench/StickButton2D-b3-v0`](variants/StickButton2D/StickButton2D-b3.md) (b3)
+- [`prbench/StickButton2D-b5-v0`](variants/StickButton2D/StickButton2D-b5.md) (b5)
+- [`prbench/StickButton2D-b10-v0`](variants/StickButton2D/StickButton2D-b10.md) (b10)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/StickButton2D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/demo_gifs/StickButton2D-b10/StickButton2D-b10.gif)
-
-**Demo Stats**: Total Reward: -468.00, Success: Yes, Steps: 468
+![demo GIF](assets/group_gifs/StickButton2D.gif)
 
 ## Observation Space
-The entries of an array in this Box space correspond to the following object features:
-| **Index** | **Object** | **Feature** |
-| --- | --- | --- |
-| 0 | robot | x |
-| 1 | robot | y |
-| 2 | robot | theta |
-| 3 | robot | base_radius |
-| 4 | robot | arm_joint |
-| 5 | robot | arm_length |
-| 6 | robot | vacuum |
-| 7 | robot | gripper_height |
-| 8 | robot | gripper_width |
-| 9 | stick | x |
-| 10 | stick | y |
-| 11 | stick | theta |
-| 12 | stick | static |
-| 13 | stick | color_r |
-| 14 | stick | color_g |
-| 15 | stick | color_b |
-| 16 | stick | z_order |
-| 17 | stick | width |
-| 18 | stick | height |
-| 19 | button0 | x |
-| 20 | button0 | y |
-| 21 | button0 | theta |
-| 22 | button0 | static |
-| 23 | button0 | color_r |
-| 24 | button0 | color_g |
-| 25 | button0 | color_b |
-| 26 | button0 | z_order |
-| 27 | button0 | radius |
-| 28 | button1 | x |
-| 29 | button1 | y |
-| 30 | button1 | theta |
-| 31 | button1 | static |
-| 32 | button1 | color_r |
-| 33 | button1 | color_g |
-| 34 | button1 | color_b |
-| 35 | button1 | z_order |
-| 36 | button1 | radius |
-| 37 | button2 | x |
-| 38 | button2 | y |
-| 39 | button2 | theta |
-| 40 | button2 | static |
-| 41 | button2 | color_r |
-| 42 | button2 | color_g |
-| 43 | button2 | color_b |
-| 44 | button2 | z_order |
-| 45 | button2 | radius |
-
+*(Differs per variant, see individual variant pages)*
 
 ## Action Space
 The entries of an array in this Box space correspond to the following action features:
