@@ -657,3 +657,393 @@ def test_sample_pose_in_bbox_3d_small_bbox():
         assert 1.0 <= x <= 1.01
         assert 1.0 <= y <= 1.01
         assert 1.0 <= z <= 1.01
+
+
+# Tests for rotate_bounding_box_3d function
+
+
+def test_rotate_bounding_box_3d_no_rotation():
+    """Test rotating a bounding box by identity (no change)."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 1.0, 1.5]
+    identity_matrix = np.eye(3, dtype=np.float64)
+    center = (1.0, 0.5, 0.75)
+
+    result = rotate_bounding_box_3d(bbox, identity_matrix, center)
+
+    # Should be approximately the same (allowing for floating point precision)
+    np.testing.assert_allclose(result, bbox, rtol=1e-10)
+
+
+def test_rotate_bounding_box_3d_90_degrees_z_axis():
+    """Test rotating a bounding box by 90 degrees around z-axis."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 1.0, 1.0]  # 2x1x1 box
+    center = (1.0, 0.5, 0.5)  # Center of the box
+
+    # 90-degree rotation around z-axis
+    angle = np.pi / 2
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # After 90 degree rotation around z, the box should become 1x2x1
+    width = result[3] - result[0]
+    height = result[4] - result[1]
+    depth = result[5] - result[2]
+
+    # Should be approximately 1x2x1 (rotated from 2x1x1)
+    assert abs(width - 1.0) < 1e-10
+    assert abs(height - 2.0) < 1e-10
+    assert abs(depth - 1.0) < 1e-10
+
+    # Center should remain the same
+    result_center_x = (result[0] + result[3]) / 2
+    result_center_y = (result[1] + result[4]) / 2
+    result_center_z = (result[2] + result[5]) / 2
+
+    assert abs(result_center_x - center[0]) < 1e-10
+    assert abs(result_center_y - center[1]) < 1e-10
+    assert abs(result_center_z - center[2]) < 1e-10
+
+
+def test_rotate_bounding_box_3d_90_degrees_x_axis():
+    """Test rotating a bounding box by 90 degrees around x-axis."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 2.0, 1.0]  # 1x2x1 box
+    center = (0.5, 1.0, 0.5)
+
+    # 90-degree rotation around x-axis
+    angle = np.pi / 2
+    rotation_matrix = np.array(
+        [
+            [1, 0, 0],
+            [0, np.cos(angle), -np.sin(angle)],
+            [0, np.sin(angle), np.cos(angle)],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # After 90 degree rotation around x, y and z dimensions swap
+    width = result[3] - result[0]
+    height = result[4] - result[1]
+    depth = result[5] - result[2]
+
+    # Should be approximately 1x1x2 (rotated from 1x2x1)
+    assert abs(width - 1.0) < 1e-10
+    assert abs(height - 1.0) < 1e-10
+    assert abs(depth - 2.0) < 1e-10
+
+
+def test_rotate_bounding_box_3d_90_degrees_y_axis():
+    """Test rotating a bounding box by 90 degrees around y-axis."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 2.0]  # 1x1x2 box
+    center = (0.5, 0.5, 1.0)
+
+    # 90-degree rotation around y-axis
+    angle = np.pi / 2
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), 0, np.sin(angle)],
+            [0, 1, 0],
+            [-np.sin(angle), 0, np.cos(angle)],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # After 90 degree rotation around y, x and z dimensions swap
+    width = result[3] - result[0]
+    height = result[4] - result[1]
+    depth = result[5] - result[2]
+
+    # Should be approximately 2x1x1 (rotated from 1x1x2)
+    assert abs(width - 2.0) < 1e-10
+    assert abs(height - 1.0) < 1e-10
+    assert abs(depth - 1.0) < 1e-10
+
+
+def test_rotate_bounding_box_3d_180_degrees_z_axis():
+    """Test rotating a bounding box by 180 degrees around z-axis."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 1.0, 1.0]
+    center = (1.0, 0.5, 0.5)
+
+    # 180-degree rotation around z-axis
+    angle = np.pi
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # After 180 degrees, dimensions should be the same
+    width = result[3] - result[0]
+    height = result[4] - result[1]
+    depth = result[5] - result[2]
+
+    assert abs(width - 2.0) < 1e-10
+    assert abs(height - 1.0) < 1e-10
+    assert abs(depth - 1.0) < 1e-10
+
+    # Box should be centered at the same point
+    result_center_x = (result[0] + result[3]) / 2
+    result_center_y = (result[1] + result[4]) / 2
+    result_center_z = (result[2] + result[5]) / 2
+
+    assert abs(result_center_x - center[0]) < 1e-10
+    assert abs(result_center_y - center[1]) < 1e-10
+    assert abs(result_center_z - center[2]) < 1e-10
+
+
+def test_rotate_bounding_box_3d_full_rotation_360_degrees():
+    """Test that a full 360-degree rotation returns to original."""
+    bbox = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    center = (2.5, 3.5, 4.5)
+
+    # 360-degree rotation around z-axis
+    angle = 2 * np.pi
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # Should be approximately the same as original
+    np.testing.assert_allclose(result, bbox, rtol=1e-10)
+
+
+def test_rotate_bounding_box_3d_45_degrees_z_axis():
+    """Test rotating a bounding box by 45 degrees around z-axis."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]  # Unit cube
+    center = (0.5, 0.5, 0.5)
+
+    # 45-degree rotation around z-axis
+    angle = np.pi / 4
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # After 45 degrees, a unit square in xy should have dimensions sqrt(2) x sqrt(2)
+    width = result[3] - result[0]
+    height = result[4] - result[1]
+    depth = result[5] - result[2]
+
+    expected_2d_dim = np.sqrt(2)
+
+    assert abs(width - expected_2d_dim) < 1e-10
+    assert abs(height - expected_2d_dim) < 1e-10
+    assert abs(depth - 1.0) < 1e-10
+
+    # Center should remain the same
+    result_center_x = (result[0] + result[3]) / 2
+    result_center_y = (result[1] + result[4]) / 2
+    result_center_z = (result[2] + result[5]) / 2
+
+    assert abs(result_center_x - center[0]) < 1e-10
+    assert abs(result_center_y - center[1]) < 1e-10
+    assert abs(result_center_z - center[2]) < 1e-10
+
+
+def test_rotate_bounding_box_3d_default_center():
+    """Test that rotation uses bbox center when center is None."""
+    bbox = [0.0, 0.0, 0.0, 2.0, 2.0, 2.0]
+
+    # 90-degree rotation around z-axis with default center
+    angle = np.pi / 2
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center=None)
+
+    # Default center should be (1.0, 1.0, 1.0)
+    result_center_x = (result[0] + result[3]) / 2
+    result_center_y = (result[1] + result[4]) / 2
+    result_center_z = (result[2] + result[5]) / 2
+
+    assert abs(result_center_x - 1.0) < 1e-10
+    assert abs(result_center_y - 1.0) < 1e-10
+    assert abs(result_center_z - 1.0) < 1e-10
+
+
+def test_rotate_bounding_box_3d_different_centers():
+    """Test rotating around different center points."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]
+
+    # 90-degree rotation around z-axis
+    angle = np.pi / 2
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    # Rotate around origin
+    result1 = rotate_bounding_box_3d(bbox, rotation_matrix, (0.0, 0.0, 0.0))
+
+    # Rotate around far point
+    result2 = rotate_bounding_box_3d(bbox, rotation_matrix, (10.0, 10.0, 10.0))
+
+    # Results should be different (different center points)
+    assert result1 != result2
+
+    # But dimensions should be the same
+    width1 = result1[3] - result1[0]
+    height1 = result1[4] - result1[1]
+    depth1 = result1[5] - result1[2]
+    width2 = result2[3] - result2[0]
+    height2 = result2[4] - result2[1]
+    depth2 = result2[5] - result2[2]
+
+    assert abs(width1 - width2) < 1e-10
+    assert abs(height1 - height2) < 1e-10
+    assert abs(depth1 - depth2) < 1e-10
+
+
+def test_rotate_bounding_box_3d_negative_coords():
+    """Test rotating bounding box with negative coordinates."""
+    bbox = [-2.0, -2.0, -2.0, 0.0, 0.0, 0.0]
+    center = (-1.0, -1.0, -1.0)
+
+    # 90-degree rotation around z-axis
+    angle = np.pi / 2
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # After 90 degrees, dimensions should swap in xy
+    width = result[3] - result[0]
+    height = result[4] - result[1]
+    depth = result[5] - result[2]
+
+    assert abs(width - 2.0) < 1e-10
+    assert abs(height - 2.0) < 1e-10
+    assert abs(depth - 2.0) < 1e-10
+
+    # Center should remain the same
+    result_center_x = (result[0] + result[3]) / 2
+    result_center_y = (result[1] + result[4]) / 2
+    result_center_z = (result[2] + result[5]) / 2
+
+    assert abs(result_center_x - center[0]) < 1e-10
+    assert abs(result_center_y - center[1]) < 1e-10
+    assert abs(result_center_z - center[2]) < 1e-10
+
+
+def test_rotate_bounding_box_3d_using_euler2mat():
+    """Test rotating using rotation matrix from euler2mat_rzxy."""
+    bbox = [0.0, 0.0, 0.0, 1.0, 2.0, 1.0]
+    center = (0.5, 1.0, 0.5)
+
+    # Create rotation matrix for 90-degree rotation around z-axis
+    rotation_matrix = euler2mat_rzxy(np.pi / 2, 0.0, 0.0)
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # After 90 degrees around z, xy dimensions should swap
+    width = result[3] - result[0]
+    height = result[4] - result[1]
+    depth = result[5] - result[2]
+
+    assert abs(width - 2.0) < 1e-10
+    assert abs(height - 1.0) < 1e-10
+    assert abs(depth - 1.0) < 1e-10
+
+
+def test_rotate_bounding_box_3d_small_bbox():
+    """Test rotating a very small bounding box."""
+    bbox = [1.0, 1.0, 1.0, 1.01, 1.01, 1.01]
+    center = (1.005, 1.005, 1.005)
+
+    # 90-degree rotation around z-axis
+    angle = np.pi / 2
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # Dimensions should be very small but approximately equal
+    width = result[3] - result[0]
+    height = result[4] - result[1]
+    depth = result[5] - result[2]
+
+    assert abs(width - 0.01) < 1e-6
+    assert abs(height - 0.01) < 1e-6
+    assert abs(depth - 0.01) < 1e-6
+
+
+def test_rotate_bounding_box_3d_non_uniform_bbox():
+    """Test rotating a non-uniform bounding box."""
+    bbox = [0.0, 0.0, 0.0, 3.0, 2.0, 1.0]  # 3x2x1 box
+    center = (1.5, 1.0, 0.5)
+
+    # 45-degree rotation around z-axis
+    angle = np.pi / 4
+    rotation_matrix = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ],
+        dtype=np.float64,
+    )
+
+    result = rotate_bounding_box_3d(bbox, rotation_matrix, center)
+
+    # Z dimension should be unchanged
+    depth = result[5] - result[2]
+    assert abs(depth - 1.0) < 1e-10
+
+    # Center should remain the same
+    result_center_x = (result[0] + result[3]) / 2
+    result_center_y = (result[1] + result[4]) / 2
+    result_center_z = (result[2] + result[5]) / 2
+
+    assert abs(result_center_x - center[0]) < 1e-10
+    assert abs(result_center_y - center[1]) < 1e-10
+    assert abs(result_center_z - center[2]) < 1e-10
