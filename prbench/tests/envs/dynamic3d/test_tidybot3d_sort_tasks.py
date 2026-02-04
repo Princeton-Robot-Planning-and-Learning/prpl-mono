@@ -11,8 +11,8 @@ from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 def test_tidybot_lab2_fit_blocks_in_cupboard_goals():
     """Test that tidybot-lab2-o6-fit_the_blocks_in_the_cupboard achieves goals.
 
-    Initializes the environment, places all cuboids in their goal regions,
-    and verifies that env._check_goals() returns True.
+    Initializes the environment, places all cuboids in their goal regions, and verifies
+    that env._check_goals() returns True.
     """
     tasks_root = (
         Path(prbench.__path__[0]).parent / "prbench" / "envs" / "dynamic3d" / "tasks"
