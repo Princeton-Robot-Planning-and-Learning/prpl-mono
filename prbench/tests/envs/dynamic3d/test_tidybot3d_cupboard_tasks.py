@@ -4,9 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from PIL import Image
 
-import prbench
 from prbench.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 
 
@@ -70,7 +68,9 @@ def test_tidybot_cupboard_real_o1_goals():
     modified_state = current_state.copy()
 
     # Get the goal region bbox
-    goal_region = cupboard.region_objects["cupboard_1_cube_1_goal_region"][0]
+    goal_region = cupboard.region_objects["cupboard_1_cube_1_goal_region"][
+        0
+    ]
     goal_region.env = env._robot_env  # Set env for region
     bbox = goal_region.bbox
     goal_pos = (
@@ -192,10 +192,11 @@ def test_tidybot_lab2_kitchen_o5_sweep_blocks_goal():
     and saves all states to a folder.
     """
     tasks_root = Path(__file__).parent / "test_tasks"
-    task_config_path = (
-        tasks_root
-        / "tidybot-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island.json"
+    task_filename = (
+        "tidybot-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer"
+        "_of_the_kitchen_island.json"
     )
+    task_config_path = tasks_root / task_filename
 
     if not task_config_path.exists():
         pytest.skip(
@@ -252,9 +253,10 @@ def test_tidybot_lab2_kitchen_o5_sweep_blocks_goal():
     modified_state = current_state.copy()
 
     # Get the goal region bbox
-    goal_region = kitchen_island.region_objects[
+    goal_region_list = kitchen_island.region_objects[
         "kitchen_island_shelf_1_partition_1_region"
-    ][0]
+    ]
+    goal_region = goal_region_list[0]
     goal_region.env = env._robot_env  # Set env for region
     bbox = goal_region.bbox
     goal_pos = (
@@ -282,7 +284,8 @@ def test_tidybot_lab2_kitchen_o5_sweep_blocks_goal():
         goals_satisfied
     ), "Goals should be satisfied when all cubes are in goal region"
 
-    # Test 2: Place all cubes with noise around goal position and verify goals still satisfied
+    # Test 2: Place all cubes with noise around goal position and verify
+    # goals are still satisfied
     noisy_offsets = [
         (0.05, 0.05, 0.0),
         (-0.05, 0.05, 0.0),
