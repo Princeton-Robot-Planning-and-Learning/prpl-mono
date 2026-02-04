@@ -1,10 +1,7 @@
 """Tests for table3d.py."""
 
-import time
-from pathlib import Path
 from typing import Any
 
-import dill as pkl  # type: ignore[import-untyped]
 import numpy as np
 import pytest
 from gymnasium.wrappers import RecordVideo
@@ -24,62 +21,10 @@ from prbench.envs.geom3d.table3d import (
     Table3DObjectCentricState,
 )
 from tests.conftest import MAKE_VIDEOS
+from tests.envs.geom3d.utils import DEFAULT_DEMOS_DIR, save_demo
 
 # Flag to enable trajectory saving (can be controlled like MAKE_VIDEOS)
 SAVE_TRAJECTORIES = MAKE_VIDEOS
-
-# Default demos directory: prbench/demos relative to this test file
-# Test file: prpl-mono/prbench/tests/envs/geom3d/test_table3d.py
-# Demos:     prpl-mono/prbench/demos
-_TEST_DIR = Path(__file__).resolve().parent
-_DEFAULT_DEMOS_DIR = _TEST_DIR.parent.parent.parent / "demos"
-
-
-def sanitize_env_id(env_id: str) -> str:
-    """Remove unnecessary stuff from the env ID.
-
-    Mirrors the function in prbench/scripts/generate_env_docs.py and collect_demos_ds.py
-    for consistent directory naming.
-    """
-    if env_id.startswith("prbench/"):
-        env_id = env_id[len("prbench/") :]
-    env_id = env_id.replace("/", "_")
-    if len(env_id) >= 3 and env_id[-3:-1] == "-v":
-        return env_id[:-3]
-    return env_id
-
-
-def save_demo(
-    demo_dir: Path,
-    env_id: str,
-    seed: int,
-    observations: list[Any],
-    actions: list[Any],
-    rewards: list[float],
-    terminated: bool,
-    truncated: bool,
-) -> Path:
-    """Save a demo to disk in the same format as collect_demos_ds.py.
-
-    Directory structure: {demo_dir}/{sanitized_env_id}/{seed}/{timestamp}.p
-    """
-    timestamp = int(time.time())
-    demo_subdir = demo_dir / sanitize_env_id(env_id) / str(seed)
-    demo_subdir.mkdir(parents=True, exist_ok=True)
-    demo_path = demo_subdir / f"{timestamp}.p"
-    demo_data = {
-        "env_id": env_id,
-        "timestamp": timestamp,
-        "seed": seed,
-        "observations": observations,
-        "actions": actions,
-        "rewards": rewards,
-        "terminated": terminated,
-        "truncated": truncated,
-    }
-    with open(demo_path, "wb") as f:
-        pkl.dump(demo_data, f)
-    return demo_path
 
 
 @pytest.fixture(scope="module")
@@ -341,7 +286,7 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     # Save trajectory to pickle file
     if SAVE_TRAJECTORIES and len(traj_actions) > 0:
         demo_path = save_demo(
-            demo_dir=_DEFAULT_DEMOS_DIR,
+            demo_dir=DEFAULT_DEMOS_DIR,
             env_id=f"prbench/Table3D-o{num_cubes}-v0",
             seed=seed,
             observations=traj_observations,
