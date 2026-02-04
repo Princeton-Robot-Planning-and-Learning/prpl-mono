@@ -202,7 +202,7 @@
     },
     "cameras": {
         "task_view": {
-            "position": [-1.2, 0, 1.25],
+            "position": [-0.8, 0, 0.8],
             "lookat": [0.55, 0, 0.5],
             "fovy": 42,
             "resolution": [640, 480]

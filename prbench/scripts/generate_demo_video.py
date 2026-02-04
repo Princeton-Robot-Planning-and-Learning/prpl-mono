@@ -186,7 +186,11 @@ def generate_demo_video(
     terminated_successfully = False
 
     if "TidyBot" in env_id:
-        env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+        # env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+        robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
+        env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+            robot_name + "_wrist"
+        )  # type: ignore # pylint: disable=protected-access
     # Add initial frame.
     initial_frame = env.render()  # type: ignore
     frames.append(initial_frame)
@@ -198,7 +202,11 @@ def generate_demo_video(
             total_reward += float(reward)
 
             if "TidyBot" in env_id:
-                env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                # env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
+                robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                    robot_name + "_wrist"
+                )  # type: ignore # pylint: disable=protected-access
             frame = env.render()  # type: ignore
             frames.append(frame)
 

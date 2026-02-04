@@ -67,8 +67,8 @@
     },
     "cameras": {
         "task_view": {
-            "position": [1, -2, 2],
-            "lookat": [1, 0, 0],
+            "position": [1.7, -0.2, 0.2],
+            "lookat": [1, -0.2, 0],
             "fovy": 42,
             "resolution": [640, 480]
         }

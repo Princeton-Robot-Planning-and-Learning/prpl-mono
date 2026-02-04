@@ -163,9 +163,14 @@ def run_teleop(
                 wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
                 env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
                 agent_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                    "task_view"
+                )  # type: ignore # pylint: disable=protected-access
+                task_view_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
                 if show_images:
                     _visualize_image_in_window(overview_image, "agent_overview")
                     _visualize_image_in_window(base_image, "base")
+                    _visualize_image_in_window(task_view_image, "task_view")
                     _visualize_image_in_window(wrist_image, "wrist")
                     _visualize_image_in_window(agent_image, "agentview_1")
 

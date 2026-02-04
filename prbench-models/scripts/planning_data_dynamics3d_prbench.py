@@ -151,7 +151,12 @@ def collect_data(
                     robot_name + "_wrist"
                 )  # type: ignore # pylint: disable=protected-access
                 wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                env.unwrapped._object_centric_env.set_render_camera(  # type: ignore # pylint: disable=protected-access
+                    robot_name + "_task_view"
+                )  # type: ignore # pylint: disable=protected-access
+                task_view_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
                 _visualize_image_in_window(overview_image, "agentview_1")
+                _visualize_image_in_window(task_view_image, "task_view")
                 _visualize_image_in_window(base_image, "base")
                 _visualize_image_in_window(wrist_image, "wrist")
             # Record observation and action before stepping
