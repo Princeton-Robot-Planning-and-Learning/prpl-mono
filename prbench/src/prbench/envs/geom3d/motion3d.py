@@ -38,6 +38,12 @@ class Motion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     target_lower_bound: tuple[float, float, float] = (0.12, 0.1, 0.4)
     target_upper_bound: tuple[float, float, float] = (0.62, 0.9, 0.9)
 
+    # Realistic background settings.
+    realistic_bg: bool = True
+    realistic_bg_position: tuple[float, float, float] = (0.7, -1.5, -0.37)
+    realistic_bg_euler: tuple[float, float, float] = (np.pi / 2, 0, 0.0)
+    realistic_bg_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+
 
 class Motion3DObjectCentricState(Geom3DObjectCentricState):
     """A state in the Motion3DEnv().

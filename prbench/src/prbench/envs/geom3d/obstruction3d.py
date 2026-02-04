@@ -64,6 +64,12 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     # surface during each round of rejection sampling during reset().
     obstruction_init_on_target_prob: float = 0.9
 
+    # Realistic background settings.
+    realistic_bg: bool = True
+    realistic_bg_position: tuple[float, float, float] = (0.7, -1.5, -0.37)
+    realistic_bg_euler: tuple[float, float, float] = (np.pi / 2, 0, 0.0)
+    realistic_bg_scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
+
     def get_camera_kwargs(self) -> dict[str, Any]:
         """Get kwargs to pass to PyBullet camera."""
         return {
