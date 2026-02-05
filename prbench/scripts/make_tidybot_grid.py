@@ -85,9 +85,9 @@ def main() -> None:
             gif_info.append((gif_path, w, h, duration))
             print(f"  {gif_path.name}: {w}x{h}, {duration:.2f}s")
 
-        # Grid parameters
+        # Grid parameters (16:9 aspect ratio)
         rows, cols = 5, 5
-        cell_size = 240
+        cell_w, cell_h = 512, 288  # 16:9 ratio, 5x5 grid = 2560x1440 (1440p)
         speed_multiplier = 4
         max_duration = max(info[3] for info in gif_info)
         target_duration = max_duration / speed_multiplier
@@ -100,21 +100,21 @@ def main() -> None:
         for i, (gif_path, w, h, duration) in enumerate(gif_info):
             inputs.extend(["-i", str(gif_path)])
             speed_factor = target_duration / duration
-            sz = cell_size
+            src_ratio = w / h
+            target_ratio = 16 / 9
 
-            if w == h:
-                filt = f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:{sz}[v{i}]"
-            elif w > h:
-                # Wider than tall - crop horizontally to make square
+            # Crop to 16:9, then scale
+            if src_ratio > target_ratio:
+                # Source is wider - crop width
                 filt = (
                     f"[{i}:v]setpts={speed_factor}*PTS,"
-                    f"crop=ih:ih:(iw-ih)/2:0,scale={sz}:{sz}[v{i}]"
+                    f"crop=ih*16/9:ih:(iw-ih*16/9)/2:0,scale={cell_w}:{cell_h}[v{i}]"
                 )
             else:
-                # Taller than wide - crop vertically to make square
+                # Source is taller - crop height
                 filt = (
                     f"[{i}:v]setpts={speed_factor}*PTS,"
-                    f"crop=iw:iw:0:(ih-iw)/2,scale={sz}:{sz}[v{i}]"
+                    f"crop=iw:iw*9/16:0:(ih-iw*9/16)/2,scale={cell_w}:{cell_h}[v{i}]"
                 )
             filter_parts.append(filt)
 
@@ -123,8 +123,8 @@ def main() -> None:
         for i in range(rows * cols):
             row = i // cols
             col = i % cols
-            x = col * cell_size
-            y = row * cell_size
+            x = col * cell_w
+            y = row * cell_h
             layout_parts.append(f"{x}_{y}")
 
         stream_refs = "".join(f"[v{i}]" for i in range(25))
