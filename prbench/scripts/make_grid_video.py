@@ -128,21 +128,37 @@ def main() -> None:
         # Calculate speed factor to normalize duration
         speed_factor = target_duration / effective_duration
 
+        is_dynamic3d = get_category(gif_path.stem) == 0
+
         if w == h:
             # Already square, just scale and adjust duration
             filt = f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:{sz}[v{i}]"
         elif w > h:
-            # Wider than tall - add vertical padding
-            filt = (
-                f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:-1,"
-                f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
-            )
+            if is_dynamic3d:
+                # Crop horizontally to make square, then scale
+                filt = (
+                    f"[{i}:v]setpts={speed_factor}*PTS,"
+                    f"crop=ih:ih:(iw-ih)/2:0,scale={sz}:{sz}[v{i}]"
+                )
+            else:
+                # Add vertical padding
+                filt = (
+                    f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:-1,"
+                    f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
+                )
         else:
-            # Taller than wide - add horizontal padding
-            filt = (
-                f"[{i}:v]setpts={speed_factor}*PTS,scale=-1:{sz},"
-                f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
-            )
+            if is_dynamic3d:
+                # Crop vertically to make square, then scale
+                filt = (
+                    f"[{i}:v]setpts={speed_factor}*PTS,"
+                    f"crop=iw:iw:0:(ih-iw)/2,scale={sz}:{sz}[v{i}]"
+                )
+            else:
+                # Add horizontal padding
+                filt = (
+                    f"[{i}:v]setpts={speed_factor}*PTS,scale=-1:{sz},"
+                    f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
+                )
         filter_parts.append(filt)
 
     # Add white frames for empty cells if needed
