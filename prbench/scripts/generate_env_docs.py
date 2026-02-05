@@ -471,7 +471,8 @@ def _main() -> None:
     parser.add_argument(
         "--env",
         type=str,
-        help="Generate docs for a specific environment class (e.g., Motion2D)",
+        nargs="+",
+        help="Generate docs for specific environment classes (e.g., Motion2D Manipulation3D)",
     )
     args = parser.parse_args()
 
@@ -479,7 +480,7 @@ def _main() -> None:
     if args.force:
         print("Force flag detected - regenerating all environment classes")
     elif args.env:
-        print(f"Generating docs for environment: {args.env}")
+        print(f"Generating docs for environments: {', '.join(args.env)}")
     else:
         print("Checking for changes using git diff origin/main...")
 
@@ -500,13 +501,14 @@ def _main() -> None:
 
     env_classes = prbench.get_env_classes()
 
-    # Filter to specific environment if requested
+    # Filter to specific environments if requested
     if args.env:
-        if args.env not in env_classes:
-            print(f"Error: Environment class '{args.env}' not found")
+        not_found = [env for env in args.env if env not in env_classes]
+        if not_found:
+            print(f"Error: Environment class(es) not found: {', '.join(not_found)}")
             print(f"Available classes: {', '.join(sorted(env_classes.keys()))}")
             return
-        env_classes = {args.env: env_classes[args.env]}
+        env_classes = {env: env_classes[env] for env in args.env}
 
     for class_name, class_info in env_classes.items():
         total_classes += 1
