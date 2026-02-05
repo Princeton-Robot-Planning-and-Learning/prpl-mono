@@ -2,19 +2,27 @@
 
 ![random action GIF](assets/random_action_gifs/Shelf3D.gif)
 
-**Random Action Stats**: Total Reward: -25.00, Success: No, Steps: 25
+**Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
 
 ## Description
-A 3D environment where the goal is to pick up objects from the ground and place them onto a shelf.
+A 3D mobile manipulation environment using the TidyBot platform.
+
+The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
+Scene type: cupboard_real with 8 objects.
+
+The robot can control:
+- Base pose (x, y, theta)
+- Arm position (x, y, z)
+- Arm orientation (quaternion)
+- Gripper position (open/close)
+
 
 ## Available Variants
-The number of objects differs between environment variants. For example, Shelf3D-o1 has 1 object, while Shelf3D-o10 has 10 objects.
+This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
 
-- [`prbench/Shelf3D-o1-v0`](variants/Shelf3D/Shelf3D-o1.md) (o1)
-- [`prbench/Shelf3D-o2-v0`](variants/Shelf3D/Shelf3D-o2.md) (o2)
-- [`prbench/Shelf3D-o3-v0`](variants/Shelf3D/Shelf3D-o3.md) (o3)
-- [`prbench/Shelf3D-o5-v0`](variants/Shelf3D/Shelf3D-o5.md) (o5)
-- [`prbench/Shelf3D-o10-v0`](variants/Shelf3D/Shelf3D-o10.md) (o10)
+- [`prbench/TidyBot3D-Shelf3D-cupboard_real-o1-v0`](variants/Shelf3D/TidyBot3D-Shelf3D-cupboard_real-o1.md) (TidyBot3D-cupboard_real-o1)
+- [`prbench/TidyBot3D-Shelf3D-cupboard_real-o8-v0`](variants/Shelf3D/TidyBot3D-Shelf3D-cupboard_real-o8.md) (TidyBot3D-cupboard_real-o8)
+- [`prbench/TidyBot3D-Shelf3D-cupboard_real-o2-v0`](variants/Shelf3D/TidyBot3D-Shelf3D-cupboard_real-o2.md) (TidyBot3D-cupboard_real-o2)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Shelf3D.gif)
@@ -26,29 +34,22 @@ The number of objects differs between environment variants. For example, Shelf3D
 *(Differs per variant, see individual variant pages)*
 
 ## Action Space
-An action space for mobile manipulation with a 7 DOF robot that can open and close its gripper.
-
-Actions are bounded relative base position, rotation, and joint positions, and open / close.
-
-| **Index** | **Description** |
-| --- | --- |
-| 0 | delta base x |
-| 1 | delta base y |
-| 2 | delta base rotation |
-| 3 | delta joint 1 |
-| 4 | delta joint 2 |
-| 5 | delta joint 3 |
-| 6 | delta joint 4 |
-| 7 | delta joint 5 |
-| 8 | delta joint 6 |
-| 9 | delta joint 7 |
-| 10 | gripper open/close |
-
-The open / close logic is: <-0.5 is close, >0.5 is open, and otherwise no change.
-
+Actions: base pos and yaw (3), arm joints (7), gripper pos (1)
 
 ## Rewards
-The reward is -1 per timestep to encourage efficient task completion. The episode terminates successfully when all objects are placed on the shelf (i.e., above the first shelf layer) and the gripper is closed. The gripper must be closed to prevent accidental "success" while an object is still being held above the shelf.
+Reward function depends on the specific task:
+- Object stacking: Reward for successfully stacking objects
+- Drawer/cabinet tasks: Reward for opening/closing and placing objects
+- General manipulation: Reward for successful pick-and-place operations
+
+Currently returns a small negative reward (-0.01) per timestep to encourage exploration.
+
 
 ## References
-This is a very common kind of environment. The background is adapted from the [Replica dataset](https://arxiv.org/abs/1906.05797) (Straub et al., 2019).
+TidyBot++: An Open-Source Holonomic Mobile Manipulator
+for Robot Learning
+- Jimmy Wu, William Chong, Robert Holmberg, Aaditya Prasad, Yihuai Gao,
+  Oussama Khatib, Shuran Song, Szymon Rusinkiewicz, Jeannette Bohg
+- Conference on Robot Learning (CoRL), 2024
+
+https://github.com/tidybot2/tidybot2

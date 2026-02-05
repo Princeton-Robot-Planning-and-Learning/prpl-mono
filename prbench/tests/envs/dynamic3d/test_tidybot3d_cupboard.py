@@ -558,7 +558,7 @@ def test_tidybot3d_cupboard_mimiclabs_with_video():
     """Test MimicLabs scene with ConstrainedFitting task and video recording."""
     prbench.register_all_environments()
     env = prbench.make(
-        "prbench/TidyBot3D-sort-lab2-o12-sort_the_blocks_into_the_cupboard-v0",
+        "prbench/SortClutteredBlocks3D-o12-sort_the_blocks_into_the_cupboard-v0",
         render_mode="rgb_array",
         scene_bg=True,
         scene_render_camera="task_view",
