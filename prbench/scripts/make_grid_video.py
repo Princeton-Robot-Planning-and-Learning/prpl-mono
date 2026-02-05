@@ -103,8 +103,8 @@ def main() -> None:
     cols = 5
     rows = 5
 
-    # Target cell size and duration
-    cell_size = 240
+    # Target cell size (16:9 aspect ratio) and duration
+    cell_w, cell_h = 512, 288  # 16:9 ratio, 5x5 grid = 2560x1440 (1440p)
     speed_multiplier = 4
     max_duration = max(info[3] for info in gif_info)
     target_duration = max_duration / speed_multiplier
@@ -113,7 +113,6 @@ def main() -> None:
     # Build ffmpeg filter complex
     inputs = []
     filter_parts = []
-    sz = cell_size
 
     for i, (gif_path, w, h, duration) in enumerate(gif_info):
         # Loop short GIFs twice (if less than 1/3 of max duration)
@@ -129,43 +128,40 @@ def main() -> None:
         speed_factor = target_duration / effective_duration
 
         is_dynamic3d = get_category(gif_path.stem) == 0
+        src_ratio = w / h
+        target_ratio = 16 / 9
 
-        if w == h:
-            # Already square, just scale and adjust duration
-            filt = f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:{sz}[v{i}]"
-        elif w > h:
-            if is_dynamic3d:
-                # Crop horizontally to make square, then scale
+        if is_dynamic3d:
+            # Crop to 16:9, then scale
+            if src_ratio > target_ratio:
+                # Source is wider - crop width
                 filt = (
                     f"[{i}:v]setpts={speed_factor}*PTS,"
-                    f"crop=ih:ih:(iw-ih)/2:0,scale={sz}:{sz}[v{i}]"
+                    f"crop=ih*16/9:ih:(iw-ih*16/9)/2:0,scale={cell_w}:{cell_h}[v{i}]"
                 )
             else:
-                # Add vertical padding
+                # Source is taller - crop height
                 filt = (
-                    f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:-1,"
-                    f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
+                    f"[{i}:v]setpts={speed_factor}*PTS,"
+                    f"crop=iw:iw*9/16:0:(ih-iw*9/16)/2,scale={cell_w}:{cell_h}[v{i}]"
                 )
         else:
-            if is_dynamic3d:
-                # Crop vertically to make square, then scale
-                filt = (
-                    f"[{i}:v]setpts={speed_factor}*PTS,"
-                    f"crop=iw:iw:0:(ih-iw)/2,scale={sz}:{sz}[v{i}]"
-                )
-            else:
-                # Add horizontal padding
-                filt = (
-                    f"[{i}:v]setpts={speed_factor}*PTS,scale=-1:{sz},"
-                    f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
-                )
+            # Scale to fit within cell, then pad to exact size
+            # Use force_original_aspect_ratio to handle all cases
+            filt = (
+                f"[{i}:v]setpts={speed_factor}*PTS,"
+                f"scale={cell_w}:{cell_h}:force_original_aspect_ratio=decrease,"
+                f"pad={cell_w}:{cell_h}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
+            )
         filter_parts.append(filt)
 
     # Add white frames for empty cells if needed
     empty_cells = rows * cols - n
     for i in range(empty_cells):
         idx = n + i
-        filter_parts.append(f"color=white:s={sz}x{sz}:d={target_duration}[v{idx}]")
+        filter_parts.append(
+            f"color=white:s={cell_w}x{cell_h}:d={target_duration}[v{idx}]"
+        )
 
     # Build xstack layout
     total_cells = rows * cols
@@ -173,8 +169,8 @@ def main() -> None:
     for i in range(total_cells):
         row = i // cols
         col = i % cols
-        x = col * cell_size
-        y = row * cell_size
+        x = col * cell_w
+        y = row * cell_h
         layout_parts.append(f"{x}_{y}")
 
     stream_refs = "".join(f"[v{i}]" for i in range(total_cells))
