@@ -39,7 +39,7 @@ def test_namo_env_loads():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "Dynamo3D" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
     )
 
     obs, info = env.reset(seed=42)
@@ -58,7 +58,7 @@ def test_namo_goal_not_satisfied_initially():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "Dynamo3D" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
     )
 
     env.reset(seed=42)
@@ -79,7 +79,7 @@ def test_namo_goal_satisfied_when_robot_in_region():
     region, potentially by pushing the obstacle out of the way.
     """
     prbench.register_all_environments()
-    env = prbench.make("prbench/TidyBot3D-Dynamo3D-namo-o1-v0", render_mode="rgb_array")
+    env = prbench.make("prbench/Dynamo3D-o1-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_goal_satisfied")
@@ -120,7 +120,7 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
     3. Checking that the goal is now satisfied
     """
     prbench.register_all_environments()
-    env = prbench.make("prbench/TidyBot3D-Dynamo3D-namo-o1-v0", render_mode="rgb_array")
+    env = prbench.make("prbench/Dynamo3D-o1-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_teleport_goal")
@@ -191,14 +191,14 @@ def test_namo_robot_can_navigate_to_goal():
     prbench.register_all_environments()
     if MIMICLABS_SCENES_DIR.exists():
         env = prbench.make(
-            "prbench/TidyBot3D-Dynamo3D-namo-o1-v0",
+            "prbench/Dynamo3D-o1-v0",
             render_mode="rgb_array",
             scene_bg=True,
             scene_render_camera="agentview_1",
         )
     else:
         env = prbench.make(
-            "prbench/TidyBot3D-Dynamo3D-namo-o1-v0", render_mode="rgb_array"
+            "prbench/Dynamo3D-o1-v0", render_mode="rgb_array"
         )
 
     if MAKE_VIDEOS:
@@ -248,7 +248,7 @@ def test_namo_action_space():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "Dynamo3D" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
     )
 
     env.reset(seed=42)
@@ -263,7 +263,7 @@ def test_namo_step():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "Dynamo3D" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
     )
 
     env.reset(seed=42)
@@ -289,7 +289,7 @@ def test_namo_with_mimiclabs_scene():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "Dynamo3D" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
         scene_bg=True,
     )
 
