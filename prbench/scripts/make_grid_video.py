@@ -25,6 +25,7 @@ def get_gif_info(gif_path: Path) -> tuple[int, int, float]:
         ],
         capture_output=True,
         text=True,
+        check=False,
     )
     lines = result.stdout.strip().split("\n")
     w, h = lines[0].split(",")
@@ -32,7 +33,8 @@ def get_gif_info(gif_path: Path) -> tuple[int, int, float]:
     return int(w), int(h), duration
 
 
-def main():
+def main() -> None:
+    """Combine GIFs into a grid video."""
     group_gifs_dir = Path(__file__).parent.parent / "docs/envs/assets/group_gifs"
     output_path = Path(__file__).parent.parent / "docs/envs/assets/group_grid.mp4"
 
@@ -65,6 +67,7 @@ def main():
     # Build ffmpeg filter complex
     inputs = []
     filter_parts = []
+    sz = cell_size
 
     for i, (gif_path, w, h, duration) in enumerate(gif_info):
         # Loop short GIFs twice (if less than 1/3 of max duration)
@@ -81,26 +84,27 @@ def main():
 
         if w == h:
             # Already square, just scale and adjust duration
-            filter_parts.append(
-                f"[{i}:v]setpts={speed_factor}*PTS,scale={cell_size}:{cell_size}[v{i}]"
-            )
+            filt = f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:{sz}[v{i}]"
         elif w > h:
             # Wider than tall - add vertical padding
-            filter_parts.append(
-                f"[{i}:v]setpts={speed_factor}*PTS,scale={cell_size}:-1,pad={cell_size}:{cell_size}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
+            filt = (
+                f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:-1,"
+                f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
             )
         else:
             # Taller than wide - add horizontal padding
-            filter_parts.append(
-                f"[{i}:v]setpts={speed_factor}*PTS,scale=-1:{cell_size},pad={cell_size}:{cell_size}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
+            filt = (
+                f"[{i}:v]setpts={speed_factor}*PTS,scale=-1:{sz},"
+                f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
             )
+        filter_parts.append(filt)
 
     # Add white frames for empty cells if needed
     empty_cells = rows * cols - n
     for i in range(empty_cells):
         idx = n + i
         filter_parts.append(
-            f"color=white:s={cell_size}x{cell_size}:d={target_duration}[v{idx}]"
+            f"color=white:s={sz}x{sz}:d={target_duration}[v{idx}]"
         )
 
     # Build xstack layout
