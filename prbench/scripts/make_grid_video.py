@@ -5,6 +5,49 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Geom3D environments (from prbench registration)
+GEOM3D_ENVS = {
+    "Motion3D",
+    "BaseMotion3D",
+    "Ground3D",
+    "Table3D",
+    "Transport3D",
+    "Shelf3D",
+    "Obstruction3D",
+    "Packing3D",
+}
+
+# Geom2D environments
+GEOM2D_ENVS = {
+    "Obstruction2D",
+    "ClutteredRetrieval2D",
+    "ClutteredStorage2D",
+    "Motion2D",
+    "StickButton2D",
+    "PushPullHook2D",
+}
+
+# Dynamic2D environments
+DYNAMIC2D_ENVS = {
+    "DynObstruction2D",
+    "DynPushPullHook2D",
+    "DynPushT2D",
+    "DynScoopPour2D",
+}
+
+
+def get_category(name: str) -> int:
+    """Return sort key for category order: Dynamic3D, Geom3D, Dynamic2D, Geom2D."""
+    if name in GEOM3D_ENVS:
+        return 1  # Geom3D
+    if name in GEOM2D_ENVS:
+        return 3  # Geom2D
+    if name in DYNAMIC2D_ENVS:
+        return 2  # Dynamic2D
+    if name.endswith("3D"):
+        return 0  # Dynamic3D (anything else ending in 3D)
+    return 4  # Unknown
+
 
 def get_gif_info(gif_path: Path) -> tuple[int, int, float]:
     """Get width, height, and duration of a GIF using ffprobe."""
@@ -38,7 +81,10 @@ def main() -> None:
     group_gifs_dir = Path(__file__).parent.parent / "docs/envs/assets/group_gifs"
     output_path = Path(__file__).parent.parent / "docs/envs/assets/group_grid.mp4"
 
-    gif_files = sorted(group_gifs_dir.glob("*.gif"))
+    gif_files = sorted(
+        group_gifs_dir.glob("*.gif"),
+        key=lambda p: (get_category(p.stem), p.stem),
+    )
     if not gif_files:
         print("No GIFs found in group_gifs directory")
         sys.exit(1)
@@ -54,11 +100,11 @@ def main() -> None:
 
     # Determine grid dimensions
     n = len(gif_files)
-    cols = 4
-    rows = (n + cols - 1) // cols  # Ceiling division
+    cols = 5
+    rows = 5
 
     # Target cell size and duration
-    cell_size = 360
+    cell_size = 240
     speed_multiplier = 4
     max_duration = max(info[3] for info in gif_info)
     target_duration = max_duration / speed_multiplier
@@ -82,21 +128,37 @@ def main() -> None:
         # Calculate speed factor to normalize duration
         speed_factor = target_duration / effective_duration
 
+        is_dynamic3d = get_category(gif_path.stem) == 0
+
         if w == h:
             # Already square, just scale and adjust duration
             filt = f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:{sz}[v{i}]"
         elif w > h:
-            # Wider than tall - add vertical padding
-            filt = (
-                f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:-1,"
-                f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
-            )
+            if is_dynamic3d:
+                # Crop horizontally to make square, then scale
+                filt = (
+                    f"[{i}:v]setpts={speed_factor}*PTS,"
+                    f"crop=ih:ih:(iw-ih)/2:0,scale={sz}:{sz}[v{i}]"
+                )
+            else:
+                # Add vertical padding
+                filt = (
+                    f"[{i}:v]setpts={speed_factor}*PTS,scale={sz}:-1,"
+                    f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
+                )
         else:
-            # Taller than wide - add horizontal padding
-            filt = (
-                f"[{i}:v]setpts={speed_factor}*PTS,scale=-1:{sz},"
-                f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
-            )
+            if is_dynamic3d:
+                # Crop vertically to make square, then scale
+                filt = (
+                    f"[{i}:v]setpts={speed_factor}*PTS,"
+                    f"crop=iw:iw:0:(ih-iw)/2,scale={sz}:{sz}[v{i}]"
+                )
+            else:
+                # Add horizontal padding
+                filt = (
+                    f"[{i}:v]setpts={speed_factor}*PTS,scale=-1:{sz},"
+                    f"pad={sz}:{sz}:(ow-iw)/2:(oh-ih)/2:color=white[v{i}]"
+                )
         filter_parts.append(filt)
 
     # Add white frames for empty cells if needed
