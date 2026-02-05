@@ -1,6 +1,6 @@
-# Shelf3D
+# ConstrainedCupboard3D
 
-![random action GIF](assets/random_action_gifs/Shelf3D.gif)
+![random action GIF](assets/random_action_gifs/ConstrainedCupboard3D.gif)
 
 **Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
 
@@ -8,7 +8,7 @@
 A 3D mobile manipulation environment using the TidyBot platform.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: cupboard_real with 8 objects.
+Scene type: lab2 with 2 objects.
 
 The robot can control:
 - Base pose (x, y, theta)
@@ -20,15 +20,15 @@ The robot can control:
 ## Available Variants
 This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
 
-- [`prbench/TidyBot3D-Shelf3D-cupboard_real-o1-v0`](variants/Shelf3D/TidyBot3D-Shelf3D-cupboard_real-o1.md) (TidyBot3D-cupboard_real-o1)
-- [`prbench/TidyBot3D-Shelf3D-cupboard_real-o8-v0`](variants/Shelf3D/TidyBot3D-Shelf3D-cupboard_real-o8.md) (TidyBot3D-cupboard_real-o8)
-- [`prbench/TidyBot3D-Shelf3D-cupboard_real-o2-v0`](variants/Shelf3D/TidyBot3D-Shelf3D-cupboard_real-o2.md) (TidyBot3D-cupboard_real-o2)
+- [`prbench/TidyBot3D-ConstrainedCupboard3D-lab2-o1-fit_the_blocks_in_the_cupboard-v0`](variants/ConstrainedCupboard3D/TidyBot3D-ConstrainedCupboard3D-lab2-o1-fit_the_blocks_in_the_cupboard.md) (TidyBot3D-lab2-o1-fit_the_blocks_in_the_cupboard)
+- [`prbench/TidyBot3D-ConstrainedCupboard3D-lab2-o2-fit_the_blocks_in_the_cupboard-v0`](variants/ConstrainedCupboard3D/TidyBot3D-ConstrainedCupboard3D-lab2-o2-fit_the_blocks_in_the_cupboard.md) (TidyBot3D-lab2-o2-fit_the_blocks_in_the_cupboard)
+- [`prbench/TidyBot3D-ConstrainedCupboard3D-lab2-o6-fit_the_blocks_in_the_cupboard-v0`](variants/ConstrainedCupboard3D/TidyBot3D-ConstrainedCupboard3D-lab2-o6-fit_the_blocks_in_the_cupboard.md) (TidyBot3D-lab2-o6-fit_the_blocks_in_the_cupboard)
 
 ## Initial State Distribution
-![initial state GIF](assets/initial_state_gifs/Shelf3D.gif)
+![initial state GIF](assets/initial_state_gifs/ConstrainedCupboard3D.gif)
 
 ## Example Demonstration
-![demo GIF](assets/group_gifs/Shelf3D.gif)
+*(No demonstration GIFs available)*
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*

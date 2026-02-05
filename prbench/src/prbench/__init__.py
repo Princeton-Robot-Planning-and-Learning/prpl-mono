@@ -396,11 +396,13 @@ def register_all_environments() -> None:
                             "scene_type": scene_type,
                             "num_objects": num_task_objects,
                             "task_config_path": str(task_config),
+                            "scene_render_camera": "task_view",
+                            "scene_bg": True,
                         },
                     )
-                    if robot not in env_class_variants:
-                        env_class_variants[robot] = []
-                    env_class_variants[robot].append(variant_id)
+                    if folder_name not in env_class_variants:
+                        env_class_variants[folder_name] = []
+                    env_class_variants[folder_name].append(variant_id)
 
     for robot, variant_ids in env_class_variants.items():
         _register_env_class(
