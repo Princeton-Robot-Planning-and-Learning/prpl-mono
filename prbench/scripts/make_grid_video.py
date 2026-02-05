@@ -103,9 +103,7 @@ def main() -> None:
     empty_cells = rows * cols - n
     for i in range(empty_cells):
         idx = n + i
-        filter_parts.append(
-            f"color=white:s={sz}x{sz}:d={target_duration}[v{idx}]"
-        )
+        filter_parts.append(f"color=white:s={sz}x{sz}:d={target_duration}[v{idx}]")
 
     # Build xstack layout
     total_cells = rows * cols
