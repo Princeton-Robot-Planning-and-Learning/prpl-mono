@@ -352,7 +352,7 @@ def register_all_environments() -> None:
     # Tasks with different scenes and object counts
     tasks_root = Path(__file__).parent / "envs" / "dynamic3d" / "tasks"
 
-    env_class_variants: dict[str, list[str]] = {}
+    env_class_variants: dict[str, dict[str, list[str]]] = {}
     for task_item in tasks_root.iterdir():
         if task_item.is_file() and task_item.suffix == ".json":
             # Handle single config file directly in tasks_root

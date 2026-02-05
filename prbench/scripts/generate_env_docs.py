@@ -6,6 +6,8 @@ Usage:
   python generate_env_docs.py --env Motion2D     # Generate docs for specific environment
 """
 
+from __future__ import annotations
+
 import argparse
 import inspect
 import json
@@ -154,7 +156,7 @@ def create_initial_state_gif(
     try:
         imgs: list = []
         for variant_id in variant_ids:
-            kwargs = {"render_mode": "rgb_array"}
+            kwargs: dict[str, str | bool] = {"render_mode": "rgb_array"}
             if class_name in DYNAMIC3D_ENVS:
                 kwargs["scene_bg"] = True
             env = prbench.make(variant_id, **kwargs)
@@ -528,14 +530,14 @@ def _main() -> None:
 
         # Use a middle variant as representative (or first if only one variant)
         representative_variant = variants[len(variants) // 2]
-        kwargs = {"render_mode": "rgb_array"}
+        kwargs: dict[str, str | bool] = {"render_mode": "rgb_array"}
         if class_name in DYNAMIC3D_ENVS:
             kwargs["scene_bg"] = True
         env = prbench.make(representative_variant, **kwargs)
 
         # Check if any variant of this class has changed
-        def make_env(variant_id: str):
-            kwargs = {"render_mode": "rgb_array"}
+        def make_env(variant_id: str, class_name: str = class_name):
+            kwargs: dict[str, str | bool] = {"render_mode": "rgb_array"}
             if class_name in DYNAMIC3D_ENVS:
                 kwargs["scene_bg"] = True
             return prbench.make(variant_id, **kwargs)
@@ -567,10 +569,10 @@ def _main() -> None:
             variant_dir = OUTPUT_DIR / "variants" / class_name
             variant_dir.mkdir(parents=True, exist_ok=True)
             for variant_id in variants:
-                kwargs = {"render_mode": "rgb_array"}
+                variant_kwargs: dict[str, str | bool] = {"render_mode": "rgb_array"}
                 if class_name in DYNAMIC3D_ENVS:
-                    kwargs["scene_bg"] = True
-                variant_env = prbench.make(variant_id, **kwargs)
+                    variant_kwargs["scene_bg"] = True
+                variant_env = prbench.make(variant_id, **variant_kwargs)
                 variant_name = sanitize_env_id(variant_id)
                 variant_has_initial_gif = create_variant_initial_state_gif(
                     variant_name, variant_env
