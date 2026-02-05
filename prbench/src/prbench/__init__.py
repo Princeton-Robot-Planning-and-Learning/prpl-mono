@@ -396,8 +396,7 @@ def register_all_environments() -> None:
                             "scene_type": scene_type,
                             "num_objects": num_task_objects,
                             "task_config_path": str(task_config),
-                            "scene_render_camera": "task_view",
-                            "scene_bg": True,
+                            "scene_render_camera": "task_view"
                         },
                     )
                     if folder_name not in env_class_variants:
