@@ -8,7 +8,7 @@
 A 3D mobile manipulation environment using the TidyBot platform.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: lab2_kitchen with 2 objects.
+Scene type: ground with 3 objects. In the 'ground' scene, objects are placed randomly on a flat ground plane.
 
 The robot can control:
 - Base pose (x, y, theta)
@@ -20,16 +20,16 @@ The robot can control:
 ## Available Variants
 This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
 
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_on_the_left_side_of_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_on_the_left_side_of_the_bowl.md) (TidyBot3D-lab2_kitchen-o1-put_the_boxed_drink_on_the_left_side_of_the_bowl)
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_on_the_right_side_of_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_on_the_right_side_of_the_bowl.md) (TidyBot3D-lab2_kitchen-o1-put_the_boxed_drink_on_the_right_side_of_the_bowl)
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_next_to_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_next_to_the_bowl.md) (TidyBot3D-lab2_kitchen-o1-put_the_boxed_drink_next_to_the_bowl)
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl.md) (TidyBot3D-lab2_kitchen-o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl)
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_behind_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_behind_the_bowl.md) (TidyBot3D-lab2_kitchen-o1-put_the_boxed_drink_behind_the_bowl)
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl.md) (TidyBot3D-lab2_kitchen-o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl)
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl.md) (TidyBot3D-lab2_kitchen-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl)
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl.md) (TidyBot3D-lab2_kitchen-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl)
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl.md) (TidyBot3D-lab2_kitchen-o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl)
-- [`prbench/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_in_front_of_the_bowl-v0`](variants/Rearrange3D/TidyBot3D-Rearrange3D-lab2_kitchen-o1-put_the_boxed_drink_in_front_of_the_bowl.md) (TidyBot3D-lab2_kitchen-o1-put_the_boxed_drink_in_front_of_the_bowl)
+- [`prbench/Rearrange3D-o1-put_the_boxed_drink_on_the_right_side_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_on_the_right_side_of_the_bowl.md) (o1-put_the_boxed_drink_on_the_right_side_of_the_bowl)
+- [`prbench/Rearrange3D-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl.md) (o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl)
+- [`prbench/Rearrange3D-o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl.md) (o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl)
+- [`prbench/Rearrange3D-o1-put_the_boxed_drink_on_the_left_side_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_on_the_left_side_of_the_bowl.md) (o1-put_the_boxed_drink_on_the_left_side_of_the_bowl)
+- [`prbench/Rearrange3D-o1-put_the_boxed_drink_next_to_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_next_to_the_bowl.md) (o1-put_the_boxed_drink_next_to_the_bowl)
+- [`prbench/Rearrange3D-o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl.md) (o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl)
+- [`prbench/Rearrange3D-o1-put_the_boxed_drink_behind_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_behind_the_bowl.md) (o1-put_the_boxed_drink_behind_the_bowl)
+- [`prbench/Rearrange3D-o1-put_the_boxed_drink_in_front_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_in_front_of_the_bowl.md) (o1-put_the_boxed_drink_in_front_of_the_bowl)
+- [`prbench/Rearrange3D-o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl.md) (o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl)
+- [`prbench/Rearrange3D-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl.md) (o2-put_the_boxed_drink_and_the_can_next_to_the_bowl)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/Rearrange3D.gif)
@@ -44,12 +44,11 @@ This environment has variants that differ in scene type and number of objects. S
 Actions: base pos and yaw (3), arm joints (7), gripper pos (1)
 
 ## Rewards
-Reward function depends on the specific task:
-- Object stacking: Reward for successfully stacking objects
-- Drawer/cabinet tasks: Reward for opening/closing and placing objects
-- General manipulation: Reward for successful pick-and-place operations
-
-Currently returns a small negative reward (-0.01) per timestep to encourage exploration.
+The primary reward is for successfully placing objects at their target locations.
+- A reward of +1.0 is given for each object placed within a 5cm tolerance of its target.
+- A smaller positive reward is given for objects within a 10cm tolerance to guide the robot.
+- A small negative reward (-0.01) is applied at each timestep to encourage efficiency.
+The episode terminates when all objects are placed at their respective targets.
 
 
 ## References
