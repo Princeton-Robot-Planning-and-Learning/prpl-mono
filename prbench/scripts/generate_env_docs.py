@@ -20,6 +20,12 @@ from prbench.gif_utils import optimize_gif
 
 OUTPUT_DIR = Path(__file__).parent.parent / "docs" / "envs"
 
+# Dynamically read all folder names from the tasks directory
+DYNAMIC3D_TASKS_DIR = (
+    Path(__file__).parent.parent / "src" / "prbench" / "envs" / "dynamic3d" / "tasks"
+)
+DYNAMIC3D_ENVS = sorted([d.name for d in DYNAMIC3D_TASKS_DIR.iterdir() if d.is_dir()])
+
 
 def get_changed_files() -> set[Path]:
     """Get the set of files that have changed compared to origin/main."""
@@ -148,7 +154,10 @@ def create_initial_state_gif(
     try:
         imgs: list = []
         for variant_id in variant_ids:
-            env = prbench.make(variant_id, render_mode="rgb_array")
+            kwargs = {"render_mode": "rgb_array"}
+            if class_name in DYNAMIC3D_ENVS:
+                kwargs["scene_bg"] = True
+            env = prbench.make(variant_id, **kwargs)
             for i in range(num_resets_per_variant):
                 env.reset(seed=seed + i)
                 imgs.append(env.render())
@@ -519,12 +528,20 @@ def _main() -> None:
 
         # Use a middle variant as representative (or first if only one variant)
         representative_variant = variants[len(variants) // 2]
-        env = prbench.make(representative_variant, render_mode="rgb_array")
+        kwargs = {"render_mode": "rgb_array"}
+        if class_name in DYNAMIC3D_ENVS:
+            kwargs["scene_bg"] = True
+        env = prbench.make(representative_variant, **kwargs)
 
         # Check if any variant of this class has changed
+        def make_env(variant_id: str):
+            kwargs = {"render_mode": "rgb_array"}
+            if class_name in DYNAMIC3D_ENVS:
+                kwargs["scene_bg"] = True
+            return prbench.make(variant_id, **kwargs)
+
         class_changed = any(
-            is_env_changed(prbench.make(v, render_mode="rgb_array"), changed_files)
-            for v in variants
+            is_env_changed(make_env(v), changed_files) for v in variants
         )
 
         if args.force or args.env or class_changed:
@@ -550,7 +567,10 @@ def _main() -> None:
             variant_dir = OUTPUT_DIR / "variants" / class_name
             variant_dir.mkdir(parents=True, exist_ok=True)
             for variant_id in variants:
-                variant_env = prbench.make(variant_id, render_mode="rgb_array")
+                kwargs = {"render_mode": "rgb_array"}
+                if class_name in DYNAMIC3D_ENVS:
+                    kwargs["scene_bg"] = True
+                variant_env = prbench.make(variant_id, **kwargs)
                 variant_name = sanitize_env_id(variant_id)
                 variant_has_initial_gif = create_variant_initial_state_gif(
                     variant_name, variant_env
