@@ -1,5 +1,7 @@
 """Tests for packing3d.py."""
 
+from typing import Any
+
 import numpy as np
 from gymnasium.wrappers import RecordVideo
 from prpl_utils.utils import wrap_angle
@@ -18,7 +20,11 @@ from prbench.envs.geom3d.packing3d import (
     Packing3DEnv,
     Packing3DObjectCentricState,
 )
+from prbench.envs.geom3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
 from tests.conftest import MAKE_VIDEOS
+
+# Flag to enable trajectory saving (can be controlled like MAKE_VIDEOS)
+SAVE_TRAJECTORIES = MAKE_VIDEOS
 
 
 def test_packing3d_env_basic():
@@ -56,6 +62,7 @@ def test_pick_place_on_rack():
     # Create the real environment.
 
     num_parts = 2
+    seed = 123
     env = Packing3DEnv(
         num_parts=num_parts, use_gui=False, render_mode="rgb_array", realistic_bg=False
     )
@@ -66,10 +73,17 @@ def test_pick_place_on_rack():
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos")
 
-    vec_obs, _ = env.reset(seed=123)
+    vec_obs, _ = env.reset(seed=seed)
     # NOTE: we should soon make this smoother.
     oc_obs = env.observation_space.devectorize(vec_obs)
     obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
+
+    # Initialize trajectory collection
+    traj_observations: list[Any] = [vec_obs.copy()]
+    traj_actions: list[Any] = []
+    traj_rewards: list[float] = []
+    ep_terminated = False
+    ep_truncated = False
 
     sim = ObjectCentricPacking3DEnv(
         num_parts=num_parts, config=config, realistic_bg=False
@@ -123,7 +137,13 @@ def test_pick_place_on_rack():
             delta_lst = [wrap_angle(a) for a in delta]
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
-            vec_obs, _, _, _, _ = env.step(action)
+            vec_obs, reward, terminated, truncated, _ = env.step(action)
+            # Collect trajectory data
+            traj_observations.append(vec_obs.copy())
+            traj_actions.append(action.copy())
+            traj_rewards.append(float(reward))
+            ep_terminated = ep_terminated or terminated
+            ep_truncated = ep_truncated or truncated
             # NOTE: we should soon make this smoother.
             oc_obs = env.observation_space.devectorize(vec_obs)
             obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
@@ -155,14 +175,26 @@ def test_pick_place_on_rack():
             delta_lst = [wrap_angle(a) for a in delta]
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
-            vec_obs, _, _, _, _ = env.step(action)
+            vec_obs, reward, terminated, truncated, _ = env.step(action)
+            # Collect trajectory data
+            traj_observations.append(vec_obs.copy())
+            traj_actions.append(action.copy())
+            traj_rewards.append(float(reward))
+            ep_terminated = ep_terminated or terminated
+            ep_truncated = ep_truncated or truncated
             # NOTE: we should soon make this smoother.
             oc_obs = env.observation_space.devectorize(vec_obs)
             obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
         # Close the gripper to grasp.
         action = np.array([0.0] * 7 + [-1.0], dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         # NOTE: we should soon make this smoother.
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
@@ -199,7 +231,13 @@ def test_pick_place_on_rack():
             delta_lst = [wrap_angle(a) for a in delta]
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
-            vec_obs, _, _, _, _ = env.step(action)
+            vec_obs, reward, terminated, truncated, _ = env.step(action)
+            # Collect trajectory data
+            traj_observations.append(vec_obs.copy())
+            traj_actions.append(action.copy())
+            traj_rewards.append(float(reward))
+            ep_terminated = ep_terminated or terminated
+            ep_truncated = ep_truncated or truncated
             # NOTE: we should soon make this smoother.
             oc_obs = env.observation_space.devectorize(vec_obs)
             obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
@@ -259,14 +297,26 @@ def test_pick_place_on_rack():
             delta_lst = [wrap_angle(a) for a in delta]
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
-            vec_obs, _, _, _, _ = env.step(action)
+            vec_obs, reward, terminated, truncated, _ = env.step(action)
+            # Collect trajectory data
+            traj_observations.append(vec_obs.copy())
+            traj_actions.append(action.copy())
+            traj_rewards.append(float(reward))
+            ep_terminated = ep_terminated or terminated
+            ep_truncated = ep_truncated or truncated
             # NOTE: we should soon make this smoother.
             oc_obs = env.observation_space.devectorize(vec_obs)
             obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
         # Open the gripper to finish the placement. Should trigger "done" (goal reached).
         action = np.array([0.0] * 7 + [1.0], dtype=np.float32)
-        vec_obs, _, done, _, _ = env.step(action)
+        vec_obs, reward, done, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or done
+        ep_truncated = ep_truncated or truncated
         # NOTE: we should soon make this smoother.
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
@@ -304,7 +354,13 @@ def test_pick_place_on_rack():
             delta_lst = [wrap_angle(a) for a in delta]
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
-            vec_obs, _, _, _, _ = env.step(action)
+            vec_obs, reward, terminated, truncated, _ = env.step(action)
+            # Collect trajectory data
+            traj_observations.append(vec_obs.copy())
+            traj_actions.append(action.copy())
+            traj_rewards.append(float(reward))
+            ep_terminated = ep_terminated or terminated
+            ep_truncated = ep_truncated or truncated
             # NOTE: we should soon make this smoother.
             oc_obs = env.observation_space.devectorize(vec_obs)
             obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
@@ -319,6 +375,21 @@ def test_pick_place_on_rack():
             y_coeffs = y_coeffs[1:]
 
     assert done, "Goal not reached"
+
+    # Save trajectory to pickle file
+    if SAVE_TRAJECTORIES and len(traj_actions) > 0:
+        demo_path = save_demo(
+            demo_dir=DEFAULT_DEMOS_DIR,
+            env_id=f"prbench/Packing3D-p{num_parts}-v0",
+            seed=seed,
+            observations=traj_observations,
+            actions=traj_actions,
+            rewards=traj_rewards,
+            terminated=ep_terminated,
+            truncated=ep_truncated,
+        )
+        print(f"Trajectory saved to {demo_path}")
+        print(f"  Observations: {len(traj_observations)}, Actions: {len(traj_actions)}")
 
     # Uncomment to debug.
     # import pybullet as p
