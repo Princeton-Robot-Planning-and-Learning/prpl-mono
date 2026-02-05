@@ -472,7 +472,10 @@ def _main() -> None:
         "--env",
         type=str,
         nargs="+",
-        help="Generate docs for specific environment classes (e.g., Motion2D Manipulation3D)",
+        help=(
+            "Generate docs for specific environment classes "
+            "(e.g., Motion2D Manipulation3D)"
+        ),
     )
     args = parser.parse_args()
 
