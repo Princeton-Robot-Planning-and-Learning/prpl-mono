@@ -100,6 +100,23 @@
                 640,
                 480
             ]
+        },
+        "task_view": {
+            "position": [
+                1,
+                1,
+                2
+            ],
+            "lookat": [
+                0.5,
+                0,
+                0
+            ],
+            "fovy": 45,
+            "resolution": [
+                640,
+                480
+            ]
         }
     },
     "initial_state": [
