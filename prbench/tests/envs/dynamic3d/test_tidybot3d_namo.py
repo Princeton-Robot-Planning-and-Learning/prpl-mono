@@ -197,9 +197,7 @@ def test_namo_robot_can_navigate_to_goal():
             scene_render_camera="agentview_1",
         )
     else:
-        env = prbench.make(
-            "prbench/Dynamo3D-o1-v0", render_mode="rgb_array"
-        )
+        env = prbench.make("prbench/Dynamo3D-o1-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_navigate")
