@@ -440,7 +440,9 @@ _create_robocasa_object_classes()
 # Export all dynamically created classes
 # pylint: disable=unused-variable
 _dynamic_exports = [
-    name for name in globals() if name.startswith("Robocasa") and name != "RoboCasaObject"
+    name
+    for name in globals()
+    if name.startswith("Robocasa") and name != "RoboCasaObject"
 ]
 __all__ = [
     "RoboCasaObject",

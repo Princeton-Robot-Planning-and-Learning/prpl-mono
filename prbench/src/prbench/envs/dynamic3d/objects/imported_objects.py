@@ -112,8 +112,9 @@ def _create_replica_object_classes() -> None:
         object_type_name = object_dir.name
 
         # Create a class name (convert snake_case to PascalCase)
-        # e.g., "frl_apartment_chair_01" -> "ReplicaFrlApartmentChair01"
-        class_name_parts = ["Replica"] + [
+        # e.g., "frl_apartment_chair_01" -> "RobocasaFrlApartmentChair01"
+        # Note: We keep the "Robocasa" prefix for backwards compatibility with task configs
+        class_name_parts = ["Robocasa"] + [
             part.capitalize() for part in object_type_name.split("_")
         ]
         class_name = "".join(class_name_parts)
@@ -131,7 +132,7 @@ def _create_replica_object_classes() -> None:
         )
 
         # Register the class with multiple names for flexibility
-        register_object(new_class)  # Registers as lowercase class name
+        register_object(new_class)  # Registers as lowercase class name (e.g., robocasafrlapartmentchair01)
 
         # Also register with the exact object type name (e.g., "frl_apartment_chair_01")
         # and with "robocasa_" prefix for backwards compatibility
