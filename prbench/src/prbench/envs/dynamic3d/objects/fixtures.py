@@ -917,8 +917,10 @@ class Cupboard(MujocoFixture):
                     )
                     # Parent pose is cupboard position + drawer position
                     drawer_pos = np.array(
-                        [drawer_center_x, drawer_y, drawer_z], dtype=np.float32
-                    )
+                        [drawer_center_x, drawer_y, drawer_z],
+                        dtype=np.float32,
+                    )  # Note: (to fix) region bounds should account for
+                    # drawer position offset
                     parent_pos = np.array(self.position, dtype=np.float32) + drawer_pos
                 else:
                     # Parent pose is just the cupboard position

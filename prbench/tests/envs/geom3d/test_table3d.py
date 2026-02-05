@@ -1,5 +1,7 @@
 """Tests for table3d.py."""
 
+from typing import Any
+
 import numpy as np
 import pytest
 from gymnasium.wrappers import RecordVideo
@@ -13,12 +15,16 @@ from pybullet_helpers.motion_planning import (
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
 
+from prbench.envs.geom3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
 from prbench.envs.geom3d.table3d import (
     ObjectCentricTable3DEnv,
     Table3DEnv,
     Table3DObjectCentricState,
 )
 from tests.conftest import MAKE_VIDEOS
+
+# Flag to enable trajectory saving (can be controlled like MAKE_VIDEOS)
+SAVE_TRAJECTORIES = MAKE_VIDEOS
 
 
 @pytest.fixture(scope="module")
@@ -58,13 +64,22 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         env.unwrapped._object_centric_env.config  # pylint: disable=protected-access
     )
 
-    vec_obs, _ = env.reset(seed=123)
+    seed = 123
+    vec_obs, _ = env.reset(seed=seed)
     oc_obs = env.observation_space.devectorize(vec_obs)
     obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
+    # Initialize trajectory collection
+    traj_observations: list[Any] = [vec_obs.copy()]
+    traj_actions: list[Any] = []
+    traj_rewards: list[float] = []
+    ep_terminated = False
+    ep_truncated = False
+
+    num_cubes = 2
     # Create a simulator for planning.
     sim = ObjectCentricTable3DEnv(
-        num_cubes=2, config=config, use_gui=False, realistic_bg=False
+        num_cubes=num_cubes, config=config, use_gui=False, realistic_bg=False
     )
     sim.set_state(obs)
 
@@ -95,7 +110,13 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         delta_lst = [delta.x, delta.y, delta.rot]
         action_lst = delta_lst + [0.0] * 7 + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
@@ -126,14 +147,26 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Step 3: Close the gripper to grasp cube1 (takes multiple steps)
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [-1.0], dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
@@ -169,7 +202,13 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
         delta_lst = [wrap_angle(a) for a in delta]
         action_lst = [0.0] * 3 + delta_lst + [0.0]
         action = np.array(action_lst, dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
@@ -209,7 +248,13 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
             delta_lst = [wrap_angle(a) for a in delta]
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
-            vec_obs, _, _, _, _ = env.step(action)
+            vec_obs, reward, terminated, truncated, _ = env.step(action)
+            # Collect trajectory data
+            traj_observations.append(vec_obs.copy())
+            traj_actions.append(action.copy())
+            traj_rewards.append(float(reward))
+            ep_terminated = ep_terminated or terminated
+            ep_truncated = ep_truncated or truncated
             oc_obs = env.observation_space.devectorize(vec_obs)
             obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
@@ -226,8 +271,29 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     # Step 6: Open the gripper to place the cube
     for _ in range(5):
         action = np.array([0.0] * 3 + [0.0] * 7 + [1.0], dtype=np.float32)
-        vec_obs, _, _, _, _ = env.step(action)
+        vec_obs, reward, terminated, truncated, _ = env.step(action)
+        # Collect trajectory data
+        traj_observations.append(vec_obs.copy())
+        traj_actions.append(action.copy())
+        traj_rewards.append(float(reward))
+        ep_terminated = ep_terminated or terminated
+        ep_truncated = ep_truncated or truncated
         oc_obs = env.observation_space.devectorize(vec_obs)
         obs = Table3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     assert obs.grasped_object is None, "Object not released"
+
+    # Save trajectory to pickle file
+    if SAVE_TRAJECTORIES and len(traj_actions) > 0:
+        demo_path = save_demo(
+            demo_dir=DEFAULT_DEMOS_DIR,
+            env_id=f"prbench/Table3D-o{num_cubes}-v0",
+            seed=seed,
+            observations=traj_observations,
+            actions=traj_actions,
+            rewards=traj_rewards,
+            terminated=ep_terminated,
+            truncated=ep_truncated,
+        )
+        print(f"Trajectory saved to {demo_path}")
+        print(f"  Observations: {len(traj_observations)}, Actions: {len(traj_actions)}")

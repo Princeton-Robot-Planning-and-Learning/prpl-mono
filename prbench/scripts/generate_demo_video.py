@@ -157,6 +157,12 @@ def generate_demo_video(
             render_mode="rgb_array",
             scene_bg=True,
         )
+    elif "3D" in env_id and "TidyBot" not in env_id:
+        env = prbench.make(
+            env_id,
+            render_mode="rgb_array",
+            realistic_bg=True,
+        )
     else:
         env = prbench.make(env_id, render_mode="rgb_array")
 

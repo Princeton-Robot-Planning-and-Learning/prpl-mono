@@ -659,7 +659,7 @@ class MjData:
         if site_id is None:
             raise ValueError(f"Site '{name}' not found in model")
 
-        return self.mj_data.site_xmat[site_id]
+        return self.mj_data.site_xmat[site_id].reshape((3, 3))
 
 
 class MjSim:

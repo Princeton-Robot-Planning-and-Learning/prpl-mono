@@ -561,12 +561,15 @@ def test_tidybot3d_cupboard_mimiclabs_with_video():
         "prbench/TidyBot3D-sort-lab2-o12-sort_the_blocks_into_the_cupboard-v0",
         render_mode="rgb_array",
         scene_bg=True,
-        scene_render_camera="agentview",
+        scene_render_camera="task_view",
     )
 
     # Wrap with RecordVideo if making videos
     if MAKE_VIDEOS:
-        env = RecordVideo(env, "unit_test_videos_cupboard_o12_sort_blocks_mimiclabs")
+        env = RecordVideo(
+            env,
+            "unit_test_videos_cupboard_o12_sort_the_blocks_into_the_cupboard_mimiclabs",
+        )
 
     obs, _ = env.reset()
     # Take a few random steps to generate video frames
