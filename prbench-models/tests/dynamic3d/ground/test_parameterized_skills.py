@@ -1029,7 +1029,7 @@ def test_pick_toss():
     # Create the environment.
     num_cubes = 1
     env = prbench.make(
-        f"prbench/TidyBot3D-dynamic-lab2-o{num_cubes}-toss_the_blocks_into_the_bin-v0",
+        f"prbench/Tossing3D-o{num_cubes}-v0",
         render_mode="rgb_array",
         scene_bg=False,
     )
