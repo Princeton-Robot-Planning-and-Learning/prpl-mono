@@ -374,42 +374,46 @@ def register_all_environments() -> None:
                 },
             )
             if robot not in env_class_variants:
-                env_class_variants[robot] = []
-            env_class_variants[robot].append(variant_id)
+                env_class_variants[robot] = {}
+            if robot not in env_class_variants[robot]:
+                env_class_variants[robot][robot] = []
+            env_class_variants[robot][robot].append(variant_id)
         elif task_item.is_dir():
             # Handle folders and register each config file within
+            # Each folder corresponds to a task type
             folder_name = task_item.name
             for task_config in task_item.iterdir():
+                # Go through variants for this task
                 if task_config.is_file():
                     config_name = task_config.stem
-                    robot = {"tidybot": "TidyBot3D", "rby1a": "RBY1A3D"}[
-                        config_name.split("-")[0]
-                    ]
+                    robot = "TidyBot3D"
+                    # Note: we only support one robot at the moment
+                    # In the future, get robot from config.
                     scene_type = config_name.split("-")[1]
-                    num_task_objects = int(config_name.split("-")[2][1:])
                     task_cfg = "-".join(config_name.split("-")[1:])
-                    variant_id = f"prbench/{robot}-{folder_name}-{task_cfg}-v0"
+                    variant_id = f"prbench/{folder_name}-{task_cfg}-v0"
                     _register(
                         id=variant_id,
                         entry_point=f"prbench.envs.dynamic3d.tidybot3d:{robot}Env",
                         kwargs={
-                            "scene_type": scene_type,
-                            "num_objects": num_task_objects,
                             "task_config_path": str(task_config),
-                            "scene_render_camera": "task_view"
+                            "scene_render_camera": "task_view",
                         },
                     )
                     if folder_name not in env_class_variants:
-                        env_class_variants[folder_name] = []
-                    env_class_variants[folder_name].append(variant_id)
+                        env_class_variants[folder_name] = {}
+                    if robot not in env_class_variants[folder_name]:
+                        env_class_variants[folder_name][robot] = []
+                    env_class_variants[folder_name][robot].append(variant_id)
 
-    for robot, variant_ids in env_class_variants.items():
-        _register_env_class(
-            class_name=robot,
-            entry_point=f"prbench.envs.dynamic3d.tidybot3d:{robot}Env",
-            category="Dynamic3D",
-            variant_ids=variant_ids,
-        )
+    for class_name, robot_variant_ids in env_class_variants.items():
+        for robot, variant_ids in robot_variant_ids.items():
+            _register_env_class(
+                class_name=class_name,
+                entry_point=f"prbench.envs.dynamic3d.tidybot3d:{robot}Env",
+                category="Dynamic3D",
+                variant_ids=variant_ids,
+            )
 
 
 def _register(id: str, *args, **kwargs) -> None:  # pylint: disable=redefined-builtin
