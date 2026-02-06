@@ -86,16 +86,13 @@ def analyze_results(log_dir: Path) -> pd.DataFrame:
     df = pd.DataFrame(all_data)
 
     # Group by env and rgb_observation, compute averages
-    grouped = (
-        df.groupby(["env", "rgb_observation"])
-        .agg(
-            {
-                "success": ["mean", "std", "count"],
-                "planning_time": ["mean", "std"],
-                "steps": "mean",
-                "reward": ["mean", "std"],
-            }
-        )
+    grouped = df.groupby(["env", "rgb_observation"]).agg(
+        {
+            "success": ["mean", "std", "count"],
+            "planning_time": ["mean", "std"],
+            "steps": "mean",
+            "reward": ["mean", "std"],
+        }
     )
 
     # Flatten column names before reset_index
@@ -143,7 +140,9 @@ def format_table(df: pd.DataFrame) -> str:
 
     # Dynamically determine environment column width based on longest environment name
     max_env_len = max(len(str(env)) for env in df["env"])
-    env_col_width = max(max_env_len + 2, len("Environment"))  # At least as wide as header
+    env_col_width = max(
+        max_env_len + 2, len("Environment")
+    )  # At least as wide as header
 
     # Calculate total table width
     table_width = env_col_width + 15 + 25 + 30 + 15 + 25 + 30 + 6  # +6 for spaces
