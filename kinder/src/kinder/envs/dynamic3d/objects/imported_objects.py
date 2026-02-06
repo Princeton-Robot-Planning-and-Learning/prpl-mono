@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
-from kinder.envs.dynamic3d.objects.base import REGISTERED_OBJECTS, register_object
+from kinder.envs.dynamic3d.objects.base import REGISTERED_OBJECTS
 from kinder.envs.dynamic3d.objects.robocasa_objects import (
     REPLICA_OBJECTS_DIR,
     RoboCasaObject,
