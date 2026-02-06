@@ -61,7 +61,7 @@ This environment has variants that differ in scene type and number of objects. S
 - [`kinder/TidyBot3D-base_motion-o1-v0`](variants/TidyBot3D/TidyBot3D-base_motion-o1.md) (base_motion-o1)
 
 ## Initial State Distribution
-*(Initial state GIF could not be generated due to rendering issues)*
+![initial state GIF](assets/initial_state_gifs/TidyBot3D.gif)
 
 ## Example Demonstration
 *(No demonstration GIFs available)*

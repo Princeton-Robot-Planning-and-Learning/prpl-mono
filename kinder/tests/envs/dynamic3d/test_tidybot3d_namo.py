@@ -39,7 +39,7 @@ def test_namo_env_loads():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
     )
 
     obs, info = env.reset(seed=42)
@@ -58,7 +58,7 @@ def test_namo_goal_not_satisfied_initially():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
     )
 
     env.reset(seed=42)
@@ -79,7 +79,7 @@ def test_namo_goal_satisfied_when_robot_in_region():
     region, potentially by pushing the obstacle out of the way.
     """
     kinder.register_all_environments()
-    env = kinder.make("kinder/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array")
+    env = kinder.make("kinder/Dynamo3D-o1-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_goal_satisfied")
@@ -92,8 +92,8 @@ def test_namo_goal_satisfied_when_robot_in_region():
     # Get current state
     current_state = oc_env._get_current_state()  # pylint: disable=protected-access
 
-    # Get the robot object (robot_0 from the task config)
-    robot = current_state.get_object_from_name("robot_0")
+    # Get the robot object
+    robot = current_state.get_object_from_name("robot")
 
     # Move robot to the goal region (center of goal region is at x=1.0, y=0.0)
     modified_state = current_state.copy()
@@ -120,7 +120,7 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
     3. Checking that the goal is now satisfied
     """
     kinder.register_all_environments()
-    env = kinder.make("kinder/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array")
+    env = kinder.make("kinder/Dynamo3D-o1-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_teleport_goal")
@@ -138,8 +138,8 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
     # Get current state
     current_state = oc_env._get_current_state()  # pylint: disable=protected-access
 
-    # Get the robot and obstacle chair objects (robot_0 from the task config)
-    robot = current_state.get_object_from_name("robot_0")
+    # Get the robot and obstacle chair objects
+    robot = current_state.get_object_from_name("robot")
     obstacle_chair = current_state.get_object_from_name("obstacle_chair")
 
     # Create modified state
@@ -191,15 +191,13 @@ def test_namo_robot_can_navigate_to_goal():
     kinder.register_all_environments()
     if MIMICLABS_SCENES_DIR.exists():
         env = kinder.make(
-            "kinder/TidyBot3D-navigate-namo-o1-v0",
+            "kinder/Dynamo3D-o1-v0",
             render_mode="rgb_array",
             scene_bg=True,
             scene_render_camera="agentview_1",
         )
     else:
-        env = kinder.make(
-            "kinder/TidyBot3D-navigate-namo-o1-v0", render_mode="rgb_array"
-        )
+        env = kinder.make("kinder/Dynamo3D-o1-v0", render_mode="rgb_array")
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_navigate")
@@ -209,9 +207,9 @@ def test_namo_robot_can_navigate_to_goal():
     # Access the underlying object-centric environment
     oc_env = env.unwrapped._object_centric_env  # pylint: disable=protected-access
 
-    # Get initial state (robot_0 from the task config)
+    # Get initial state
     state = env.observation_space.devectorize(obs)
-    robot = state.get_object_from_name("robot_0")
+    robot = state.get_object_from_name("robot")
     robot_x = state.get(robot, "pos_base_x")
     robot_y = state.get(robot, "pos_base_y")
 
@@ -248,7 +246,7 @@ def test_namo_action_space():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
     )
 
     env.reset(seed=42)
@@ -263,7 +261,7 @@ def test_namo_step():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
     )
 
     env.reset(seed=42)
@@ -289,7 +287,7 @@ def test_namo_with_mimiclabs_scene():
     env = ObjectCentricTidyBot3DEnv(
         scene_type="namo",
         num_objects=1,
-        task_config_path=str(TASKS_DIR / "navigate" / "tidybot-namo-o1.json"),
+        task_config_path=str(TASKS_DIR / "Dynamo3D" / "Dynamo3D-o1.json"),
         scene_bg=True,
     )
 

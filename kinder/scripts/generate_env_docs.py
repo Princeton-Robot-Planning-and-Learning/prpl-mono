@@ -6,6 +6,8 @@ Usage:
   python generate_env_docs.py --env Motion2D     # Generate docs for specific environment
 """
 
+from __future__ import annotations
+
 import argparse
 import inspect
 import json
@@ -19,6 +21,12 @@ import kinder
 from kinder.gif_utils import optimize_gif
 
 OUTPUT_DIR = Path(__file__).parent.parent / "docs" / "envs"
+
+# Dynamically read all folder names from the tasks directory
+DYNAMIC3D_TASKS_DIR = (
+    Path(__file__).parent.parent / "src" / "kinder" / "envs" / "dynamic3d" / "tasks"
+)
+DYNAMIC3D_ENVS = sorted([d.name for d in DYNAMIC3D_TASKS_DIR.iterdir() if d.is_dir()])
 
 
 def get_changed_files() -> set[Path]:
@@ -148,7 +156,10 @@ def create_initial_state_gif(
     try:
         imgs: list = []
         for variant_id in variant_ids:
-            env = kinder.make(variant_id, render_mode="rgb_array")
+            kwargs: dict[str, str | bool] = {"render_mode": "rgb_array"}
+            if class_name in DYNAMIC3D_ENVS:
+                kwargs["scene_bg"] = True
+            env = kinder.make(variant_id, **kwargs)
             for i in range(num_resets_per_variant):
                 env.reset(seed=seed + i)
                 imgs.append(env.render())
@@ -471,7 +482,11 @@ def _main() -> None:
     parser.add_argument(
         "--env",
         type=str,
-        help="Generate docs for a specific environment class (e.g., Motion2D)",
+        nargs="+",
+        help=(
+            "Generate docs for specific environment classes "
+            "(e.g., Motion2D Manipulation3D)"
+        ),
     )
     args = parser.parse_args()
 
@@ -479,7 +494,7 @@ def _main() -> None:
     if args.force:
         print("Force flag detected - regenerating all environment classes")
     elif args.env:
-        print(f"Generating docs for environment: {args.env}")
+        print(f"Generating docs for environments: {', '.join(args.env)}")
     else:
         print("Checking for changes using git diff origin/main...")
 
@@ -500,13 +515,14 @@ def _main() -> None:
 
     env_classes = kinder.get_env_classes()
 
-    # Filter to specific environment if requested
+    # Filter to specific environments if requested
     if args.env:
-        if args.env not in env_classes:
-            print(f"Error: Environment class '{args.env}' not found")
+        not_found = [env for env in args.env if env not in env_classes]
+        if not_found:
+            print(f"Error: Environment class(es) not found: {', '.join(not_found)}")
             print(f"Available classes: {', '.join(sorted(env_classes.keys()))}")
             return
-        env_classes = {args.env: env_classes[args.env]}
+        env_classes = {env: env_classes[env] for env in args.env}
 
     for class_name, class_info in env_classes.items():
         total_classes += 1
@@ -514,12 +530,20 @@ def _main() -> None:
 
         # Use a middle variant as representative (or first if only one variant)
         representative_variant = variants[len(variants) // 2]
-        env = kinder.make(representative_variant, render_mode="rgb_array")
+        kwargs: dict[str, str | bool] = {"render_mode": "rgb_array"}
+        if class_name in DYNAMIC3D_ENVS:
+            kwargs["scene_bg"] = True
+        env = kinder.make(representative_variant, **kwargs)
 
         # Check if any variant of this class has changed
+        def make_env(variant_id: str, class_name: str = class_name):
+            kwargs: dict[str, str | bool] = {"render_mode": "rgb_array"}
+            if class_name in DYNAMIC3D_ENVS:
+                kwargs["scene_bg"] = True
+            return kinder.make(variant_id, **kwargs)
+
         class_changed = any(
-            is_env_changed(kinder.make(v, render_mode="rgb_array"), changed_files)
-            for v in variants
+            is_env_changed(make_env(v), changed_files) for v in variants
         )
 
         if args.force or args.env or class_changed:
@@ -545,7 +569,10 @@ def _main() -> None:
             variant_dir = OUTPUT_DIR / "variants" / class_name
             variant_dir.mkdir(parents=True, exist_ok=True)
             for variant_id in variants:
-                variant_env = kinder.make(variant_id, render_mode="rgb_array")
+                variant_kwargs: dict[str, str | bool] = {"render_mode": "rgb_array"}
+                if class_name in DYNAMIC3D_ENVS:
+                    variant_kwargs["scene_bg"] = True
+                variant_env = kinder.make(variant_id, **variant_kwargs)
                 variant_name = sanitize_env_id(variant_id)
                 variant_has_initial_gif = create_variant_initial_state_gif(
                     variant_name, variant_env

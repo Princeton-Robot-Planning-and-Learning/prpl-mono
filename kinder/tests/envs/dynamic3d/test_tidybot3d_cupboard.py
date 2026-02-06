@@ -555,10 +555,10 @@ def test_cupboard_region_site_creation_and_placement():
     "Run: python scripts/download_mimiclabs_assets.py",
 )
 def test_tidybot3d_cupboard_mimiclabs_with_video():
-    """Test MimicLabs scene with sorting task and video recording."""
+    """Test MimicLabs scene with ConstrainedFitting task and video recording."""
     kinder.register_all_environments()
     env = kinder.make(
-        "kinder/TidyBot3D-sort-lab2-o12-sort_the_blocks_into_the_cupboard-v0",
+        "kinder/SortClutteredBlocks3D-o12-sort_the_blocks_into_the_cupboard-v0",
         render_mode="rgb_array",
         scene_bg=True,
         scene_render_camera="task_view",
