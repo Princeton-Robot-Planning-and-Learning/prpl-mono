@@ -3,6 +3,8 @@
 from typing import Any, Sequence
 
 import numpy as np
+from gymnasium.spaces import Box
+
 from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
