@@ -76,8 +76,8 @@ class GymToGymnasium:
 def patch_box_float32() -> Callable[..., None]:
     """Resolves Gymnasium Box precision warnings by patching space creation to use
     float32 dtypes from the start, eliminating the need for runtime casting that
-    triggers "precision lowered" warnings from environment libraries like PRBench
-    (PRBench creates box spaces with float64 bounds).
+    triggers "precision lowered" warnings from environment libraries like KinDER
+    (KinDER creates box spaces with float64 bounds).
 
     Returns:
         The original Box.__init__ method for restoration.

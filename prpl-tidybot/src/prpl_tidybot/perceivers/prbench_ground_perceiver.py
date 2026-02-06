@@ -1,6 +1,6 @@
-"""A perceiver for the PRBench Dynamic 3D Ground environment."""
+"""A perceiver for the KinDER Dynamic 3D Ground environment."""
 
-from prbench.envs.dynamic3d.object_types import (
+from kinder.envs.dynamic3d.object_types import (
     MujocoMovableObjectType,
     MujocoObjectTypeFeatures,
     MujocoTidyBotRobotObjectType,
@@ -12,8 +12,8 @@ from prpl_tidybot.interfaces.interface import Interface
 from prpl_tidybot.perceivers.base_perceiver import Perceiver
 
 
-class PRBenchGroundPerceiver(Perceiver[ObjectCentricState]):
-    """A perceiver for the PRBench Dynamic 3D Ground environment."""
+class KinDERGroundPerceiver(Perceiver[ObjectCentricState]):
+    """A perceiver for the KinDER Dynamic 3D Ground environment."""
 
     def __init__(self, interface: Interface) -> None:
         self._interface = interface
