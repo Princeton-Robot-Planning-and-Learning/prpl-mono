@@ -4,8 +4,8 @@ import argparse
 import time
 from typing import Any
 
-import numpy as np
 import kinder
+import numpy as np
 from episode_storage import EpisodeWriter
 from relational_structs.spaces import ObjectCentricBoxSpace
 

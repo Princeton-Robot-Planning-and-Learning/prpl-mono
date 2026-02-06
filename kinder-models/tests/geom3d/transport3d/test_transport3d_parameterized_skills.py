@@ -1,7 +1,7 @@
 """Tests for Transport3D parameterized skills."""
 
-import numpy as np
 import kinder
+import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
 from kinder.envs.geom3d.transport3d import ObjectCentricTransport3DEnv

@@ -1,7 +1,7 @@
 """Test utils for dynamic3d models."""
 
-import numpy as np
 import kinder
+import numpy as np
 from matplotlib import pyplot as plt
 from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2

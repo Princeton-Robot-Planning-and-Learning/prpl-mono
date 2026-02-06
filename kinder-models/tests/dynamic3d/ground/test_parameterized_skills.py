@@ -1,7 +1,7 @@
 """Tests for ground parameterized skills."""
 
-import numpy as np
 import kinder
+import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
 from prpl_tidybot.interfaces.interface import FakeInterface

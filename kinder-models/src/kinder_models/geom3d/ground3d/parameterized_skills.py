@@ -3,8 +3,6 @@
 from typing import Any, Sequence
 
 import numpy as np
-from gymnasium.spaces import Box
-
 from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
@@ -12,6 +10,7 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
+from gymnasium.spaces import Box
 from kinder.envs.geom3d.ground3d import (
     Geom3DRobotType,
     Ground3DObjectCentricState,

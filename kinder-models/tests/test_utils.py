@@ -7,8 +7,8 @@ from kinder_bilevel_planning.env_models.dynamic3d.tidybot3d_base_motion import (
 )
 
 from kinder_models.utils import (
-    ParameterizedSkillReference,
     KinDERParameterizedSkillEnv,
+    ParameterizedSkillReference,
 )
 
 

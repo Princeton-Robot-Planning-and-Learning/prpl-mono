@@ -3,8 +3,8 @@ environments."""
 
 import argparse
 
-import numpy as np
 import kinder
+import numpy as np
 from episode_storage import EpisodeWriter
 from kinder.envs.geom3d.base_motion3d import ObjectCentricBaseMotion3DEnv
 from kinder.envs.geom3d.ground3d import ObjectCentricGround3DEnv
