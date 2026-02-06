@@ -135,13 +135,14 @@ def generate_demo_video(
     output_path: Path | None = None,
     fps: int | None = None,
     loop: int = 0,
+    env_id_override: str | None = None,
 ) -> None:
     """Generate a video from a pickled demonstration."""
     # Load the demonstration.
     demo_data = load_demo(demo_path)
 
     # Extract demo information.
-    env_id = demo_data["env_id"]
+    env_id = env_id_override if env_id_override else demo_data["env_id"]
     actions = demo_data["actions"]
     seed = demo_data["seed"]
 
@@ -151,13 +152,14 @@ def generate_demo_video(
 
     # Create the environment.
     prbench.register_all_environments()
-    if "TidyBot" in env_id:
+    is_tidybot = "TidyBot" in env_id or "SweepIntoDrawer" in env_id
+    if is_tidybot:
         env = prbench.make(
             env_id,
             render_mode="rgb_array",
             scene_bg=True,
         )
-    elif "3D" in env_id and "TidyBot" not in env_id:
+    elif "3D" in env_id and not is_tidybot:
         env = prbench.make(
             env_id,
             render_mode="rgb_array",
@@ -191,7 +193,7 @@ def generate_demo_video(
     total_reward = 0.0
     terminated_successfully = False
 
-    if "TidyBot" in env_id:
+    if is_tidybot:
         env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
     # Add initial frame.
     initial_frame = env.render()  # type: ignore
@@ -203,7 +205,7 @@ def generate_demo_video(
             _, reward, terminated, truncated, _ = env.step(action)
             total_reward += float(reward)
 
-            if "TidyBot" in env_id:
+            if is_tidybot:
                 env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
             frame = env.render()  # type: ignore
             frames.append(frame)

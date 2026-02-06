@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a 5x5 grid video from TidyBot3D sweep demos."""
+"""Generate a 5x5 grid video from SweepIntoDrawer3D demos."""
 
 import subprocess
 import sys
@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 # pylint: disable=wrong-import-position
-from generate_demo_video import discover_demos_by_env, generate_demo_video
+from generate_demo_video import generate_demo_video
 
 
 def get_gif_info(gif_path: Path) -> tuple[int, int, float]:
@@ -41,17 +41,27 @@ def get_gif_info(gif_path: Path) -> tuple[int, int, float]:
 
 
 def main() -> None:
-    """Generate a grid video from multiple TidyBot3D demos."""
-    env_id = (
-        "prbench/TidyBot3D-tool_use-lab2_kitchen"
-        "-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0"
+    """Generate a grid video from multiple SweepIntoDrawer3D demos."""
+    # Old demo directory name -> new environment name
+    demo_dir_name = (
+        "TidyBot3D-tool_use-lab2_kitchen"
+        "-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island"
     )
+    env_id = "prbench/SweepIntoDrawer3D-o5-v0"
     demos_dir = Path(__file__).parent.parent / "demos"
     output_path = (
-        Path(__file__).parent.parent / "docs/envs/assets/tidybot_sweep_grid.mp4"
+        Path(__file__).parent.parent / "docs/envs/assets/sweep_into_drawer_grid.mp4"
     )
 
-    all_demos = discover_demos_by_env(env_id, demos_dir)
+    # Find demos in the old directory (demos are stored under old TidyBot3D name)
+    env_dir = demos_dir / demo_dir_name
+    if not env_dir.exists():
+        print(f"Error: Demo directory {env_dir} does not exist")
+        sys.exit(1)
+
+    all_demos = sorted(
+        env_dir.rglob("*.p"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
     if len(all_demos) < 25:
         print(f"Error: Need at least 25 demos, found {len(all_demos)}")
         sys.exit(1)
@@ -74,7 +84,7 @@ def main() -> None:
         for i, demo_path in enumerate(selected_demos):
             gif_path = Path(tmpdir) / f"demo_{i:02d}.gif"
             print(f"\n=== Generating GIF {i+1}/25 from {demo_path} ===")
-            generate_demo_video(demo_path, gif_path)
+            generate_demo_video(demo_path, gif_path, env_id_override=env_id)
             gif_paths.append(gif_path)
 
         # Gather info for all GIFs
