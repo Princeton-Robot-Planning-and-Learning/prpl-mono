@@ -1,0 +1,586 @@
+{
+    "scene": {
+        "simple": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        },
+        "mimiclabs-lab2": {
+            "position": [
+                0,
+                0,
+                0
+            ]
+        }
+    },
+    "fixtures": {
+        "cupboard": {
+            "kitchen_island": {
+                "length": 2.0,
+                "depth": 0.75,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [-0.333, 0.333],
+                    [-0.333, 0.333]
+                ],
+                "shelf_drawers": [
+                    [true, true, true],
+                    [true, true, true]
+                ],
+                "side_and_back_open": false,
+                "rgba_cupboard_top_shelf": [0.8, 0.6, 0.4, 1.0],
+                "rgba_cupboard_shelf": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_panel": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_partition": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_bottom": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_wall": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_face": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_handle": [0.8, 0.6, 0.4, 1.0]
+            },
+            "kitchen_cooking_area": {
+                "length": 3.25,
+                "depth": 0.75,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [-0.54, 0.54],
+                    [-0.54, 0.54]
+                ],
+                "shelf_drawers": [
+                    [false, true, false],
+                    [false, true, false]
+                ],
+                "side_and_back_open": false,
+                "rgba_cupboard_top_shelf": [0.8, 0.6, 0.4, 1.0],
+                "rgba_cupboard_shelf": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_panel": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_partition": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_bottom": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_wall": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_face": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_handle": [0.8, 0.6, 0.4, 1.0]
+            },
+            "kitchen_cooking_area_upper": {
+                "length": 3.25,
+                "depth": 0.5,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [],
+                    []
+                ],
+                "side_and_back_open": false,
+                "rgba_cupboard_shelf": [0.8, 0.6, 0.4, 1.0],
+                "rgba_cupboard_panel": [0.8, 0.6, 0.4, 1.0],
+                "rgba_cupboard_partition": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_bottom": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_wall": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_face": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_handle": [0.8, 0.6, 0.4, 1.0]
+            },
+            "kitchen_left_side": {
+                "length": 2.12,
+                "depth": 0.75,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [-0.53, 0.53],
+                    [-0.53, 0.53]
+                ],
+                "shelf_drawers": [
+                    [false, true, false],
+                    [false, true, false]
+                ],
+                "side_and_back_open": false,
+                "rgba_cupboard_top_shelf": [0.8, 0.6, 0.4, 1.0],
+                "rgba_cupboard_shelf": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_panel": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_partition": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_bottom": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_wall": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_face": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_handle": [0.8, 0.6, 0.4, 1.0]
+            },
+            "kitchen_left_corner": {
+                "length": 0.75,
+                "depth": 0.75,
+                "shelf_heights": [
+                    0.15,
+                    0.25
+                ],
+                "shelf_partitions": [
+                    [],
+                    []
+                ],
+                "side_and_back_open": false,
+                "rgba_cupboard_top_shelf": [0.8, 0.6, 0.4, 1.0],
+                "rgba_cupboard_shelf": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_panel": [0.3, 0.15, 0.05, 1.0],
+                "rgba_cupboard_partition": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_bottom": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_wall": [0.8, 0.6, 0.4, 1.0],
+                "rgba_drawer_face": [0.3, 0.15, 0.05, 1.0],
+                "rgba_drawer_handle": [0.8, 0.6, 0.4, 1.0]
+            }
+        }
+    },
+    "regions": {
+        "kitchen_island_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    0.5,
+                    0,
+                    0,
+                    0.5,
+                    0,
+                    0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    -90,
+                    -90
+                ]
+            ]
+        },
+        "kitchen_cooking_area_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    2.62,
+                    0.625,
+                    0,
+                    2.62,
+                    0.625,
+                    0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    90,
+                    90
+                ]
+            ]
+        },
+        "kitchen_cooking_area_upper_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    2.745,
+                    0.625,
+                    1.5,
+                    2.745,
+                    0.625,
+                    1.5
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    90,
+                    90
+                ]
+            ]
+        },
+        "kitchen_left_side_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    1.185,
+                    2.625,
+                    0,
+                    1.185,
+                    2.625,
+                    0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    180,
+                    180
+                ]
+            ]
+        },
+        "kitchen_left_corner_init_region": {
+            "target": "ground",
+            "ranges": [
+                [
+                    2.62,
+                    2.625,
+                    0,
+                    2.62,
+                    2.625,
+                    0
+                ]
+            ],
+            "yaw_ranges": [
+                [
+                    180,
+                    180
+                ]
+            ]
+        },
+        "kitchen_island_shelf_0_partition_0_region": {
+            "target": "kitchen_island",
+            "shelf": 0,
+            "partition": 0,
+            "ranges": [[-0.2835, -0.325, 0.2835, 0.325]],
+            "rgba": [
+                0.0,
+                0.0,
+                1.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_island_shelf_0_partition_1_region": {
+            "target": "kitchen_island",
+            "shelf": 0,
+            "partition": 1,
+            "ranges": [[-0.283, -0.325, 0.283, 0.325]],
+            "rgba": [
+                0.0,
+                0.5,
+                1.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_island_shelf_0_partition_2_region": {
+            "target": "kitchen_island",
+            "shelf": 0,
+            "partition": 2,
+            "ranges": [[-0.2835, -0.325, 0.2835, 0.325]],
+            "rgba": [
+                0.0,
+                1.0,
+                1.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_island_shelf_1_partition_0_region": {
+            "target": "kitchen_island",
+            "shelf": 1,
+            "partition": 0,
+            "ranges": [[-0.2835, -0.325, 0.2835, 0.325]],
+            "rgba": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_island_shelf_1_partition_1_region": {
+            "target": "kitchen_island",
+            "shelf": 1,
+            "partition": 1,
+            "ranges": [[-0.283, -0.325, 0.283, 0.325]],
+            "rgba": [
+                1.0,
+                0.5,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_island_shelf_1_partition_2_region": {
+            "target": "kitchen_island",
+            "shelf": 1,
+            "partition": 2,
+            "ranges": [[-0.2835, -0.325, 0.2835, 0.325]],
+            "rgba": [
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_island_shelf_2_region": {
+            "target": "kitchen_island",
+            "shelf": 2,
+            "ranges": [[-0.95, -0.325, 0.95, 0.325]],
+            "rgba": [
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_shelf_0_partition_0_region": {
+            "target": "kitchen_cooking_area",
+            "shelf": 0,
+            "partition": 0,
+            "ranges": [[-0.4925, -0.325, 0.4925, 0.325]],
+            "rgba": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_shelf_0_partition_1_region": {
+            "target": "kitchen_cooking_area",
+            "shelf": 0,
+            "partition": 1,
+            "ranges": [[-0.4925, -0.325, 0.4925, 0.325]],
+            "rgba": [
+                0.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_shelf_0_partition_2_region": {
+            "target": "kitchen_cooking_area",
+            "shelf": 0,
+            "partition": 2,
+            "ranges": [[-0.4925, -0.325, 0.4925, 0.325]],
+            "rgba": [
+                0.0,
+                0.0,
+                1.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_shelf_1_partition_0_region": {
+            "target": "kitchen_cooking_area",
+            "shelf": 1,
+            "partition": 0,
+            "ranges": [[-0.4925, -0.325, 0.4925, 0.325]],
+            "rgba": [
+                1.0,
+                0.5,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_shelf_1_partition_1_region": {
+            "target": "kitchen_cooking_area",
+            "shelf": 1,
+            "partition": 1,
+            "ranges": [[-0.4925, -0.325, 0.4925, 0.325]],
+            "rgba": [
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_shelf_1_partition_2_region": {
+            "target": "kitchen_cooking_area",
+            "shelf": 1,
+            "partition": 2,
+            "ranges": [[-0.4925, -0.325, 0.4925, 0.325]],
+            "rgba": [
+                0.0,
+                1.0,
+                1.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_shelf_2_region": {
+            "target": "kitchen_cooking_area",
+            "shelf": 2,
+            "ranges": [[-1.575, -0.325, 1.575, 0.325]],
+            "rgba": [
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_upper_shelf_0_region": {
+            "target": "kitchen_cooking_area_upper",
+            "shelf": 0,
+            "ranges": [[-1.575, -0.2, 1.575, 0.2]],
+            "rgba": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_upper_shelf_1_region": {
+            "target": "kitchen_cooking_area_upper",
+            "shelf": 1,
+            "ranges": [[-1.575, -0.2, 1.575, 0.2]],
+            "rgba": [
+                0.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_cooking_area_upper_shelf_2_region": {
+            "target": "kitchen_cooking_area_upper",
+            "shelf": 2,
+            "ranges": [[-1.575, -0.2, 1.575, 0.2]],
+            "rgba": [
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_left_side_shelf_0_partition_0_region": {
+            "target": "kitchen_left_side",
+            "shelf": 0,
+            "partition": 0,
+            "ranges": [[-0.35, -0.325, 0.35, 0.325]],
+            "rgba": [
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_left_side_shelf_0_partition_1_region": {
+            "target": "kitchen_left_side",
+            "shelf": 0,
+            "partition": 1,
+            "ranges": [[-0.35, -0.325, 0.35, 0.325]],
+            "rgba": [
+                0.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_left_side_shelf_0_partition_2_region": {
+            "target": "kitchen_left_side",
+            "shelf": 0,
+            "partition": 2,
+            "ranges": [[-0.35, -0.325, 0.35, 0.325]],
+            "rgba": [
+                0.0,
+                0.0,
+                1.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_left_side_shelf_1_partition_0_region": {
+            "target": "kitchen_left_side",
+            "shelf": 1,
+            "partition": 0,
+            "ranges": [[-0.35, -0.325, 0.35, 0.325]],
+            "rgba": [
+                1.0,
+                0.5,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_left_side_shelf_1_partition_1_region": {
+            "target": "kitchen_left_side",
+            "shelf": 1,
+            "partition": 1,
+            "ranges": [[-0.35, -0.325, 0.35, 0.325]],
+            "rgba": [
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_left_side_shelf_1_partition_2_region": {
+            "target": "kitchen_left_side",
+            "shelf": 1,
+            "partition": 2,
+            "ranges": [[-0.35, -0.325, 0.35, 0.325]],
+            "rgba": [
+                0.0,
+                1.0,
+                1.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 0]]
+        },
+        "robot_living_area_init_region": {
+            "target": "ground",
+            "ranges": [[-1.0, -0.75, -0.5, 0.75]],
+            "rgba": [
+                0.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            "yaw_ranges": [[0, 360]]
+        }
+    },
+    "cameras": {
+        "agentview_1": {
+            "position": [
+                0,
+                0.5,
+                2.5
+            ],
+            "lookat": [
+                0,
+                0.5,
+                0
+            ],
+            "fovy": 42,
+            "resolution": [
+                640,
+                480
+            ]
+        }
+    },
+    "initial_state": [
+        [
+            "on",
+            "kitchen_island",
+            "kitchen_island_init_region"
+        ],
+        [
+            "on",
+            "kitchen_cooking_area",
+            "kitchen_cooking_area_init_region"
+        ],
+        [
+            "on",
+            "kitchen_cooking_area_upper",
+            "kitchen_cooking_area_upper_init_region"
+        ],
+        [
+            "on",
+            "kitchen_left_side",
+            "kitchen_left_side_init_region"
+        ],
+        [
+            "on",
+            "kitchen_left_corner",
+            "kitchen_left_corner_init_region"
+        ]
+    ]
+}

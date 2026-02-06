@@ -1,0 +1,60 @@
+{
+    "robots": {
+        "tidybot": {
+            "robot_0": {}
+        }
+    },
+    "scene": "lab2_kitchen_gray",
+    "regions": {
+        "robot_task_init_region": {
+            "target": "ground",
+            "ranges": [[-0.25, -0.05, -0.15, 0.05]],
+            "rgba": [0.0, 1.0, 0.0, 0.0],
+            "yaw_ranges": [[-5, 5]]
+        },
+        "kitchen_island_shelf_2_bowl_region": {
+            "target": "kitchen_island",
+            "shelf": 2,
+            "ranges": [[0.1, -0.2, 0.3, 0.0]],
+            "rgba": [1.0, 1.0, 0.0, 0.0],
+            "yaw_ranges": [[0, 0]]
+        },
+        "kitchen_island_shelf_2_boxed_drink_region": {
+            "target": "kitchen_island",
+            "shelf": 2,
+            "ranges": [[-0.3, -0.2, -0.1, 0.0]],
+            "rgba": [1.0, 1.0, 0.0, 0.0],
+            "yaw_ranges": [[0, 0]]
+        },
+        "bowl_0_region": {
+            "target": "bowl_0",
+            "ranges": [[-0.05, 0.05, 0.05, 0.12]],
+            "yaw_ranges": [[0, 360]],
+            "rgba": [0.5, 0.5, 0.5, 0.3]
+        }
+    },
+    "objects": {
+        "robocasa_boxed_drink_0": {
+            "boxed_drink_0": {}
+        },
+        "robocasa_bowl_0": {
+            "bowl_0": {}
+        }
+    },
+    "cameras": {
+        "task_view": {
+            "position": [1.70, 0.0, 1.25],
+            "lookat": [0.5, 0.0, 0.75],
+            "fovy": 42,
+            "resolution": [640, 480]
+        }
+    },
+    "initial_state": [
+        ["in", "boxed_drink_0", "kitchen_island_shelf_2_boxed_drink_region"],
+        ["in", "bowl_0", "kitchen_island_shelf_2_bowl_region"],
+        ["on", "robot_0", "robot_task_init_region"]
+    ],
+    "goal_state": [
+        ["on", "boxed_drink_0", "bowl_0_region"]
+    ]
+}

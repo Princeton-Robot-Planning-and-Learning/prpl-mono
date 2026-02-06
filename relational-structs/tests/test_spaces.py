@@ -82,3 +82,31 @@ def test_object_centric_state_space():
     recovered_state = box.devectorize(vec)
     assert recovered_state.allclose(state)
     assert isinstance(recovered_state, _CustomObjectCentricState)
+
+    # Test get_object_subvector.
+    box = space.to_box([obj1, obj2, obj3], type_to_feats)
+    vec = box.vectorize(state)
+    subvec1 = box.get_object_subvector(vec, "obj1")
+    assert subvec1.shape == (2,)
+    assert list(subvec1) == [1, 1]
+    subvec2 = box.get_object_subvector(vec, "obj2")
+    assert subvec2.shape == (2,)
+    assert list(subvec2) == [1, 0]
+    subvec3 = box.get_object_subvector(vec, "obj3")
+    assert subvec3.shape == (1,)
+    assert list(subvec3) == [1]
+    with pytest.raises(ValueError, match="not found"):
+        box.get_object_subvector(vec, "nonexistent")
+
+    # Test get_vector_excluding_object.
+    excl1 = box.get_vector_excluding_object(vec, "obj1")
+    assert excl1.shape == (3,)
+    assert list(excl1) == [1, 0, 1]  # obj2 + obj3
+    excl2 = box.get_vector_excluding_object(vec, "obj2")
+    assert excl2.shape == (3,)
+    assert list(excl2) == [1, 1, 1]  # obj1 + obj3
+    excl3 = box.get_vector_excluding_object(vec, "obj3")
+    assert excl3.shape == (4,)
+    assert list(excl3) == [1, 1, 1, 0]  # obj1 + obj2
+    with pytest.raises(ValueError, match="not found"):
+        box.get_vector_excluding_object(vec, "nonexistent")
