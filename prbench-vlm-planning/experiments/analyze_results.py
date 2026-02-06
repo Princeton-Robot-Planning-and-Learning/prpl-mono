@@ -110,7 +110,7 @@ def analyze_results(log_dir: Path) -> pd.DataFrame:
 
     # Calculate average reward among successful episodes
     successful_reward = (
-        df[df["success"] == True]
+        df[df["success"]]
         .groupby(["env", "rgb_observation"])["reward"]
         .agg(["mean", "std"])
         .reset_index()
