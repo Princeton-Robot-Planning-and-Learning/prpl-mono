@@ -3,9 +3,9 @@
 import math
 import time
 
-import prbench
+import kinder
 from matplotlib import pyplot as plt
-from prbench_models.dynamic3d.utils import (
+from kinder_models.dynamic3d.utils import (
     get_bounding_box,
     plot_overhead_scene,
     run_base_motion_planning,
@@ -17,16 +17,16 @@ from tomsgeoms2d.structs import Rectangle
 from prpl_tidybot.base_movement import reach_target_pose
 from prpl_tidybot.coord_converter import CoordFrameConverter
 from prpl_tidybot.interfaces.interface import RealInterface
-from prpl_tidybot.perceivers.prbench_ground_perceiver import PRBenchGroundPerceiver
+from prpl_tidybot.perceivers.kinder_ground_perceiver import KinDERGroundPerceiver
 
-prbench.register_all_environments()
+kinder.register_all_environments()
 
 
 def test_run_base_motion_planning() -> None:
     """Tests for real world base motion planning."""
 
     try:
-        env = prbench.make("prbench/TidyBot3D-ground-o1-v0", render_mode="rgb_array")
+        env = kinder.make("kinder/TidyBot3D-ground-o1-v0", render_mode="rgb_array")
         sim = env.unwrapped._object_centric_env  # type: ignore # pylint: disable=protected-access
         assert isinstance(env.observation_space, ObjectCentricBoxSpace)
         _, _ = env.reset(seed=123)
@@ -45,7 +45,7 @@ def test_run_base_motion_planning() -> None:
         map_to_odom_converter.update(observation.map_base_pose, observation.base_pose)
         odom_to_map_converter.update(observation.base_pose, observation.map_base_pose)
 
-        perceiver = PRBenchGroundPerceiver(interface)
+        perceiver = KinDERGroundPerceiver(interface)
         state = perceiver.get_state()
         sim.set_state(state)
 

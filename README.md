@@ -16,9 +16,9 @@ prpl-mono/
     pyproject.toml
     src/prpl-llm-utils
     tests/
-  prbench/
+  kinder/
     pyproject.toml
-    src/prbench
+    src/kinder
     tests/
   ...
 ```

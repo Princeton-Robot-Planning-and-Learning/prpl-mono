@@ -1,0 +1,8 @@
+# PRPL mono requirements.
+../bilevel-planning
+../kinder[all]
+../kinder-models
+../prpl-utils
+../relational-structs
+../toms-geoms-2d
+../pybullet-helpers
