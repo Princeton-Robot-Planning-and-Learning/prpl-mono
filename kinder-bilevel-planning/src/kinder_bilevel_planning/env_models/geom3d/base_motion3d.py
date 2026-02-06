@@ -8,7 +8,6 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from numpy.typing import NDArray
 from kinder.envs.geom3d.base_motion3d import (
     BaseMotion3DObjectCentricState,
     Geom3DPointType,
@@ -21,6 +20,7 @@ from kinder.envs.geom3d.utils import (
 from kinder_models.geom3d.base_motion3d.parameterized_skills import (
     create_lifted_controllers,
 )
+from numpy.typing import NDArray
 from relational_structs import (
     GroundAtom,
     LiftedAtom,

@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any, Dict, Generator, List, Tuple
 
 import gymnasium as gym
-import numpy as np
 import kinder
+import numpy as np
 
 # Import LeRobot APIs
 from lerobot.datasets.utils import combine_feature_dicts, hw_to_dataset_features

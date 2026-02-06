@@ -1,7 +1,7 @@
 """Tests for cupboard real state_abstractions.py."""
 
-import numpy as np
 import kinder
+import numpy as np
 from conftest import MAKE_VIDEOS  # pylint: disable=import-error
 from gymnasium.wrappers import RecordVideo
 from kinder.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv

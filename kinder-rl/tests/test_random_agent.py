@@ -2,8 +2,8 @@
 
 import copy
 
-import numpy as np
 import kinder
+import numpy as np
 from gymnasium import spaces
 from omegaconf import DictConfig
 

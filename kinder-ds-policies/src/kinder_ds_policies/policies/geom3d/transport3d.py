@@ -11,12 +11,12 @@ import numpy as np
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
-from numpy.typing import NDArray
 from kinder.envs.geom3d.transport3d import ObjectCentricTransport3DEnv
 from kinder.envs.geom3d.utils import Geom3DObjectCentricState, Geom3DRobotActionSpace
 from kinder_models.geom3d.transport3d.parameterized_skills import (
     create_lifted_controllers,
 )
+from numpy.typing import NDArray
 from relational_structs import Object, ObjectCentricState
 from relational_structs.spaces import ObjectCentricBoxSpace
 

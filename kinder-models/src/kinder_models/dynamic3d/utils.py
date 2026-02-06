@@ -3,12 +3,12 @@
 from typing import Iterable
 
 import numpy as np
-from matplotlib import pyplot as plt
 from kinder.envs.dynamic3d.object_types import (
     MujocoFixtureObjectType,
     MujocoObjectType,
     MujocoTidyBotRobotObjectType,
 )
+from matplotlib import pyplot as plt
 from prpl_utils.motion_planning import BiRRT
 from prpl_utils.utils import get_signed_angle_distance, wrap_angle
 from relational_structs import (

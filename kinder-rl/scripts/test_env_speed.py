@@ -4,8 +4,8 @@ import time
 from typing import Callable
 
 import gymnasium as gym
-import numpy as np
 import kinder
+import numpy as np
 
 kinder.register_all_environments()
 

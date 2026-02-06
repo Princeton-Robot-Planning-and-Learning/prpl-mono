@@ -5,7 +5,6 @@ from typing import Iterable, Optional, Sequence, Union
 
 import numpy as np
 from bilevel_planning.structs import GroundParameterizedController
-from numpy.typing import NDArray
 from kinder.envs.dynamic2d.dyn_obstruction2d import (
     DynObstruction2DEnvConfig,
 )
@@ -13,6 +12,7 @@ from kinder.envs.dynamic2d.object_types import KinRobotType
 from kinder.envs.dynamic2d.utils import KinRobotActionSpace
 from kinder.envs.geom2d.structs import SE2Pose
 from kinder.envs.utils import state_2d_has_collision
+from numpy.typing import NDArray
 from prpl_utils.motion_planning import BiRRT
 from prpl_utils.utils import get_signed_angle_distance, wrap_angle
 from relational_structs.object_centric_state import ObjectCentricState
