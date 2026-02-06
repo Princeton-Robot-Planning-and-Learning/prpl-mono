@@ -21,13 +21,15 @@ The robot can control:
 This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
 
 - [`kinder/SortClutteredBlocks3D-o12-sort_the_blocks_into_the_cupboard-v0`](variants/SortClutteredBlocks3D/SortClutteredBlocks3D-o12-sort_the_blocks_into_the_cupboard.md) (o12-sort_the_blocks_into_the_cupboard)
+- [`kinder/SortClutteredBlocks3D-o20-sort_the_cluttered_blocks_into_bins-v0`](variants/SortClutteredBlocks3D/SortClutteredBlocks3D-o20-sort_the_cluttered_blocks_into_bins.md) (o20-sort_the_cluttered_blocks_into_bins)
+- [`kinder/SortClutteredBlocks3D-o4-sort_the_cluttered_blocks_into_bins-v0`](variants/SortClutteredBlocks3D/SortClutteredBlocks3D-o4-sort_the_cluttered_blocks_into_bins.md) (o4-sort_the_cluttered_blocks_into_bins)
 - [`kinder/SortClutteredBlocks3D-o20-sort_the_cluttered_blocks_into_bowls-v0`](variants/SortClutteredBlocks3D/SortClutteredBlocks3D-o20-sort_the_cluttered_blocks_into_bowls.md) (o20-sort_the_cluttered_blocks_into_bowls)
 
 ## Initial State Distribution
 ![initial state GIF](assets/initial_state_gifs/SortClutteredBlocks3D.gif)
 
 ## Example Demonstration
-*(No demonstration GIFs available)*
+![demo GIF](assets/group_gifs/SortClutteredBlocks3D.gif)
 
 ## Observation Space
 *(Differs per variant, see individual variant pages)*
