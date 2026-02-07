@@ -164,7 +164,8 @@ class ObjectCentricDynObstruction2DEnv(
     """Dynamic environment where a block must be placed on an obstructed target. Uses
     PyMunk physics simulation.
 
-    Key difference from Kinematic2DEnv is that the robot can interact with dynamic objects
+    Key difference from Kinematic2DEnv is that the robot can interact with dynamic
+    objects
     with realistic physics (friction, collisions, etc). This means some objects should
     be *pushed* instead of *grasped*.
     """

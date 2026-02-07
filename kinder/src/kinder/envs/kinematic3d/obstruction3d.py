@@ -142,7 +142,9 @@ class Obstruction3DObjectCentricState(Kinematic3DObjectCentricState):
 
 
 class ObjectCentricObstruction3DEnv(
-    ObjectCentricKinematic3DRobotEnv[Obstruction3DObjectCentricState, Obstruction3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[
+        Obstruction3DObjectCentricState, Obstruction3DEnvConfig
+    ]
 ):
     """Environment where obstructions must be cleared to place a target on a region."""
 
@@ -415,7 +417,9 @@ class ObjectCentricObstruction3DEnv(
             ]
         )
         state = create_state_from_dict(
-            state_dict, Kinematic3DEnvTypeFeatures, state_cls=Obstruction3DObjectCentricState
+            state_dict,
+            Kinematic3DEnvTypeFeatures,
+            state_cls=Obstruction3DObjectCentricState,
         )
         assert isinstance(state, Obstruction3DObjectCentricState)
         return state

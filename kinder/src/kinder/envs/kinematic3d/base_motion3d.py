@@ -58,7 +58,9 @@ class BaseMotion3DObjectCentricState(Kinematic3DObjectCentricState):
 
 
 class ObjectCentricBaseMotion3DEnv(
-    ObjectCentricKinematic3DRobotEnv[BaseMotion3DObjectCentricState, BaseMotion3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[
+        BaseMotion3DObjectCentricState, BaseMotion3DEnvConfig
+    ]
 ):
     """Environment where only base motion planning is needed to reach a goal."""
 
@@ -139,7 +141,9 @@ class ObjectCentricBaseMotion3DEnv(
             [("robot", Kinematic3DRobotType), ("target", Kinematic3DPointType)]
         )
         state = create_state_from_dict(
-            state_dict, Kinematic3DEnvTypeFeatures, state_cls=BaseMotion3DObjectCentricState
+            state_dict,
+            Kinematic3DEnvTypeFeatures,
+            state_cls=BaseMotion3DObjectCentricState,
         )
         assert isinstance(state, BaseMotion3DObjectCentricState)
         return state

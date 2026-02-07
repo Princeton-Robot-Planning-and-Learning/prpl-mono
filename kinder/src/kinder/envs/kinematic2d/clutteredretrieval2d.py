@@ -35,7 +35,9 @@ Kinematic2DRobotEnvTypeFeatures[TargetRegionType] = list(
 
 
 @dataclass(frozen=True)
-class ClutteredRetrieval2DEnvConfig(Kinematic2DRobotEnvConfig, metaclass=FinalConfigMeta):
+class ClutteredRetrieval2DEnvConfig(
+    Kinematic2DRobotEnvConfig, metaclass=FinalConfigMeta
+):
     """Config for ClutteredRetrieval2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
