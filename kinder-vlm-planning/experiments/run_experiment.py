@@ -9,8 +9,11 @@ Examples:
 
 - Running on multiple environments and multiple seeds:
     python experiments/run_experiment.py -m seed='range(0,3)' \
-        env=Motion2D-p0-v0,Motion2D-p2-v0,StickButton2D-b1-v0,StickButton2D-b3-v0 \
-        vlm_model=gpt-5 use_image=true,false temperature=1
+        env=Motion2D-p0-v0,StickButton2D-b1-v0 \
+        vlm_model=gpt-5 rgb_observation=true,false temperature=1
+    python exeriments/run_experiment.py -m seed='range(0,3)' \
+        env=BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0 \
+        vlm_model=gpt-5 rgb_observation=true,false temperature=1 hydra/launcher=joblib
 """
 
 import logging
@@ -62,7 +65,7 @@ def _main(cfg: DictConfig) -> None:
         env_controllers=env_controllers,
         vlm_model_name=cfg.vlm_model,
         temperature=cfg.temperature,
-        max_planning_horizon=cfg.max_planning_horizon,
+        max_planning_horizon=cfg.max_eval_steps,
         seed=cfg.seed,
         rgb_observation=cfg.get("rgb_observation", False),
     )
@@ -90,6 +93,8 @@ def _main(cfg: DictConfig) -> None:
                 "success": False,
                 "steps": 0,
                 "planning_time": 0.0,
+                "execution_time": 0.0,
+                "reward": 0.0,
                 "eval_episode": eval_episode,
                 "error": str(e),
             }
@@ -121,6 +126,7 @@ def _run_single_episode_evaluation(
 ) -> dict[str, float | bool | str]:
     steps = 0
     success = False
+    total_reward = 0.0
     seed = sample_seed_from_rng(rng)
     obs, info = env.reset(seed=seed)
 
@@ -133,7 +139,8 @@ def _run_single_episode_evaluation(
         env.metadata["description"] is not None
     ), "Environment must have a description."
     info.update({"description": env.metadata["description"]})
-    planning_time = 0.0  # measure the time taken by the approach only
+    planning_time = 0.0  # time spent generating plans (VLM queries)
+    execution_time = 0.0  # time spent executing the policy (getting actions)
     planning_failed = False
 
     # Initial planning
@@ -146,7 +153,13 @@ def _run_single_episode_evaluation(
     planning_time += result["time"]
 
     if planning_failed:
-        return {"success": False, "steps": steps, "planning_time": planning_time}
+        return {
+            "success": False,
+            "steps": steps,
+            "planning_time": planning_time,
+            "execution_time": execution_time,
+            "reward": total_reward,
+        }
 
     # Execute the plan
     for _ in range(max_eval_steps):
@@ -156,17 +169,34 @@ def _run_single_episode_evaluation(
             except VLMPlanningAgentFailure as e:
                 logging.info(f"Agent failed during execution: {e}")
                 break
-        planning_time += result["time"]
+        execution_time += result["time"]
 
         # Execute action in environment
         obs, rew, done, truncated, info = env.step(action)
         reward = float(rew)
+        total_reward += reward
         assert not truncated
+
+        # Log the resulting state and done status
+        logging.info(f"[ENV STEP DEBUG] Done: {done}")
+        # Devectorize to get readable state
+        state_obs_for_log = obs if not agent.rgb_observation else obs
+        try:
+            obs_space = env.observation_space
+            state = obs_space.devectorize(state_obs_for_log)  # type: ignore
+            logging.info(f"[ENV STEP DEBUG] Resulting state:\n{state.pretty_str()}")
+        except Exception as e:
+            logging.info(f"[ENV STEP DEBUG] Could not devectorize state: {e}")
 
         # Wrap observation with rendered image if using RGB observations
         if agent.rgb_observation:
             rendered_img = env.render()  # type: ignore[assignment]
             obs = {"state": obs, "img": rendered_img}
+
+        if done:
+            success = True
+            break
+        steps += 1
 
         with timer() as result:
             try:
@@ -174,15 +204,16 @@ def _run_single_episode_evaluation(
             except VLMPlanningAgentFailure as e:
                 logging.info(f"Agent failed during update: {e}")
                 break
-        planning_time += result["time"]
-
-        if done:
-            success = True
-            break
-        steps += 1
+        execution_time += result["time"]
 
     logging.info(f"Success result: {success}")
-    return {"success": success, "steps": steps, "planning_time": planning_time}
+    return {
+        "success": success,
+        "steps": steps,
+        "planning_time": planning_time,
+        "execution_time": execution_time,
+        "reward": total_reward,
+    }
 
 
 if __name__ == "__main__":

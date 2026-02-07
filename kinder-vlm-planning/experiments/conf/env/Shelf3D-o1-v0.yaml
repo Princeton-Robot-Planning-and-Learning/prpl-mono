@@ -1,0 +1,4 @@
+# @package _global_
+# Configuration for Shelf3D-o1-v0
+env: "Shelf3D-o1-v0"
+max_eval_steps: 500
