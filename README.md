@@ -73,7 +73,7 @@ python experiments/run_experiment.py -m seed='range(300,305)' \
 
 ### Imitation Learning
 
-We do not include code for running imitation learning baselines. This repository however does contain various tools that were critical to data collection for all tasks.
+We do not include code for running imitation learning baselines (due to space constraints, we cannot include demonstrations). This code however does contain the tools that were used for data collection.
 
 #### Teleoperation
 
