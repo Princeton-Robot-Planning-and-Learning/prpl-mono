@@ -111,7 +111,7 @@ We do not include code for running imitation learning baselines. This repository
 Dynamic3D: 
 ```
 $ cd kinder-models
-$ python scripts/teleop_dynamics3d_kinder.py
+$ python scripts/teleop_dynamics3d_kinder.py --env-name <env_name>
 ```
 
 Dynamic2D and Geom2D: 
