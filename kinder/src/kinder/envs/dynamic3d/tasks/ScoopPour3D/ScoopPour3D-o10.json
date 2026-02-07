@@ -16,7 +16,7 @@
         "scoop_init_region": {
             "target": "kitchen_island",
             "shelf": 2,
-            "ranges": [[-0.2, -0.375, 0.2, -0.175]],
+            "ranges": [[-0.2, -0.375, 0.2, -0.225]],
             "yaw_ranges": [[-45, 45]],
             "rgba": [0.5, 0.5, 0.5, 0.0]
         },
@@ -44,27 +44,27 @@
     "objects": {
         "scoop": {
             "scoop_0": {
-                "length": 0.1,
+                "length": 0.05,
                 "width": 0.05,
                 "height": 0.04,
-                "wall_width": 0.005,
-                "handle_length": 0.05,
+                "wall_width": 0.002,
+                "handle_length": 0.035,
                 "handle_width": 0.02,
                 "handle_height": 0.02
             }
         },
         "bin": {
             "bin_yellow_0": {
-                "length": 0.3,
+                "length": 0.45,
                 "width": 0.3,
-                "height": 0.1,
+                "height": 0.07,
                 "wall_thickness": 0.02,
                 "rgba": [0.8, 0.8, 0.0, 1.0]
             },
             "bin_green_0": {
-                "length": 0.3,
+                "length": 0.45,
                 "width": 0.3,
-                "height": 0.1,
+                "height": 0.07,
                 "wall_thickness": 0.02,
                 "rgba": [0.1, 0.8, 0.1, 1.0]
             }
@@ -91,7 +91,6 @@
         }
     },
     "initial_state": [
-        ["in", "scoop_0", "scoop_init_region"],
         ["on", "bin_yellow_0", "bin_yellow_init_region"],
         ["on", "bin_green_0", "bin_green_init_region"],
         ["on", "robot_0", "robot_task_init_region"],
@@ -104,7 +103,8 @@
         ["in", "cube_6", "blocks_init_region"],
         ["in", "cube_7", "blocks_init_region"],
         ["in", "cube_8", "blocks_init_region"],
-        ["in", "cube_9", "blocks_init_region"]
+        ["in", "cube_9", "blocks_init_region"],
+        ["in", "scoop_0", "scoop_init_region"]
     ],
     "goal_state": [
         ["on", "cube_0", "kitchen_island_shelf_1_partition_1_region"],
