@@ -2,4 +2,3 @@
 ../relational-structs
 ../bilevel-planning
 ../kinder
-../prpl-tidybot
