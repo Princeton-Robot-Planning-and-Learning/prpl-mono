@@ -6,7 +6,7 @@ There are multiple Python packages that can be installed and developed separatel
 
 The basic structure is:
 ```
-prpl-mono/
+kinder-mono/
   .github/workflows/ci.yml
   our-utils/
     pyproject.toml

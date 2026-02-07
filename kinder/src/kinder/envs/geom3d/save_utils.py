@@ -7,8 +7,8 @@ from typing import Any
 import dill as pkl  # type: ignore[import-untyped]
 
 # Default demos directory: kinder/demos relative to this file
-# Utils file: prpl-mono/kinder/tests/envs/geom3d/utils.py
-# Demos:      prpl-mono/kinder/demos
+# Utils file: kinder-mono/kinder/tests/envs/geom3d/utils.py
+# Demos:      kinder-mono/kinder/demos
 _UTILS_DIR = Path(__file__).resolve().parent
 DEFAULT_DEMOS_DIR = _UTILS_DIR.parent.parent.parent.parent / "demos"
 

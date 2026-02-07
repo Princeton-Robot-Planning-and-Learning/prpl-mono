@@ -20,8 +20,8 @@ from kinder_models.teleop_utils import _visualize_image_in_window
 kinder.register_all_environments()
 
 # Default demos directory: ../kinder/demos relative to this script
-# Script: prpl-mono/kinder-models/scripts/teleop_dynamics3d_kinder.py
-# Demos:  prpl-mono/kinder/demos
+# Script: kinder-mono/kinder-models/scripts/teleop_dynamics3d_kinder.py
+# Demos:  kinder-mono/kinder/demos
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _DEFAULT_DEMOS_DIR = _SCRIPT_DIR.parent.parent / "kinder" / "demos"
 
