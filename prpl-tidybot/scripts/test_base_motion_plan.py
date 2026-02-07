@@ -2,13 +2,13 @@
 
 import time
 
-import prbench
-from matplotlib import pyplot as plt
-from prbench_models.dynamic3d.utils import (
+import kinder
+from kinder_models.dynamic3d.utils import (
     get_bounding_box,
     plot_overhead_scene,
     run_base_motion_planning,
 )
+from matplotlib import pyplot as plt
 from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2
 from tomsgeoms2d.structs import Rectangle
@@ -17,13 +17,13 @@ from prpl_tidybot.base_movement import reach_target_pose
 from prpl_tidybot.coord_converter import CoordFrameConverter
 from prpl_tidybot.interfaces.interface import RealInterface
 
-prbench.register_all_environments()
+kinder.register_all_environments()
 
 
 def test_run_base_motion_planning() -> None:
     """Tests for real world base motion planning."""
 
-    env = prbench.make("prbench/TidyBot3D-ground-o3-v0", render_mode="rgb_array")
+    env = kinder.make("kinder/TidyBot3D-ground-o3-v0", render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     obs, _ = env.reset(seed=123)
     state = env.observation_space.devectorize(obs)

@@ -1,0 +1,21 @@
+# Default configuration for RL experiments
+defaults:
+  - agent: ppo_motion2d_0_passage
+  - _self_
+
+# Environment configuration
+env_id: kinder/Motion2D-p0-v0
+max_episode_steps: 300
+
+# Evaluation configuration
+eval_episodes: 50
+
+# Random seed
+seed: 0
+
+# Hydra configuration - disable default output directory
+# Our experiment runner manages output directories instead
+hydra:
+  output_subdir: null
+  run:
+    dir: .

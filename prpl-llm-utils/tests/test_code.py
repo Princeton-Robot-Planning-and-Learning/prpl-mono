@@ -60,13 +60,11 @@ def test_synthesize_python_function_with_llm():
             ),
         ]
 
-        query = Query(
-            """Generate a Python function of the form
+        query = Query("""Generate a Python function of the form
 
 def count_good_dogs(dog_names: list[str]) -> int:
     # your code here
-"""
-        )
+""")
 
         ordered_responses = []
 
@@ -167,15 +165,13 @@ def test_function_synthesis_with_real_llm():
             ),
         ]
 
-        query = Query(
-            """Generate a Python function of the form
+        query = Query("""Generate a Python function of the form
 
 def count_vowels(s: str) -> int:
     # your code here
 
 Note that "y" should be counted.
-"""
-        )
+""")
 
         synthesized_python_fn = synthesize_python_function_with_llm(
             function_name,

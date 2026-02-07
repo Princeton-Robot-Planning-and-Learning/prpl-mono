@@ -1,0 +1,60 @@
+# Rearrange3D
+
+![random action GIF](assets/random_action_gifs/Rearrange3D.gif)
+
+**Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
+
+## Description
+A 3D task where the robot must rearrange objects into different spatial arrangements with respect to other objects.
+
+The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
+
+The robot can control:
+- Base pose (x, y, theta)
+- Arm position (x, y, z)
+- Arm orientation (quaternion)
+- Gripper position (open/close)
+
+
+## Available Variants
+Each variant requires the robot to put one or more objects on the left, right, front, behind, or next to another object.
+
+- [`kinder/Rearrange3D-o1-put_the_boxed_drink_on_the_right_side_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_on_the_right_side_of_the_bowl.md) (o1-put_the_boxed_drink_on_the_right_side_of_the_bowl)
+- [`kinder/Rearrange3D-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl.md) (o2-put_the_boxed_drink_in_front_of_and_the_can_behind_the_bowl)
+- [`kinder/Rearrange3D-o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl.md) (o2-put_the_can_on_the_left_and_the_boxed_drink_on_the_right_side_of_the_bowl)
+- [`kinder/Rearrange3D-o1-put_the_boxed_drink_on_the_left_side_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_on_the_left_side_of_the_bowl.md) (o1-put_the_boxed_drink_on_the_left_side_of_the_bowl)
+- [`kinder/Rearrange3D-o1-put_the_boxed_drink_next_to_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_next_to_the_bowl.md) (o1-put_the_boxed_drink_next_to_the_bowl)
+- [`kinder/Rearrange3D-o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl.md) (o2-put_the_boxed_drink_on_the_left_and_the_can_on_the_right_side_of_the_bowl)
+- [`kinder/Rearrange3D-o1-put_the_boxed_drink_behind_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_behind_the_bowl.md) (o1-put_the_boxed_drink_behind_the_bowl)
+- [`kinder/Rearrange3D-o1-put_the_boxed_drink_in_front_of_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o1-put_the_boxed_drink_in_front_of_the_bowl.md) (o1-put_the_boxed_drink_in_front_of_the_bowl)
+- [`kinder/Rearrange3D-o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl.md) (o2-put_the_can_in_front_of_and_the_boxed_drink_behind_the_bowl)
+- [`kinder/Rearrange3D-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl-v0`](variants/Rearrange3D/Rearrange3D-o2-put_the_boxed_drink_and_the_can_next_to_the_bowl.md) (o2-put_the_boxed_drink_and_the_can_next_to_the_bowl)
+
+## Initial State Distribution
+![initial state GIF](assets/initial_state_gifs/Rearrange3D.gif)
+
+## Example Demonstration
+*(No demonstration GIFs available)*
+
+## Observation Space
+*(Differs per variant, see individual variant pages)*
+
+## Action Space
+Actions: base pos and yaw (3), arm joints (7), gripper pos (1)
+
+## Rewards
+The primary reward is for successfully placing objects at their target locations.
+- A reward of +1.0 is given for each object placed within a 5cm tolerance of its target.
+- A smaller positive reward is given for objects within a 10cm tolerance to guide the robot.
+- A small negative reward (-0.01) is applied at each timestep to encourage efficiency.
+The episode terminates when all objects are placed at their respective targets.
+
+
+## References
+TidyBot++: An Open-Source Holonomic Mobile Manipulator
+for Robot Learning
+- Jimmy Wu, William Chong, Robert Holmberg, Aaditya Prasad, Yihuai Gao,
+  Oussama Khatib, Shuran Song, Szymon Rusinkiewicz, Jeannette Bohg
+- Conference on Robot Learning (CoRL), 2024
+
+https://github.com/tidybot2/tidybot2

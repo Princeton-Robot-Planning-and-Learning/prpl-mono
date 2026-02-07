@@ -7,7 +7,7 @@ logs
 llm_cache.db
 vlm_cache
 unit_test_videos*
-prbench-vlm-planning/outputs
+kinder-vlm-planning/outputs
 data/
 
 # Byte-compiled / optimized / DLL files
@@ -186,3 +186,6 @@ datasets
 
 # third party libraries
 third_party
+
+# local test scripts
+multiple_runs.py

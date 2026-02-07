@@ -3,10 +3,10 @@
 import math
 import time
 
+import kinder
 import numpy as np
-import prbench
 from gymnasium.wrappers import RecordVideo
-from prbench_models.dynamic3d.ground.parameterized_skills import (
+from kinder_models.dynamic3d.ground.parameterized_skills import (
     create_lifted_controllers,
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
@@ -16,10 +16,10 @@ from prpl_tidybot.base_movement import reach_target_pose
 from prpl_tidybot.constants import POLICY_CONTROL_PERIOD
 from prpl_tidybot.coord_converter import CoordFrameConverter
 from prpl_tidybot.interfaces.interface import RealInterface
-from prpl_tidybot.perceivers.prbench_ground_perceiver import PRBenchGroundPerceiver
+from prpl_tidybot.perceivers.kinder_ground_perceiver import KinDERGroundPerceiver
 from prpl_tidybot.structs import TidyBotAction
 
-prbench.register_all_environments()
+kinder.register_all_environments()
 
 
 def real2sim() -> None:
@@ -28,8 +28,8 @@ def real2sim() -> None:
     try:
         # Create the environment.
         num_cubes = 1
-        env = prbench.make(
-            f"prbench/TidyBot3D-cupboard-o{num_cubes}-v0", render_mode="rgb_array"
+        env = kinder.make(
+            f"kinder/TidyBot3D-cupboard-o{num_cubes}-v0", render_mode="rgb_array"
         )
 
         env = RecordVideo(
@@ -54,7 +54,7 @@ def real2sim() -> None:
         map_to_odom_converter.update(observation.map_base_pose, observation.base_pose)
         odom_to_map_converter.update(observation.base_pose, observation.map_base_pose)
 
-        perceiver = PRBenchGroundPerceiver(interface)
+        perceiver = KinDERGroundPerceiver(interface)
         state = perceiver.get_state()
         env.unwrapped._object_centric_env.set_state(state)  # type: ignore # pylint: disable=protected-access
 
@@ -242,8 +242,8 @@ def real2sim2real() -> None:
     try:
         # Create the environment.
         num_cubes = 1
-        env = prbench.make(
-            f"prbench/TidyBot3D-cupboard-o{num_cubes}-v0", render_mode="rgb_array"
+        env = kinder.make(
+            f"kinder/TidyBot3D-cupboard-o{num_cubes}-v0", render_mode="rgb_array"
         )
 
         # Reset the environment and get the initial state.
@@ -264,7 +264,7 @@ def real2sim2real() -> None:
         map_to_odom_converter.update(observation.map_base_pose, observation.base_pose)
         odom_to_map_converter.update(observation.base_pose, observation.map_base_pose)
 
-        perceiver = PRBenchGroundPerceiver(interface)
+        perceiver = KinDERGroundPerceiver(interface)
         temp_state = perceiver.get_state()
         env.unwrapped._object_centric_env.set_state(temp_state)  # type: ignore # pylint: disable=protected-access
         state = env.unwrapped._object_centric_env._get_object_centric_state()  # type: ignore # pylint: disable=protected-access
@@ -314,7 +314,7 @@ def real2sim2real() -> None:
         map_to_odom_converter.update(observation.map_base_pose, observation.base_pose)
         odom_to_map_converter.update(observation.base_pose, observation.map_base_pose)
 
-        perceiver = PRBenchGroundPerceiver(interface)
+        perceiver = KinDERGroundPerceiver(interface)
         temp_state = perceiver.get_state()
         env.unwrapped._object_centric_env.set_state(temp_state)  # type: ignore # pylint: disable=protected-access
         state = env.unwrapped._object_centric_env._get_object_centric_state()  # type: ignore # pylint: disable=protected-access
@@ -371,7 +371,7 @@ def real2sim2real() -> None:
         map_to_odom_converter.update(observation.map_base_pose, observation.base_pose)
         odom_to_map_converter.update(observation.base_pose, observation.map_base_pose)
 
-        perceiver = PRBenchGroundPerceiver(interface)
+        perceiver = KinDERGroundPerceiver(interface)
         temp_state = perceiver.get_state()
         env.unwrapped._object_centric_env.set_state(temp_state)  # type: ignore # pylint: disable=protected-access
         state = env.unwrapped._object_centric_env._get_object_centric_state()  # type: ignore # pylint: disable=protected-access
@@ -410,7 +410,7 @@ def real2sim2real() -> None:
         map_to_odom_converter.update(observation.map_base_pose, observation.base_pose)
         odom_to_map_converter.update(observation.base_pose, observation.map_base_pose)
 
-        perceiver = PRBenchGroundPerceiver(interface)
+        perceiver = KinDERGroundPerceiver(interface)
         temp_state = perceiver.get_state()
         env.unwrapped._object_centric_env.set_state(temp_state)  # type: ignore # pylint: disable=protected-access
         state = env.unwrapped._object_centric_env._get_object_centric_state()  # type: ignore # pylint: disable=protected-access
@@ -464,7 +464,7 @@ def real2sim2real() -> None:
         map_to_odom_converter.update(observation.map_base_pose, observation.base_pose)
         odom_to_map_converter.update(observation.base_pose, observation.map_base_pose)
 
-        perceiver = PRBenchGroundPerceiver(interface)
+        perceiver = KinDERGroundPerceiver(interface)
         temp_state = perceiver.get_state()
         env.unwrapped._object_centric_env.set_state(temp_state)  # type: ignore # pylint: disable=protected-access
         state = env.unwrapped._object_centric_env._get_object_centric_state()  # type: ignore # pylint: disable=protected-access

@@ -1,0 +1,27 @@
+# Default configuration for VLM planning experiments
+
+defaults:
+  - env: Motion2D-p0-v0
+
+# Agent configuration
+vlm_model: "gpt-5"
+temperature: 1
+rgb_observation: true
+use_env_models: true
+
+# Evaluation configuration
+seed: 0
+num_eval_episodes: 50
+
+hydra:
+  run:
+    dir: ./logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ./logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}
+  launcher:
+    _target_: hydra_plugins.hydra_joblib_launcher.joblib_launcher.JoblibLauncher
+    n_jobs: -1  # Use all CPU cores, or set a specific number like 10
+    backend: loky  # Use 'loky' for better isolation, or 'threading' for IO-bound tasks
+    verbose: 10  # Set verbosity level
+    pre_dispatch: 2*n_jobs  # Number of jobs to pre-dispatch

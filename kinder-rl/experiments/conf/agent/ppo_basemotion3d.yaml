@@ -1,0 +1,22 @@
+# PPO agent configuration for BaseMotion3D
+name: ppo
+
+# Core training parameters
+args:
+  total_timesteps: 1000000
+  num_envs: 8
+  num_steps: 256
+  num_eval_envs: 1
+  # Network architecture
+  hidden_size: 128
+  # Dense reward settings
+  dense_reward: false
+  dense_reward_scale: 0.1
+
+# Training settings
+torch_deterministic: true
+cuda: false
+
+# Logging settings
+exp_name: "ppo_basemotion3d_train"
+tb_log_dir: "runs"
