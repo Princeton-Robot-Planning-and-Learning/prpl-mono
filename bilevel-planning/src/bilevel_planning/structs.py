@@ -195,7 +195,7 @@ class LiftedSkill(Generic[_X, _U]):
 
     def ground(self, objects: Sequence[Object]) -> GroundSkill[_X, _U]:
         """Create a GroundSkill()."""
-        ground_operator = self.operator.ground(tuple(objects))
+        ground_operator = self.operator.ground(objects)
         ground_controller = self.controller.ground(objects)
         return GroundSkill(self, ground_operator, ground_controller)
 

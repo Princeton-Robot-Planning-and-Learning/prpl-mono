@@ -60,7 +60,7 @@ def create_lifted_controllers(
             state = self._last_state
             assert state is not None
             target = state.get_object_from_name("cube1")
-            robot = state.get_object_from_name("robot")
+            robot = state.get_object_from_name("robot_0")
             target_x = state.get(target, "x")
             target_y = state.get(target, "y")
             robot_x = state.get(robot, "pos_base_x")

@@ -3,8 +3,8 @@
 import math
 import time
 
-import numpy as np
 import kinder
+import numpy as np
 from gymnasium.wrappers import RecordVideo
 from kinder_models.dynamic3d.ground.parameterized_skills import (
     create_lifted_controllers,

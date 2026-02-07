@@ -5,7 +5,7 @@
 **Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
 
 ## Description
-A 3D mobile manipulation environment using the TidyBot platform.
+A 3D task where the robot must pick up objects from the ground and place them onto a space-constrained shelf in a cupboard with three layers.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
 Scene type: cupboard_real with 8 objects.
@@ -18,7 +18,7 @@ The robot can control:
 
 
 ## Available Variants
-This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
+The variants require picking and placing different numbers of objects.
 
 - [`kinder/TidyBot3D-Shelf3D-cupboard_real-o1-v0`](variants/Shelf3D/TidyBot3D-Shelf3D-cupboard_real-o1.md) (TidyBot3D-cupboard_real-o1)
 - [`kinder/TidyBot3D-Shelf3D-cupboard_real-o8-v0`](variants/Shelf3D/TidyBot3D-Shelf3D-cupboard_real-o8.md) (TidyBot3D-cupboard_real-o8)

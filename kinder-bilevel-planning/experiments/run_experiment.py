@@ -17,9 +17,9 @@ import os
 from pathlib import Path
 
 import hydra
+import kinder
 import numpy as np
 import pandas as pd
-import kinder
 from gymnasium.core import Env
 from gymnasium.wrappers import RecordVideo
 from hydra.core.hydra_config import HydraConfig

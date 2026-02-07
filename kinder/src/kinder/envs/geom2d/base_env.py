@@ -17,7 +17,7 @@ from relational_structs import (
 )
 from relational_structs.utils import create_state_from_dict
 
-from kinder.core import ObjectCentricKinDEREnv, KinDEREnvConfig, RobotActionSpace
+from kinder.core import KinDEREnvConfig, ObjectCentricKinDEREnv, RobotActionSpace
 from kinder.envs.geom2d.object_types import (
     CRVRobotType,
     Geom2DRobotEnvTypeFeatures,

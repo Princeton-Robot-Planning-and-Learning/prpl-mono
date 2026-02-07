@@ -35,7 +35,7 @@ def test_kinder_parameterized_skill_env():
     obs, _ = env.reset(seed=123)
 
     # Make a plan.
-    robot = obs.get_object_from_name("robot")
+    robot = obs.get_object_from_name("robot_0")
     cube = obs.get_object_from_name("cube1")
     move_to_cube = ParameterizedSkillReference(
         "MoveToTargetGroundController", objects=[robot, cube], params={}

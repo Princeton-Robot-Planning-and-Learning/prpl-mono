@@ -8,7 +8,6 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from numpy.typing import NDArray
 from kinder.envs.geom2d.object_types import CircleType, CRVRobotType, RectangleType
 from kinder.envs.geom2d.stickbutton2d import (
     ObjectCentricStickButton2DEnv,
@@ -22,6 +21,7 @@ from kinder.envs.geom2d.utils import (
 from kinder_models.geom2d.envs.stickbutton2d.parameterized_skills import (
     create_lifted_controllers,
 )
+from numpy.typing import NDArray
 from relational_structs import (
     GroundAtom,
     LiftedAtom,

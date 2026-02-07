@@ -1,7 +1,7 @@
 """Tests for base_motion3d.py domain-specific policy."""
 
-import numpy as np
 import kinder
+import numpy as np
 import pytest
 from gymnasium.wrappers import RecordVideo
 from kinder.envs.geom3d.base_motion3d import BaseMotion3DObjectCentricState
