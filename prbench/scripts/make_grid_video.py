@@ -12,7 +12,6 @@ GEOM3D_ENVS = {
     "Ground3D",
     "Table3D",
     "Transport3D",
-    "Shelf3D",
     "Obstruction3D",
     "Packing3D",
 }
