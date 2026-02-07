@@ -22,9 +22,9 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
+from numpy.typing import NDArray
 from prpl_llm_utils.cache import FilePretrainedLargeModelCache
 from prpl_llm_utils.models import OpenAIModel
-from numpy.typing import NDArray
 from relational_structs.objects import Object, Type
 
 

@@ -25,8 +25,8 @@ import numpy as np
 import pandas as pd
 from gymnasium.core import Env
 from hydra.core.hydra_config import HydraConfig
-from prpl_utils.utils import sample_seed_from_rng, timer
 from omegaconf import DictConfig, OmegaConf
+from prpl_utils.utils import sample_seed_from_rng, timer
 
 from kinder_vlm_planning.agent import VLMPlanningAgent, VLMPlanningAgentFailure
 from kinder_vlm_planning.env_controllers import get_controllers_for_environment
