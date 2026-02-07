@@ -11,7 +11,7 @@ This package provides RL baselines (PPO, SAC) for the KinDER physical reasoning 
 
 For monorepo installation, install dependencies first:
 ```bash
-pip install -r prpl_requirements.txt
+pip install -r our_requirements.txt
 pip install -e ".[develop]"
 ```
 

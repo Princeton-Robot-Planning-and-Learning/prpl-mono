@@ -108,7 +108,7 @@ We do not include code for running imitation learning baselines. This repository
 
 #### Teleoperation
 
-Dynamic3D: kinder-models/scripts/teleop_dynamics3d_prbench.py
+Dynamic3D: kinder-models/scripts/teleop_dynamics3d_kinder.py
 
 Dynamic2D and Geom2D: kinder/scripts/collect_demos.py
 
