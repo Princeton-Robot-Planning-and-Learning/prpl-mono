@@ -1,1 +1,1 @@
-"""Domain-specific policies for geom3d environments."""
+"""Domain-specific policies for kinematic3d environments."""

@@ -2,7 +2,7 @@
 
 This policy implements a scripted sequence of pick and place operations using the
 parameterized skills from kinder-models. The logic mirrors the test in kinder-
-models/tests/geom3d/transport3d.
+models/tests/kinematic3d/transport3d.
 """
 
 from typing import Any
@@ -11,9 +11,9 @@ import numpy as np
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
-from kinder.envs.geom3d.transport3d import ObjectCentricTransport3DEnv
-from kinder.envs.geom3d.utils import Geom3DObjectCentricState, Geom3DRobotActionSpace
-from kinder_models.geom3d.transport3d.parameterized_skills import (
+from kinder.envs.kinematic3d.transport3d import ObjectCentricTransport3DEnv
+from kinder.envs.kinematic3d.utils import Kinematic3DObjectCentricState, Kinematic3DRobotActionSpace
+from kinder_models.kinematic3d.transport3d.parameterized_skills import (
     create_lifted_controllers,
 )
 from numpy.typing import NDArray
@@ -35,7 +35,7 @@ class Transport3DScriptedPolicy(StatefulPolicy):
     def __init__(
         self,
         observation_space: ObjectCentricBoxSpace,
-        action_space: Geom3DRobotActionSpace,
+        action_space: Kinematic3DRobotActionSpace,
         num_cubes: int,
         seed: int = 123,
         birrt_extend_num_interp: int = 25,
@@ -130,7 +130,7 @@ class Transport3DScriptedPolicy(StatefulPolicy):
         state = self._observation_space.devectorize(observation)
 
         # Sync sim.
-        assert isinstance(state, Geom3DObjectCentricState)
+        assert isinstance(state, Kinematic3DObjectCentricState)
         self._sim.set_state(state)
 
         # Initialize on first call.
@@ -163,7 +163,7 @@ class Transport3DScriptedPolicy(StatefulPolicy):
 
 def create_domain_specific_policy(
     observation_space: ObjectCentricBoxSpace,
-    action_space: Geom3DRobotActionSpace,
+    action_space: Kinematic3DRobotActionSpace,
     num_cubes: int = 2,
     seed: int = 123,
     birrt_extend_num_interp: int = 25,

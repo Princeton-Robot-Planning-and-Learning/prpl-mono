@@ -1,4 +1,4 @@
-"""Base class for Geom2D robot environments."""
+"""Base class for Kinematic2D robot environments."""
 
 import abc
 from dataclasses import dataclass
@@ -18,14 +18,14 @@ from relational_structs import (
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import KinDEREnvConfig, ObjectCentricKinDEREnv, RobotActionSpace
-from kinder.envs.geom2d.object_types import (
+from kinder.envs.kinematic2d.object_types import (
     CRVRobotType,
-    Geom2DRobotEnvTypeFeatures,
+    Kinematic2DRobotEnvTypeFeatures,
 )
-from kinder.envs.geom2d.structs import MultiBody2D, SE2Pose
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.structs import MultiBody2D, SE2Pose
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
-    get_geom2d_crv_robot_action_from_gui_input,
+    get_kinematic2d_crv_robot_action_from_gui_input,
     get_suctioned_objects,
     snap_suctioned_objects,
 )
@@ -33,8 +33,8 @@ from kinder.envs.utils import render_2dstate, state_2d_has_collision
 
 
 @dataclass(frozen=True)
-class Geom2DRobotEnvConfig(KinDEREnvConfig):
-    """Scene configuration for a Geom2DRobotEnv."""
+class Kinematic2DRobotEnvConfig(KinDEREnvConfig):
+    """Scene configuration for a Kinematic2DRobotEnv."""
 
     # The world is oriented like a standard X/Y coordinate frame.
     world_min_x: float = 0.0
@@ -58,14 +58,14 @@ class Geom2DRobotEnvConfig(KinDEREnvConfig):
     render_dpi: int = 50
 
 
-_ConfigType = TypeVar("_ConfigType", bound=Geom2DRobotEnvConfig)
+_ConfigType = TypeVar("_ConfigType", bound=Kinematic2DRobotEnvConfig)
 
 
-class ObjectCentricGeom2DRobotEnv(
+class ObjectCentricKinematic2DRobotEnv(
     ObjectCentricKinDEREnv[ObjectCentricState, Array, _ConfigType],
     Generic[_ConfigType],
 ):
-    """Base class for Geom2D robot environments.
+    """Base class for Kinematic2D robot environments.
 
     NOTE: this implementation currently assumes we are using CRVRobotType.
     If we add other robot types in the future, we will need to refactor a bit.
@@ -112,7 +112,7 @@ class ObjectCentricGeom2DRobotEnv(
 
     def _create_constant_initial_state(self) -> ObjectCentricState:
         initial_state_dict = self._create_constant_initial_state_dict()
-        return create_state_from_dict(initial_state_dict, Geom2DRobotEnvTypeFeatures)
+        return create_state_from_dict(initial_state_dict, Kinematic2DRobotEnvTypeFeatures)
 
     def reset(
         self, *, seed: int | None = None, options: dict | None = None
@@ -199,7 +199,7 @@ class ObjectCentricGeom2DRobotEnv(
     @property
     def type_features(self) -> dict[Type, list[str]]:
         """The types and features for this environment."""
-        return Geom2DRobotEnvTypeFeatures
+        return Kinematic2DRobotEnvTypeFeatures
 
     def _get_obs(self) -> ObjectCentricState:
         assert self._current_state is not None, "Need to call reset()"
@@ -258,4 +258,4 @@ class ObjectCentricGeom2DRobotEnv(
     ) -> NDArray[np.float32]:
         """Get the mapping from human inputs to actions."""
         assert isinstance(self.action_space, CRVRobotActionSpace)
-        return get_geom2d_crv_robot_action_from_gui_input(self.action_space, gui_input)
+        return get_kinematic2d_crv_robot_action_from_gui_input(self.action_space, gui_input)

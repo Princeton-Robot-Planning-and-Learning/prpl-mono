@@ -14,7 +14,7 @@ from pybullet_helpers.motion_planning import (
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from kinder.envs.geom3d.obstruction3d import (
+from kinder.envs.kinematic3d.obstruction3d import (
     ObjectCentricObstruction3DEnv,
     Obstruction3DEnv,
     Obstruction3DEnvConfig,

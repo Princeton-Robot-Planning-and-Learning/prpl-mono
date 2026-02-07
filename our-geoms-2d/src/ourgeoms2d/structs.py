@@ -13,7 +13,7 @@ from matplotlib import patches
 from numpy.typing import NDArray
 
 
-class Geom2D(abc.ABC):
+class Kinematic2D(abc.ABC):
     """A 2D shape that contains some points."""
 
     @abc.abstractmethod
@@ -31,13 +31,13 @@ class Geom2D(abc.ABC):
         """Samples a random point inside the 2D shape."""
         raise NotImplementedError("Override me!")
 
-    def intersects(self, other: Geom2D) -> bool:
+    def intersects(self, other: Kinematic2D) -> bool:
         """Checks if this shape intersects with another one."""
-        return geom2ds_intersect(self, other)
+        return kinematic2ds_intersect(self, other)
 
 
 @dataclass(frozen=True)
-class LineSegment(Geom2D):
+class LineSegment(Kinematic2D):
     """A helper class for visualizing and collision checking line segments."""
 
     x1: float
@@ -73,7 +73,7 @@ class LineSegment(Geom2D):
 
 
 @dataclass(frozen=True)
-class Circle(Geom2D):
+class Circle(Kinematic2D):
     """A helper class for visualizing and collision checking circles."""
 
     x: float
@@ -104,7 +104,7 @@ class Circle(Geom2D):
 
 
 @dataclass(frozen=True)
-class Triangle(Geom2D):
+class Triangle(Kinematic2D):
     """A helper class for visualizing and collision checking triangles."""
 
     x1: float
@@ -158,7 +158,7 @@ class Triangle(Geom2D):
 
 
 @dataclass(frozen=True)
-class Rectangle(Geom2D):
+class Rectangle(Kinematic2D):
     """A helper class for visualizing and collision checking rectangles.
 
     Following the convention in plt.Rectangle, the origin is at the bottom left corner,
@@ -317,7 +317,7 @@ class Rectangle(Geom2D):
 
 
 @dataclass(frozen=True)
-class Lobject(Geom2D):
+class Lobject(Kinematic2D):
     """A helper class for representing a L-shaped object for visualizing and collision
     checking.
 
@@ -503,7 +503,7 @@ class Lobject(Geom2D):
 
 
 @dataclass(frozen=True)
-class Tobject(Geom2D):
+class Tobject(Kinematic2D):
     """A helper class for representing a T-shaped object for visualizing and collision
     checking.
 
@@ -835,7 +835,7 @@ def rectangle_intersects_circle(rect: Rectangle, circ: Circle) -> bool:
     return False
 
 
-def geom2ds_intersect(geom1: Geom2D, geom2: Geom2D) -> bool:
+def kinematic2ds_intersect(geom1: Kinematic2D, geom2: Kinematic2D) -> bool:
     """Check if two 2D bodies intersect."""
     if isinstance(geom1, LineSegment) and isinstance(geom2, LineSegment):
         return line_segments_intersect(geom1, geom2)

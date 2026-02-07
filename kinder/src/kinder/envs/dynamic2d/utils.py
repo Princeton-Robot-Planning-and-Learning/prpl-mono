@@ -13,7 +13,7 @@ from relational_structs import Object
 from kinder.envs.dynamic2d.object_types import (
     KinRectangleType,
 )
-from kinder.envs.geom2d.structs import (
+from kinder.envs.kinematic2d.structs import (
     SE2Pose,
     ZOrder,
 )

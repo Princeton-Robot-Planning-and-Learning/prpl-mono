@@ -8,21 +8,21 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from kinder.envs.geom2d.object_types import CircleType, CRVRobotType, RectangleType
-from kinder.envs.geom2d.stickbutton2d import (
+from kinder.envs.kinematic2d.object_types import CircleType, CRVRobotType, RectangleType
+from kinder.envs.kinematic2d.stickbutton2d import (
     ObjectCentricStickButton2DEnv,
     StickButton2DEnvConfig,
 )
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
     object_to_multibody2d,
 )
-from kinder_models.geom2d.envs.stickbutton2d.parameterized_skills import (
+from kinder_models.kinematic2d.envs.stickbutton2d.parameterized_skills import (
     create_lifted_controllers,
 )
 from numpy.typing import NDArray
-from ourgeoms2d.structs import Geom2D
+from ourgeoms2d.structs import Kinematic2D
 from relational_structs import (
     GroundAtom,
     LiftedAtom,
@@ -115,7 +115,7 @@ def create_bilevel_planning_models(
         stick_multi_body = object_to_multibody2d(stick, x, {})
         assert len(stick_multi_body.bodies) == 1
         stick_geom = stick_multi_body.bodies[0].geom
-        robot_geom: set[Geom2D] = set()
+        robot_geom: set[Kinematic2D] = set()
         for body in robot_multi_body.bodies:
             robot_geom.add(body.geom)
 

@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 from our_utils.motion_planning import BiRRT
 from our_utils.utils import get_signed_angle_distance, wrap_angle
 from ourgeoms2d.structs import Rectangle
-from ourgeoms2d.utils import find_closest_points, geom2ds_intersect
+from ourgeoms2d.utils import find_closest_points, kinematic2ds_intersect
 from relational_structs import (
     Array,
     Object,
@@ -15,11 +15,11 @@ from relational_structs import (
 )
 
 from kinder.core import RobotActionSpace
-from kinder.envs.geom2d.object_types import (
+from kinder.envs.kinematic2d.object_types import (
     DoubleRectType,
     RectangleType,
 )
-from kinder.envs.geom2d.structs import (
+from kinder.envs.kinematic2d.structs import (
     MultiBody2D,
     SE2Pose,
     ZOrder,
@@ -203,7 +203,7 @@ def get_suctioned_objects(
         # not static by definition.
         obj_multibody = object_to_multibody2d(obj, state, {})
         for obj_body in obj_multibody.bodies:
-            if geom2ds_intersect(suction_body.geom, obj_body.geom):
+            if kinematic2ds_intersect(suction_body.geom, obj_body.geom):
                 world_to_obj = get_se2_pose(state, obj)
                 gripper_to_obj = world_to_gripper.inverse * world_to_obj
                 suctioned_objects.append((obj, gripper_to_obj))
@@ -244,7 +244,7 @@ def move_objects_in_contact(
             contact_body = object_to_multibody2d(contact_obj, state, {})
             for b1 in suctioned_body.bodies:
                 for b2 in contact_body.bodies:
-                    if geom2ds_intersect(b1.geom, b2.geom):
+                    if kinematic2ds_intersect(b1.geom, b2.geom):
                         closest_points_b1, closest_points_b2, _ = find_closest_points(
                             b1.geom, b2.geom
                         )
@@ -488,7 +488,7 @@ def is_movable_rectangle(state: ObjectCentricState, obj: Object) -> bool:
     return obj.is_instance(RectangleType) and state.get(obj, "static") < 0.5
 
 
-def get_geom2d_crv_robot_action_from_gui_input(
+def get_kinematic2d_crv_robot_action_from_gui_input(
     action_space: CRVRobotActionSpace, gui_input: dict[str, Any]
 ) -> NDArray[np.float32]:
     """Get the mapping from human inputs to actions, derived from action space."""

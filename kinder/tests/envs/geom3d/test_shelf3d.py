@@ -17,12 +17,12 @@ from pybullet_helpers.motion_planning import (
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from kinder.envs.geom3d.shelf3d import (
+from kinder.envs.kinematic3d.shelf3d import (
     ObjectCentricShelf3DEnv,
     Shelf3DEnv,
     Shelf3DObjectCentricState,
 )
-from kinder.envs.geom3d.utils import extend_joints_to_include_fingers
+from kinder.envs.kinematic3d.utils import extend_joints_to_include_fingers
 from tests.conftest import MAKE_VIDEOS
 
 

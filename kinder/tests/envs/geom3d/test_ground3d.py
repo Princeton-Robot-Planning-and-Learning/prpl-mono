@@ -13,7 +13,7 @@ from pybullet_helpers.motion_planning import (
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from kinder.envs.geom3d.ground3d import (
+from kinder.envs.kinematic3d.ground3d import (
     Ground3DEnv,
     Ground3DObjectCentricState,
     ObjectCentricGround3DEnv,

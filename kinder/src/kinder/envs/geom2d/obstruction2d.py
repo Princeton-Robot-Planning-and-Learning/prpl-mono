@@ -8,17 +8,17 @@ from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom2d.base_env import (
-    Geom2DRobotEnvConfig,
-    ObjectCentricGeom2DRobotEnv,
+from kinder.envs.kinematic2d.base_env import (
+    Kinematic2DRobotEnvConfig,
+    ObjectCentricKinematic2DRobotEnv,
 )
-from kinder.envs.geom2d.object_types import (
+from kinder.envs.kinematic2d.object_types import (
     CRVRobotType,
-    Geom2DRobotEnvTypeFeatures,
+    Kinematic2DRobotEnvTypeFeatures,
     RectangleType,
 )
-from kinder.envs.geom2d.structs import MultiBody2D, SE2Pose, ZOrder
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.structs import MultiBody2D, SE2Pose, ZOrder
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     create_walls_from_world_boundaries,
     is_inside,
@@ -28,16 +28,16 @@ from kinder.envs.utils import PURPLE, sample_se2_pose, state_2d_has_collision
 
 TargetBlockType = Type("target_block", parent=RectangleType)
 TargetSurfaceType = Type("target_surface", parent=RectangleType)
-Geom2DRobotEnvTypeFeatures[TargetBlockType] = list(
-    Geom2DRobotEnvTypeFeatures[RectangleType]
+Kinematic2DRobotEnvTypeFeatures[TargetBlockType] = list(
+    Kinematic2DRobotEnvTypeFeatures[RectangleType]
 )
-Geom2DRobotEnvTypeFeatures[TargetSurfaceType] = list(
-    Geom2DRobotEnvTypeFeatures[RectangleType]
+Kinematic2DRobotEnvTypeFeatures[TargetSurfaceType] = list(
+    Kinematic2DRobotEnvTypeFeatures[RectangleType]
 )
 
 
 @dataclass(frozen=True)
-class Obstruction2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
+class Obstruction2DEnvConfig(Kinematic2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Config for Obstruction2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
@@ -144,7 +144,7 @@ class Obstruction2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
 
 
 class ObjectCentricObstruction2DEnv(
-    ObjectCentricGeom2DRobotEnv[Obstruction2DEnvConfig]
+    ObjectCentricKinematic2DRobotEnv[Obstruction2DEnvConfig]
 ):
     """Environment where a block must be placed on an obstructed target."""
 
@@ -340,7 +340,7 @@ class ObjectCentricObstruction2DEnv(
             }
 
         # Finalize state.
-        return create_state_from_dict(init_state_dict, Geom2DRobotEnvTypeFeatures)
+        return create_state_from_dict(init_state_dict, Kinematic2DRobotEnvTypeFeatures)
 
     def _target_satisfied(
         self,
@@ -397,7 +397,7 @@ class Obstruction2DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom2DRobotEnv:
+    ) -> ObjectCentricKinematic2DRobotEnv:
         return ObjectCentricObstruction2DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

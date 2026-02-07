@@ -4,8 +4,8 @@ from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 
 import kinder
-from kinder.envs.geom2d.object_types import CircleType
-from kinder.envs.geom2d.stickbutton2d import ObjectCentricStickButton2DEnv
+from kinder.envs.kinematic2d.object_types import CircleType
+from kinder.envs.kinematic2d.stickbutton2d import ObjectCentricStickButton2DEnv
 from tests.conftest import MAKE_VIDEOS
 
 

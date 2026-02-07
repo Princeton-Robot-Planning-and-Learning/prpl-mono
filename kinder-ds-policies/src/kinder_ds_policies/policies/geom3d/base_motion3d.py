@@ -5,7 +5,7 @@ the target position.
 """
 
 import numpy as np
-from kinder.envs.geom3d.base_motion3d import BaseMotion3DObjectCentricState
+from kinder.envs.kinematic3d.base_motion3d import BaseMotion3DObjectCentricState
 from numpy.typing import NDArray
 from relational_structs.spaces import ObjectCentricBoxSpace
 

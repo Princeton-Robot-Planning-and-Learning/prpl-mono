@@ -6,11 +6,11 @@ import kinder
 import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
-from kinder.envs.geom3d.obstruction3d import ObjectCentricObstruction3DEnv
-from kinder.envs.geom3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
+from kinder.envs.kinematic3d.obstruction3d import ObjectCentricObstruction3DEnv
+from kinder.envs.kinematic3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from kinder_models.geom3d.obstruction3d.parameterized_skills import (
+from kinder_models.kinematic3d.obstruction3d.parameterized_skills import (
     create_lifted_controllers,
 )
 

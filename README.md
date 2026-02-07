@@ -83,13 +83,13 @@ cd kinder-models
 python scripts/teleop_dynamics3d_kinder.py --env-name <env_name>
 ```
 
-Dynamic2D and Geom2D: 
+Dynamic2D and Kinematic2D: 
 ```
 cd kinder
 python scripts/collect_demos.py --env_id <your_env_id>
 ```
 
-Geom3D: 
+Kinematic3D: 
 ```
 cd kinder-ds-policies
 python experiments/collect_demos_ds.py

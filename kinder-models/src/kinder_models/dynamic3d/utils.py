@@ -11,8 +11,8 @@ from kinder.envs.dynamic3d.object_types import (
 from matplotlib import pyplot as plt
 from our_utils.motion_planning import BiRRT
 from our_utils.utils import get_signed_angle_distance, wrap_angle
-from ourgeoms2d.structs import Geom2D, Rectangle
-from ourgeoms2d.utils import geom2ds_intersect
+from ourgeoms2d.structs import Kinematic2D, Rectangle
+from ourgeoms2d.utils import kinematic2ds_intersect
 from relational_structs import (
     Object,
     ObjectCentricState,
@@ -70,9 +70,9 @@ def get_bounding_box(
     raise NotImplementedError
 
 
-def get_overhead_geom2ds(state: ObjectCentricState) -> dict[str, Geom2D]:
-    """Get a mapping from object name to Geom2D from an overhead perspective."""
-    geoms: dict[str, Geom2D] = {}
+def get_overhead_kinematic2ds(state: ObjectCentricState) -> dict[str, Kinematic2D]:
+    """Get a mapping from object name to Kinematic2D from an overhead perspective."""
+    geoms: dict[str, Kinematic2D] = {}
     for obj in state:
         if obj.is_instance(MujocoTidyBotRobotObjectType):
             pose = get_overhead_robot_se2_pose(state, obj)
@@ -109,7 +109,7 @@ def plot_overhead_scene(
         "bbox": {"facecolor": "white", "alpha": 0.25, "edgecolor": "none", "pad": 2},
     }
 
-    geoms = get_overhead_geom2ds(state)
+    geoms = get_overhead_kinematic2ds(state)
     for obj_name, geom in geoms.items():
         geom.plot(ax, facecolor="white", edgecolor="black")
         assert isinstance(geom, Rectangle)
@@ -144,7 +144,7 @@ def run_base_motion_planning(
     rng = np.random.default_rng(seed)
 
     # Construct geoms.
-    geoms = get_overhead_geom2ds(state)
+    geoms = get_overhead_kinematic2ds(state)
     (robot,) = state.get_objects(MujocoTidyBotRobotObjectType)
     robot_width, robot_height, _ = get_bounding_box(state, robot)
     obstacles = state.get_objects(MujocoObjectType)
@@ -199,7 +199,7 @@ def run_base_motion_planning(
             rotation_about_center=pose.theta(),
         )
         for obstacle_geom in obstacle_geoms:
-            if geom2ds_intersect(robot_geom, obstacle_geom):
+            if kinematic2ds_intersect(robot_geom, obstacle_geom):
                 return True
         return False
 

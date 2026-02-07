@@ -19,21 +19,21 @@ from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom3d.base_env import (
-    Geom3DEnvConfig,
-    ObjectCentricGeom3DRobotEnv,
+from kinder.envs.kinematic3d.base_env import (
+    Kinematic3DEnvConfig,
+    ObjectCentricKinematic3DRobotEnv,
 )
-from kinder.envs.geom3d.object_types import (
-    Geom3DCuboidType,
-    Geom3DEnvTypeFeatures,
-    Geom3DRobotType,
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DCuboidType,
+    Kinematic3DEnvTypeFeatures,
+    Kinematic3DRobotType,
 )
-from kinder.envs.geom3d.utils import Geom3DObjectCentricState
+from kinder.envs.kinematic3d.utils import Kinematic3DObjectCentricState
 from kinder.envs.utils import PURPLE
 
 
 @dataclass(frozen=True)
-class Table3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
+class Table3DEnvConfig(Kinematic3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Table3DEnv()."""
 
     # Table.
@@ -73,10 +73,10 @@ class Table3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         )
 
 
-class Table3DObjectCentricState(Geom3DObjectCentricState):
+class Table3DObjectCentricState(Kinematic3DObjectCentricState):
     """A state in the Table3DEnv().
 
-    Adds convenience methods on top of Geom3DObjectCentricState().
+    Adds convenience methods on top of Kinematic3DObjectCentricState().
     """
 
     def get_cuboid_half_extents(self, name: str) -> tuple[float, float, float]:
@@ -106,7 +106,7 @@ class Table3DObjectCentricState(Geom3DObjectCentricState):
 
 
 class ObjectCentricTable3DEnv(
-    ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Table3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[Kinematic3DObjectCentricState, Table3DEnvConfig]
 ):
     """PyBullet environment where an object must be picked from the table.
 
@@ -155,11 +155,11 @@ class ObjectCentricTable3DEnv(
         set_pose(self.table_id, self.config.table_pose, self.physics_client_id)
 
     @property
-    def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
+    def state_cls(self) -> TypingType[Kinematic3DObjectCentricState]:
         return Table3DObjectCentricState
 
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
-        return self._create_state_dict([("table", Geom3DCuboidType)])
+        return self._create_state_dict([("table", Kinematic3DCuboidType)])
 
     def _reset_objects(self) -> None:
         # Randomly sample collision-free positions for the cubes.
@@ -196,7 +196,7 @@ class ObjectCentricTable3DEnv(
         else:
             raise RuntimeError("Failed to sample collision-free cube poses")
 
-    def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
+    def _set_object_states(self, obs: Kinematic3DObjectCentricState) -> None:
         assert isinstance(obs, Table3DObjectCentricState)
         for cube_name, cube_id in self._cubes.items():
             assert cube_id is not None
@@ -236,12 +236,12 @@ class ObjectCentricTable3DEnv(
 
     def _get_obs(self) -> Table3DObjectCentricState:
         state_dict = self._create_state_dict(
-            [("robot", Geom3DRobotType)]
-            + [("table", Geom3DCuboidType)]
-            + [("cube" + str(i), Geom3DCuboidType) for i in range(self._num_cubes)]
+            [("robot", Kinematic3DRobotType)]
+            + [("table", Kinematic3DCuboidType)]
+            + [("cube" + str(i), Kinematic3DCuboidType) for i in range(self._num_cubes)]
         )
         state = create_state_from_dict(
-            state_dict, Geom3DEnvTypeFeatures, state_cls=Table3DObjectCentricState
+            state_dict, Kinematic3DEnvTypeFeatures, state_cls=Table3DObjectCentricState
         )
         assert isinstance(state, Table3DObjectCentricState)
         return state
@@ -259,7 +259,7 @@ class Table3DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom3DRobotEnv:
+    ) -> ObjectCentricKinematic3DRobotEnv:
         return ObjectCentricTable3DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

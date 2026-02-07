@@ -8,16 +8,16 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from kinder.envs.geom3d.base_motion3d import (
+from kinder.envs.kinematic3d.base_motion3d import (
     BaseMotion3DObjectCentricState,
-    Geom3DPointType,
-    Geom3DRobotType,
+    Kinematic3DPointType,
+    Kinematic3DRobotType,
     ObjectCentricBaseMotion3DEnv,
 )
-from kinder.envs.geom3d.utils import (
-    Geom3DRobotActionSpace,
+from kinder.envs.kinematic3d.utils import (
+    Kinematic3DRobotActionSpace,
 )
-from kinder_models.geom3d.base_motion3d.parameterized_skills import (
+from kinder_models.kinematic3d.base_motion3d.parameterized_skills import (
     create_lifted_controllers,
 )
 from numpy.typing import NDArray
@@ -38,7 +38,7 @@ def create_bilevel_planning_models(
 ) -> SesameModels:
     """Create the env models for base motion 3D."""
     assert isinstance(observation_space, ObjectCentricBoxSpace)
-    assert isinstance(action_space, Geom3DRobotActionSpace)
+    assert isinstance(action_space, Kinematic3DRobotActionSpace)
 
     sim = ObjectCentricBaseMotion3DEnv()
 
@@ -60,20 +60,20 @@ def create_bilevel_planning_models(
         return obs.copy()
 
     # Types.
-    types = {Geom3DPointType, Geom3DRobotType}
+    types = {Kinematic3DPointType, Kinematic3DRobotType}
 
     # Create the state space.
     state_space = ObjectCentricStateSpace(types)
 
     # Predicates.
-    AtTgt = Predicate("AtTgt", [Geom3DRobotType, Geom3DPointType])
+    AtTgt = Predicate("AtTgt", [Kinematic3DRobotType, Kinematic3DPointType])
     predicates = {AtTgt}
 
     # State abstractor.
     def state_abstractor(x: ObjectCentricState) -> RelationalAbstractState:
         """Get the abstract state for the current state."""
-        robot = x.get_objects(Geom3DRobotType)[0]
-        target = x.get_objects(Geom3DPointType)[0]
+        robot = x.get_objects(Kinematic3DRobotType)[0]
+        target = x.get_objects(Kinematic3DPointType)[0]
 
         atoms: set[GroundAtom] = set()
 
@@ -89,14 +89,14 @@ def create_bilevel_planning_models(
     # Goal abstractor.
     def goal_deriver(x: ObjectCentricState) -> RelationalAbstractGoal:
         """The goal is to have the robot base at the target pose."""
-        robot = x.get_objects(Geom3DRobotType)[0]
-        target = x.get_objects(Geom3DPointType)[0]
+        robot = x.get_objects(Kinematic3DRobotType)[0]
+        target = x.get_objects(Kinematic3DPointType)[0]
         atoms = {GroundAtom(AtTgt, [robot, target])}
         return RelationalAbstractGoal(atoms, state_abstractor)
 
     # Operators.
-    robot = Variable("?robot", Geom3DRobotType)
-    target = Variable("?target", Geom3DPointType)
+    robot = Variable("?robot", Kinematic3DRobotType)
+    target = Variable("?target", Kinematic3DPointType)
 
     MoveBaseToTargetOperator = LiftedOperator(
         "MoveBaseToTarget",

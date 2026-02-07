@@ -11,14 +11,14 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
 from gymnasium.spaces import Box
-from kinder.envs.geom3d.base_motion3d import (
+from kinder.envs.kinematic3d.base_motion3d import (
     BaseMotion3DObjectCentricState,
-    Geom3DPointType,
-    Geom3DRobotType,
+    Kinematic3DPointType,
+    Kinematic3DRobotType,
     ObjectCentricBaseMotion3DEnv,
 )
-from kinder.envs.geom3d.utils import (
-    Geom3DRobotActionSpace,
+from kinder.envs.kinematic3d.utils import (
+    Kinematic3DRobotActionSpace,
 )
 from pybullet_helpers.geometry import SE2Pose
 from pybullet_helpers.motion_planning import (
@@ -109,7 +109,7 @@ class GroundMoveBaseToTargetController(
 
 
 def create_lifted_controllers(
-    action_space: Geom3DRobotActionSpace,
+    action_space: Kinematic3DRobotActionSpace,
     sim: ObjectCentricBaseMotion3DEnv,
 ) -> dict[str, LiftedParameterizedController]:
     """Create lifted parameterized controllers for BaseMotion3D."""
@@ -123,8 +123,8 @@ def create_lifted_controllers(
             super().__init__(objects, sim)
 
     # Create variables for lifted controllers
-    robot = Variable("?robot", Geom3DRobotType)
-    target = Variable("?target", Geom3DPointType)
+    robot = Variable("?robot", Kinematic3DRobotType)
+    target = Variable("?target", Kinematic3DPointType)
 
     # Lifted controllers
     move_base_to_target_controller: LiftedParameterizedController = (

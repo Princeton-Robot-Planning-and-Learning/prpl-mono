@@ -8,18 +8,18 @@ from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom2d.base_env import (
-    Geom2DRobotEnvConfig,
-    ObjectCentricGeom2DRobotEnv,
+from kinder.envs.kinematic2d.base_env import (
+    Kinematic2DRobotEnvConfig,
+    ObjectCentricKinematic2DRobotEnv,
 )
-from kinder.envs.geom2d.object_types import (
+from kinder.envs.kinematic2d.object_types import (
     CircleType,
     CRVRobotType,
-    Geom2DRobotEnvTypeFeatures,
+    Kinematic2DRobotEnvTypeFeatures,
     RectangleType,
 )
-from kinder.envs.geom2d.structs import SE2Pose, ZOrder
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.structs import SE2Pose, ZOrder
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     create_walls_from_world_boundaries,
 )
@@ -27,7 +27,7 @@ from kinder.envs.utils import BLACK, BROWN, sample_se2_pose, state_2d_has_collis
 
 
 @dataclass(frozen=True)
-class StickButton2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
+class StickButton2DEnvConfig(Kinematic2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Config for StickButton2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
@@ -105,7 +105,7 @@ class StickButton2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
 
 
 class ObjectCentricStickButton2DEnv(
-    ObjectCentricGeom2DRobotEnv[StickButton2DEnvConfig]
+    ObjectCentricKinematic2DRobotEnv[StickButton2DEnvConfig]
 ):
     """Environment with a stick and buttons that need to be pressed.
 
@@ -276,7 +276,7 @@ class ObjectCentricStickButton2DEnv(
             }
 
         # Finalize state.
-        return create_state_from_dict(init_state_dict, Geom2DRobotEnvTypeFeatures)
+        return create_state_from_dict(init_state_dict, Kinematic2DRobotEnvTypeFeatures)
 
     def press_button(self, button: Object) -> ObjectCentricState:
         """Press a button by changing its color."""
@@ -346,7 +346,7 @@ class StickButton2DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom2DRobotEnv:
+    ) -> ObjectCentricKinematic2DRobotEnv:
         return ObjectCentricStickButton2DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
-from kinder.envs.geom2d.structs import SE2Pose
+from kinder.envs.kinematic2d.structs import SE2Pose
 
 from kinder_bilevel_planning.agent import BilevelPlanningAgent
 from kinder_bilevel_planning.env_models import create_bilevel_planning_models

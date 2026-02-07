@@ -15,8 +15,8 @@ from pybullet_helpers.motion_planning import (
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from kinder.envs.geom3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
-from kinder.envs.geom3d.table3d import (
+from kinder.envs.kinematic3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
+from kinder.envs.kinematic3d.table3d import (
     ObjectCentricTable3DEnv,
     Table3DEnv,
     Table3DObjectCentricState,

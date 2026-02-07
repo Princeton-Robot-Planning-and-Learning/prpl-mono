@@ -11,14 +11,14 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
 from gymnasium.spaces import Box
-from kinder.envs.geom3d.object_types import Geom3DCuboidType, Geom3DFixtureType
-from kinder.envs.geom3d.shelf3d import (
-    Geom3DRobotType,
+from kinder.envs.kinematic3d.object_types import Kinematic3DCuboidType, Kinematic3DFixtureType
+from kinder.envs.kinematic3d.shelf3d import (
+    Kinematic3DRobotType,
     ObjectCentricShelf3DEnv,
     Shelf3DObjectCentricState,
 )
-from kinder.envs.geom3d.utils import (
-    Geom3DRobotActionSpace,
+from kinder.envs.kinematic3d.utils import (
+    Kinematic3DRobotActionSpace,
 )
 from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
 from pybullet_helpers.inverse_kinematics import (
@@ -37,13 +37,13 @@ from relational_structs import (
     Variable,
 )
 
-from kinder_models.geom3d.base_controllers import BasePlaceController
-from kinder_models.geom3d.constants import (
+from kinder_models.kinematic3d.base_controllers import BasePlaceController
+from kinder_models.kinematic3d.constants import (
     GRASP_TRANSFORM_TO_OBJECT,
     GRIPPER_CLOSE_THRESHOLD,
     HOME_JOINT_POSITIONS,
 )
-from kinder_models.geom3d.utils import get_target_robot_pose_from_parameters
+from kinder_models.kinematic3d.utils import get_target_robot_pose_from_parameters
 
 # constants
 MOVE_TO_TARGET_DISTANCE_BOUNDS = (0.45, 0.6)
@@ -415,7 +415,7 @@ class GroundPlaceController(BasePlaceController):
 
 
 def create_lifted_controllers(
-    action_space: Geom3DRobotActionSpace,
+    action_space: Kinematic3DRobotActionSpace,
     sim: ObjectCentricShelf3DEnv,
 ) -> dict[str, LiftedParameterizedController]:
     """Create lifted parameterized controllers for Shelf3D."""
@@ -435,8 +435,8 @@ def create_lifted_controllers(
             super().__init__(objects, sim)
 
     # Create variables for lifted controllers
-    robot = Variable("?robot", Geom3DRobotType)
-    target = Variable("?target", Geom3DCuboidType)
+    robot = Variable("?robot", Kinematic3DRobotType)
+    target = Variable("?target", Kinematic3DCuboidType)
 
     # Lifted controllers
     pick_controller: LiftedParameterizedController = LiftedParameterizedController(
@@ -459,9 +459,9 @@ def create_lifted_controllers(
     )
 
     # Create variables for lifted controllers
-    robot = Variable("?robot", Geom3DRobotType)
-    target = Variable("?target", Geom3DCuboidType)
-    target_shelf = Variable("?target_shelf", Geom3DFixtureType)
+    robot = Variable("?robot", Kinematic3DRobotType)
+    target = Variable("?target", Kinematic3DCuboidType)
+    target_shelf = Variable("?target_shelf", Kinematic3DFixtureType)
 
     # lifted place controller
     place_controller: LiftedParameterizedController = LiftedParameterizedController(

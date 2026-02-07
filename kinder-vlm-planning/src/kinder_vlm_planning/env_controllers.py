@@ -13,7 +13,7 @@ def get_controllers_for_environment(
     """Automatically load LiftedParameterizedControllers for a given environment.
 
     Args:
-        env_class_name: Class name of the environment (e.g., "geom2d", "geom3d")
+        env_class_name: Class name of the environment (e.g., "kinematic2d", "kinematic3d")
         env_name: Name of the environment (e.g., "motion2d", "clutteredretrieval2d")
         action_space: Optional action space to pass to create_lifted_controllers
 
@@ -21,8 +21,8 @@ def get_controllers_for_environment(
         Dictionary of LiftedParameterizedControllers, or None if not available
     """
     # Generate module path dynamically
-    # e.g., kinder_models.geom2d.envs.clutteredretrieval2d.parameterized_skills
-    if env_class_name == "geom2d":
+    # e.g., kinder_models.kinematic2d.envs.clutteredretrieval2d.parameterized_skills
+    if env_class_name == "kinematic2d":
         module_path = (
             f"kinder_models.{env_class_name}.envs.{env_name}.parameterized_skills"
         )
@@ -45,7 +45,7 @@ def _import_lifted_controllers(
     Args:
         module_path: Python import path to the parameterized_skills module
         env_name: Environment name for logging
-        env_class_name: Environment class name (e.g., "geom2d", "geom3d")
+        env_class_name: Environment class name (e.g., "kinematic2d", "kinematic3d")
         action_space: Optional action space to pass to create_lifted_controllers
 
     Returns:
@@ -67,8 +67,8 @@ def _import_lifted_controllers(
 
         # Call create_lifted_controllers with appropriate parameters
         # based on env_class_name
-        if env_class_name == "geom3d":
-            # For geom3d environments, we need to create a sim object
+        if env_class_name == "kinematic3d":
+            # For kinematic3d environments, we need to create a sim object
             # Import the environment class dynamically
             env_module_path = f"kinder.envs.{env_class_name}.{env_name}"
             env_module = importlib.import_module(env_module_path)
@@ -94,10 +94,10 @@ def _import_lifted_controllers(
             sim_class = getattr(env_module, sim_class_name)
             sim = sim_class()
 
-            # Call with (action_space, sim) for geom3d
+            # Call with (action_space, sim) for kinematic3d
             lifted_controllers = create_lifted_controllers(action_space, sim)
         else:
-            # For geom2d and other environments, use (action_space, init_constant_state)
+            # For kinematic2d and other environments, use (action_space, init_constant_state)
             lifted_controllers = create_lifted_controllers(
                 action_space=action_space, init_constant_state=None
             )

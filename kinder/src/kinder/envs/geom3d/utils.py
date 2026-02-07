@@ -13,7 +13,7 @@ from relational_structs import Object, ObjectCentricState
 from scipy.spatial.transform import Rotation
 from shapely.geometry import Polygon
 
-from kinder.envs.geom3d.object_types import Geom3DCuboidType
+from kinder.envs.kinematic3d.object_types import Kinematic3DCuboidType
 from kinder.envs.utils import RobotActionSpace
 
 # Path to the default realistic background OBJ file
@@ -63,8 +63,8 @@ def load_realistic_background(
     return body_id
 
 
-class Geom3DObjectCentricState(ObjectCentricState):
-    """A state in the Geom3D environment.
+class Kinematic3DObjectCentricState(ObjectCentricState):
+    """A state in the Kinematic3D environment.
 
     Inherits from ObjectCentricState but adds some conveninent look ups.
     """
@@ -89,7 +89,7 @@ class Geom3DObjectCentricState(ObjectCentricState):
     def grasped_object(self) -> str | None:
         """The name of the currently grasped object, or None if there is none."""
         grasped_objs: list[Object] = []
-        for obj in self.get_objects(Geom3DCuboidType):
+        for obj in self.get_objects(Kinematic3DCuboidType):
             if self.get(obj, "grasp_active") > 0.5:
                 grasped_objs.append(obj)
         if not grasped_objs:
@@ -151,7 +151,7 @@ class Geom3DObjectCentricState(ObjectCentricState):
         return Pose(position, orientation)
 
 
-class Geom3DRobotActionSpace(RobotActionSpace):
+class Kinematic3DRobotActionSpace(RobotActionSpace):
     """An action space for a mobile manipulation with a 7 DOF robot that can open and
     close its gripper.
 
@@ -210,7 +210,7 @@ def remove_fingers_from_extended_joints(
 
 
 def get_robot_action_from_gui_input(
-    action_space: Geom3DRobotActionSpace, gui_input: dict[str, Any]
+    action_space: Kinematic3DRobotActionSpace, gui_input: dict[str, Any]
 ) -> NDArray[np.float32]:
     """Get the mapping from human inputs to actions, derived from action space."""
     # This will be implemented later - placeholder for now

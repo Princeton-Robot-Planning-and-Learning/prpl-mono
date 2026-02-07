@@ -15,12 +15,12 @@ from pybullet_helpers.motion_planning import (
 from relational_structs import Object
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from kinder.envs.geom3d.packing3d import (
+from kinder.envs.kinematic3d.packing3d import (
     ObjectCentricPacking3DEnv,
     Packing3DEnv,
     Packing3DObjectCentricState,
 )
-from kinder.envs.geom3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
+from kinder.envs.kinematic3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
 from tests.conftest import MAKE_VIDEOS
 
 # Flag to enable trajectory saving (can be controlled like MAKE_VIDEOS)
