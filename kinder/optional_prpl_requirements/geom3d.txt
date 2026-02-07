@@ -1,2 +1,0 @@
-# KinDER mono requirements for just the core of kinder.
-../pybullet-helpers

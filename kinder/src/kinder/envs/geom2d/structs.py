@@ -70,8 +70,7 @@ class MultiBody2D:
 class SE2Pose:
     """Container for an SE2Pose.
 
-    In the future, may want to move this to a more general repository, e.g.,
-    ourgeoms2d.
+    In the future, may want to move this to a more general repository, e.g., ourgeoms2d.
     """
 
     x: float
