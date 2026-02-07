@@ -8,7 +8,10 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from kinder.envs.kinematic3d.object_types import Kinematic3DCuboidType, Kinematic3DFixtureType
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DCuboidType,
+    Kinematic3DFixtureType,
+)
 from kinder.envs.kinematic3d.transport3d import (
     Kinematic3DRobotType,
     ObjectCentricTransport3DEnv,
