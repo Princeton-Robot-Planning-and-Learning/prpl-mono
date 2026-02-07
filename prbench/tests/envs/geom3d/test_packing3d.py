@@ -18,6 +18,7 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from prbench.envs.geom3d.packing3d import (
     ObjectCentricPacking3DEnv,
     Packing3DEnv,
+    Packing3DEnvConfig,
     Packing3DObjectCentricState,
 )
 from prbench.envs.geom3d.save_utils import DEFAULT_DEMOS_DIR, save_demo
@@ -61,10 +62,19 @@ def test_pick_place_on_rack():
     """Test that picking and placing can be executed for any object."""
     # Create the real environment.
 
-    num_parts = 1
+    num_parts = 3
     seed = 123
+    config = Packing3DEnvConfig(
+        part_triangular_prob=0.0,
+        part_triangle_side_lb=0.06,
+        part_triangle_side_ub=0.06,
+    )
     env = Packing3DEnv(
-        num_parts=num_parts, use_gui=False, render_mode="rgb_array", realistic_bg=True
+        num_parts=num_parts,
+        config=config,
+        use_gui=False,
+        render_mode="rgb_array",
+        realistic_bg=True,
     )
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = (
@@ -99,13 +109,14 @@ def test_pick_place_on_rack():
 
     # Run motion planning.
     if MAKE_VIDEOS:  # make a smooth motion plan for videos
-        max_candidate_plans = 10
+        max_candidate_plans = 1
     else:
         max_candidate_plans = 1
 
-    # sample placement coefficients for each part
-    x_coeffs = np.linspace(-0.0, 0.0, num_parts)
-    y_coeffs = np.linspace(-0.4, 0.4, num_parts)
+    # Placement coefficients for each part (multiply by rack half extents).
+    # Layout: part0 at top, part1 at center, last part at bottom center.
+    x_coeffs = np.array([0.0, 0.0, 0.0])
+    y_coeffs = np.array([0.6, 0.0, -0.55])
 
     # First, move to pre-grasp pose (top-down).
     selected_object = get_target_object_from_obs(obs)
@@ -261,7 +272,7 @@ def test_pick_place_on_rack():
         )
         end_effector_placement_pose = multiply_poses(
             block_placement_pose,
-            obs.grasped_object_transform,
+            obs.grasped_object_transform.invert(),
         )
         end_effector_pre_placement_pose = Pose(
             (
@@ -272,8 +283,7 @@ def test_pick_place_on_rack():
             end_effector_placement_pose.orientation,
         )
 
-        # We don't really have to motion plan here because there
-        # are no other objects, but in general we would motion plan.
+        # Plan motion to placement via pre-placement waypoint.
         sim.set_state(obs)
         current_end_effector_pose = sim.robot.arm.get_end_effector_pose()
         joint_plan = smoothly_follow_end_effector_path(
@@ -298,17 +308,15 @@ def test_pick_place_on_rack():
             action_lst = [0.0] * 3 + delta_lst + [0.0]
             action = np.array(action_lst, dtype=np.float32)
             vec_obs, reward, terminated, truncated, _ = env.step(action)
-            # Collect trajectory data
             traj_observations.append(vec_obs.copy())
             traj_actions.append(action.copy())
             traj_rewards.append(float(reward))
             ep_terminated = ep_terminated or terminated
             ep_truncated = ep_truncated or truncated
-            # NOTE: we should soon make this smoother.
             oc_obs = env.observation_space.devectorize(vec_obs)
             obs = Packing3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
-        # Open the gripper to finish the placement. Should trigger "done" (goal reached).
+        # Open the gripper to finish the placement.
         action = np.array([0.0] * 7 + [1.0], dtype=np.float32)
         vec_obs, reward, done, truncated, _ = env.step(action)
         # Collect trajectory data
