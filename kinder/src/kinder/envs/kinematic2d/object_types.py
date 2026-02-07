@@ -28,11 +28,10 @@ Kinematic2DRobotEnvTypeFeatures[CircleType] = (
     Kinematic2DRobotEnvTypeFeatures[Kinematic2DType] + ["radius"]
 )
 LObjectType = Type("lobject", parent=Kinematic2DType)
-Kinematic2DRobotEnvTypeFeatures[LObjectType] = [
-    "width",
-    "length_side1",
-    "length_side2",
-]
+Kinematic2DRobotEnvTypeFeatures[LObjectType] = (
+    Kinematic2DRobotEnvTypeFeatures[Kinematic2DType]
+    + ["width", "length_side1", "length_side2"]
+)
 
 # Double-order rectangle (for shelves with bookends, etc.)
 DoubleRectType = Type("double_rectangle", parent=Kinematic2DType)
