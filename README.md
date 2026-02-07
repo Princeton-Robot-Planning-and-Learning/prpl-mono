@@ -101,6 +101,7 @@ cd kinder-models
 python scripts/planning_data_dynamics3d_kinder.py
 ```
 
+
 ## Troubleshooting
 
 ### Installing PyBullet on Recent MacOS
@@ -122,3 +123,4 @@ python setup.py install
 ### Installing `gymnasium[box2d]` on MacOS
 
 If you encounter issues installing `gymnasium[box2d]` on MacOS, do `brew install swig` first and then retry.
+
