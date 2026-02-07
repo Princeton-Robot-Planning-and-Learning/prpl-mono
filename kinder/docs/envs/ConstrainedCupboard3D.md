@@ -5,10 +5,9 @@
 **Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
 
 ## Description
-A 3D mobile manipulation environment using the TidyBot platform.
+A 3D task where the robot is supposed to fit multiple long rods into constrained spaces in a cupboard. The cupboard has varying numbers and sizes of rows and columns.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: lab2 with 2 objects.
 
 The robot can control:
 - Base pose (x, y, theta)
@@ -18,7 +17,7 @@ The robot can control:
 
 
 ## Available Variants
-This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
+The variants require fitting different number of objects into cupboards of different sizes with varying arrangement of feasible regions at each reset.
 
 - [`kinder/TidyBot3D-ConstrainedCupboard3D-lab2-o1-fit_the_blocks_in_the_cupboard-v0`](variants/ConstrainedCupboard3D/TidyBot3D-ConstrainedCupboard3D-lab2-o1-fit_the_blocks_in_the_cupboard.md) (TidyBot3D-lab2-o1-fit_the_blocks_in_the_cupboard)
 - [`kinder/TidyBot3D-ConstrainedCupboard3D-lab2-o2-fit_the_blocks_in_the_cupboard-v0`](variants/ConstrainedCupboard3D/TidyBot3D-ConstrainedCupboard3D-lab2-o2-fit_the_blocks_in_the_cupboard.md) (TidyBot3D-lab2-o2-fit_the_blocks_in_the_cupboard)

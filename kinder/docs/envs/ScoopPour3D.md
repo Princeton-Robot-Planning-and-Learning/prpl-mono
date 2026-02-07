@@ -5,10 +5,10 @@
 **Random Action Stats**: Total Reward: -0.25, Success: No, Steps: 25
 
 ## Description
-A 3D mobile manipulation environment using the TidyBot platform.
+A 3D task where the robot must transfer a pile of objects from one bin to another. There is a tool available that may be used for scooping and pouring.
 
 The robot has a holonomic mobile base with powered casters and a Kinova Gen3 arm.
-Scene type: lab2_kitchen with 5 objects.
+Scene type: lab2_kitchen.
 
 The robot can control:
 - Base pose (x, y, theta)
@@ -18,7 +18,7 @@ The robot can control:
 
 
 ## Available Variants
-This environment has variants that differ in scene type and number of objects. Scene types include 'ground', 'cabinet', etc. The number of objects varies across variants.
+The variants require scooping and pouring different numbers of objects.
 
 - [`kinder/TidyBot3D-ScoopPour3D-lab2_kitchen-o5-scoop_the_blocks_from_the_yellow_bin_to_the_green_bin-v0`](variants/ScoopPour3D/TidyBot3D-ScoopPour3D-lab2_kitchen-o5-scoop_the_blocks_from_the_yellow_bin_to_the_green_bin.md) (TidyBot3D-lab2_kitchen-o5-scoop_the_blocks_from_the_yellow_bin_to_the_green_bin)
 
