@@ -10,6 +10,7 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
+from gymnasium.spaces import Box
 from kinder.envs.geom3d.motion3d import (
     Geom3DPointType,
     Geom3DRobotType,
@@ -149,6 +150,7 @@ def create_lifted_controllers(
     sim: ObjectCentricMotion3DEnv,
 ) -> dict[str, LiftedParameterizedController]:
     """Create lifted parameterized controllers for Motion3D."""
+    del action_space
 
     # Create partial controller classes that include the sim
     class MoveToTargetController(GroundMoveToTargetController):
@@ -166,7 +168,7 @@ def create_lifted_controllers(
         LiftedParameterizedController(
             [robot, target],
             MoveToTargetController,
-            action_space,
+            Box(-np.inf, np.inf, (7,)),
         )
     )
     return {
