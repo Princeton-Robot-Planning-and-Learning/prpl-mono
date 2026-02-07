@@ -2,6 +2,7 @@
 
 import logging
 from pathlib import Path
+from pprint import pformat
 from typing import (
     Any,
     Callable,
@@ -200,14 +201,27 @@ def controller_and_param_plan_to_policy(
 ) -> Callable[[_O], _U]:
     """Convert a controller plan to a policy."""
     queue = list(controller_and_param_plan)
+    logging.info(
+        f"[PLAN DEBUG] Initialized controller queue with {len(queue)} controllers"
+    )
+    for i, (ctrl, params) in enumerate(queue):
+        logging.info(f"[PLAN DEBUG]   Controller {i}: {ctrl} with params {params}")
 
     def _controller_and_params_policy(
         obs: _O,  # pylint: disable=unused-argument
     ) -> tuple[GroundParameterizedController, Sequence[float]]:
+        logging.info(
+            f"[PLAN DEBUG] Requesting new controller. Queue size: {len(queue)}"
+        )
         if not queue:
+            logging.error("[PLAN DEBUG] Controller queue is empty! Plan exhausted.")
             raise Exception("Controller plan exhausted")
         controller, params = queue.pop(0)
-        logging.debug(f"Executing controller: {controller}")
+        logging.info(
+            f"[PLAN DEBUG] Popped controller from queue: {controller} "
+            f"with params {params}"
+        )
+        logging.info(f"[PLAN DEBUG] Remaining controllers in queue: {len(queue)}")
         return controller, params
 
     return option_policy_to_policy(
@@ -225,24 +239,47 @@ def option_policy_to_policy(
     """Create a policy that executes the given option policy."""
     cur_option: Optional[GroundParameterizedController] = None
     num_cur_option_steps = 0
+    total_policy_calls = 0
 
     def _policy(obs: Any) -> Any:
-        nonlocal cur_option, num_cur_option_steps
+        nonlocal cur_option, num_cur_option_steps, total_policy_calls
+        total_policy_calls += 1
+
+        logging.info(f"[POLICY DEBUG] Policy called (call #{total_policy_calls})")
 
         # Convert observation to ObjectCentricState
         state = observation_space.devectorize(cast(NDArray[np.float32], obs))
+        logging.info(f"[POLICY DEBUG] Current state:\n{pformat(state.pretty_str())}")
 
         # Check if we need a new controller
+        if cur_option is None:
+            logging.info("[POLICY DEBUG] No current controller, requesting new one")
+        elif cur_option.terminated():
+            logging.info(
+                f"[POLICY DEBUG] Current controller {cur_option} terminated "
+                f"after {num_cur_option_steps} steps, requesting new one"
+            )
+        else:
+            logging.info(
+                f"[POLICY DEBUG] Continuing current controller {cur_option} "
+                f"(step {num_cur_option_steps + 1})"
+            )
+
         if cur_option is None or cur_option.terminated():
             if max_horizon is not None and num_cur_option_steps >= max_horizon:
                 raise Exception("Exceeded max controller steps.")
 
             # Get new controller from the option policy
             cur_option, params = option_policy(obs)
+            logging.info(
+                f"[POLICY DEBUG] Received controller: {cur_option} with params {params}"
+            )
             if len(params) == 0:
-                params = [0.0]
+                params = tuple()
+                logging.info(f"[POLICY DEBUG] Empty params, using default: {params}")
             # Initialize the controller with its parameters
             cur_option.reset(state, params)  # pylint: disable=protected-access
+            logging.info("[POLICY DEBUG] Controller reset/initialized")
             num_cur_option_steps = 0
         else:
             # Let the controller observe the current state
@@ -253,6 +290,7 @@ def option_policy_to_policy(
         # Get action from controller
         try:
             action = cur_option.step()
+            logging.info(f"[POLICY DEBUG] Controller returned action: {action}")
         except TrajectorySamplingFailure as e:
             # Wrap the trajectory sampling failure in a more informative error
             raise RuntimeError(f"Controller failed to find trajectory: {e}") from e

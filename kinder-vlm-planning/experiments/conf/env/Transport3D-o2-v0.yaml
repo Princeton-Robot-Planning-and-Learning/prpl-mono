@@ -1,0 +1,4 @@
+# @package _global_
+# Configuration for Transport3D-o2-v0
+env: "Transport3D-o2-v0"
+max_eval_steps: 1200

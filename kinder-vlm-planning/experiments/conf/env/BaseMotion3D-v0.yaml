@@ -1,0 +1,4 @@
+# @package _global_
+# Configuration for BaseMotion3D-v0
+env: "BaseMotion3D-v0"
+max_eval_steps: 100
