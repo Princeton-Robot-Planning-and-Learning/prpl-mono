@@ -23,7 +23,7 @@ prpl-mono/
   ...
 ```
 
-Packages that depend on other packages in this repo should include a `prpl_requirements.txt` file.
+Packages that depend on other packages in this repo should include a `our_requirements.txt` file.
 
 ## Task Demonstrations
 

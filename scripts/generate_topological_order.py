@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script to generate a topological ordering of Python packages in this repository
-based on the dependencies listed in prpl_requirements.txt files.
+based on the dependencies listed in our_requirements.txt files.
 
 This script analyzes the dependencies between packages in the PRPL monorepo and
 produces a topological ordering that respects dependency constraints - packages
@@ -31,9 +31,9 @@ def find_packages(repo_root: Path) -> list[str]:
     return sorted(packages)
 
 
-def parse_prpl_requirements(package_path: Path) -> list[str]:
+def parse_our_requirements(package_path: Path) -> list[str]:
     """
-    Parse prpl_requirements.txt file to extract dependencies on other packages in the monorepo.
+    Parse our_requirements.txt file to extract dependencies on other packages in the monorepo.
 
     Args:
         package_path: Path to the package directory
@@ -41,14 +41,14 @@ def parse_prpl_requirements(package_path: Path) -> list[str]:
     Returns:
         list of package names that this package depends on
     """
-    prpl_requirements_file = package_path / "prpl_requirements.txt"
+    our_requirements_file = package_path / "our_requirements.txt"
     dependencies = []
 
-    if not prpl_requirements_file.exists():
+    if not our_requirements_file.exists():
         return dependencies
 
     try:
-        with open(prpl_requirements_file, 'r') as f:
+        with open(our_requirements_file, 'r') as f:
             for line in f:
                 line = line.strip()
                 # Skip empty lines and comments
@@ -64,14 +64,14 @@ def parse_prpl_requirements(package_path: Path) -> list[str]:
                     dependencies.append(dependency_name)
 
     except Exception as e:
-        print(f"Warning: Could not read {prpl_requirements_file}: {e}", file=sys.stderr)
+        print(f"Warning: Could not read {our_requirements_file}: {e}", file=sys.stderr)
 
     return dependencies
 
 
 def build_dependency_graph(repo_root: Path, packages: list[str]) -> dict[str, list[str]]:
     """
-    Build a dependency graph by parsing prpl_requirements.txt files.
+    Build a dependency graph by parsing our_requirements.txt files.
     
     Args:
         repo_root: Path to the repository root
@@ -84,7 +84,7 @@ def build_dependency_graph(repo_root: Path, packages: list[str]) -> dict[str, li
     
     for package in packages:
         package_path = repo_root / package
-        dependencies = parse_prpl_requirements(package_path)
+        dependencies = parse_our_requirements(package_path)
         
         # Filter dependencies to only include packages that exist in the repo
         valid_dependencies = [dep for dep in dependencies if dep in packages]
@@ -247,9 +247,9 @@ def main():
             for package in ordered_packages:
                 package_path = repo_root / package
                 
-                # Check if package has prpl_requirements.txt
-                if (package_path / "prpl_requirements.txt").exists():
-                    print(f"cd {package} && uv pip install -r prpl_requirements.txt && uv pip install -e .")
+                # Check if package has our_requirements.txt
+                if (package_path / "our_requirements.txt").exists():
+                    print(f"cd {package} && uv pip install -r our_requirements.txt && uv pip install -e .")
                 else:
                     print(f"cd {package} && uv pip install -e .")
                     

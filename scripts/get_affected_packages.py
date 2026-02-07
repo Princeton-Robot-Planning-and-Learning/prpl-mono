@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from generate_topological_order import (
     find_packages,
     build_dependency_graph,
-    parse_prpl_requirements,
+    parse_our_requirements,
 )
 
 

@@ -20,7 +20,7 @@ runs:
     #     path: |
     #       ~/.cache/uv
     #       .venv
-    #     key: uv-${{ runner.os }}-py${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml', '**/prpl_requirements.txt') }}
+    #     key: uv-${{ runner.os }}-py${{ inputs.python-version }}-${{ hashFiles('**/pyproject.toml', '**/our_requirements.txt') }}
     #     restore-keys: |
     #       uv-${{ runner.os }}-py${{ inputs.python-version }}-
 
