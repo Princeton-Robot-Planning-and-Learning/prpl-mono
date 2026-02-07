@@ -16,21 +16,21 @@ from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom3d.base_env import (
-    Geom3DEnvConfig,
-    ObjectCentricGeom3DRobotEnv,
+from kinder.envs.kinematic3d.base_env import (
+    Kinematic3DEnvConfig,
+    ObjectCentricKinematic3DRobotEnv,
 )
-from kinder.envs.geom3d.object_types import (
-    Geom3DCuboidType,
-    Geom3DEnvTypeFeatures,
-    Geom3DRobotType,
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DCuboidType,
+    Kinematic3DEnvTypeFeatures,
+    Kinematic3DRobotType,
 )
-from kinder.envs.geom3d.utils import Geom3DObjectCentricState
+from kinder.envs.kinematic3d.utils import Kinematic3DObjectCentricState
 from kinder.envs.utils import PURPLE
 
 
 @dataclass(frozen=True)
-class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
+class Obstruction3DEnvConfig(Kinematic3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Obstruction3DEnv()."""
 
     # Robot.
@@ -114,10 +114,10 @@ class Obstruction3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         )
 
 
-class Obstruction3DObjectCentricState(Geom3DObjectCentricState):
+class Obstruction3DObjectCentricState(Kinematic3DObjectCentricState):
     """A state in the Obstruction3DEnv().
 
-    Adds convenience methods on top of Geom3DObjectCentricState().
+    Adds convenience methods on top of Kinematic3DObjectCentricState().
     """
 
     @property
@@ -142,7 +142,7 @@ class Obstruction3DObjectCentricState(Geom3DObjectCentricState):
 
 
 class ObjectCentricObstruction3DEnv(
-    ObjectCentricGeom3DRobotEnv[Obstruction3DObjectCentricState, Obstruction3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[Obstruction3DObjectCentricState, Obstruction3DEnvConfig]
 ):
     """Environment where obstructions must be cleared to place a target on a region."""
 
@@ -182,11 +182,11 @@ class ObjectCentricObstruction3DEnv(
         self._obstruction_id_to_half_extents: dict[int, tuple[float, float, float]] = {}
 
     @property
-    def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
+    def state_cls(self) -> TypingType[Kinematic3DObjectCentricState]:
         return Obstruction3DObjectCentricState
 
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
-        return self._create_state_dict([("table", Geom3DCuboidType)])
+        return self._create_state_dict([("table", Kinematic3DCuboidType)])
 
     def _reset_objects(self) -> None:
 
@@ -295,7 +295,7 @@ class ObjectCentricObstruction3DEnv(
             else:
                 raise RuntimeError("Failed to sample target block pose")
 
-    def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
+    def _set_object_states(self, obs: Kinematic3DObjectCentricState) -> None:
         assert isinstance(obs, Obstruction3DObjectCentricState)
         # Check if target region needs to be recreated.
         if self._target_region_half_extents != obs.target_region_half_extents:
@@ -405,17 +405,17 @@ class ObjectCentricObstruction3DEnv(
     def _get_obs(self) -> Obstruction3DObjectCentricState:
         state_dict = self._create_state_dict(
             [
-                ("robot", Geom3DRobotType),
-                ("target_region", Geom3DCuboidType),
-                ("target_block", Geom3DCuboidType),
+                ("robot", Kinematic3DRobotType),
+                ("target_region", Kinematic3DCuboidType),
+                ("target_block", Kinematic3DCuboidType),
             ]
             + [
-                (f"obstruction{i}", Geom3DCuboidType)
+                (f"obstruction{i}", Kinematic3DCuboidType)
                 for i in range(self._num_obstructions)
             ]
         )
         state = create_state_from_dict(
-            state_dict, Geom3DEnvTypeFeatures, state_cls=Obstruction3DObjectCentricState
+            state_dict, Kinematic3DEnvTypeFeatures, state_cls=Obstruction3DObjectCentricState
         )
         assert isinstance(state, Obstruction3DObjectCentricState)
         return state
@@ -437,7 +437,7 @@ class Obstruction3DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom3DRobotEnv:
+    ) -> ObjectCentricKinematic3DRobotEnv:
         return ObjectCentricObstruction3DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

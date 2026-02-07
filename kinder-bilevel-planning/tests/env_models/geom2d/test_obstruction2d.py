@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
-from kinder_models.geom2d.envs.obstruction2d.parameterized_skills import (
+from kinder_models.kinematic2d.envs.obstruction2d.parameterized_skills import (
     get_robot_transfer_position,
 )
 
@@ -107,7 +107,7 @@ def test_obstruction2d_state_abstractor():
 
     # Uncomment to debug.
     # import imageio.v2 as iio
-    # env.unwrapped._geom2d_env._current_state = state1
+    # env.unwrapped._kinematic2d_env._current_state = state1
     # img = env.render()
     # iio.imsave(f"debug/robot-holding-block.png", img)
     # import ipdb; ipdb.set_trace()

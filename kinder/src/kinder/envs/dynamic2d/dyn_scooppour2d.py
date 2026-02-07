@@ -28,7 +28,7 @@ from kinder.envs.dynamic2d.utils import (
     KinRobotActionSpace,
     create_walls_from_world_boundaries,
 )
-from kinder.envs.geom2d.structs import SE2Pose, ZOrder
+from kinder.envs.kinematic2d.structs import SE2Pose, ZOrder
 from kinder.envs.utils import (
     BLACK,
     BROWN,

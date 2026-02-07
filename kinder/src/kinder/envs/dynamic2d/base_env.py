@@ -34,7 +34,7 @@ from kinder.envs.dynamic2d.utils import (
     on_collision_w_static,
     on_gripper_grasp,
 )
-from kinder.envs.geom2d.structs import MultiBody2D
+from kinder.envs.kinematic2d.structs import MultiBody2D
 from kinder.envs.utils import render_2dstate
 
 
@@ -121,7 +121,7 @@ class ObjectCentricDynamic2DRobotEnv(
         # Note: We assume each object corresponds to exactly one pymunk body.
         # This does not include the robot, which is handled separately.
         self._state_obj_to_pymunk_body: dict[Object, pymunk.Body] = {}
-        # Used for collision checking with Geom2D.
+        # Used for collision checking with Kinematic2D.
         self._static_object_body_cache: dict[Object, MultiBody2D] = {}
 
     def _create_observation_space(self, config: _ConfigType) -> ObjectCentricStateSpace:
@@ -497,7 +497,7 @@ class ObjectCentricDynamic2DRobotEnv(
     def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the current state.
 
-        The same as Geom2D render for now.
+        The same as Kinematic2D render for now.
         """
         # This will be implemented later
         assert self.render_mode == "rgb_array"

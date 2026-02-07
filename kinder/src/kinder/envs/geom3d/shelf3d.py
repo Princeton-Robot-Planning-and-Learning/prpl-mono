@@ -18,24 +18,24 @@ from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom3d.base_env import (
-    Geom3DEnvConfig,
-    ObjectCentricGeom3DRobotEnv,
+from kinder.envs.kinematic3d.base_env import (
+    Kinematic3DEnvConfig,
+    ObjectCentricKinematic3DRobotEnv,
 )
-from kinder.envs.geom3d.object_types import (
-    Geom3DCuboidType,
-    Geom3DEnvTypeFeatures,
-    Geom3DFixtureType,
-    Geom3DRobotType,
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DCuboidType,
+    Kinematic3DEnvTypeFeatures,
+    Kinematic3DFixtureType,
+    Kinematic3DRobotType,
 )
-from kinder.envs.geom3d.utils import (
-    Geom3DObjectCentricState,
+from kinder.envs.kinematic3d.utils import (
+    Kinematic3DObjectCentricState,
     sample_collision_free_object_poses,
 )
 
 
 @dataclass(frozen=True)
-class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
+class Shelf3DEnvConfig(Kinematic3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Shelf3DEnv()."""
 
     max_action_mag: float = 0.2
@@ -94,15 +94,15 @@ class Shelf3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         return asset_dir / texture_filename
 
 
-class Shelf3DObjectCentricState(Geom3DObjectCentricState):
+class Shelf3DObjectCentricState(Kinematic3DObjectCentricState):
     """A state in the Shelf3DEnv().
 
-    Adds convenience methods on top of Geom3DObjectCentricState().
+    Adds convenience methods on top of Kinematic3DObjectCentricState().
     """
 
 
 class ObjectCentricShelf3DEnv(
-    ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Shelf3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[Kinematic3DObjectCentricState, Shelf3DEnvConfig]
 ):
     """PyBullet environment where objects must be picked from the ground and placed on a
     shelf."""
@@ -177,11 +177,11 @@ class ObjectCentricShelf3DEnv(
             )
 
     @property
-    def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
+    def state_cls(self) -> TypingType[Kinematic3DObjectCentricState]:
         return Shelf3DObjectCentricState
 
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
-        return self._create_state_dict([("shelf", Geom3DFixtureType)])
+        return self._create_state_dict([("shelf", Kinematic3DFixtureType)])
 
     def _reset_objects(self) -> None:
         sample_collision_free_object_poses(
@@ -193,7 +193,7 @@ class ObjectCentricShelf3DEnv(
             other_collision_ids={self.robot.base.robot_id},
         )
 
-    def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
+    def _set_object_states(self, obs: Kinematic3DObjectCentricState) -> None:
         assert isinstance(obs, Shelf3DObjectCentricState)
         for cube_name, cube_id in self._cubes.items():
             assert cube_id is not None
@@ -227,12 +227,12 @@ class ObjectCentricShelf3DEnv(
 
     def _get_obs(self) -> Shelf3DObjectCentricState:
         state_dict = self._create_state_dict(
-            [("robot", Geom3DRobotType)]
-            + [("shelf", Geom3DFixtureType)]
-            + [("cube" + str(i), Geom3DCuboidType) for i in range(self._num_cubes)]
+            [("robot", Kinematic3DRobotType)]
+            + [("shelf", Kinematic3DFixtureType)]
+            + [("cube" + str(i), Kinematic3DCuboidType) for i in range(self._num_cubes)]
         )
         state = create_state_from_dict(
-            state_dict, Geom3DEnvTypeFeatures, state_cls=Shelf3DObjectCentricState
+            state_dict, Kinematic3DEnvTypeFeatures, state_cls=Shelf3DObjectCentricState
         )
         assert isinstance(state, Shelf3DObjectCentricState)
         return state
@@ -264,7 +264,7 @@ class Shelf3DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom3DRobotEnv:
+    ) -> ObjectCentricKinematic3DRobotEnv:
         return ObjectCentricShelf3DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

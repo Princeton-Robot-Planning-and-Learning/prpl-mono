@@ -7,17 +7,17 @@ from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom2d.base_env import (
-    Geom2DRobotEnvConfig,
-    ObjectCentricGeom2DRobotEnv,
+from kinder.envs.kinematic2d.base_env import (
+    Kinematic2DRobotEnvConfig,
+    ObjectCentricKinematic2DRobotEnv,
 )
-from kinder.envs.geom2d.object_types import (
+from kinder.envs.kinematic2d.object_types import (
     CRVRobotType,
-    Geom2DRobotEnvTypeFeatures,
+    Kinematic2DRobotEnvTypeFeatures,
     RectangleType,
 )
-from kinder.envs.geom2d.structs import SE2Pose, ZOrder
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.structs import SE2Pose, ZOrder
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     create_walls_from_world_boundaries,
     rectangle_object_to_geom,
@@ -25,13 +25,13 @@ from kinder.envs.geom2d.utils import (
 from kinder.envs.utils import BLACK, PURPLE, sample_se2_pose, state_2d_has_collision
 
 TargetRegionType = Type("target_region", parent=RectangleType)
-Geom2DRobotEnvTypeFeatures[TargetRegionType] = list(
-    Geom2DRobotEnvTypeFeatures[RectangleType]
+Kinematic2DRobotEnvTypeFeatures[TargetRegionType] = list(
+    Kinematic2DRobotEnvTypeFeatures[RectangleType]
 )
 
 
 @dataclass(frozen=True)
-class Motion2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
+class Motion2DEnvConfig(Kinematic2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Config for Motion2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
@@ -48,7 +48,7 @@ class Motion2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
     min_dtheta: float = -np.pi / 16
     max_dtheta: float = np.pi / 16
     # NOTE: these should not be needed, but they are included for consistency
-    # with the other geom2d environments.
+    # with the other kinematic2d environments.
     min_darm: float = -1e-1
     max_darm: float = 1e-1
     min_vac: float = 0.0
@@ -114,7 +114,7 @@ class Motion2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
     render_fps: int = 20
 
 
-class ObjectCentricMotion2DEnv(ObjectCentricGeom2DRobotEnv[Motion2DEnvConfig]):
+class ObjectCentricMotion2DEnv(ObjectCentricKinematic2DRobotEnv[Motion2DEnvConfig]):
     """Only 2D motion planning is needed to reach a goal region.
 
     This is an object-centric environment. The vectorized version with Box spaces is
@@ -256,7 +256,7 @@ class ObjectCentricMotion2DEnv(ObjectCentricGeom2DRobotEnv[Motion2DEnvConfig]):
                 }
 
         # Finalize state.
-        return create_state_from_dict(init_state_dict, Geom2DRobotEnvTypeFeatures)
+        return create_state_from_dict(init_state_dict, Kinematic2DRobotEnvTypeFeatures)
 
     def _get_reward_and_done(self) -> tuple[float, bool]:
         # Terminate when the robot position is in the target region.
@@ -284,7 +284,7 @@ class Motion2DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom2DRobotEnv:
+    ) -> ObjectCentricKinematic2DRobotEnv:
         return ObjectCentricMotion2DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

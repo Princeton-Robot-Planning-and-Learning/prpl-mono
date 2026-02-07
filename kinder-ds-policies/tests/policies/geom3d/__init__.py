@@ -1,1 +1,1 @@
-"""Tests for geom3d domain-specific policies."""
+"""Tests for kinematic3d domain-specific policies."""

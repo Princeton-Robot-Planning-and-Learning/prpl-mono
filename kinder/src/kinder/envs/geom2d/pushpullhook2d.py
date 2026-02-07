@@ -8,19 +8,19 @@ from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom2d.base_env import (
-    Geom2DRobotEnvConfig,
-    ObjectCentricGeom2DRobotEnv,
+from kinder.envs.kinematic2d.base_env import (
+    Kinematic2DRobotEnvConfig,
+    ObjectCentricKinematic2DRobotEnv,
 )
-from kinder.envs.geom2d.object_types import (
+from kinder.envs.kinematic2d.object_types import (
     CircleType,
     CRVRobotType,
-    Geom2DRobotEnvTypeFeatures,
+    Kinematic2DRobotEnvTypeFeatures,
     LObjectType,
     RectangleType,
 )
-from kinder.envs.geom2d.structs import SE2Pose, ZOrder
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.structs import SE2Pose, ZOrder
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     create_walls_from_world_boundaries,
     move_objects_in_contact,
@@ -29,7 +29,7 @@ from kinder.envs.utils import BLACK, BROWN, sample_se2_pose, state_2d_has_collis
 
 
 @dataclass(frozen=True)
-class PushPullHook2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
+class PushPullHook2DEnvConfig(Kinematic2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Config for PushPullHook2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
@@ -134,7 +134,7 @@ class PushPullHook2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
 
 # Object-centric environment class
 class ObjectCentricPushPullHook2DEnv(
-    ObjectCentricGeom2DRobotEnv[PushPullHook2DEnvConfig]
+    ObjectCentricKinematic2DRobotEnv[PushPullHook2DEnvConfig]
 ):
     """Environment with a hook, a movable button and a target button.
 
@@ -321,7 +321,7 @@ class ObjectCentricPushPullHook2DEnv(
             }
 
         # Finalize state.
-        return create_state_from_dict(init_state_dict, Geom2DRobotEnvTypeFeatures)
+        return create_state_from_dict(init_state_dict, Kinematic2DRobotEnvTypeFeatures)
 
     def press_button(self, button: Object) -> ObjectCentricState:
         """Press a button by changing its color."""
@@ -451,7 +451,7 @@ class PushPullHook2DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom2DRobotEnv:
+    ) -> ObjectCentricKinematic2DRobotEnv:
         return ObjectCentricPushPullHook2DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

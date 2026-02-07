@@ -1,4 +1,4 @@
-"""Base environment class for all Geom3D environments."""
+"""Base environment class for all Kinematic3D environments."""
 
 from __future__ import annotations
 
@@ -35,17 +35,17 @@ from relational_structs.utils import create_state_from_dict
 from scipy.spatial.transform import Rotation
 
 from kinder.core import KinDEREnvConfig, ObjectCentricKinDEREnv, RobotActionSpace
-from kinder.envs.geom3d.object_types import (
-    Geom3DCuboidType,
-    Geom3DEnvTypeFeatures,
-    Geom3DFixtureType,
-    Geom3DPointType,
-    Geom3DRobotType,
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DCuboidType,
+    Kinematic3DEnvTypeFeatures,
+    Kinematic3DFixtureType,
+    Kinematic3DPointType,
+    Kinematic3DRobotType,
 )
-from kinder.envs.geom3d.utils import (
+from kinder.envs.kinematic3d.utils import (
     DEFAULT_REALISTIC_BG_PATH,
-    Geom3DObjectCentricState,
-    Geom3DRobotActionSpace,
+    Kinematic3DObjectCentricState,
+    Kinematic3DRobotActionSpace,
     extend_joints_to_include_fingers,
     get_robot_action_from_gui_input,
     load_realistic_background,
@@ -54,8 +54,8 @@ from kinder.envs.geom3d.utils import (
 
 
 @dataclass(frozen=True)
-class Geom3DEnvConfig(KinDEREnvConfig):
-    """Config for Geom3DEnv()."""
+class Kinematic3DEnvConfig(KinDEREnvConfig):
+    """Config for Kinematic3DEnv()."""
 
     # Robot.
     robot_name: str = "tidybot-kinova"
@@ -229,15 +229,15 @@ class Geom3DEnvConfig(KinDEREnvConfig):
 
 
 # Subclasses may extend the state.
-_ObsType = TypeVar("_ObsType", bound=Geom3DObjectCentricState)
-_ConfigType = TypeVar("_ConfigType", bound=Geom3DEnvConfig)
+_ObsType = TypeVar("_ObsType", bound=Kinematic3DObjectCentricState)
+_ConfigType = TypeVar("_ConfigType", bound=Kinematic3DEnvConfig)
 
 
-class ObjectCentricGeom3DRobotEnv(
+class ObjectCentricKinematic3DRobotEnv(
     ObjectCentricKinDEREnv[_ObsType, Array, _ConfigType],
     Generic[_ObsType, _ConfigType],
 ):
-    """Base class for Geom3D environments."""
+    """Base class for Kinematic3D environments."""
 
     def __init__(
         self,
@@ -333,7 +333,7 @@ class ObjectCentricGeom3DRobotEnv(
 
     @property
     @abc.abstractmethod
-    def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
+    def state_cls(self) -> TypingType[Kinematic3DObjectCentricState]:
         """The type of states in this environment."""
 
     @abc.abstractmethod
@@ -405,19 +405,19 @@ class ObjectCentricGeom3DRobotEnv(
     @property
     def type_features(self) -> dict[Type, list[str]]:
         """The types and features for this environment."""
-        return Geom3DEnvTypeFeatures
+        return Kinematic3DEnvTypeFeatures
 
     def _create_observation_space(self, config: _ConfigType) -> ObjectCentricStateSpace:
         types = set(self.type_features)
         return ObjectCentricStateSpace(types, state_cls=self.state_cls)
 
     def _create_action_space(self, config: _ConfigType) -> RobotActionSpace:
-        return Geom3DRobotActionSpace(max_magnitude=config.max_action_mag)
+        return Kinematic3DRobotActionSpace(max_magnitude=config.max_action_mag)
 
     def _create_constant_initial_state(self) -> _ObsType:
         initial_state_dict = self._create_constant_initial_state_dict()
         state = create_state_from_dict(
-            initial_state_dict, Geom3DEnvTypeFeatures, state_cls=self.state_cls
+            initial_state_dict, Kinematic3DEnvTypeFeatures, state_cls=self.state_cls
         )
         # This is tricky for type annotation because we are dynamically setting the
         # class to be self.state_cls, which should be _ObsType.
@@ -810,7 +810,7 @@ class ObjectCentricGeom3DRobotEnv(
             obj = Object(object_name, object_type)
             feats: dict[str, float] = {}
             # Handle robots.
-            if object_type == Geom3DRobotType:
+            if object_type == Kinematic3DRobotType:
                 # Add base pose.
                 base_pose = self.robot.get_base()
                 feats["pos_base_x"] = base_pose.x
@@ -848,7 +848,7 @@ class ObjectCentricGeom3DRobotEnv(
                     ):
                         feats[feat_name] = feat
             # Handle cuboids.
-            elif object_type == Geom3DCuboidType:
+            elif object_type == Kinematic3DCuboidType:
                 # Add pose.
                 body_id = self._object_name_to_pybullet_id(object_name)
                 pose = get_pose(body_id, self.physics_client_id)
@@ -878,7 +878,7 @@ class ObjectCentricGeom3DRobotEnv(
                     feats[feat_name] = feat
                 feats["object_type"] = -1.0  # cuboid
             # Handle points.
-            elif object_type == Geom3DPointType:
+            elif object_type == Kinematic3DPointType:
                 # Add position.
                 body_id = self._object_name_to_pybullet_id(object_name)
                 pose = get_pose(body_id, self.physics_client_id)
@@ -886,7 +886,7 @@ class ObjectCentricGeom3DRobotEnv(
                 feats["y"] = pose.position[1]
                 feats["z"] = pose.position[2]
             # Handle fixtures.
-            elif object_type == Geom3DFixtureType:
+            elif object_type == Kinematic3DFixtureType:
                 # Add pose.
                 body_id = self._object_name_to_pybullet_id(object_name)
                 pose = get_pose(body_id, self.physics_client_id)
@@ -913,5 +913,5 @@ class ObjectCentricGeom3DRobotEnv(
     ) -> NDArray[np.float32]:
         """Get the mapping from human inputs to actions."""
         # This will be implemented later
-        assert isinstance(self.action_space, Geom3DRobotActionSpace)
+        assert isinstance(self.action_space, Kinematic3DRobotActionSpace)
         return get_robot_action_from_gui_input(self.action_space, gui_input)

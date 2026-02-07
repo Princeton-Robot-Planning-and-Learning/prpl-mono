@@ -21,19 +21,19 @@ from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom3d.base_env import (
-    Geom3DEnvConfig,
-    ObjectCentricGeom3DRobotEnv,
+from kinder.envs.kinematic3d.base_env import (
+    Kinematic3DEnvConfig,
+    ObjectCentricKinematic3DRobotEnv,
 )
-from kinder.envs.geom3d.object_types import (
-    Geom3DCuboidType,
-    Geom3DEnvTypeFeatures,
-    Geom3DPointType,
-    Geom3DRobotType,
-    Geom3DTriangleType,
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DCuboidType,
+    Kinematic3DEnvTypeFeatures,
+    Kinematic3DPointType,
+    Kinematic3DRobotType,
+    Kinematic3DTriangleType,
 )
-from kinder.envs.geom3d.utils import (
-    Geom3DObjectCentricState,
+from kinder.envs.kinematic3d.utils import (
+    Kinematic3DObjectCentricState,
     is_inside,
     remove_fingers_from_extended_joints,
 )
@@ -41,7 +41,7 @@ from kinder.envs.utils import PURPLE
 
 
 @dataclass(frozen=True)
-class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
+class Packing3DEnvConfig(Kinematic3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Packing3DEnv()."""
 
     # Robot.
@@ -161,10 +161,10 @@ class Packing3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
         return base, height, self.part_triangle_depth, float(triangle_type)
 
 
-class Packing3DObjectCentricState(Geom3DObjectCentricState):
+class Packing3DObjectCentricState(Kinematic3DObjectCentricState):
     """A state in the Packing3DEnv().
 
-    Adds convenience methods on top of Geom3DObjectCentricState().
+    Adds convenience methods on top of Kinematic3DObjectCentricState().
     """
 
     def get_object_pose(self, name: str) -> Pose:
@@ -182,7 +182,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
             self.get(obj, "pose_qw"),
         )
 
-        if obj.type == Geom3DTriangleType:
+        if obj.type == Kinematic3DTriangleType:
             # For triangle objects, we need to adjust the position to match the center
             # of the triangular prism, since the pose is defined at the centroid of the
             # triangle base.
@@ -209,7 +209,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
                 self.get(obj, "half_extent_z"),
                 -1,
             )
-            if obj.type == Geom3DCuboidType
+            if obj.type == Kinematic3DCuboidType
             else (
                 max(self.get_object_triangle_features(name)[:2]) / 2,
                 max(self.get_object_triangle_features(name)[:2]) / 2,
@@ -276,11 +276,11 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
         features = {}
         for obj in self.objects:
             if obj.name.startswith("part"):
-                if obj.type == Geom3DCuboidType:
+                if obj.type == Kinematic3DCuboidType:
                     features[obj.name] = self.get_object_half_extents_packing3d(
                         obj.name
                     )
-                elif obj.type == Geom3DTriangleType:
+                elif obj.type == Kinematic3DTriangleType:
                     features[obj.name] = self.get_object_triangle_features(obj.name)
                 else:
                     raise ValueError(f"Unsupported part type: {obj.type}")
@@ -306,8 +306,8 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
     def grasped_object(self) -> str | None:
         """The name of the currently grasped object, or None if there is none."""
         grasped_objs: list[Object] = []
-        for obj in self.get_objects(Geom3DCuboidType) + self.get_objects(
-            Geom3DTriangleType
+        for obj in self.get_objects(Kinematic3DCuboidType) + self.get_objects(
+            Kinematic3DTriangleType
         ):
             if self.get(obj, "grasp_active") > 0.5:
                 grasped_objs.append(obj)
@@ -319,7 +319,7 @@ class Packing3DObjectCentricState(Geom3DObjectCentricState):
 
 
 class ObjectCentricPacking3DEnv(
-    ObjectCentricGeom3DRobotEnv[Packing3DObjectCentricState, Packing3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[Packing3DObjectCentricState, Packing3DEnvConfig]
 ):
     """Environment where small parts must be packed into a rack without collisions."""
 
@@ -369,7 +369,7 @@ class ObjectCentricPacking3DEnv(
         ] = {}
 
     @property
-    def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
+    def state_cls(self) -> TypingType[Kinematic3DObjectCentricState]:
         return Packing3DObjectCentricState
 
     def _create_state_dict(
@@ -380,7 +380,7 @@ class ObjectCentricPacking3DEnv(
             obj = Object(object_name, object_type)
             feats: dict[str, float] = {}
             # Handle robots.
-            if object_type == Geom3DRobotType:
+            if object_type == Kinematic3DRobotType:
                 # Add base pose.
                 base_pose = self.robot.get_base()
                 feats["pos_base_x"] = base_pose.x
@@ -418,7 +418,7 @@ class ObjectCentricPacking3DEnv(
                     ):
                         feats[feat_name] = feat
             # Handle cuboids.
-            elif object_type == Geom3DCuboidType:
+            elif object_type == Kinematic3DCuboidType:
                 # Add pose.
                 body_id = self._object_name_to_pybullet_id(object_name)
                 pose = get_pose(body_id, self.physics_client_id)
@@ -448,7 +448,7 @@ class ObjectCentricPacking3DEnv(
                     feats[feat_name] = feat
                 feats["object_type"] = -1.0  # cuboid
             # Handle points.
-            elif object_type == Geom3DPointType:
+            elif object_type == Kinematic3DPointType:
                 # Add position.
                 body_id = self._object_name_to_pybullet_id(object_name)
                 pose = get_pose(body_id, self.physics_client_id)
@@ -456,7 +456,7 @@ class ObjectCentricPacking3DEnv(
                 feats["y"] = pose.position[1]
                 feats["z"] = pose.position[2]
             # Handle triangles.
-            elif object_type == Geom3DTriangleType:
+            elif object_type == Kinematic3DTriangleType:
                 body_id = self._object_name_to_pybullet_id(object_name)
                 pose = get_pose(body_id, self.physics_client_id)
                 pose_feat_names = [
@@ -491,7 +491,7 @@ class ObjectCentricPacking3DEnv(
         return state_dict
 
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
-        return self._create_state_dict([("table", Geom3DCuboidType)])
+        return self._create_state_dict([("table", Kinematic3DCuboidType)])
 
     def _reset_objects(self) -> None:
 
@@ -512,13 +512,13 @@ class ObjectCentricPacking3DEnv(
         for i in range(self._num_parts):
             name = f"part{i}"
             part_type = (
-                Geom3DCuboidType
+                Kinematic3DCuboidType
                 if self.config.part_triangular_prob * self._num_parts >= i + 1
-                else Geom3DTriangleType
+                else Kinematic3DTriangleType
             )
 
             # Sample part half extents from config.
-            if part_type == Geom3DCuboidType:
+            if part_type == Kinematic3DCuboidType:
                 sampled = self.config.sample_part_half_extents(self.np_random)
                 half_extents = (sampled[0], sampled[1], sampled[2])
                 part_id = create_pybullet_block_with_peg(
@@ -528,7 +528,7 @@ class ObjectCentricPacking3DEnv(
                 )
                 self._part_id_to_half_extents[part_id] = half_extents
                 self._part_ids[name] = part_id
-                self._part_ids_to_type[part_id] = Geom3DCuboidType
+                self._part_ids_to_type[part_id] = Kinematic3DCuboidType
                 self._part_ids_to_triangle_features[part_id] = (
                     sampled[0],
                     sampled[1],
@@ -536,7 +536,7 @@ class ObjectCentricPacking3DEnv(
                     -1,
                 )
 
-            elif part_type == Geom3DTriangleType:
+            elif part_type == Kinematic3DTriangleType:
                 side_a, side_b, depth, triangle_type = (
                     self.config.sample_part_triangle_features(self.np_random)
                 )
@@ -554,7 +554,7 @@ class ObjectCentricPacking3DEnv(
                 )
                 self._part_id_to_half_extents[part_id] = half_extents
                 self._part_ids[name] = part_id
-                self._part_ids_to_type[part_id] = Geom3DTriangleType
+                self._part_ids_to_type[part_id] = Kinematic3DTriangleType
                 self._part_ids_to_triangle_features[part_id] = (
                     side_a,
                     side_b,
@@ -626,7 +626,7 @@ class ObjectCentricPacking3DEnv(
                 if not collision_exists:
                     break
 
-    def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
+    def _set_object_states(self, obs: Kinematic3DObjectCentricState) -> None:
         assert isinstance(obs, Packing3DObjectCentricState)
         # Update rack (recreate if half extents changed)
         if self._rack_id is not None:
@@ -702,7 +702,7 @@ class ObjectCentricPacking3DEnv(
 
     def _get_obs(self) -> Packing3DObjectCentricState:
         state_dict = self._create_state_dict(
-            [("robot", Geom3DRobotType), ("rack", Geom3DCuboidType)]
+            [("robot", Kinematic3DRobotType), ("rack", Kinematic3DCuboidType)]
             + [
                 (
                     f"part{i}",
@@ -714,7 +714,7 @@ class ObjectCentricPacking3DEnv(
             ]
         )
         state = create_state_from_dict(
-            state_dict, Geom3DEnvTypeFeatures, state_cls=Packing3DObjectCentricState
+            state_dict, Kinematic3DEnvTypeFeatures, state_cls=Packing3DObjectCentricState
         )
         assert isinstance(state, Packing3DObjectCentricState)
         return state
@@ -745,7 +745,7 @@ class Packing3DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom3DRobotEnv:
+    ) -> ObjectCentricKinematic3DRobotEnv:
         return ObjectCentricPacking3DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

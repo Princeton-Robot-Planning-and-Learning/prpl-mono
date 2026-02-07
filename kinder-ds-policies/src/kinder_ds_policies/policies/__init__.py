@@ -23,9 +23,9 @@ def create_domain_specific_policy(env_name: str, **kwargs) -> StatefulPolicy:
 
     # Try different directories based on environment type
     possible_paths = [
-        current_file.parent / "geom2d" / f"{env_name}.py",
+        current_file.parent / "kinematic2d" / f"{env_name}.py",
         current_file.parent / "dynamic2d" / f"{env_name}.py",
-        current_file.parent / "geom3d" / f"{env_name}.py",
+        current_file.parent / "kinematic3d" / f"{env_name}.py",
         current_file.parent / "dynamic3d" / f"{env_name}.py",
     ]
 

@@ -5,7 +5,7 @@ from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 
 import kinder
-from kinder.envs.geom2d.motion2d import Motion2DEnvConfig, ObjectCentricMotion2DEnv
+from kinder.envs.kinematic2d.motion2d import Motion2DEnvConfig, ObjectCentricMotion2DEnv
 from tests.conftest import MAKE_VIDEOS
 
 kinder.register_all_environments()

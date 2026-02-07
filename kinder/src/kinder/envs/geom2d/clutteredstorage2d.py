@@ -8,18 +8,18 @@ from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom2d.base_env import (
-    Geom2DRobotEnvConfig,
-    ObjectCentricGeom2DRobotEnv,
+from kinder.envs.kinematic2d.base_env import (
+    Kinematic2DRobotEnvConfig,
+    ObjectCentricKinematic2DRobotEnv,
 )
-from kinder.envs.geom2d.object_types import (
+from kinder.envs.kinematic2d.object_types import (
     CRVRobotType,
     DoubleRectType,
-    Geom2DRobotEnvTypeFeatures,
+    Kinematic2DRobotEnvTypeFeatures,
     RectangleType,
 )
-from kinder.envs.geom2d.structs import SE2Pose, ZOrder
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.structs import SE2Pose, ZOrder
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     create_walls_from_world_boundaries,
     is_inside_shelf,
@@ -28,16 +28,16 @@ from kinder.envs.utils import BLACK, PURPLE, sample_se2_pose, state_2d_has_colli
 
 # NOTE: unlike some other environments, there are multiple target blocks here.
 TargetBlockType = Type("target_block", parent=RectangleType)
-Geom2DRobotEnvTypeFeatures[TargetBlockType] = list(
-    Geom2DRobotEnvTypeFeatures[RectangleType]
+Kinematic2DRobotEnvTypeFeatures[TargetBlockType] = list(
+    Kinematic2DRobotEnvTypeFeatures[RectangleType]
 )
 # There is only one target region (the shelf) and it is bookended by obstacles.
 ShelfType = Type("shelf", parent=DoubleRectType)
-Geom2DRobotEnvTypeFeatures[ShelfType] = list(Geom2DRobotEnvTypeFeatures[DoubleRectType])
+Kinematic2DRobotEnvTypeFeatures[ShelfType] = list(Kinematic2DRobotEnvTypeFeatures[DoubleRectType])
 
 
 @dataclass(frozen=True)
-class ClutteredStorage2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMeta):
+class ClutteredStorage2DEnvConfig(Kinematic2DRobotEnvConfig, metaclass=FinalConfigMeta):
     """Config for ClutteredStorage2DEnv()."""
 
     # World boundaries. Standard coordinate frame with (0, 0) in bottom left.
@@ -146,7 +146,7 @@ class ClutteredStorage2DEnvConfig(Geom2DRobotEnvConfig, metaclass=FinalConfigMet
 
 
 class ObjectCentricClutteredStorage2DEnv(
-    ObjectCentricGeom2DRobotEnv[ClutteredStorage2DEnvConfig]
+    ObjectCentricKinematic2DRobotEnv[ClutteredStorage2DEnvConfig]
 ):
     """Cluttered environment where blocks must be stored on a shelf.
 
@@ -348,7 +348,7 @@ class ObjectCentricClutteredStorage2DEnv(
                 }
 
         # Finalize state.
-        return create_state_from_dict(init_state_dict, Geom2DRobotEnvTypeFeatures)
+        return create_state_from_dict(init_state_dict, Kinematic2DRobotEnvTypeFeatures)
 
     def _get_reward_and_done(self) -> tuple[float, bool]:
         assert self._current_state is not None
@@ -376,7 +376,7 @@ class ClutteredStorage2DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom2DRobotEnv:
+    ) -> ObjectCentricKinematic2DRobotEnv:
         return ObjectCentricClutteredStorage2DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

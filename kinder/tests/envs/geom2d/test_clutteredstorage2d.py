@@ -5,7 +5,7 @@ from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 
 import kinder
-from kinder.envs.geom2d.clutteredstorage2d import (
+from kinder.envs.kinematic2d.clutteredstorage2d import (
     ObjectCentricClutteredStorage2DEnv,
     ShelfType,
     TargetBlockType,

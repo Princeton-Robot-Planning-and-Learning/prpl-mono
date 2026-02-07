@@ -8,10 +8,10 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
 from gymnasium.spaces import Box
-from kinder.envs.geom2d.motion2d import RectangleType, TargetRegionType
-from kinder.envs.geom2d.object_types import CRVRobotType
-from kinder.envs.geom2d.structs import SE2Pose
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.motion2d import RectangleType, TargetRegionType
+from kinder.envs.kinematic2d.object_types import CRVRobotType
+from kinder.envs.kinematic2d.structs import SE2Pose
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     run_motion_planning_for_crv_robot,
     state_2d_has_collision,
@@ -22,7 +22,7 @@ from relational_structs import (
     Variable,
 )
 
-from kinder_models.geom2d.utils import Geom2dRobotController
+from kinder_models.kinematic2d.utils import Geom2dRobotController
 
 
 # Controllers.

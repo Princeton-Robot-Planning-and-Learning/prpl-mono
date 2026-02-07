@@ -12,20 +12,20 @@ from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom3d.base_env import (
-    Geom3DEnvConfig,
-    ObjectCentricGeom3DRobotEnv,
+from kinder.envs.kinematic3d.base_env import (
+    Kinematic3DEnvConfig,
+    ObjectCentricKinematic3DRobotEnv,
 )
-from kinder.envs.geom3d.object_types import (
-    Geom3DEnvTypeFeatures,
-    Geom3DPointType,
-    Geom3DRobotType,
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DEnvTypeFeatures,
+    Kinematic3DPointType,
+    Kinematic3DRobotType,
 )
-from kinder.envs.geom3d.utils import Geom3DObjectCentricState
+from kinder.envs.kinematic3d.utils import Kinematic3DObjectCentricState
 
 
 @dataclass(frozen=True)
-class BaseMotion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
+class BaseMotion3DEnvConfig(Kinematic3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for BaseMotion3DEnv()."""
 
     # Robot.
@@ -40,10 +40,10 @@ class BaseMotion3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     target_upper_bound: SE2Pose = SE2Pose(2, 2, np.pi)
 
 
-class BaseMotion3DObjectCentricState(Geom3DObjectCentricState):
+class BaseMotion3DObjectCentricState(Kinematic3DObjectCentricState):
     """A state in the BaseMotion3DEnv().
 
-    Adds convenience methods on top of Geom3DObjectCentricState().
+    Adds convenience methods on top of Kinematic3DObjectCentricState().
     """
 
     @property
@@ -58,7 +58,7 @@ class BaseMotion3DObjectCentricState(Geom3DObjectCentricState):
 
 
 class ObjectCentricBaseMotion3DEnv(
-    ObjectCentricGeom3DRobotEnv[BaseMotion3DObjectCentricState, BaseMotion3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[BaseMotion3DObjectCentricState, BaseMotion3DEnvConfig]
 ):
     """Environment where only base motion planning is needed to reach a goal."""
 
@@ -86,7 +86,7 @@ class ObjectCentricBaseMotion3DEnv(
         )
 
     @property
-    def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
+    def state_cls(self) -> TypingType[Kinematic3DObjectCentricState]:
         return BaseMotion3DObjectCentricState
 
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
@@ -136,10 +136,10 @@ class ObjectCentricBaseMotion3DEnv(
 
     def _get_obs(self) -> BaseMotion3DObjectCentricState:
         state_dict = self._create_state_dict(
-            [("robot", Geom3DRobotType), ("target", Geom3DPointType)]
+            [("robot", Kinematic3DRobotType), ("target", Kinematic3DPointType)]
         )
         state = create_state_from_dict(
-            state_dict, Geom3DEnvTypeFeatures, state_cls=BaseMotion3DObjectCentricState
+            state_dict, Kinematic3DEnvTypeFeatures, state_cls=BaseMotion3DObjectCentricState
         )
         assert isinstance(state, BaseMotion3DObjectCentricState)
         return state
@@ -171,7 +171,7 @@ class BaseMotion3DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom3DRobotEnv:
+    ) -> ObjectCentricKinematic3DRobotEnv:
         return ObjectCentricBaseMotion3DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

@@ -1,4 +1,4 @@
-"""Constants for geom3d environments."""
+"""Constants for kinematic3d environments."""
 
 import numpy as np
 from pybullet_helpers.geometry import Pose

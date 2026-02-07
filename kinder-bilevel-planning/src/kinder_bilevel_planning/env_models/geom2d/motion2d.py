@@ -8,17 +8,17 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from kinder.envs.geom2d.motion2d import (
+from kinder.envs.kinematic2d.motion2d import (
     ObjectCentricMotion2DEnv,
     RectangleType,
     TargetRegionType,
 )
-from kinder.envs.geom2d.object_types import CRVRobotType
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.object_types import CRVRobotType
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     rectangle_object_to_geom,
 )
-from kinder_models.geom2d.envs.motion2d.parameterized_skills import (
+from kinder_models.kinematic2d.envs.motion2d.parameterized_skills import (
     create_lifted_controllers,
 )
 from numpy.typing import NDArray

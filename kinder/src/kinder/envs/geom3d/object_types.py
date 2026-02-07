@@ -2,13 +2,13 @@
 
 from relational_structs import Type
 
-Geom3DEnvTypeFeatures: dict[Type, list[str]] = {}
+Kinematic3DEnvTypeFeatures: dict[Type, list[str]] = {}
 
 # The robot, which is a 7DOF arm, has joint positions and grasp features.
 # Note that we must store the finger state if we want to have different grasps for
 # different sized objects.
-Geom3DRobotType = Type("Geom3DRobot")
-Geom3DEnvTypeFeatures[Geom3DRobotType] = [
+Kinematic3DRobotType = Type("Kinematic3DRobot")
+Kinematic3DEnvTypeFeatures[Kinematic3DRobotType] = [
     "pos_base_x",
     "pos_base_y",
     "pos_base_rot",
@@ -31,8 +31,8 @@ Geom3DEnvTypeFeatures[Geom3DRobotType] = [
 ]
 
 # Cuboid objects have poses, grasp features, and half extents.
-Geom3DCuboidType = Type("Geom3DCuboid")
-Geom3DEnvTypeFeatures[Geom3DCuboidType] = [
+Kinematic3DCuboidType = Type("Kinematic3DCuboid")
+Kinematic3DEnvTypeFeatures[Kinematic3DCuboidType] = [
     "pose_x",
     "pose_y",
     "pose_z",
@@ -51,8 +51,8 @@ Geom3DEnvTypeFeatures[Geom3DCuboidType] = [
 
 # Triangle objects: parameterize by triangle kind and side lengths (a,b,c)
 # plus a thickness/depth along Z. Pose and grasp_active included.
-Geom3DTriangleType = Type("Geom3DTriangle")
-Geom3DEnvTypeFeatures[Geom3DTriangleType] = [
+Kinematic3DTriangleType = Type("Kinematic3DTriangle")
+Kinematic3DEnvTypeFeatures[Kinematic3DTriangleType] = [
     "pose_x",
     "pose_y",
     "pose_z",
@@ -70,8 +70,8 @@ Geom3DEnvTypeFeatures[Geom3DTriangleType] = [
 ]
 
 # A point is just a position. For example, it could be a target point to reach.
-Geom3DPointType = Type("Geom3DPoint")
-Geom3DEnvTypeFeatures[Geom3DPointType] = [
+Kinematic3DPointType = Type("Kinematic3DPoint")
+Kinematic3DEnvTypeFeatures[Kinematic3DPointType] = [
     "x",
     "y",
     "z",
@@ -79,8 +79,8 @@ Geom3DEnvTypeFeatures[Geom3DPointType] = [
 
 
 # Fixtures: static objects with a pose.
-Geom3DFixtureType = Type("Geom3DFixture")
-Geom3DEnvTypeFeatures[Geom3DFixtureType] = [
+Kinematic3DFixtureType = Type("Kinematic3DFixture")
+Kinematic3DEnvTypeFeatures[Kinematic3DFixtureType] = [
     "pose_x",
     "pose_y",
     "pose_z",

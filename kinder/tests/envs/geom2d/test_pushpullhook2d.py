@@ -4,7 +4,7 @@ from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 
 import kinder
-from kinder.envs.geom2d.pushpullhook2d import ObjectCentricPushPullHook2DEnv
+from kinder.envs.kinematic2d.pushpullhook2d import ObjectCentricPushPullHook2DEnv
 from tests.conftest import MAKE_VIDEOS
 
 

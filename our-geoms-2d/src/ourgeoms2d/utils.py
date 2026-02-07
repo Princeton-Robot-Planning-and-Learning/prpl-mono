@@ -6,7 +6,7 @@ from typing import Tuple
 
 import numpy as np
 
-from ourgeoms2d.structs import Circle, Geom2D, LineSegment, Lobject, Rectangle
+from ourgeoms2d.structs import Circle, Kinematic2D, LineSegment, Lobject, Rectangle
 
 
 def line_segments_intersect(seg1: LineSegment, seg2: LineSegment) -> bool:
@@ -191,7 +191,7 @@ def tobject_intersects_circle(tobj, circ: Circle) -> bool:
     return False
 
 
-def geom2ds_intersect(geom1: Geom2D, geom2: Geom2D) -> bool:
+def kinematic2ds_intersect(geom1: Kinematic2D, geom2: Kinematic2D) -> bool:
     """Check if two 2D bodies intersect."""
     if isinstance(geom1, LineSegment) and isinstance(geom2, LineSegment):
         return line_segments_intersect(geom1, geom2)
@@ -408,7 +408,7 @@ def find_closest_points_object_object(
 
 
 def find_closest_points(
-    geom1: Geom2D, geom2: Geom2D
+    geom1: Kinematic2D, geom2: Kinematic2D
 ) -> Tuple[Tuple[float, float], Tuple[float, float], float]:
     """Find the closest points between two objects."""
     if isinstance(geom1, Circle) and isinstance(geom2, Circle):

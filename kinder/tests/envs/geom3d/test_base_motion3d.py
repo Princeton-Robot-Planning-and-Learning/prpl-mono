@@ -11,7 +11,7 @@ from pybullet_helpers.motion_planning import (
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 import kinder
-from kinder.envs.geom3d.base_motion3d import (
+from kinder.envs.kinematic3d.base_motion3d import (
     BaseMotion3DEnv,
     BaseMotion3DObjectCentricState,
     ObjectCentricBaseMotion3DEnv,
@@ -98,7 +98,7 @@ def test_check_mobile_base_collisions_is_called(
 
     # Patch the check_mobile_base_collisions function
     with patch(
-        "kinder.envs.geom3d.base_env.check_mobile_base_collisions"
+        "kinder.envs.kinematic3d.base_env.check_mobile_base_collisions"
     ) as mock_check_base:
         # Set return value to False (no collision)
         mock_check_base.return_value = False

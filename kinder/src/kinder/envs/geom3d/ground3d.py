@@ -14,24 +14,24 @@ from relational_structs import Object, ObjectCentricState
 from relational_structs.utils import create_state_from_dict
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
-from kinder.envs.geom3d.base_env import (
-    Geom3DEnvConfig,
-    ObjectCentricGeom3DRobotEnv,
+from kinder.envs.kinematic3d.base_env import (
+    Kinematic3DEnvConfig,
+    ObjectCentricKinematic3DRobotEnv,
 )
-from kinder.envs.geom3d.object_types import (
-    Geom3DCuboidType,
-    Geom3DEnvTypeFeatures,
-    Geom3DRobotType,
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DCuboidType,
+    Kinematic3DEnvTypeFeatures,
+    Kinematic3DRobotType,
 )
-from kinder.envs.geom3d.utils import (
-    Geom3DObjectCentricState,
+from kinder.envs.kinematic3d.utils import (
+    Kinematic3DObjectCentricState,
     sample_collision_free_object_poses,
 )
 from kinder.envs.utils import PURPLE
 
 
 @dataclass(frozen=True)
-class Ground3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
+class Ground3DEnvConfig(Kinematic3DEnvConfig, metaclass=FinalConfigMeta):
     """Config for Ground3DEnv()."""
 
     # World bounds.
@@ -45,15 +45,15 @@ class Ground3DEnvConfig(Geom3DEnvConfig, metaclass=FinalConfigMeta):
     block_rgba: tuple[float, float, float, float] = PURPLE + (1.0,)
 
 
-class Ground3DObjectCentricState(Geom3DObjectCentricState):
+class Ground3DObjectCentricState(Kinematic3DObjectCentricState):
     """A state in the GroundMotion3DEnv().
 
-    Adds convenience methods on top of Geom3DObjectCentricState().
+    Adds convenience methods on top of Kinematic3DObjectCentricState().
     """
 
 
 class ObjectCentricGround3DEnv(
-    ObjectCentricGeom3DRobotEnv[Geom3DObjectCentricState, Ground3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[Kinematic3DObjectCentricState, Ground3DEnvConfig]
 ):
     """PyBullet environment where an object must be picked from the ground.
 
@@ -85,7 +85,7 @@ class ObjectCentricGround3DEnv(
             self._cubes[f"cube{idx}"] = cube_id
 
     @property
-    def state_cls(self) -> TypingType[Geom3DObjectCentricState]:
+    def state_cls(self) -> TypingType[Kinematic3DObjectCentricState]:
         return Ground3DObjectCentricState
 
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
@@ -102,7 +102,7 @@ class ObjectCentricGround3DEnv(
             other_collision_ids={self.robot.base.robot_id},
         )
 
-    def _set_object_states(self, obs: Geom3DObjectCentricState) -> None:
+    def _set_object_states(self, obs: Kinematic3DObjectCentricState) -> None:
         assert isinstance(obs, Ground3DObjectCentricState)
         for cube_name, cube_id in self._cubes.items():
             assert cube_id is not None
@@ -138,11 +138,11 @@ class ObjectCentricGround3DEnv(
 
     def _get_obs(self) -> Ground3DObjectCentricState:
         state_dict = self._create_state_dict(
-            [("robot", Geom3DRobotType)]
-            + [("cube" + str(i), Geom3DCuboidType) for i in range(self._num_cubes)]
+            [("robot", Kinematic3DRobotType)]
+            + [("cube" + str(i), Kinematic3DCuboidType) for i in range(self._num_cubes)]
         )
         state = create_state_from_dict(
-            state_dict, Geom3DEnvTypeFeatures, state_cls=Ground3DObjectCentricState
+            state_dict, Kinematic3DEnvTypeFeatures, state_cls=Ground3DObjectCentricState
         )
         assert isinstance(state, Ground3DObjectCentricState)
         return state
@@ -160,7 +160,7 @@ class Ground3DEnv(ConstantObjectKinDEREnv):
 
     def _create_object_centric_env(
         self, *args, **kwargs
-    ) -> ObjectCentricGeom3DRobotEnv:
+    ) -> ObjectCentricKinematic3DRobotEnv:
         return ObjectCentricGround3DEnv(*args, **kwargs)
 
     def _get_constant_object_names(

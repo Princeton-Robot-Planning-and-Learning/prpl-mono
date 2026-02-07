@@ -7,8 +7,8 @@ import numpy as np
 from gymnasium.spaces import Box
 from numpy.typing import NDArray
 from our_utils.utils import fig2data
-from ourgeoms2d.structs import Circle, Geom2D, Lobject, Rectangle, Tobject
-from ourgeoms2d.utils import geom2ds_intersect
+from ourgeoms2d.structs import Circle, Kinematic2D, Lobject, Rectangle, Tobject
+from ourgeoms2d.utils import kinematic2ds_intersect
 from relational_structs import (
     Object,
     ObjectCentricState,
@@ -26,16 +26,16 @@ from kinder.envs.dynamic2d.object_types import (
     SmallSquareType,
     TObjectType,
 )
-from kinder.envs.geom2d.object_types import (
+from kinder.envs.kinematic2d.object_types import (
     CircleType,
     CRVRobotType,
     DoubleRectType,
 )
-from kinder.envs.geom2d.object_types import LObjectType as LObjectTypeGeom
-from kinder.envs.geom2d.object_types import (
+from kinder.envs.kinematic2d.object_types import LObjectType as LObjectTypeGeom
+from kinder.envs.kinematic2d.object_types import (
     RectangleType,
 )
-from kinder.envs.geom2d.structs import (
+from kinder.envs.kinematic2d.structs import (
     Body2D,
     MultiBody2D,
     SE2Pose,
@@ -123,7 +123,7 @@ def state_2d_has_collision(
                         or z_orders_may_collide(body1.z_order, body2.z_order)
                     ):
                         continue
-                    if geom2ds_intersect(body1.geom, body2.geom):
+                    if kinematic2ds_intersect(body1.geom, body2.geom):
                         return True
     return False
 
@@ -364,7 +364,7 @@ def crv_robot_to_multibody2d(obj: Object, state: ObjectCentricState) -> MultiBod
     return MultiBody2D(obj.name, bodies)
 
 
-def geom2d_lobject_to_multibody2d(
+def kinematic2d_lobject_to_multibody2d(
     obj: Object, state: ObjectCentricState
 ) -> MultiBody2D:
     """Helper to create a MultiBody2D for an LObjectType object."""
@@ -394,7 +394,7 @@ def geom2d_lobject_to_multibody2d(
     return MultiBody2D(obj.name, [body])
 
 
-def geom2d_double_rectangle_to_multibody2d(
+def kinematic2d_double_rectangle_to_multibody2d(
     obj: Object, state: ObjectCentricState
 ) -> MultiBody2D:
     """Helper to create a MultiBody2D for a DoubleRectType object."""
@@ -576,7 +576,7 @@ def object_to_multibody2d(
     is_static = state.get(obj, "static") > 0.5
     if is_static and obj in static_object_cache:
         return static_object_cache[obj]
-    geom: Geom2D  # rectangle or circle
+    geom: Kinematic2D  # rectangle or circle
     if obj.is_instance(RectangleType):
         x = state.get(obj, "x")
         y = state.get(obj, "y")
@@ -631,9 +631,9 @@ def object_to_multibody2d(
         body = Body2D(geom, z_order, rendering_kwargs)
         multibody = MultiBody2D(obj.name, [body])
     elif obj.is_instance(LObjectTypeDyn) or obj.is_instance(LObjectTypeGeom):
-        multibody = geom2d_lobject_to_multibody2d(obj, state)
+        multibody = kinematic2d_lobject_to_multibody2d(obj, state)
     elif obj.is_instance(DoubleRectType):
-        multibody = geom2d_double_rectangle_to_multibody2d(obj, state)
+        multibody = kinematic2d_double_rectangle_to_multibody2d(obj, state)
     elif obj.is_instance(SmallCircleType):
         # Small circle objects (for scoop-pour tasks)
         x = state.get(obj, "x")

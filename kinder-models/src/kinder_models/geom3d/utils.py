@@ -1,4 +1,4 @@
-"""Utils for geom3d environments."""
+"""Utils for kinematic3d environments."""
 
 import numpy as np
 from pybullet_helpers.geometry import SE2Pose

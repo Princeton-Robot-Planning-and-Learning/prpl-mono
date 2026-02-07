@@ -8,18 +8,18 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from kinder.envs.geom2d.clutteredretrieval2d import (
+from kinder.envs.kinematic2d.clutteredretrieval2d import (
     ObjectCentricClutteredRetrieval2DEnv,
     TargetBlockType,
     TargetRegionType,
 )
-from kinder.envs.geom2d.object_types import CRVRobotType, RectangleType
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.object_types import CRVRobotType, RectangleType
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
     is_inside,
 )
-from kinder_models.geom2d.envs.clutteredretrieval2d.parameterized_skills import (
+from kinder_models.kinematic2d.envs.clutteredretrieval2d.parameterized_skills import (
     create_lifted_controllers,
 )
 from numpy.typing import NDArray

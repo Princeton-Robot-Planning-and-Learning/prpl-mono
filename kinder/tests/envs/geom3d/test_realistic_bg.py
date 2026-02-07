@@ -1,4 +1,4 @@
-"""Tests for realistic background loading in Geom3D environments."""
+"""Tests for realistic background loading in Kinematic3D environments."""
 
 import numpy as np
 import pytest

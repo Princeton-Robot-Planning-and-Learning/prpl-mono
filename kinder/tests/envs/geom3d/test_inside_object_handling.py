@@ -1,9 +1,9 @@
-"""Tests for inside_object handling in geom3d environments."""
+"""Tests for inside_object handling in kinematic3d environments."""
 
 import pytest
 from pybullet_helpers.geometry import Pose, get_pose, multiply_poses, set_pose
 
-from kinder.envs.geom3d.transport3d import (
+from kinder.envs.kinematic3d.transport3d import (
     ObjectCentricTransport3DEnv,
     Transport3DEnv,
     Transport3DObjectCentricState,

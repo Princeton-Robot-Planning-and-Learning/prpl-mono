@@ -4,10 +4,10 @@ import kinder
 import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
-from kinder.envs.geom3d.base_motion3d import ObjectCentricBaseMotion3DEnv
+from kinder.envs.kinematic3d.base_motion3d import ObjectCentricBaseMotion3DEnv
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from kinder_models.geom3d.base_motion3d.parameterized_skills import (
+from kinder_models.kinematic3d.base_motion3d.parameterized_skills import (
     create_lifted_controllers,
 )
 

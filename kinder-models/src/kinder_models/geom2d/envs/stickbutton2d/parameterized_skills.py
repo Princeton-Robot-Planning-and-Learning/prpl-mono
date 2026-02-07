@@ -5,9 +5,9 @@ from typing import Optional, Sequence
 import numpy as np
 from bilevel_planning.structs import LiftedParameterizedController
 from gymnasium.spaces import Box
-from kinder.envs.geom2d.object_types import CircleType, CRVRobotType, RectangleType
-from kinder.envs.geom2d.structs import SE2Pose
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.object_types import CircleType, CRVRobotType, RectangleType
+from kinder.envs.kinematic2d.structs import SE2Pose
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
 )
 from relational_structs import (
@@ -16,7 +16,7 @@ from relational_structs import (
     Variable,
 )
 
-from kinder_models.geom2d.utils import Geom2dRobotController
+from kinder_models.kinematic2d.utils import Geom2dRobotController
 
 
 # Controllers.

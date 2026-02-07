@@ -5,9 +5,9 @@ from typing import Optional, Sequence, Union
 
 import numpy as np
 from bilevel_planning.structs import GroundParameterizedController
-from kinder.envs.geom2d.object_types import CRVRobotType
-from kinder.envs.geom2d.structs import SE2Pose
-from kinder.envs.geom2d.utils import CRVRobotActionSpace
+from kinder.envs.kinematic2d.object_types import CRVRobotType
+from kinder.envs.kinematic2d.structs import SE2Pose
+from kinder.envs.kinematic2d.utils import CRVRobotActionSpace
 from numpy.typing import NDArray
 from relational_structs import Object, ObjectCentricState
 

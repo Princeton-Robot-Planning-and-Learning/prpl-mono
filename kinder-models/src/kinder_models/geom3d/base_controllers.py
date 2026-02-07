@@ -9,9 +9,9 @@ from bilevel_planning.structs import (
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
-from kinder.envs.geom3d.base_env import ObjectCentricGeom3DRobotEnv
-from kinder.envs.geom3d.utils import (
-    Geom3DObjectCentricState,
+from kinder.envs.kinematic3d.base_env import ObjectCentricKinematic3DRobotEnv
+from kinder.envs.kinematic3d.utils import (
+    Kinematic3DObjectCentricState,
 )
 from pybullet_helpers.geometry import Pose, SE2Pose
 from pybullet_helpers.inverse_kinematics import InverseKinematicsError
@@ -42,7 +42,7 @@ class BasePlaceController(
     def __init__(
         self,
         objects: Sequence[Object],
-        sim: ObjectCentricGeom3DRobotEnv,
+        sim: ObjectCentricKinematic3DRobotEnv,
         birrt_extend_num_interp: int = 10,
         smooth_mp_max_time: float = 0.1,
         smooth_mp_max_candidate_plans: int = 1,
@@ -97,7 +97,7 @@ class BasePlaceController(
             self._navigated = True
 
         # Compute delta base pose.
-        assert isinstance(self._current_state, Geom3DObjectCentricState)
+        assert isinstance(self._current_state, Kinematic3DObjectCentricState)
         current_base_pose = self._current_state.base_pose
         delta = target_base_pose - current_base_pose
         delta_lst = [delta.x, delta.y, delta.rot]
@@ -205,7 +205,7 @@ class BasePlaceController(
         if len(self._current_arm_joint_plan) == 0:
             self._pre_place = True
         # Compute delta joint positions.
-        assert isinstance(self._current_state, Geom3DObjectCentricState)
+        assert isinstance(self._current_state, Kinematic3DObjectCentricState)
         delta_lst = get_jointwise_difference(
             self._joint_infos,
             target_joints[:7],
@@ -268,7 +268,7 @@ class BasePlaceController(
         target_joints = self._current_retract_plan.pop(0)
         if len(self._current_retract_plan) == 0:
             self._lifted = True
-        assert isinstance(self._current_state, Geom3DObjectCentricState)
+        assert isinstance(self._current_state, Kinematic3DObjectCentricState)
         # Compute delta joint positions.
         delta_lst = get_jointwise_difference(
             self._joint_infos,

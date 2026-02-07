@@ -8,14 +8,14 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
 from gymnasium.spaces import Box
-from kinder.envs.geom2d.clutteredretrieval2d import (
+from kinder.envs.kinematic2d.clutteredretrieval2d import (
     ClutteredRetrieval2DEnvConfig,
     TargetBlockType,
     TargetRegionType,
 )
-from kinder.envs.geom2d.object_types import CRVRobotType, RectangleType
-from kinder.envs.geom2d.structs import SE2Pose
-from kinder.envs.geom2d.utils import (
+from kinder.envs.kinematic2d.object_types import CRVRobotType, RectangleType
+from kinder.envs.kinematic2d.structs import SE2Pose
+from kinder.envs.kinematic2d.utils import (
     CRVRobotActionSpace,
     get_suctioned_objects,
     run_motion_planning_for_crv_robot,
@@ -28,7 +28,7 @@ from relational_structs import (
     Variable,
 )
 
-from kinder_models.geom2d.utils import Geom2dRobotController
+from kinder_models.kinematic2d.utils import Geom2dRobotController
 
 
 # Controllers.

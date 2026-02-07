@@ -4,7 +4,7 @@ import kinder
 import numpy as np
 import pytest
 from gymnasium.wrappers import RecordVideo
-from kinder.envs.geom3d.base_motion3d import BaseMotion3DObjectCentricState
+from kinder.envs.kinematic3d.base_motion3d import BaseMotion3DObjectCentricState
 
 from kinder_ds_policies.policies import create_domain_specific_policy
 from tests.conftest import MAKE_VIDEOS

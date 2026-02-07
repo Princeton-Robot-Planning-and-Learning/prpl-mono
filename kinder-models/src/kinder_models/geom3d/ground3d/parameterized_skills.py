@@ -11,16 +11,16 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
 from gymnasium.spaces import Box
-from kinder.envs.geom3d.ground3d import (
-    Geom3DRobotType,
+from kinder.envs.kinematic3d.ground3d import (
+    Kinematic3DRobotType,
     Ground3DObjectCentricState,
     ObjectCentricGround3DEnv,
 )
-from kinder.envs.geom3d.object_types import (
-    Geom3DCuboidType,
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DCuboidType,
 )
-from kinder.envs.geom3d.utils import (
-    Geom3DRobotActionSpace,
+from kinder.envs.kinematic3d.utils import (
+    Kinematic3DRobotActionSpace,
 )
 from pybullet_helpers.geometry import Pose, SE2Pose, multiply_poses
 from pybullet_helpers.inverse_kinematics import (
@@ -39,7 +39,7 @@ from relational_structs import (
     Variable,
 )
 
-from kinder_models.geom3d.constants import (
+from kinder_models.kinematic3d.constants import (
     GRASP_TRANSFORM_TO_OBJECT,
     GRIPPER_CLOSE_THRESHOLD,
     GRIPPER_OPEN_THRESHOLD,
@@ -565,7 +565,7 @@ class GroundPlaceController(
 
 
 def create_lifted_controllers(
-    action_space: Geom3DRobotActionSpace,
+    action_space: Kinematic3DRobotActionSpace,
     sim: ObjectCentricGround3DEnv,
 ) -> dict[str, LiftedParameterizedController]:
     """Create lifted parameterized controllers for Ground3D."""
@@ -585,8 +585,8 @@ def create_lifted_controllers(
             super().__init__(objects, sim)
 
     # Create variables for lifted controllers
-    robot = Variable("?robot", Geom3DRobotType)
-    target = Variable("?target", Geom3DCuboidType)
+    robot = Variable("?robot", Kinematic3DRobotType)
+    target = Variable("?target", Kinematic3DCuboidType)
 
     # Lifted controllers
     pick_controller: LiftedParameterizedController = LiftedParameterizedController(
@@ -609,8 +609,8 @@ def create_lifted_controllers(
     )
 
     # Create variables for lifted controllers
-    robot = Variable("?robot", Geom3DRobotType)
-    target = Variable("?target", Geom3DCuboidType)
+    robot = Variable("?robot", Kinematic3DRobotType)
+    target = Variable("?target", Kinematic3DCuboidType)
 
     # lifted place controller
     place_controller: LiftedParameterizedController = LiftedParameterizedController(

@@ -12,7 +12,7 @@ from ourgeoms2d.structs import (
     Tobject,
     Triangle,
 )
-from ourgeoms2d.utils import geom2ds_intersect
+from ourgeoms2d.utils import kinematic2ds_intersect
 
 
 def test_line_segment():
@@ -37,9 +37,9 @@ def test_line_segment():
     seg3 = LineSegment(x1=-2, y1=-3, x2=-4, y2=2)
     seg3.plot(ax, color="green", linewidth=2)
 
-    assert geom2ds_intersect(seg1, seg2)
-    assert not geom2ds_intersect(seg1, seg3)
-    assert not geom2ds_intersect(seg2, seg3)
+    assert kinematic2ds_intersect(seg1, seg2)
+    assert not kinematic2ds_intersect(seg1, seg3)
+    assert not kinematic2ds_intersect(seg2, seg3)
 
     rng = np.random.default_rng(0)
     for _ in range(10):
@@ -53,23 +53,23 @@ def test_line_segment():
     # Legacy tests.
     seg1 = LineSegment(2, 5, 7, 6)
     seg2 = LineSegment(2.5, 7.1, 7.4, 5.3)
-    assert geom2ds_intersect(seg1, seg2)
+    assert kinematic2ds_intersect(seg1, seg2)
 
     seg1 = LineSegment(1, 3, 5, 3)
     seg2 = LineSegment(3, 7, 3, 2)
-    assert geom2ds_intersect(seg1, seg2)
+    assert kinematic2ds_intersect(seg1, seg2)
 
     seg1 = LineSegment(2, 5, 7, 6)
     seg2 = LineSegment(2, 6, 7, 7)
-    assert not geom2ds_intersect(seg1, seg2)
+    assert not kinematic2ds_intersect(seg1, seg2)
 
     seg1 = LineSegment(1, 1, 3, 3)
     seg2 = LineSegment(2, 2, 4, 4)
-    assert not geom2ds_intersect(seg1, seg2)
+    assert not kinematic2ds_intersect(seg1, seg2)
 
     seg1 = LineSegment(1, 1, 3, 3)
     seg2 = LineSegment(1, 1, 6.7, 7.4)
-    assert not geom2ds_intersect(seg1, seg2)
+    assert not kinematic2ds_intersect(seg1, seg2)
 
 
 def test_circle():
@@ -99,9 +99,9 @@ def test_circle():
     circ3 = Circle(x=-6, y=1, radius=1)
     circ3.plot(ax, color="green", alpha=0.5)
 
-    assert geom2ds_intersect(circ1, circ2)
-    assert not geom2ds_intersect(circ1, circ3)
-    assert geom2ds_intersect(circ2, circ3)
+    assert kinematic2ds_intersect(circ1, circ2)
+    assert not kinematic2ds_intersect(circ1, circ3)
+    assert kinematic2ds_intersect(circ2, circ3)
 
     rng = np.random.default_rng(0)
     for _ in range(10):
@@ -203,10 +203,10 @@ def test_rectangle():
     rect3 = Rectangle(x=-1.5, y=1, width=1, height=1, theta=-0.5)
     rect3.plot(ax, color="green", alpha=0.5)
 
-    assert geom2ds_intersect(rect1, rect2)
-    assert geom2ds_intersect(rect1, rect3)
-    assert geom2ds_intersect(rect3, rect1)
-    assert not geom2ds_intersect(rect2, rect3)
+    assert kinematic2ds_intersect(rect1, rect2)
+    assert kinematic2ds_intersect(rect1, rect3)
+    assert kinematic2ds_intersect(rect3, rect1)
+    assert not kinematic2ds_intersect(rect2, rect3)
 
     rect4 = Rectangle(x=0.8, y=1e-5, height=0.1, width=0.07, theta=0)
     assert not rect4.contains_point(0.2, 0.05)
@@ -302,21 +302,21 @@ def test_line_segment_circle_intersection():
     """Tests for line_segment_intersects_circle()."""
     seg1 = LineSegment(-3, 0, 0, 0)
     circ1 = Circle(0, 0, 1)
-    assert geom2ds_intersect(seg1, circ1)
-    assert geom2ds_intersect(circ1, seg1)
+    assert kinematic2ds_intersect(seg1, circ1)
+    assert kinematic2ds_intersect(circ1, seg1)
 
     seg2 = LineSegment(-3, 3, 4, 3)
-    assert not geom2ds_intersect(seg2, circ1)
-    assert not geom2ds_intersect(circ1, seg2)
+    assert not kinematic2ds_intersect(seg2, circ1)
+    assert not kinematic2ds_intersect(circ1, seg2)
 
     seg3 = LineSegment(0, -2, 1, -2.5)
-    assert not geom2ds_intersect(seg3, circ1)
-    assert not geom2ds_intersect(circ1, seg3)
+    assert not kinematic2ds_intersect(seg3, circ1)
+    assert not kinematic2ds_intersect(circ1, seg3)
 
     seg4 = LineSegment(0, -3, 0, -4)
-    assert not geom2ds_intersect(seg4, circ1)
-    assert not geom2ds_intersect(circ1, seg4)
-    assert not geom2ds_intersect(seg2, circ1)
+    assert not kinematic2ds_intersect(seg4, circ1)
+    assert not kinematic2ds_intersect(circ1, seg4)
+    assert not kinematic2ds_intersect(seg2, circ1)
 
     # Uncomment for debugging.
     # plt.savefig("/tmp/line_segment_circle_unit_test.png")
@@ -326,56 +326,56 @@ def test_line_segment_rectangle_intersection():
     """Tests for line_segment_intersects_rectangle()."""
     seg1 = LineSegment(-3, 0, 0, 0)
     rect1 = Rectangle(-1, -1, 2, 2, 0)
-    assert geom2ds_intersect(seg1, rect1)
-    assert geom2ds_intersect(rect1, seg1)
+    assert kinematic2ds_intersect(seg1, rect1)
+    assert kinematic2ds_intersect(rect1, seg1)
 
     seg2 = LineSegment(-3, 3, 4, 3)
-    assert not geom2ds_intersect(seg2, rect1)
-    assert not geom2ds_intersect(rect1, seg2)
+    assert not kinematic2ds_intersect(seg2, rect1)
+    assert not kinematic2ds_intersect(rect1, seg2)
 
     seg3 = LineSegment(0, -2, 1, -2.5)
-    assert not geom2ds_intersect(seg3, rect1)
-    assert not geom2ds_intersect(rect1, seg3)
+    assert not kinematic2ds_intersect(seg3, rect1)
+    assert not kinematic2ds_intersect(rect1, seg3)
 
     seg4 = LineSegment(0, -3, 0, -4)
-    assert not geom2ds_intersect(seg4, rect1)
-    assert not geom2ds_intersect(rect1, seg4)
+    assert not kinematic2ds_intersect(seg4, rect1)
+    assert not kinematic2ds_intersect(rect1, seg4)
 
 
 def test_rectangle_circle_intersection():
     """Tests for rectangle_intersects_circle()."""
     rect1 = Rectangle(x=0, y=0, width=4, height=3, theta=0)
     circ1 = Circle(x=0, y=0, radius=1)
-    assert geom2ds_intersect(rect1, circ1)
-    assert geom2ds_intersect(circ1, rect1)
+    assert kinematic2ds_intersect(rect1, circ1)
+    assert kinematic2ds_intersect(circ1, rect1)
 
     circ2 = Circle(x=1, y=1, radius=0.5)
-    assert geom2ds_intersect(rect1, circ2)
-    assert geom2ds_intersect(circ2, rect1)
+    assert kinematic2ds_intersect(rect1, circ2)
+    assert kinematic2ds_intersect(circ2, rect1)
 
     rect2 = Rectangle(x=1, y=1, width=1, height=1, theta=0)
-    assert not geom2ds_intersect(rect2, circ1)
-    assert not geom2ds_intersect(circ1, rect2)
+    assert not kinematic2ds_intersect(rect2, circ1)
+    assert not kinematic2ds_intersect(circ1, rect2)
 
     circ3 = Circle(x=0, y=0, radius=100)
-    assert geom2ds_intersect(rect1, circ3)
-    assert geom2ds_intersect(circ3, rect1)
-    assert geom2ds_intersect(rect2, circ3)
-    assert geom2ds_intersect(circ3, rect2)
+    assert kinematic2ds_intersect(rect1, circ3)
+    assert kinematic2ds_intersect(circ3, rect1)
+    assert kinematic2ds_intersect(rect2, circ3)
+    assert kinematic2ds_intersect(circ3, rect2)
 
 
 def test_lobject_rectangle_intersection():
     """Tests for Lobject intersection."""
     lobject = Lobject(x=0, y=0, width=1, lengths=[1, 1], theta=0)
-    assert geom2ds_intersect(lobject, Rectangle(x=0, y=0, width=1, height=1, theta=0))
-    assert geom2ds_intersect(Rectangle(x=0, y=0, width=1, height=1, theta=0), lobject)
+    assert kinematic2ds_intersect(lobject, Rectangle(x=0, y=0, width=1, height=1, theta=0))
+    assert kinematic2ds_intersect(Rectangle(x=0, y=0, width=1, height=1, theta=0), lobject)
 
 
 def test_lobject_circle_intersection():
     """Tests for Lobject intersection."""
     lobject = Lobject(x=0, y=0, width=1, lengths=[1, 1], theta=0)
-    assert geom2ds_intersect(lobject, Circle(x=0, y=0, radius=1))
-    assert geom2ds_intersect(Circle(x=0, y=0, radius=1), lobject)
+    assert kinematic2ds_intersect(lobject, Circle(x=0, y=0, radius=1))
+    assert kinematic2ds_intersect(Circle(x=0, y=0, radius=1), lobject)
 
 
 def test_tobject():
@@ -440,8 +440,8 @@ def test_tobject_rectangle_intersection():
     tobject = Tobject(
         x=0, y=0, width=1, length_horizontal=2, length_vertical=2, theta=0
     )
-    assert geom2ds_intersect(tobject, Rectangle(x=0, y=0, width=1, height=1, theta=0))
-    assert geom2ds_intersect(Rectangle(x=0, y=0, width=1, height=1, theta=0), tobject)
+    assert kinematic2ds_intersect(tobject, Rectangle(x=0, y=0, width=1, height=1, theta=0))
+    assert kinematic2ds_intersect(Rectangle(x=0, y=0, width=1, height=1, theta=0), tobject)
 
 
 def test_tobject_circle_intersection():
@@ -449,11 +449,11 @@ def test_tobject_circle_intersection():
     tobject = Tobject(
         x=0, y=0, width=1, length_horizontal=2, length_vertical=2, theta=0
     )
-    assert geom2ds_intersect(tobject, Circle(x=0, y=0, radius=1))
-    assert geom2ds_intersect(Circle(x=0, y=0, radius=1), tobject)
+    assert kinematic2ds_intersect(tobject, Circle(x=0, y=0, radius=1))
+    assert kinematic2ds_intersect(Circle(x=0, y=0, radius=1), tobject)
 
 
-def test_geom2ds_intersect():
-    """Tests for geom2ds_intersect()."""
+def test_kinematic2ds_intersect():
+    """Tests for kinematic2ds_intersect()."""
     with pytest.raises(NotImplementedError):
-        geom2ds_intersect(None, None)
+        kinematic2ds_intersect(None, None)

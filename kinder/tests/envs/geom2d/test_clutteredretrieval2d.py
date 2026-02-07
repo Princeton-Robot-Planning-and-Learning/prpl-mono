@@ -4,7 +4,7 @@ from gymnasium.spaces import Box
 from gymnasium.wrappers import RecordVideo
 
 import kinder
-from kinder.envs.geom2d.clutteredretrieval2d import (
+from kinder.envs.kinematic2d.clutteredretrieval2d import (
     ObjectCentricClutteredRetrieval2DEnv,
 )
 from tests.conftest import MAKE_VIDEOS

@@ -8,16 +8,16 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from kinder.envs.geom3d.object_types import Geom3DCuboidType, Geom3DFixtureType
-from kinder.envs.geom3d.shelf3d import (
-    Geom3DRobotType,
+from kinder.envs.kinematic3d.object_types import Kinematic3DCuboidType, Kinematic3DFixtureType
+from kinder.envs.kinematic3d.shelf3d import (
+    Kinematic3DRobotType,
     ObjectCentricShelf3DEnv,
     Shelf3DObjectCentricState,
 )
-from kinder.envs.geom3d.utils import (
-    Geom3DRobotActionSpace,
+from kinder.envs.kinematic3d.utils import (
+    Kinematic3DRobotActionSpace,
 )
-from kinder_models.geom3d.shelf3d.parameterized_skills import (
+from kinder_models.kinematic3d.shelf3d.parameterized_skills import (
     create_lifted_controllers,
 )
 from numpy.typing import NDArray
@@ -41,7 +41,7 @@ def create_bilevel_planning_models(
 ) -> SesameModels:
     """Create the env models for shelf 3D."""
     assert isinstance(observation_space, ObjectCentricBoxSpace)
-    assert isinstance(action_space, Geom3DRobotActionSpace)
+    assert isinstance(action_space, Kinematic3DRobotActionSpace)
 
     sim = ObjectCentricShelf3DEnv(num_cubes=num_objects)
 
@@ -63,24 +63,24 @@ def create_bilevel_planning_models(
         return obs.copy()
 
     # Types.
-    types = {Geom3DCuboidType, Geom3DFixtureType, Geom3DRobotType}
+    types = {Kinematic3DCuboidType, Kinematic3DFixtureType, Kinematic3DRobotType}
 
     # Create the state space.
     state_space = ObjectCentricStateSpace(types)
 
     # Predicates.
-    OnFixture = Predicate("OnFixture", [Geom3DCuboidType, Geom3DFixtureType])
-    OnGround = Predicate("OnGround", [Geom3DCuboidType])
-    Holding = Predicate("Holding", [Geom3DRobotType, Geom3DCuboidType])
-    HandEmpty = Predicate("HandEmpty", [Geom3DRobotType])
+    OnFixture = Predicate("OnFixture", [Kinematic3DCuboidType, Kinematic3DFixtureType])
+    OnGround = Predicate("OnGround", [Kinematic3DCuboidType])
+    Holding = Predicate("Holding", [Kinematic3DRobotType, Kinematic3DCuboidType])
+    HandEmpty = Predicate("HandEmpty", [Kinematic3DRobotType])
     predicates = {OnFixture, OnGround, Holding, HandEmpty}
 
     # State abstractor.
     def state_abstractor(x: ObjectCentricState) -> RelationalAbstractState:
         """Get the abstract state for the current state."""
-        robot = x.get_objects(Geom3DRobotType)[0]
-        target_objects = x.get_objects(Geom3DCuboidType)
-        target_fixtures = x.get_objects(Geom3DFixtureType)
+        robot = x.get_objects(Kinematic3DRobotType)[0]
+        target_objects = x.get_objects(Kinematic3DCuboidType)
+        target_fixtures = x.get_objects(Kinematic3DFixtureType)
 
         atoms: set[GroundAtom] = set()
 
@@ -134,9 +134,9 @@ def create_bilevel_planning_models(
     # Goal abstractor.
     def goal_deriver(x: ObjectCentricState) -> RelationalAbstractGoal:
         """The goal is to have the robot at the target pose."""
-        robot = x.get_objects(Geom3DRobotType)[0]
-        target_objects = x.get_objects(Geom3DCuboidType)
-        target_shelf = x.get_objects(Geom3DFixtureType)[0]
+        robot = x.get_objects(Kinematic3DRobotType)[0]
+        target_objects = x.get_objects(Kinematic3DCuboidType)
+        target_shelf = x.get_objects(Kinematic3DFixtureType)[0]
         atoms: set[GroundAtom] = set()
         for target in target_objects:
             atoms.add(GroundAtom(OnFixture, [target, target_shelf]))
@@ -144,8 +144,8 @@ def create_bilevel_planning_models(
         return RelationalAbstractGoal(atoms, state_abstractor)
 
     # Operators.
-    robot = Variable("?robot", Geom3DRobotType)
-    target = Variable("?target", Geom3DCuboidType)
+    robot = Variable("?robot", Kinematic3DRobotType)
+    target = Variable("?target", Kinematic3DCuboidType)
 
     PickOperator = LiftedOperator(
         "Pick",
@@ -159,9 +159,9 @@ def create_bilevel_planning_models(
     lifted_controllers = create_lifted_controllers(action_space, sim)
     PickController = lifted_controllers["pick"]
 
-    robot = Variable("?robot", Geom3DRobotType)
-    target = Variable("?target", Geom3DCuboidType)
-    target_shelf = Variable("?target_shelf", Geom3DFixtureType)
+    robot = Variable("?robot", Kinematic3DRobotType)
+    target = Variable("?target", Kinematic3DCuboidType)
+    target_shelf = Variable("?target_shelf", Kinematic3DFixtureType)
 
     PlaceOperator = LiftedOperator(
         "Place",

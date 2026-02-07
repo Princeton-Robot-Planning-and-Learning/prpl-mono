@@ -14,12 +14,12 @@ from pybullet_helpers.motion_planning import (
 )
 from relational_structs.spaces import ObjectCentricBoxSpace
 
-from kinder.envs.geom3d.transport3d import (
+from kinder.envs.kinematic3d.transport3d import (
     ObjectCentricTransport3DEnv,
     Transport3DEnv,
     Transport3DObjectCentricState,
 )
-from kinder.envs.geom3d.utils import extend_joints_to_include_fingers
+from kinder.envs.kinematic3d.utils import extend_joints_to_include_fingers
 from tests.conftest import MAKE_VIDEOS
 
 

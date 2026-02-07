@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray
 from our_utils.utils import wrap_angle
-from ourgeoms2d.structs import Geom2D
+from ourgeoms2d.structs import Kinematic2D
 
 
 class ZOrder(Enum):
@@ -36,7 +36,7 @@ class Body2D:
     """A body consists a geom, a z order (for collision checks), and rendering kwargs
     (for visualization)."""
 
-    geom: Geom2D
+    geom: Kinematic2D
     z_order: ZOrder
     rendering_kwargs: dict
     name: str = "root"
