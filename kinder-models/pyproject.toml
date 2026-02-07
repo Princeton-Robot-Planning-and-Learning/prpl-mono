@@ -13,6 +13,8 @@ dependencies = [
    "numpy",
    "spatialmath-python",
    "opencv-python>=4.9.0",
+   "flask",
+   "flask_socketio",
 ]
 
 [project.optional-dependencies]
