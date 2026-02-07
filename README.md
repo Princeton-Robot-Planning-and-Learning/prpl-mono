@@ -1,10 +1,24 @@
-# KinDER: Kinematic and Dynamic Environments for Reasoning
+# KinDER: A Physical Reasoning Benchmark for Robot Learning and Planning
 
-This repository contains code under active development.
+This repository contains code for the paper: ``KinDER: A Physical Reasoning Benchmark for Robot Learning and Planning``. 
 
-There are multiple Python packages that can be installed and developed separately. They are included in a monorepo because some are interdependent and we want to make sure that changes in one package do not break code in another.
+KinDER, short for Kinematic and Dynamic Embodied Reasoning, targets physical reasoning challenges arising in robot learning and planning. It comprises 25 procedurally generated environments, a Gymnasium-compatible Python library with parameterized skills and demonstrations, and a standardized evaluation suite with 8 implemented baselines spanning task and motion planning, imitation learning, reinforcement learning, and foundation-model-based approaches.
 
-The basic structure is:
+The environments are designed to isolate five core physical reasoning challenges: basic spatial relations, nonprehensile multi-object manipulation, tool use, combinatorial geometric constraints, and dynamic constraints, disentangled from perception, language understanding, and application-specific complexity.
+
+## Overview of Environments
+
+This benchmark includes four types of robot task environments designed to test physical reasoning and manipulation skills:
+
+- **Kinematic 2D (Geom2D)**: Simplified 2D environments with kinematic models, focused on geometric reasoning and object manipulation without dynamic physics.
+- **Kinematic 3D (Geom3D)**: Extended 3D versions of kinematic tasks with more complex spatial reasoning requirements.
+- **Dynamic 2D (Motion2D)**: 2D environments with full dynamic physics simulation, testing robot motion planning and control in a physics-aware setting.
+- **Dynamic 3D (Motion3D)**: Full 3D physics simulation environments using MuJoCo, representing the most realistic and complex robot manipulation tasks.
+
+## Repository Structure
+
+This repository consists of multiple Python packages, that can be installed separately. They are included in a monorepo. The basic structure of this repo is:
+
 ```
 kinder-mono/
   .github/workflows/ci.yml
@@ -23,19 +37,17 @@ kinder-mono/
   ...
 ```
 
-Packages that depend on other packages in this repo should include a `our_requirements.txt` file.
-
-## Task Demonstrations
-
-We collected demonstrations for all 25 tasks, and provide videos in the media attachment. We omit demonstration files due to space restrictions.
+Packages that depend on other packages in this repo include an `our_requirements.txt` file.
 
 ## Instructions for Usage
 
-### Using an Existing Package
+### Using a Package within this Monorepo
+
+To use a package in this monorepo, follow these instructions:
+
 1. Clone this repository.
-2. Installing all packages in this repository, `uv run python scripts/install_all.py`.
+2. Install all packages in this repository, `uv run python scripts/install_all.py`.
 3. Follow the README instructions in the package or packages that you want to edit.
-4. Open a pull request on this repository.
 
 ### Installing PyBullet on Recent MacOS
 
@@ -56,3 +68,50 @@ python setup.py install
 ### Installing `gymnasium[box2d]` on MacOS
 
 If you encounter issues installing `gymnasium[box2d]` on MacOS, do `brew install swig` first and then retry.
+
+## Task Demonstrations
+
+We collected demonstrations for all 25 tasks, and provide videos in the media attachment. We omit demonstration files due to space restrictions.
+
+## Reproducing Baselines
+
+We provide detailed instructions to reproduce most baseline results provided in the paper.
+
+### Reinforcement Learning
+
+See details for running RL baselines in kinder-rl/README.md
+
+### Bi-level Planning
+
+Use following commands to run bi-level planning baselines:
+
+```
+$ cd kinder-bilevel-planning
+$ python experiments/run_experiment.py -m seed='range(300,305)' env=Motion2D-p0-v0,StickButton2D-b1-v0,BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0  hydra/launcher=joblib
+```
+
+### VLM Planning
+
+Use following commands to run VLM planning baselines:
+
+```
+$ cd kinder-vlm-planning
+$ python experiments/run_experiment.py -m seed='range(300,305)' \
+    env=Motion2D-p0-v0,StickButton2D-b1-v0,BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0 \
+    vlm_model=gpt-5 rgb_observation=true,false temperature=1 \
+    hydra/launcher=joblib
+```
+
+### Imitation Learning
+
+We do not include code for running imitation learning baselines. This repository however does contain various tools that were critical to data collection for all tasks.
+
+#### Teleoperation
+
+Dynamic3D: kinder-models/scripts/teleop_dynamics3d_prbench.py
+
+Dynamic2D and Geom2D: kinder/scripts/collect_demos.py
+
+Geom3D: kinder-ds-policies/experiments/collect_demos_ds.py 
+
+Planning to generate data: kinder-models/scripts/planning_data_dynamics3d_kinder.py
