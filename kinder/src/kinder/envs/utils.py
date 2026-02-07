@@ -7,12 +7,12 @@ import numpy as np
 from gymnasium.spaces import Box
 from numpy.typing import NDArray
 from our_utils.utils import fig2data
+from ourgeoms2d.structs import Circle, Geom2D, Lobject, Rectangle, Tobject
+from ourgeoms2d.utils import geom2ds_intersect
 from relational_structs import (
     Object,
     ObjectCentricState,
 )
-from ourgeoms2d.structs import Circle, Geom2D, Lobject, Rectangle, Tobject
-from ourgeoms2d.utils import geom2ds_intersect
 
 from kinder.envs.dynamic2d.object_types import (
     DotRobotType,

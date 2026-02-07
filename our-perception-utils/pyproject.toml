@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "our_perception_utils"
 version = "0.1.0"
-description = "PRPL group perception utilities."
+description = "KinDER group perception utilities."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

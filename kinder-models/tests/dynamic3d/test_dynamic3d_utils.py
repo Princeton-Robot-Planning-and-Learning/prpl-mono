@@ -3,9 +3,9 @@
 import kinder
 import numpy as np
 from matplotlib import pyplot as plt
+from ourgeoms2d.structs import Rectangle
 from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2
-from ourgeoms2d.structs import Rectangle
 
 from kinder_models.dynamic3d.utils import (
     get_bounding_box,

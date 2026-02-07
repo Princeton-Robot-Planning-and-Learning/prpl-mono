@@ -1,2 +1,2 @@
-# PRPL mono requirements.
+# KinDER mono requirements.
 ../kinder[all]

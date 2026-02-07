@@ -10,7 +10,6 @@ from string import Template
 from typing import Collection
 
 import numpy as np
-from PIL import Image
 from our_llm_utils.cache import (
     PretrainedLargeModelCache,
     SQLite3PretrainedLargeModelCache,
@@ -22,6 +21,7 @@ from our_llm_utils.reprompting import (
     query_with_reprompts,
 )
 from our_llm_utils.structs import Query, Response
+from PIL import Image
 
 from our_perception_utils.object_detection_2d.base_object_detector_2d import (
     ObjectDetector2D,

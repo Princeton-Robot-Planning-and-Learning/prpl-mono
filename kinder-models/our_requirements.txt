@@ -1,4 +1,4 @@
-# PRPL mono requirements.
+# KinDER mono requirements.
 ../relational-structs
 ../bilevel-planning
 ../kinder

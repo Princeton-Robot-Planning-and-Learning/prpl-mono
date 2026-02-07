@@ -1,4 +1,4 @@
-# PRPL mono requirements for [all].
+# KinDER mono requirements for [all].
 ../relational-structs
 ../our-utils
 ../our-geoms-2d

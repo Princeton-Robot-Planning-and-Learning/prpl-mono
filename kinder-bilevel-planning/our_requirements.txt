@@ -1,4 +1,4 @@
-# PRPL mono requirements.
+# KinDER mono requirements.
 ../bilevel-planning
 ../kinder[all]
 ../kinder-models

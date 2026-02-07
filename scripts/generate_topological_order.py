@@ -3,7 +3,7 @@
 Script to generate a topological ordering of Python packages in this repository
 based on the dependencies listed in our_requirements.txt files.
 
-This script analyzes the dependencies between packages in the PRPL monorepo and
+This script analyzes the dependencies between packages in the KinDER monorepo and
 produces a topological ordering that respects dependency constraints - packages
 are ordered such that dependencies come before their dependents.
 """

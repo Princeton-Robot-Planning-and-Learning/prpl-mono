@@ -22,6 +22,7 @@ from kinder_models.geom2d.envs.stickbutton2d.parameterized_skills import (
     create_lifted_controllers,
 )
 from numpy.typing import NDArray
+from ourgeoms2d.structs import Geom2D
 from relational_structs import (
     GroundAtom,
     LiftedAtom,
@@ -32,7 +33,6 @@ from relational_structs import (
     Variable,
 )
 from relational_structs.spaces import ObjectCentricBoxSpace, ObjectCentricStateSpace
-from ourgeoms2d.structs import Geom2D
 
 
 def create_bilevel_planning_models(
