@@ -18,7 +18,7 @@ from bilevel_planning.structs import (
     GroundParameterizedController,
     LiftedParameterizedController,
 )
-from prpl_utils.gym_agent import Agent
+from our_utils.gym_agent import Agent
 from relational_structs.objects import Type
 
 from kinder_vlm_planning.utils import (
@@ -188,7 +188,7 @@ class VLMPlanningAgent(Agent[_O, _U]):
 
         # Query VLM
         try:
-            # Prepare hyperparameters for prpl_llm_utils
+            # Prepare hyperparameters for our_llm_utils
             hyperparameters = {
                 "temperature": self._temperature,
                 "seed": self._seed,

@@ -8,7 +8,7 @@ from typing import Iterator, NamedTuple
 import numpy as np
 import numpy.typing as npt
 import pybullet as p
-from prpl_utils.utils import get_signed_angle_distance, wrap_angle
+from our_utils.utils import get_signed_angle_distance, wrap_angle
 from pybullet_utils.transformations import (
     euler_from_quaternion,
 )

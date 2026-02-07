@@ -16,7 +16,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import zmq
-from prpl_utils.utils import sample_seed_from_rng
+from our_utils.utils import sample_seed_from_rng
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from kinder_models.policy_constants import (

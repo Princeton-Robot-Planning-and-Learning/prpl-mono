@@ -12,7 +12,7 @@ from typing import (
 )
 
 from gymnasium.spaces import Space
-from prpl_utils.utils import consistent_hash
+from our_utils.utils import consistent_hash
 
 from relational_structs.common import Action
 from relational_structs.object_centric_state import ObjectCentricState

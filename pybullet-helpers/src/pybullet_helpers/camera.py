@@ -2,7 +2,7 @@
 
 import numpy as np
 import pybullet as p
-from prpl_utils.structs import Image
+from our_utils.structs import Image
 from scipy.spatial.transform import Rotation
 
 from pybullet_helpers.geometry import Pose3D

@@ -32,7 +32,7 @@ from relational_structs import (
     Variable,
 )
 from relational_structs.spaces import ObjectCentricBoxSpace, ObjectCentricStateSpace
-from tomsgeoms2d.structs import Geom2D
+from ourgeoms2d.structs import Geom2D
 
 
 def create_bilevel_planning_models(

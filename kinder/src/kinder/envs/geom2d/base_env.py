@@ -7,7 +7,7 @@ from typing import Any, Generic, TypeVar
 import gymnasium
 import numpy as np
 from numpy.typing import NDArray
-from prpl_utils.utils import wrap_angle
+from our_utils.utils import wrap_angle
 from relational_structs import (
     Array,
     Object,

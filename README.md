@@ -8,13 +8,13 @@ The basic structure is:
 ```
 prpl-mono/
   .github/workflows/ci.yml
-  prpl-utils/
+  our-utils/
     pyproject.toml
-    src/prpl_utils
+    src/our_utils
     tests/
-  prpl-llm-utils/
+  our-llm-utils/
     pyproject.toml
-    src/prpl-llm-utils
+    src/our-llm-utils
     tests/
   kinder/
     pyproject.toml
@@ -39,7 +39,7 @@ Instructions coming later. In the meantime, use one of the existing packages as 
 ## Using a Package Externally
 You can use any individual package externally. For example:
 ```
-uv pip install "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-Learning/prpl-mono.git#subdirectory=prpl-utils"
+uv pip install "our_utils@git+https://github.com/Princeton-Robot-Planning-and-Learning/prpl-mono.git#subdirectory=our-utils"
 ```
 But beware that things are changing. Pinning commits is a good idea if you need stable code.
 

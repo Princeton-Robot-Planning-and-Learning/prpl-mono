@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 from gymnasium.wrappers import RecordVideo
-from prpl_utils.utils import wrap_angle
+from our_utils.utils import wrap_angle
 from pybullet_helpers.geometry import Pose, multiply_poses
 from pybullet_helpers.motion_planning import (
     create_joint_distance_fn,

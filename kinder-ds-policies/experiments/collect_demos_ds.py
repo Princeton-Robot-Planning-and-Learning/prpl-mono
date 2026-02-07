@@ -28,7 +28,7 @@ import kinder
 import numpy as np
 from gymnasium.core import Env
 from omegaconf import DictConfig
-from prpl_utils.utils import sample_seed_from_rng
+from our_utils.utils import sample_seed_from_rng
 
 from kinder_ds_policies.policies import create_domain_specific_policy
 from kinder_ds_policies.policies.base import PolicyFailure, StatefulPolicy

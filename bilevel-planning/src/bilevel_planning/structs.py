@@ -9,7 +9,7 @@ from typing import Any, Callable, Generic, Sequence, TypeVar
 
 import numpy as np
 from gymnasium.spaces import Box, Space
-from prpl_utils.utils import consistent_hash
+from our_utils.utils import consistent_hash
 from relational_structs import (
     GroundAtom,
     GroundOperator,

@@ -9,15 +9,15 @@ from kinder.envs.dynamic3d.object_types import (
     MujocoTidyBotRobotObjectType,
 )
 from matplotlib import pyplot as plt
-from prpl_utils.motion_planning import BiRRT
-from prpl_utils.utils import get_signed_angle_distance, wrap_angle
+from our_utils.motion_planning import BiRRT
+from our_utils.utils import get_signed_angle_distance, wrap_angle
 from relational_structs import (
     Object,
     ObjectCentricState,
 )
 from spatialmath import SE2, UnitQuaternion
-from tomsgeoms2d.structs import Geom2D, Rectangle
-from tomsgeoms2d.utils import geom2ds_intersect
+from ourgeoms2d.structs import Geom2D, Rectangle
+from ourgeoms2d.utils import geom2ds_intersect
 
 
 def get_overhead_object_se2_pose(state: ObjectCentricState, obj: Object) -> SE2:

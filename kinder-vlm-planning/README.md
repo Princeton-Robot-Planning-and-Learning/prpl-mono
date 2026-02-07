@@ -1,6 +1,6 @@
 # VLM Planning Baselines for KinDER
 
-![workflow](https://github.com/yichao-liang/kinder-vlm-planning/actions/workflows/ci.yml/badge.svg)
+![workflow](https://github.com/<redacted>/kinder-vlm-planning/actions/workflows/ci.yml/badge.svg)
 
 ## Experiment
 

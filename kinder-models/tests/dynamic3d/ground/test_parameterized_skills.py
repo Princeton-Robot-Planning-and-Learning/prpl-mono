@@ -42,7 +42,7 @@ def test_get_target_robot_pose_from_parameters():
     # Uncomment to debug.
     # import imageio.v2 as iio
     # from matplotlib import pyplot as plt
-    # from prpl_utils.utils import fig2data
+    # from our_utils.utils import fig2data
 
     # from kinder_models.dynamic3d.utils import get_overhead_object_se2_pose, \
     #     plot_overhead_scene

@@ -1,10 +1,10 @@
-"""Tests for tomsgeoms2d."""
+"""Tests for ourgeoms2d."""
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from tomsgeoms2d.structs import (
+from ourgeoms2d.structs import (
     Circle,
     LineSegment,
     Lobject,
@@ -12,7 +12,7 @@ from tomsgeoms2d.structs import (
     Tobject,
     Triangle,
 )
-from tomsgeoms2d.utils import geom2ds_intersect
+from ourgeoms2d.utils import geom2ds_intersect
 
 
 def test_line_segment():

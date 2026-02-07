@@ -36,7 +36,7 @@ env = ObjectCentricObstruction2DEnv(num_obstructions=3)
 obs, _ = env.reset(seed=123)
 print(obs.pretty_str())
 ```
-Here, `obs` is an [ObjectCentricState](https://github.com/tomsilver/relational-structs/blob/main/src/relational_structs/object_centric_state.py#L25), and the printout is:
+Here, `obs` is an [ObjectCentricState](https://github.com/<redacted>/relational-structs/blob/main/src/relational_structs/object_centric_state.py#L25), and the printout is:
 ```
 ############################################################### STATE ###############################################################
 type: crv_robot           x         y    theta    base_radius    arm_joint    arm_length    vacuum    gripper_height    gripper_width
@@ -103,7 +103,7 @@ KinDER does not provide any models for TAMP. Users are welcome to engineer their
 We strongly recommend [uv](https://docs.astral.sh/uv/getting-started/installation/). The steps below assume that you have `uv` installed. If you do not, just remove `uv` from the commands and the installation should still work.
 
 Then, choose one of the following based on you need:
-- `uv pip install -r optional_prpl_requirements/core.txt && uv pip install -e .` - Installs only core dependencies (matplotlib, numpy, relational_structs, prpl_utils)
+- `uv pip install -r optional_prpl_requirements/core.txt && uv pip install -e .` - Installs only core dependencies (matplotlib, numpy, relational_structs, our_utils)
 - `uv pip install -r prpl_requirements.txt && uv pip install -e .uv pip install -e ".[all]"` - Installs everything (excluding develop)
 - `uv pip install -r optional_prpl_requirements/geom2d.txt && uv pip install -e ".[geom2d]"` - Installs only core + geom2d dependencies (no pybullet)
 - `uv pip install -r optional_prpl_requirements/dynamic2d.txt && uv pip install -e ".[dynamic2d]"` - Installs only core + dynamic2d dependencies

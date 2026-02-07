@@ -1,6 +1,6 @@
 # PRPL mono requirements.
 ../kinder[all]
 ../kinder-models
-../prpl-utils
+../our-utils
 ../relational-structs
 ../pybullet-helpers

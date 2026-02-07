@@ -20,7 +20,7 @@ from typing import (
 )
 
 from multimethod import multimethod
-from prpl_utils.utils import consistent_hash
+from our_utils.utils import consistent_hash
 from pyperplan.pddl.parser import (
     TraversePDDLDomain,
     TraversePDDLProblem,

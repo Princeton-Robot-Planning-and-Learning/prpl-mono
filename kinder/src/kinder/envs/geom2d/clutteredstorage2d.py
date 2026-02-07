@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 from relational_structs import Object, ObjectCentricState, Type
 from relational_structs.utils import create_state_from_dict
-from tomsgeoms2d.structs import Rectangle
+from ourgeoms2d.structs import Rectangle
 
 from kinder.core import ConstantObjectKinDEREnv, FinalConfigMeta
 from kinder.envs.geom2d.base_env import (

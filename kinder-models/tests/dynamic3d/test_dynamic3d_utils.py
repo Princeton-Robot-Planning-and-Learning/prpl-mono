@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2
-from tomsgeoms2d.structs import Rectangle
+from ourgeoms2d.structs import Rectangle
 
 from kinder_models.dynamic3d.utils import (
     get_bounding_box,
@@ -95,7 +95,7 @@ def test_plot_overhead_scene():
     assert isinstance(ax, plt.Axes)
 
     # Uncomment to debug.
-    # from prpl_utils.utils import fig2data
+    # from our_utils.utils import fig2data
     # import imageio.v2 as iio
     # ax.set_title("Overhead Scene Example")
     # plt.tight_layout()
@@ -153,7 +153,7 @@ def test_run_base_motion_planning():
         robot_geom.plot(ax, fc="none", ec="gray", linestyle="dashed")
 
     # Uncomment to debug.
-    # from prpl_utils.utils import fig2data, get_signed_angle_distance
+    # from our_utils.utils import fig2data, get_signed_angle_distance
 
     # ax.set_title("Motion Planning Example")
     # plt.tight_layout()

@@ -3,7 +3,7 @@ requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tomsgeoms2d"
+name = "ourgeoms2d"
 version = "0.1.0"
 description = "2D Geometry Utilities."
 readme = "README.md"
@@ -28,7 +28,7 @@ develop = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-tomsgeoms2d = ["py.typed"]
+ourgeoms2d = ["py.typed"]
 
 [tool.black]
 line-length = 88

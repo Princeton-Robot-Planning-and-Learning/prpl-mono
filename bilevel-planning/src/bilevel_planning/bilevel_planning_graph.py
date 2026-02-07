@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib.animation import FuncAnimation
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from prpl_utils.utils import consistent_hash
+from our_utils.utils import consistent_hash
 
 from bilevel_planning.structs import Plan
 

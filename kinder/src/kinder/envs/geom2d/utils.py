@@ -4,15 +4,15 @@ from typing import Any, Iterable
 
 import numpy as np
 from numpy.typing import NDArray
-from prpl_utils.motion_planning import BiRRT
-from prpl_utils.utils import get_signed_angle_distance, wrap_angle
+from our_utils.motion_planning import BiRRT
+from our_utils.utils import get_signed_angle_distance, wrap_angle
 from relational_structs import (
     Array,
     Object,
     ObjectCentricState,
 )
-from tomsgeoms2d.structs import Rectangle
-from tomsgeoms2d.utils import find_closest_points, geom2ds_intersect
+from ourgeoms2d.structs import Rectangle
+from ourgeoms2d.utils import find_closest_points, geom2ds_intersect
 
 from kinder.core import RobotActionSpace
 from kinder.envs.geom2d.object_types import (

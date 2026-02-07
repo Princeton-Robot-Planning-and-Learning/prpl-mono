@@ -9,8 +9,8 @@ from enum import Enum
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray
-from prpl_utils.utils import wrap_angle
-from tomsgeoms2d.structs import Geom2D
+from our_utils.utils import wrap_angle
+from ourgeoms2d.structs import Geom2D
 
 
 class ZOrder(Enum):
@@ -71,7 +71,7 @@ class SE2Pose:
     """Container for an SE2Pose.
 
     In the future, may want to move this to a more general repository, e.g.,
-    tomsgeoms2d.
+    ourgeoms2d.
     """
 
     x: float

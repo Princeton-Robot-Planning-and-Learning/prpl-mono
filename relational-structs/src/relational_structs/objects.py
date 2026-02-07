@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import Optional, Set
 
-from prpl_utils.utils import consistent_hash
+from our_utils.utils import consistent_hash
 
 
 @dataclass(frozen=True, order=True)

@@ -14,7 +14,7 @@ from typing import (
 )
 
 import numpy as np
-from prpl_utils.utils import consistent_hash
+from our_utils.utils import consistent_hash
 from tabulate import tabulate
 from typing_extensions import Self
 

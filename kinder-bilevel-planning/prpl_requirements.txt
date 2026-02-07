@@ -2,7 +2,7 @@
 ../bilevel-planning
 ../kinder[all]
 ../kinder-models
-../prpl-utils
+../our-utils
 ../relational-structs
-../toms-geoms-2d
+../our-geoms-2d
 ../pybullet-helpers

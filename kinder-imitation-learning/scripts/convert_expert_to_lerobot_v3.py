@@ -230,7 +230,7 @@ def main() -> None:
                 f"--dataset.repo_id={args.repo_id}",
                 f"--dataset.root={args.output_dir}",
                 "--policy.type=diffusion",
-                "--policy.repo_id=yixuanh/motion2d_policy",
+                "--policy.repo_id=<redacted>/motion2d_policy",
                 "--output_dir=outputs/expert_training",
                 "--steps=50000",
                 "--eval_freq=10000",

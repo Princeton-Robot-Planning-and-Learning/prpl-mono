@@ -7,7 +7,7 @@ from typing import Any, TypeVar
 import gymnasium as gym
 import kinder
 from omegaconf import DictConfig
-from prpl_utils.gym_agent import Agent
+from our_utils.gym_agent import Agent
 
 _O = TypeVar("_O")
 _U = TypeVar("_U")

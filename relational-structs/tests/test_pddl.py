@@ -1,7 +1,7 @@
 """Tests for pddl.py."""
 
 import pytest
-from prpl_utils.pddl_planning import run_pyperplan_planning
+from our_utils.pddl_planning import run_pyperplan_planning
 
 from relational_structs import (
     GroundAtom,

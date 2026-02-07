@@ -28,7 +28,7 @@ import kinder
 import numpy as np
 from gymnasium.core import Env
 from omegaconf import DictConfig
-from prpl_utils.utils import sample_seed_from_rng
+from our_utils.utils import sample_seed_from_rng
 
 from kinder_bilevel_planning.agent import AgentFailure, BilevelPlanningAgent
 from kinder_bilevel_planning.env_models import create_bilevel_planning_models

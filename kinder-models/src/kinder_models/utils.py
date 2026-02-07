@@ -8,7 +8,7 @@ import numpy as np
 from bilevel_planning.structs import LiftedParameterizedController
 from kinder.core import ObjectCentricKinDEREnv
 from numpy.typing import NDArray
-from prpl_utils.spaces import FunctionalSpace
+from our_utils.spaces import FunctionalSpace
 from relational_structs import (
     Object,
     ObjectCentricState,

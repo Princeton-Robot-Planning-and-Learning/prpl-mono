@@ -22,13 +22,13 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
 from numpy.typing import NDArray
-from prpl_llm_utils.cache import FilePretrainedLargeModelCache
-from prpl_llm_utils.models import OpenAIModel
+from our_llm_utils.cache import FilePretrainedLargeModelCache
+from our_llm_utils.models import OpenAIModel
 from relational_structs.objects import Object, Type
 
 
 def create_vlm_by_name(model_name: str):
-    """Create a VLM instance using prpl_llm_utils."""
+    """Create a VLM instance using our_llm_utils."""
     # Create a cache directory in the current working directory
     cache_dir = Path("./vlm_cache")
     cache_dir.mkdir(exist_ok=True)

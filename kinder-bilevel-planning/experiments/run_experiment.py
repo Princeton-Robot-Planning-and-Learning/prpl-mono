@@ -24,7 +24,7 @@ from gymnasium.core import Env
 from gymnasium.wrappers import RecordVideo
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
-from prpl_utils.utils import sample_seed_from_rng, timer
+from our_utils.utils import sample_seed_from_rng, timer
 
 from kinder_bilevel_planning.agent import AgentFailure, BilevelPlanningAgent
 from kinder_bilevel_planning.env_models import create_bilevel_planning_models

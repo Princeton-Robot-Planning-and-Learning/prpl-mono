@@ -17,7 +17,7 @@ from kinder.envs.dynamic2d.object_types import DynRectangleType, KinRobotType
 from kinder.envs.dynamic2d.utils import KinRobotActionSpace
 from kinder.envs.geom2d.structs import SE2Pose
 from kinder.envs.utils import state_2d_has_collision
-from prpl_utils.utils import wrap_angle
+from our_utils.utils import wrap_angle
 from relational_structs.object_centric_state import ObjectCentricState
 from relational_structs.objects import Object, Variable
 

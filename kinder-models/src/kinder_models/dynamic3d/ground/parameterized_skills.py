@@ -18,7 +18,7 @@ from kinder.envs.dynamic3d.robots.tidybot_robot_env import (
     TidyBot3DRobotActionSpace,
 )
 from kinder.envs.geom3d.utils import extend_joints_to_include_fingers
-from prpl_utils.utils import get_signed_angle_distance
+from our_utils.utils import get_signed_angle_distance
 from pybullet_helpers.geometry import Pose, multiply_poses, set_pose
 from pybullet_helpers.gui import create_gui_connection
 from pybullet_helpers.inverse_kinematics import (

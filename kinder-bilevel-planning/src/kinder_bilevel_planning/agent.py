@@ -20,7 +20,7 @@ from bilevel_planning.utils import (
     RelationalAbstractSuccessorGenerator,
     RelationalControllerGenerator,
 )
-from prpl_utils.gym_agent import Agent
+from our_utils.gym_agent import Agent
 
 _O = TypeVar("_O", bound=Hashable)
 _U = TypeVar("_U", bound=Hashable)

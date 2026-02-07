@@ -6,7 +6,7 @@ from typing import Tuple
 
 import numpy as np
 
-from tomsgeoms2d.structs import Circle, Geom2D, LineSegment, Lobject, Rectangle
+from ourgeoms2d.structs import Circle, Geom2D, LineSegment, Lobject, Rectangle
 
 
 def line_segments_intersect(seg1: LineSegment, seg2: LineSegment) -> bool:

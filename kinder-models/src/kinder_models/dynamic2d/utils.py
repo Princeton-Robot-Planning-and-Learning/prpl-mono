@@ -13,8 +13,8 @@ from kinder.envs.dynamic2d.utils import KinRobotActionSpace
 from kinder.envs.geom2d.structs import SE2Pose
 from kinder.envs.utils import state_2d_has_collision
 from numpy.typing import NDArray
-from prpl_utils.motion_planning import BiRRT
-from prpl_utils.utils import get_signed_angle_distance, wrap_angle
+from our_utils.motion_planning import BiRRT
+from our_utils.utils import get_signed_angle_distance, wrap_angle
 from relational_structs.object_centric_state import ObjectCentricState
 from relational_structs.objects import Object
 

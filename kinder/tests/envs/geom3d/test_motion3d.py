@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 from gymnasium.wrappers import RecordVideo
-from prpl_utils.utils import wrap_angle
+from our_utils.utils import wrap_angle
 from pybullet_helpers.geometry import Pose
 from pybullet_helpers.motion_planning import (
     remap_joint_position_plan_to_constant_distance,
