@@ -165,7 +165,9 @@ def format_table(df: pd.DataFrame) -> str:
 
     # Dynamically determine environment column width based on longest environment name
     max_env_len = max(len(str(env)) for env in df["env_name"])
-    env_col_width = max(max_env_len + 2, len("Environment"))  # At least as wide as header
+    env_col_width = max(
+        max_env_len + 2, len("Environment")
+    )  # At least as wide as header
 
     # Create a formatted table
     lines = []
@@ -201,9 +203,7 @@ def format_table(df: pd.DataFrame) -> str:
     )
 
     if has_reward:
-        header_parts.extend(
-            ["Avg Reward (mean±std)", "Avg Reward Success (mean±std)"]
-        )
+        header_parts.extend(["Avg Reward (mean±std)", "Avg Reward Success (mean±std)"])
 
     # Calculate column widths
     widths = [env_col_width] + [15] * len(config_cols) + [25, 30, 15]
@@ -231,9 +231,7 @@ def format_table(df: pd.DataFrame) -> str:
 
         # Format metrics with mean ± std
         parts.append(f"{row['solve_rate']:.1%} ± {row['solve_rate_std']:.1%}")
-        parts.append(
-            f"{row['avg_planning_time']:.4f} ± {row['planning_time_std']:.4f}"
-        )
+        parts.append(f"{row['avg_planning_time']:.4f} ± {row['planning_time_std']:.4f}")
         parts.append(f"{row['avg_steps']:.1f}")
 
         if has_reward:

@@ -14,7 +14,6 @@ Examples:
 - Running on multiple environments and seeds (parallelized):
     python experiments/run_experiment.py -m seed='range(0,3)' \
         env=clutteredstorage2d-b1,transport3d-o2 hydra/launcher=joblib
-
 """
 
 import logging
@@ -126,7 +125,13 @@ def _run_single_episode_evaluation(
             planning_failed = True
     planning_time += result["time"]
     if planning_failed:
-        return {"success": False, "steps": steps, "planning_time": planning_time, "execution_time": execution_time, "reward": total_reward}
+        return {
+            "success": False,
+            "steps": steps,
+            "planning_time": planning_time,
+            "execution_time": execution_time,
+            "reward": total_reward,
+        }
     for _ in range(max_eval_steps):
         step_failed = False
         with timer() as result:
@@ -137,7 +142,13 @@ def _run_single_episode_evaluation(
                 step_failed = True
         execution_time += result["time"]
         if step_failed:
-            return {"success": False, "steps": steps, "planning_time": planning_time, "execution_time": execution_time, "reward": total_reward}
+            return {
+                "success": False,
+                "steps": steps,
+                "planning_time": planning_time,
+                "execution_time": execution_time,
+                "reward": total_reward,
+            }
         obs, rew, done, truncated, info = env.step(action)
         reward = float(rew)
         total_reward += reward
@@ -150,7 +161,13 @@ def _run_single_episode_evaluation(
             break
         steps += 1
     logging.info(f"Success result: {success}")
-    return {"success": success, "steps": steps, "planning_time": planning_time, "execution_time": execution_time, "reward": total_reward}
+    return {
+        "success": success,
+        "steps": steps,
+        "planning_time": planning_time,
+        "execution_time": execution_time,
+        "reward": total_reward,
+    }
 
 
 if __name__ == "__main__":
