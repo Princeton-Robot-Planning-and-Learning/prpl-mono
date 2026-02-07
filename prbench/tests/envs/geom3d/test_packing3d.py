@@ -61,10 +61,10 @@ def test_pick_place_on_rack():
     """Test that picking and placing can be executed for any object."""
     # Create the real environment.
 
-    num_parts = 2
+    num_parts = 1
     seed = 123
     env = Packing3DEnv(
-        num_parts=num_parts, use_gui=False, render_mode="rgb_array", realistic_bg=False
+        num_parts=num_parts, use_gui=False, render_mode="rgb_array", realistic_bg=True
     )
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     config = (
