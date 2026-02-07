@@ -28,9 +28,7 @@ Kinematic2DRobotEnvTypeFeatures[CircleType] = (
     Kinematic2DRobotEnvTypeFeatures[Kinematic2DType] + ["radius"]
 )
 LObjectType = Type("lobject", parent=Kinematic2DType)
-Kinematic2DRobotEnvTypeFeatures[LObjectType] = (
-    Kinematic2DRobotEnvTypeFeatures[Kinematic2DType]
-    + ["width", "height"]
+Kinematic2DRobotEnvTypeFeatures[LObjectType] = [
     "width",
     "length_side1",
     "length_side2",
