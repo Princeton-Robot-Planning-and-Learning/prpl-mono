@@ -1,7 +1,7 @@
 """Tests for cupboard real state_abstractions.py."""
 
-import numpy as np
 import kinder
+import numpy as np
 from conftest import MAKE_VIDEOS  # pylint: disable=import-error
 from gymnasium.wrappers import RecordVideo
 from kinder.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
@@ -40,7 +40,9 @@ def test_cupboard_real_state_abstraction():
     state = env.observation_space.devectorize(obs)
     assert isinstance(state, ObjectCentricState)
     abstract_state = abstractor.state_abstractor(state)
-    assert str(sorted(abstract_state.atoms)) == "[(HandEmpty robot), (OnGround cube1)]"
+    assert (
+        str(sorted(abstract_state.atoms)) == "[(HandEmpty robot_0), (OnGround cube1)]"
+    )
 
     pybullet_sim = PyBulletSim(state, rendering=False)
     # Create controllers.
@@ -48,7 +50,7 @@ def test_cupboard_real_state_abstraction():
 
     # Pick up the cube.
     lifted_controller = controllers["pick_ground"]
-    robot = state.get_object_from_name("robot")
+    robot = state.get_object_from_name("robot_0")
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -71,11 +73,11 @@ def test_cupboard_real_state_abstraction():
 
     # Check updated state abstraction: the robot should be Holding the cube.
     abstract_state = abstractor.state_abstractor(state)
-    assert str(sorted(abstract_state.atoms)) == "[(Holding robot cube1)]"
+    assert str(sorted(abstract_state.atoms)) == "[(Holding robot_0 cube1)]"
 
     # Plce the cube.
     lifted_controller = controllers["place_ground"]
-    robot = state.get_object_from_name("robot")
+    robot = state.get_object_from_name("robot_0")
     cube = state.get_object_from_name("cube1")
     cupboard = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube, cupboard)
@@ -101,7 +103,7 @@ def test_cupboard_real_state_abstraction():
     abstract_state = abstractor.state_abstractor(state)
     assert (
         str(sorted(abstract_state.atoms))
-        == "[(HandEmpty robot), (OnFixture cube1 cupboard_1)]"
+        == "[(HandEmpty robot_0), (OnFixture cube1 cupboard_1)]"
     )
 
     env.close()

@@ -5,11 +5,11 @@ from typing import Sequence
 import numpy as np
 from bilevel_planning.structs import LiftedParameterizedController
 from gymnasium.spaces import Box
-from numpy.typing import NDArray
 from kinder.envs.geom2d.object_types import CRVRobotType, RectangleType
 from kinder.envs.geom2d.obstruction2d import TargetSurfaceType
 from kinder.envs.geom2d.structs import SE2Pose
 from kinder.envs.geom2d.utils import CRVRobotActionSpace
+from numpy.typing import NDArray
 from relational_structs import Object, ObjectCentricState, Variable
 
 from kinder_models.geom2d.utils import Geom2dRobotController

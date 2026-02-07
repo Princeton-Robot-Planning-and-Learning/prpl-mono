@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 from typing import Any, NamedTuple
 
 import gymnasium as gym
-import numpy as np
 import kinder
+import numpy as np
 import torch as th
 from gymnasium import spaces
 

@@ -6,7 +6,6 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from numpy.typing import NDArray
 from kinder.envs.dynamic3d.object_types import (
     MujocoFixtureObjectType,
     MujocoMovableObjectType,
@@ -26,6 +25,7 @@ from kinder_models.dynamic3d.ground.parameterized_skills import (
     PyBulletSim,
     create_lifted_controllers,
 )
+from numpy.typing import NDArray
 from relational_structs import (
     LiftedAtom,
     LiftedOperator,

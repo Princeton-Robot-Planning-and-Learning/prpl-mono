@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import numpy as np
 import kinder
+import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
 from kinder.envs.geom3d.ground3d import ObjectCentricGround3DEnv

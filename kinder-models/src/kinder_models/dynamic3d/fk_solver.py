@@ -6,9 +6,9 @@ compute the end-effector pose from joint positions.
 
 from pathlib import Path
 
+import kinder
 import mujoco
 import numpy as np
-import kinder
 
 
 class TidybotFKSolver:

@@ -34,8 +34,7 @@ from prpl_perception_utils.structs import (
     RGBImage,
 )
 
-_PROMPT = Template(
-    """
+_PROMPT = Template("""
 Give the segmentation masks for the following objects if they appear to be
 present in the image:
 
@@ -56,8 +55,7 @@ Output a JSON list where each entry contains:
         other distinctive features. Never mask an image with confidence <0.1,
         and be confident if you know you masked the right object.
 }
-"""
-)
+""")
 
 
 def check_detection(query: Query, response: Response) -> Query | None:

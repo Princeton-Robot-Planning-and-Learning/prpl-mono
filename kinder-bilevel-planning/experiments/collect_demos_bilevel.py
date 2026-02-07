@@ -24,8 +24,8 @@ from pathlib import Path
 
 import dill as pkl  # type: ignore[import-untyped]
 import hydra
-import numpy as np
 import kinder
+import numpy as np
 from gymnasium.core import Env
 from omegaconf import DictConfig
 from prpl_utils.utils import sample_seed_from_rng

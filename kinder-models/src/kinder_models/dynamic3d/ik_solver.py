@@ -18,9 +18,9 @@ Other References:
 
 from pathlib import Path
 
+import kinder
 import mujoco
 import numpy as np
-import kinder
 
 
 class TidybotIKSolver:

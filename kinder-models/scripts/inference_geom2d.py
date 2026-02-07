@@ -11,10 +11,10 @@ from typing import Any, List
 import cv2 as cv
 import dill as pkl
 import imageio as iio
+import kinder
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import kinder
 import zmq
 from prpl_utils.utils import sample_seed_from_rng
 from relational_structs.spaces import ObjectCentricBoxSpace

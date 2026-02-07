@@ -15,9 +15,9 @@ import time
 from pathlib import Path
 
 import gymnasium as gym
+import kinder
 import numpy as np
 import pandas as pd
-import kinder
 import torch
 import yaml  # type: ignore[import-untyped]
 from omegaconf import DictConfig

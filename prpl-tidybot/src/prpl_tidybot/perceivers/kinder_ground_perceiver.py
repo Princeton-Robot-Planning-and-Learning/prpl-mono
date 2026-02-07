@@ -27,7 +27,7 @@ class KinDERGroundPerceiver(Perceiver[ObjectCentricState]):
         gripper_state = self._interface.get_gripper_state()
 
         # Add robot into object-centric state.
-        robot = Object("robot", MujocoTidyBotRobotObjectType)
+        robot = Object("robot_0", MujocoTidyBotRobotObjectType)
 
         # Build this super explicitly, even though verbose, to be careful.
         state_dict[robot] = {

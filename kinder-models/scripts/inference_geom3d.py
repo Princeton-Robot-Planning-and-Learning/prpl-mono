@@ -4,8 +4,8 @@ import argparse
 import time
 
 import cv2 as cv
-import numpy as np
 import kinder
+import numpy as np
 import zmq
 from episode_storage import EpisodeWriter
 from relational_structs.spaces import ObjectCentricBoxSpace

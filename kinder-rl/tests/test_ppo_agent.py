@@ -2,12 +2,12 @@
 
 import gymnasium
 import imageio.v2 as iio
-import numpy as np
 import kinder
+import numpy as np
 import pytest
 from gymnasium import spaces
-from omegaconf import DictConfig
 from kinder.envs.geom2d.stickbutton2d import StickButton2DEnv
+from omegaconf import DictConfig
 
 from kinder_rl.ppo_agent import PPOAgent
 

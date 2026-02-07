@@ -15,8 +15,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
 import kinder
+import numpy as np
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 kinder.register_all_environments()

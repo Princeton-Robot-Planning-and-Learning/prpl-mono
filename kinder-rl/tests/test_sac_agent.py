@@ -1,12 +1,12 @@
 """Tests for the SAC agent."""
 
 import gymnasium
-import numpy as np
 import kinder
+import numpy as np
 import pytest
 from gymnasium import spaces
-from omegaconf import DictConfig
 from kinder.envs.geom2d.stickbutton2d import StickButton2DEnv
+from omegaconf import DictConfig
 from relational_structs import Object, ObjectCentricState, Type
 
 from kinder_rl.sac_agent import SACAgent

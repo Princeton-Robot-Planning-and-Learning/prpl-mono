@@ -17,9 +17,9 @@ import logging
 import os
 
 import hydra
+import kinder
 import numpy as np
 import pandas as pd
-import kinder
 from gymnasium.core import Env
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf

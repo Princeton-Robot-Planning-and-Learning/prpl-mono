@@ -3,8 +3,8 @@
 import time
 
 import imageio.v2 as iio
-import numpy as np
 import kinder
+import numpy as np
 from kinder.envs.geom2d.structs import SE2Pose
 
 from kinder_bilevel_planning.env_models import create_bilevel_planning_models

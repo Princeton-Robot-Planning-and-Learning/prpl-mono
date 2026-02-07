@@ -9,9 +9,9 @@ import logging
 from pathlib import Path
 
 import hydra
+import kinder
 import numpy as np
 import pandas as pd
-import kinder
 from omegaconf import DictConfig, OmegaConf, read_write
 
 from kinder_rl import create_rl_agents
