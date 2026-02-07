@@ -117,7 +117,7 @@ $ python scripts/teleop_dynamics3d_kinder.py
 Dynamic2D and Geom2D: 
 ```
 $ cd kinder
-$ python scripts/collect_demos.py
+$ python scripts/collect_demos.py --env_id <your_env_id>
 ```
 
 Geom3D: 
