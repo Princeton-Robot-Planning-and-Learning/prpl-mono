@@ -56,7 +56,7 @@ Use following commands to run bilevel planning baselines:
 
 ```
 cd kinder-bilevel-planning
-python experiments/run_experiment.py -m seed='range(300,305)' env=Motion2D-p0-v0,StickButton2D-b1-v0,BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0  hydra/launcher=joblib
+python experiments/run_experiment.py -m seed='range(300,305)' env=motion2d-p0,stickbutton2d-b1,base_motion3d,transport3d-o2  hydra/launcher=joblib
 ```
 
 ### VLM Planning
@@ -66,7 +66,7 @@ Use following commands to run VLM planning baselines:
 ```
 cd kinder-vlm-planning
 python experiments/run_experiment.py -m seed='range(300,305)' \
-    env=Motion2D-p0-v0,StickButton2D-b1-v0,BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0 \
+    env=Motion2D-p0-v0,StickButton2D-b1-v0,BaseMotion3D-v0,Transport3D-o2-v0 \
     vlm_model=gpt-5 rgb_observation=true,false temperature=1 \
     hydra/launcher=joblib
 ```
