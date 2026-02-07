@@ -3,12 +3,12 @@
 import time
 
 import kinder
-from matplotlib import pyplot as plt
 from kinder_models.dynamic3d.utils import (
     get_bounding_box,
     plot_overhead_scene,
     run_base_motion_planning,
 )
+from matplotlib import pyplot as plt
 from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2
 from tomsgeoms2d.structs import Rectangle

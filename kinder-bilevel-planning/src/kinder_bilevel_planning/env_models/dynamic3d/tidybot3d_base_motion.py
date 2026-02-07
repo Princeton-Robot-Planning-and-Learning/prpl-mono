@@ -6,7 +6,6 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from numpy.typing import NDArray
 from kinder.envs.dynamic3d.object_types import (
     MujocoObjectType,
     MujocoTidyBotRobotObjectType,
@@ -21,6 +20,7 @@ from kinder_models.dynamic3d.base_motion.state_abstractions import (
     goal_deriver,
     state_abstractor,
 )
+from numpy.typing import NDArray
 from relational_structs import (
     LiftedAtom,
     LiftedOperator,

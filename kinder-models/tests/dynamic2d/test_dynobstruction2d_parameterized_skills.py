@@ -1,7 +1,7 @@
 """Tests for DynObstruction2D parameterized skills."""
 
-import numpy as np
 import kinder
+import numpy as np
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )

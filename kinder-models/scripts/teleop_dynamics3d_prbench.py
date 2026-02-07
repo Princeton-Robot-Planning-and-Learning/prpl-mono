@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 import dill as pkl  # type: ignore[import-untyped]
-import numpy as np
 import kinder
+import numpy as np
 from relational_structs.spaces import ObjectCentricBoxSpace
 
 from kinder_models.dynamic3d.fk_solver import TidybotFKSolver

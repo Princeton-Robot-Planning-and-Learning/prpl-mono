@@ -1,7 +1,7 @@
 """Tests for transport3d.py domain-specific policy."""
 
-import numpy as np
 import kinder
+import numpy as np
 import pytest
 from gymnasium.wrappers import RecordVideo
 

@@ -206,7 +206,7 @@ class MoveToTargetGroundController(
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -310,7 +310,7 @@ class PyBulletSim:
     ) -> None:
         """Update the internal state of the simulator from an object-centric state."""
         # Update the robot state.
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         # Update the arm base.
         base_pose = Pose.from_rpy(
             (x.get(robot_obj, "pos_base_x"), x.get(robot_obj, "pos_base_y"), 0.0),
@@ -483,7 +483,7 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
     def _get_current_robot_arm_conf(self) -> JointPositions:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         return [
             x.get(robot_obj, "pos_arm_joint1"),
             x.get(robot_obj, "pos_arm_joint2"),
@@ -503,7 +503,7 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -603,7 +603,7 @@ class TossController(GroundParameterizedController[ObjectCentricState, Array]):
     def _get_current_robot_arm_conf(self) -> JointPositions:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         return [
             x.get(robot_obj, "pos_arm_joint1"),
             x.get(robot_obj, "pos_arm_joint2"),
@@ -623,7 +623,7 @@ class TossController(GroundParameterizedController[ObjectCentricState, Array]):
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -744,7 +744,7 @@ class MoveArmToEndEffectorController(
     def _get_current_robot_arm_conf(self) -> JointPositions:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         return [
             x.get(robot_obj, "pos_arm_joint1"),
             x.get(robot_obj, "pos_arm_joint2"),
@@ -764,7 +764,7 @@ class MoveArmToEndEffectorController(
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -962,7 +962,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         self._current_base_motion_plan = base_motion_plan
 
         plan_x = x.copy()
-        robot = plan_x.get_object_from_name("robot")
+        robot = plan_x.get_object_from_name("robot_0")
         target_base_pose = self._current_base_motion_plan[-1]
         if not self._navigated:
             plan_x.set(robot, "pos_base_x", target_base_pose.x)
@@ -1162,7 +1162,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
     def _get_current_robot_arm_conf(self) -> JointPositions:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         return [
             x.get(robot_obj, "pos_arm_joint1"),
             x.get(robot_obj, "pos_arm_joint2"),
@@ -1182,7 +1182,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
@@ -1317,7 +1317,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         self._current_base_motion_plan = base_motion_plan
 
         plan_x = x.copy()
-        robot = plan_x.get_object_from_name("robot")
+        robot = plan_x.get_object_from_name("robot_0")
         target_base_pose = self._current_base_motion_plan[-1]
         plan_x.set(robot, "pos_base_x", target_base_pose.x)
         plan_x.set(robot, "pos_base_y", target_base_pose.y)
@@ -1493,7 +1493,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
     def _get_current_robot_arm_conf(self) -> JointPositions:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         return [
             x.get(robot_obj, "pos_arm_joint1"),
             x.get(robot_obj, "pos_arm_joint2"),
@@ -1513,7 +1513,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot")
+        robot_obj = x.get_object_from_name("robot_0")
         # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD

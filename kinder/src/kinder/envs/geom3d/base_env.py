@@ -34,7 +34,7 @@ from relational_structs import (
 from relational_structs.utils import create_state_from_dict
 from scipy.spatial.transform import Rotation
 
-from kinder.core import ObjectCentricKinDEREnv, KinDEREnvConfig, RobotActionSpace
+from kinder.core import KinDEREnvConfig, ObjectCentricKinDEREnv, RobotActionSpace
 from kinder.envs.geom3d.object_types import (
     Geom3DCuboidType,
     Geom3DEnvTypeFeatures,

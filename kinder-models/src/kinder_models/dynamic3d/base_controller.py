@@ -11,8 +11,8 @@ The current controller is part of the environment.
 from typing import Optional, Sequence
 
 import numpy as np
-from numpy.typing import NDArray
 from kinder.envs.dynamic3d.motion3d import Motion3DEnvSpec
+from numpy.typing import NDArray
 from ruckig import (  # pylint: disable=no-name-in-module
     InputParameter,
     OutputParameter,

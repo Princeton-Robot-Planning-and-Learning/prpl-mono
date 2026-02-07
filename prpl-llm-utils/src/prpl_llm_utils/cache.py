@@ -199,8 +199,7 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
 
         with sqlite3.connect(self._database_path) as conn:
             # Create base table.
-            conn.execute(
-                """
+            conn.execute("""
                 CREATE TABLE IF NOT EXISTS responses (
                     query_hash TEXT PRIMARY KEY,
                     model_id TEXT NOT NULL,
@@ -209,8 +208,7 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
                     completion TEXT NOT NULL,
                     metadata TEXT NOT NULL
                 )
-            """
-            )
+            """)
 
             # Add response_index column for multi-response support.
             # First check if it exists.
@@ -221,15 +219,12 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
                 # Add response_index column with default 0 for
                 # backward compatibility.
                 try:
-                    conn.execute(
-                        """ALTER TABLE responses ADD COLUMN
-                           response_index INTEGER DEFAULT 0"""
-                    )
+                    conn.execute("""ALTER TABLE responses ADD COLUMN
+                           response_index INTEGER DEFAULT 0""")
                     # For proper multi-response support, we need a composite key.
                     # Since SQLite doesn't support modifying PRIMARY KEY,
                     # we'll create a new table and migrate data.
-                    conn.execute(
-                        """
+                    conn.execute("""
                         CREATE TABLE IF NOT EXISTS responses_new (
                             query_hash TEXT NOT NULL,
                             response_index INTEGER NOT NULL DEFAULT 0,
@@ -240,17 +235,14 @@ class SQLite3PretrainedLargeModelCache(PretrainedLargeModelCache):
                             metadata TEXT NOT NULL,
                             PRIMARY KEY (query_hash, response_index)
                         )
-                        """
-                    )
+                        """)
                     # Copy data from old table to new table.
-                    conn.execute(
-                        """
+                    conn.execute("""
                         INSERT INTO responses_new
                         SELECT query_hash, response_index, model_id, prompt,
                                images_hash, completion, metadata
                         FROM responses
-                        """
-                    )
+                        """)
                     # Drop old table and rename new table.
                     conn.execute("DROP TABLE responses")
                     conn.execute("ALTER TABLE responses_new RENAME TO responses")

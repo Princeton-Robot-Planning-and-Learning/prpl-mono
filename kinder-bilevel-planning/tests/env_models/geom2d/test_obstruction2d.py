@@ -1,7 +1,7 @@
 """Tests for obstruction_2d.py."""
 
-import numpy as np
 import kinder
+import numpy as np
 import pytest
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo

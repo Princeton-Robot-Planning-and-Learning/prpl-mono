@@ -93,7 +93,7 @@ def test_namo_goal_satisfied_when_robot_in_region():
     current_state = oc_env._get_current_state()  # pylint: disable=protected-access
 
     # Get the robot object
-    robot = current_state.get_object_from_name("robot")
+    robot = current_state.get_object_from_name("robot_0")
 
     # Move robot to the goal region (center of goal region is at x=1.0, y=0.0)
     modified_state = current_state.copy()
@@ -139,7 +139,7 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
     current_state = oc_env._get_current_state()  # pylint: disable=protected-access
 
     # Get the robot and obstacle chair objects
-    robot = current_state.get_object_from_name("robot")
+    robot = current_state.get_object_from_name("robot_0")
     obstacle_chair = current_state.get_object_from_name("obstacle_chair")
 
     # Create modified state
@@ -209,7 +209,7 @@ def test_namo_robot_can_navigate_to_goal():
 
     # Get initial state
     state = env.observation_space.devectorize(obs)
-    robot = state.get_object_from_name("robot")
+    robot = state.get_object_from_name("robot_0")
     robot_x = state.get(robot, "pos_base_x")
     robot_y = state.get(robot, "pos_base_y")
 

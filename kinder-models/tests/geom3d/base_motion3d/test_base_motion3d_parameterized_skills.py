@@ -1,7 +1,7 @@
 """Tests for BaseMotion3D parameterized skills."""
 
-import numpy as np
 import kinder
+import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
 from kinder.envs.geom3d.base_motion3d import ObjectCentricBaseMotion3DEnv

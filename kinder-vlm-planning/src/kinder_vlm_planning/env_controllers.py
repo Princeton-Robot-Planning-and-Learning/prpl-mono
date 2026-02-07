@@ -22,9 +22,7 @@ def get_controllers_for_environment(
     """
     # Generate module path dynamically
     # e.g., kinder_models.geom2d.envs.clutteredretrieval2d.parameterized_skills
-    module_path = (
-        f"kinder_models.{env_class_name}.envs.{env_name}.parameterized_skills"
-    )
+    module_path = f"kinder_models.{env_class_name}.envs.{env_name}.parameterized_skills"
     return _import_lifted_controllers(module_path, env_name, action_space)
 
 

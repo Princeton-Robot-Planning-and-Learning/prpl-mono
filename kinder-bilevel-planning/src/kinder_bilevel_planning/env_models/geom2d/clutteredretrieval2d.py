@@ -8,7 +8,6 @@ from bilevel_planning.structs import (
     SesameModels,
 )
 from gymnasium.spaces import Space
-from numpy.typing import NDArray
 from kinder.envs.geom2d.clutteredretrieval2d import (
     ObjectCentricClutteredRetrieval2DEnv,
     TargetBlockType,
@@ -23,6 +22,7 @@ from kinder.envs.geom2d.utils import (
 from kinder_models.geom2d.envs.clutteredretrieval2d.parameterized_skills import (
     create_lifted_controllers,
 )
+from numpy.typing import NDArray
 from relational_structs import (
     GroundAtom,
     LiftedAtom,
