@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "our_llm_utils"
 version = "0.1.0"
-description = "LLM utils from the Princeton Robot Planning and Learning group."
+description = "LLM utils."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
