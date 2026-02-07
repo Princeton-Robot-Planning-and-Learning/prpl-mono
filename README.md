@@ -1,6 +1,6 @@
-# Princeton Robot Planning and Learning Monorepo
+# KinDER: Kinematic and Dynamic Environments for Reasoning
 
-This repository contains code under active development by the Princeton Robot Planning and Learning group.
+This repository contains code under active development.
 
 There are multiple Python packages that can be installed and developed separately. They are included in a monorepo because some are interdependent and we want to make sure that changes in one package do not break code in another.
 
@@ -25,27 +25,17 @@ prpl-mono/
 
 Packages that depend on other packages in this repo should include a `prpl_requirements.txt` file.
 
-## Instructions for Contributing
+## Task Demonstrations
 
-### Contributing to an Existing Package
+We collected demonstrations for all 25 tasks, and provide videos in the media attachment. We omit demonstration files due to space restrictions.
+
+## Instructions for Usage
+
+### Using an Existing Package
 1. Clone this repository.
 2. Installing all packages in this repository, `uv run python scripts/install_all.py`.
 3. Follow the README instructions in the package or packages that you want to edit.
 4. Open a pull request on this repository.
-
-### Adding a New Package
-Instructions coming later. In the meantime, use one of the existing packages as a reference.
-
-## Using a Package Externally
-You can use any individual package externally. For example:
-```
-uv pip install "our_utils@git+https://github.com/Princeton-Robot-Planning-and-Learning/prpl-mono.git#subdirectory=our-utils"
-```
-But beware that things are changing. Pinning commits is a good idea if you need stable code.
-
-## Troubleshooting
-
-We are doing our best to make installation easy across platforms, but here are some known issues and workarounds.
 
 ### Installing PyBullet on Recent MacOS
 
