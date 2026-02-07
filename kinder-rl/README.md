@@ -1,7 +1,5 @@
 # Reinforcement Learning Baselines for KinDER
 
-![workflow](https://github.com/Jaraxxus-Me/kinder-rl/actions/workflows/ci.yml/badge.svg)
-
 This package provides RL baselines (PPO, SAC) for the KinDER physical reasoning benchmark environments.
 
 ## Installation
