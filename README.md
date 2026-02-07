@@ -108,10 +108,26 @@ We do not include code for running imitation learning baselines. This repository
 
 #### Teleoperation
 
-Dynamic3D: kinder-models/scripts/teleop_dynamics3d_kinder.py
+Dynamic3D: 
+```
+$ cd kinder-models
+$ python scripts/teleop_dynamics3d_kinder.py
+```
 
-Dynamic2D and Geom2D: kinder/scripts/collect_demos.py
+Dynamic2D and Geom2D: 
+```
+$ cd kinder
+$ python scripts/collect_demos.py
+```
 
-Geom3D: kinder-ds-policies/experiments/collect_demos_ds.py 
+Geom3D: 
+```
+$ cd kinder-ds-policies
+$ python experiments/collect_demos_ds.py
+```
 
-Planning to generate data: kinder-models/scripts/planning_data_dynamics3d_kinder.py
+Planning to generate data: 
+```
+$ cd kinder-models
+$ python scripts/planning_data_dynamics3d_kinder.py
+```
