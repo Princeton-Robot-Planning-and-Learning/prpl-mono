@@ -3,3 +3,4 @@
 ../bilevel-planning
 ../kinder
 ../prpl-tidybot
+../kinder-imitation-learning
