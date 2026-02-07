@@ -137,7 +137,7 @@ def analyze_results(log_dir: Path) -> pd.DataFrame:
     # Calculate average reward among successful episodes if reward exists
     if has_reward:
         successful_reward = (
-            df[df["success"] == True]
+            df[df["success"] == True]  # pylint: disable=singleton-comparison
             .groupby(group_cols)["reward"]
             .agg(["mean", "std"])
             .reset_index()
@@ -237,7 +237,7 @@ def format_table(df: pd.DataFrame) -> str:
         if has_reward:
             parts.append(f"{row['avg_reward']:.3f} ± {row['avg_reward_std']:.3f}")
             avg_reward_successful = (
-                f"{row['avg_reward_successful']:.3f} ± {row['reward_successful_std']:.3f}"
+                f"{row['avg_reward_successful']:.3f} ± {row['reward_successful_std']:.3f}"  # pylint: disable=line-too-long
                 if pd.notna(row["avg_reward_successful"])
                 else "N/A"
             )
