@@ -38,6 +38,44 @@ python app.py
 
 The server will be available at `http://localhost:5001`.
 
+## Generating Visualization Data
+
+To use the visualizer, you need to export a Bilevel Planning Graph (BPG) and its associated concrete states from your planning script.
+
+The following example demonstrates how to export a planning graph using the `export_graph_with_pickle` method:
+
+```python
+from pathlib import Path
+import kinder
+from kinder_bilevel_planning import create_bilevel_planning_models
+
+# 1. Initialize environment and approach
+kinder.register_all_environments()
+env = kinder.make("kinder/Obstruction2D-o1-v0")
+env_models = create_bilevel_planning_models(
+    "obstruction2d", env.observation_space, env.action_space
+)
+
+# ... [Initialize your approach here] ...
+
+# 2. Run the planner on a problem instance
+obs, _ = env.reset(seed=100)
+problem = approach._observation_to_planning_problem(obs)
+plan, bpg = approach._planner.run(problem, timeout=100)
+
+# 3. Export the graph and state data for the visualizer
+save_dir = Path('webapp/data')
+save_dir.mkdir(exist_ok=True)
+
+bpg.export_graph_with_pickle(
+    json_path = save_dir / "bpg_graph.json",
+    pickle_path = save_dir / "bpg_state_data.pkl",
+    final_state = plan.states[-1] if plan else None,
+)
+```
+
+After generating these files, you can load the `.pkl` file via the backend API or UI to visualize the nodes.
+
 ## API Documentation
 
 - **`POST /api/load_pickle`**: Load planning data from a specified `.pkl` file.
