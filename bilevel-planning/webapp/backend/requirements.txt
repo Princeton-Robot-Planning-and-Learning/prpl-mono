@@ -1,0 +1,8 @@
+flask==3.0.0
+flask-cors==4.0.0
+numpy==2.3.4
+matplotlib==3.10.7
+requests==2.31.0
+../../../kinder
+pillow==10.1.0
+gymnasium
