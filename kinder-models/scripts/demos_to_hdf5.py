@@ -194,7 +194,7 @@ def convert(
                 robot_states.append(robot_observation)
                 actions.append(action)
 
-                resize_constant = 84
+                resize_constant = 224
                 # Add image if present
                 if use_geom3d or use_dynamics3d:
                     overview_image = fr["observation.overview_image"]
