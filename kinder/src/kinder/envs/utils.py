@@ -1,6 +1,7 @@
 """Utility functions shared across different types of environments."""
 
 import abc
+from collections.abc import Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -156,6 +157,7 @@ def render_2dstate(
     world_min_y: float = 0.0,
     world_max_y: float = 10.0,
     render_dpi: int = 150,
+    ax_callback: Callable[[plt.Axes], None] | None = None,
 ) -> NDArray[np.uint8]:
     """Render a state.
 
@@ -178,6 +180,8 @@ def render_2dstate(
     ax.set_ylim(world_min_y - pad_y, world_max_y + pad_y)
     ax.axis("off")
     plt.tight_layout()
+    if ax_callback is not None:
+        ax_callback(ax)
     img = fig2data(fig)
     plt.close()
     return img
