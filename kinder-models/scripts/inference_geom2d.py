@@ -162,15 +162,17 @@ def run_inference(
 
         # Create the environment
         render_mode = "rgb_array" if render or save_videos else None
-        if "TidyBot" in env_name:
+        print(f"env_name: {env_name}")
+        final_env_name = f"kinder/{env_name.strip()}"
+        if "Sweep" in env_name:
             env = kinder.make(
-                f"kinder/{env_name}",
+                final_env_name,
                 render_mode=render_mode,
                 scene_bg=True,
             )
         else:
             env = kinder.make(
-                f"kinder/{env_name}",
+                final_env_name,
                 render_mode=render_mode,
             )
 
