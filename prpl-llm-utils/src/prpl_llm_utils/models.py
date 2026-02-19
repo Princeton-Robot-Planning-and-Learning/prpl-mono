@@ -272,6 +272,7 @@ class OpenAIModel(PretrainedLargeModel):
 
         return responses
 
+
 class OpenAIResponsesModel(PretrainedLargeModel):
     """Interface for OpenAI's Responses API."""
 
@@ -290,7 +291,7 @@ class OpenAIResponsesModel(PretrainedLargeModel):
         return self._model_name
 
     def _run_query(self, query: Query) -> Response:
-        kwargs = query.hyperparameters or {}
+        kwargs = {k: v for k, v in (query.hyperparameters or {}).items() if k != "seed"}
 
         content: list[dict] = [{"type": "input_text", "text": query.prompt}]
 
@@ -314,7 +315,7 @@ class OpenAIResponsesModel(PretrainedLargeModel):
             **kwargs,  # type: ignore
         )
 
-        text = response.output[0].content[0].text  # type: ignore
+        text = response.output_text
         metadata = (
             response.usage.to_dict()  # type: ignore
             if hasattr(response, "usage") and response.usage
