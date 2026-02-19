@@ -272,6 +272,66 @@ class OpenAIModel(PretrainedLargeModel):
 
         return responses
 
+class OpenAIResponsesModel(PretrainedLargeModel):
+    """Interface for OpenAI's Responses API."""
+
+    def __init__(
+        self,
+        model_name: str,
+        cache: PretrainedLargeModelCache,
+        use_cache_only: bool = False,
+    ) -> None:
+        self._model_name = model_name
+        assert "OPENAI_API_KEY" in os.environ, "Need to set OPENAI_API_KEY"
+        super().__init__(cache, use_cache_only)
+        self._client = openai.OpenAI()
+
+    def get_id(self) -> str:
+        return self._model_name
+
+    def _run_query(self, query: Query) -> Response:
+        kwargs = query.hyperparameters or {}
+
+        content: list[dict] = [{"type": "input_text", "text": query.prompt}]
+
+        if query.imgs:
+            for img in query.imgs:
+                buffered = io.BytesIO()
+                img.save(buffered, format="PNG")
+                img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                content.append(
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:image/png;base64,{img_base64}",
+                    }
+                )
+
+        inputs = [{"role": "user", "content": content}]
+
+        response = self._client.responses.create(
+            model=self._model_name,
+            input=inputs,  # type: ignore
+            **kwargs,  # type: ignore
+        )
+
+        text = response.output[0].content[0].text  # type: ignore
+        metadata = (
+            response.usage.to_dict()  # type: ignore
+            if hasattr(response, "usage") and response.usage
+            else {}
+        )
+        return Response(text, metadata)
+
+    def _run_query_multi_response(
+        self, query: Query, num_responses: int
+    ) -> list[Response]:
+        responses = []
+        for i in range(num_responses):
+            response = self._run_query(query)
+            metadata = {**response.metadata, "response_index": i}
+            responses.append(Response(response.text, metadata))
+        return responses
+
 
 class GeminiModel(PretrainedLargeModel):
     """Common interface with methods for all Gemini-based models."""
