@@ -288,10 +288,17 @@ class OpenAIResponsesModel(PretrainedLargeModel):
         self._client = openai.OpenAI()
 
     def get_id(self) -> str:
-        return self._model_name
+        """Prevent caching differently if same model has both chat and response
+        modes."""
+        return f"{self._model_name}:responses"
 
     def _run_query(self, query: Query) -> Response:
-        kwargs = {k: v for k, v in (query.hyperparameters or {}).items() if k != "seed"}
+        """Run a query using the Responses API."""
+        kwargs = dict(query.hyperparameters or {})
+        kwargs.pop("seed", None)
+        if "max_tokens" in kwargs:
+            kwargs["max_output_tokens"] = kwargs.pop("max_tokens")
+        kwargs.pop("n", None)
 
         content: list[dict] = [{"type": "input_text", "text": query.prompt}]
 
@@ -326,6 +333,7 @@ class OpenAIResponsesModel(PretrainedLargeModel):
     def _run_query_multi_response(
         self, query: Query, num_responses: int
     ) -> list[Response]:
+        """Run a query and return multiple responses."""
         responses = []
         for i in range(num_responses):
             response = self._run_query(query)
