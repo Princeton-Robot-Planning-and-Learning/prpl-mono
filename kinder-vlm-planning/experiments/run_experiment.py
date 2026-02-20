@@ -2,8 +2,8 @@
 
 Examples:
 - Running on a single environment with a single seed:
-    python experiments/run_experiment.py -m env=Motion2D-p1-v0 seed=0 vlm_model=gpt-5 \
-        rgb_observation=true,false temperature=1
+    python experiments/run_experiment.py env=Motion2D-p0-v0 seed=0 vlm_model=gpt-5 \
+        temperature=1
     python experiments/run_experiment.py -m env=StickButton2D-b1-v0 seed=0 \
         vlm_model=gpt-5 temperature=1
 
