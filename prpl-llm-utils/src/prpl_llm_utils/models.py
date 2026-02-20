@@ -299,6 +299,7 @@ class OpenAIResponsesModel(PretrainedLargeModel):
         if "max_tokens" in kwargs:
             kwargs["max_output_tokens"] = kwargs.pop("max_tokens")
         kwargs.pop("n", None)
+        kwargs.pop("temperature", None)
 
         content: list[dict] = [{"type": "input_text", "text": query.prompt}]
 
