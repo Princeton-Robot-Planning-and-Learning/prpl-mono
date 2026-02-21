@@ -42,7 +42,7 @@ def convert(
     output_path: Path | None = None,
     render_images: bool = False,
     use_dynamic2d: bool = False,
-    use_geom3d: bool = False,
+    use_kinematic3d: bool = False,
     use_dynamics3d: bool = False,
     use_pushpull2d: bool = False,
     save_videos: bool = False,
@@ -58,7 +58,7 @@ def convert(
         output_path: Output HDF5 file path
         render_images: If True, render images for teleoperated demos
         use_dynamic2d: If True, use dynamic2d environment
-        use_geom3d: If True, use geom3d environment
+        use_kinematic3d: If True, use kinematic3d environment
         use_dynamics3d: If True, use dynamics3d environment
         use_pushpull2d: If True, use pushpull2d environment
         save_videos: If True, save videos for teleoperated demos
@@ -82,7 +82,7 @@ def convert(
         for ep_idx, ep_frames, metadata in iter_teleop_episodes(
             teleop_data_dir,
             render_images=render_images,
-            use_geom3d=use_geom3d,
+            use_kinematic3d=use_kinematic3d,
             use_dynamics3d=use_dynamics3d,
         ):
             # Write metadata once (from first episode)
@@ -141,7 +141,7 @@ def convert(
                             fr["observation.state"][:-22], dtype=np.float32
                         ).shape
                     )
-                elif use_geom3d:
+                elif use_kinematic3d:
                     assert (
                         robot_observation.shape
                         == np.array(
@@ -196,7 +196,7 @@ def convert(
 
                 resize_constant = 224
                 # Add image if present
-                if use_geom3d or use_dynamics3d:
+                if use_kinematic3d or use_dynamics3d:
                     overview_image = fr["observation.overview_image"]
                     if isinstance(overview_image, np.ndarray):
                         overview_image = cv.resize(  # pylint: disable=no-member
@@ -235,7 +235,7 @@ def convert(
             )
 
             # Write images if present
-            if use_geom3d or use_dynamics3d:
+            if use_kinematic3d or use_dynamics3d:
                 episode_group.create_dataset(
                     "obs/overview_image", data=np.array(overview_images, dtype=np.uint8)
                 )
@@ -340,9 +340,9 @@ def main() -> None:
         help="Use dynamic2d environment",
     )
     parser.add_argument(
-        "--use_geom3d",
+        "--use_kinematic3d",
         action="store_true",
-        help="Use geom3d environment",
+        help="Use kinematic3d environment",
     )
     parser.add_argument(
         "--use_dynamics3d",
@@ -385,7 +385,7 @@ def main() -> None:
         output_path=out_path,
         render_images=args.render_images,
         use_dynamic2d=args.use_dynamic2d,
-        use_geom3d=args.use_geom3d,
+        use_kinematic3d=args.use_kinematic3d,
         use_dynamics3d=args.use_dynamics3d,
         use_pushpull2d=args.use_pushpull2d,
         save_videos=args.save_videos,

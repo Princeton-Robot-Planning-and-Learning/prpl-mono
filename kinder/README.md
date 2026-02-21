@@ -31,7 +31,7 @@ img = env.render()
 All environments in KinDER use object-centric states. For example:
 
 ```python
-from kinder.envs.geom2d.obstruction2d import ObjectCentricObstruction2DEnv
+from kinder.envs.kinematic2d.obstruction2d import ObjectCentricObstruction2DEnv
 env = ObjectCentricObstruction2DEnv(num_obstructions=3)
 obs, _ = env.reset(seed=123)
 print(obs.pretty_str())
@@ -105,12 +105,12 @@ We strongly recommend [uv](https://docs.astral.sh/uv/getting-started/installatio
 Then, choose one of the following based on you need:
 - `uv pip install -r optional_prpl_requirements/core.txt && uv pip install -e .` - Installs only core dependencies (matplotlib, numpy, relational_structs, prpl_utils)
 - `uv pip install -r prpl_requirements.txt && uv pip install -e .uv pip install -e ".[all]"` - Installs everything (excluding develop)
-- `uv pip install -r optional_prpl_requirements/geom2d.txt && uv pip install -e ".[geom2d]"` - Installs only core + geom2d dependencies (no pybullet)
+- `uv pip install -r optional_prpl_requirements/kinematic2d.txt && uv pip install -e ".[kinematic2d]"` - Installs only core + kinematic2d dependencies (no pybullet)
 - `uv pip install -r optional_prpl_requirements/dynamic2d.txt && uv pip install -e ".[dynamic2d]"` - Installs only core + dynamic2d dependencies
 - `uv pip install -e ".[tidybot]"` - Installs only core + tidybot dependencies
-- `uv pip install -r optional_prpl_requirements/geom3d.txt && uv pip install -e ".[geom3d]"` - Installs only core + geom3d dependencies
+- `uv pip install -r optional_prpl_requirements/kinematic3d.txt && uv pip install -e ".[kinematic3d]"` - Installs only core + kinematic3d dependencies
 - `uv pip install -r prpl_requirements.txt && uv pip install -e ".[develop]"` - Installs all + development tools
-- Compositionally install the dependencies like `[geom2d,geom3d]`
+- Compositionally install the dependencies like `[kinematic2d,kinematic3d]`
 
 ### :microscope: Check Installation
 Run `./run_ci_checks.sh`. It should complete with all green successes.
