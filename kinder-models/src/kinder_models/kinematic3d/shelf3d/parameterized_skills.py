@@ -11,7 +11,10 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySamplingFailure,
 )
 from gymnasium.spaces import Box
-from kinder.envs.kinematic3d.object_types import Kinematic3DCuboidType, Kinematic3DFixtureType
+from kinder.envs.kinematic3d.object_types import (
+    Kinematic3DCuboidType,
+    Kinematic3DFixtureType,
+)
 from kinder.envs.kinematic3d.shelf3d import (
     Kinematic3DRobotType,
     ObjectCentricShelf3DEnv,

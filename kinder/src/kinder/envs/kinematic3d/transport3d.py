@@ -170,7 +170,9 @@ class Transport3DObjectCentricState(Kinematic3DObjectCentricState):
 
 
 class ObjectCentricTransport3DEnv(
-    ObjectCentricKinematic3DRobotEnv[Kinematic3DObjectCentricState, Transport3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[
+        Kinematic3DObjectCentricState, Transport3DEnvConfig
+    ]
 ):
     """PyBullet environment where cubes and boxes must be transported onto a table."""
 
@@ -375,7 +377,9 @@ class ObjectCentricTransport3DEnv(
             + [("box" + str(i), Kinematic3DCuboidType) for i in range(self._num_boxes)]
         )
         state = create_state_from_dict(
-            state_dict, Kinematic3DEnvTypeFeatures, state_cls=Transport3DObjectCentricState
+            state_dict,
+            Kinematic3DEnvTypeFeatures,
+            state_cls=Transport3DObjectCentricState,
         )
         assert isinstance(state, Transport3DObjectCentricState)
         return state

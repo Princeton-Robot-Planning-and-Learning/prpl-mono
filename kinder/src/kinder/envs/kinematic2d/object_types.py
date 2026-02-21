@@ -20,16 +20,20 @@ Kinematic2DRobotEnvTypeFeatures[Kinematic2DType] = [
 ]
 # Specific geom types.
 RectangleType = Type("rectangle", parent=Kinematic2DType)
-Kinematic2DRobotEnvTypeFeatures[RectangleType] = Kinematic2DRobotEnvTypeFeatures[Kinematic2DType] + [
+Kinematic2DRobotEnvTypeFeatures[RectangleType] = Kinematic2DRobotEnvTypeFeatures[
+    Kinematic2DType
+] + [
     "width",
     "height",
 ]
 CircleType = Type("circle", parent=Kinematic2DType)
-Kinematic2DRobotEnvTypeFeatures[CircleType] = Kinematic2DRobotEnvTypeFeatures[Kinematic2DType] + [
-    "radius"
-]
+Kinematic2DRobotEnvTypeFeatures[CircleType] = Kinematic2DRobotEnvTypeFeatures[
+    Kinematic2DType
+] + ["radius"]
 LObjectType = Type("lobject", parent=Kinematic2DType)
-Kinematic2DRobotEnvTypeFeatures[LObjectType] = Kinematic2DRobotEnvTypeFeatures[Kinematic2DType] + [
+Kinematic2DRobotEnvTypeFeatures[LObjectType] = Kinematic2DRobotEnvTypeFeatures[
+    Kinematic2DType
+] + [
     "width",
     "length_side1",
     "length_side2",

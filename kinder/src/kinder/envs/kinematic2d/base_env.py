@@ -112,7 +112,9 @@ class ObjectCentricKinematic2DRobotEnv(
 
     def _create_constant_initial_state(self) -> ObjectCentricState:
         initial_state_dict = self._create_constant_initial_state_dict()
-        return create_state_from_dict(initial_state_dict, Kinematic2DRobotEnvTypeFeatures)
+        return create_state_from_dict(
+            initial_state_dict, Kinematic2DRobotEnvTypeFeatures
+        )
 
     def reset(
         self, *, seed: int | None = None, options: dict | None = None
@@ -258,4 +260,6 @@ class ObjectCentricKinematic2DRobotEnv(
     ) -> NDArray[np.float32]:
         """Get the mapping from human inputs to actions."""
         assert isinstance(self.action_space, CRVRobotActionSpace)
-        return get_kinematic2d_crv_robot_action_from_gui_input(self.action_space, gui_input)
+        return get_kinematic2d_crv_robot_action_from_gui_input(
+            self.action_space, gui_input
+        )

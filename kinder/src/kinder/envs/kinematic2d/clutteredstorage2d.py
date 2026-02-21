@@ -33,7 +33,9 @@ Kinematic2DRobotEnvTypeFeatures[TargetBlockType] = list(
 )
 # There is only one target region (the shelf) and it is bookended by obstacles.
 ShelfType = Type("shelf", parent=DoubleRectType)
-Kinematic2DRobotEnvTypeFeatures[ShelfType] = list(Kinematic2DRobotEnvTypeFeatures[DoubleRectType])
+Kinematic2DRobotEnvTypeFeatures[ShelfType] = list(
+    Kinematic2DRobotEnvTypeFeatures[DoubleRectType]
+)
 
 
 @dataclass(frozen=True)
