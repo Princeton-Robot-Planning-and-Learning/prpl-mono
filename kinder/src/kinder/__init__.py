@@ -66,7 +66,7 @@ def register_all_environments() -> None:
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="ClutteredRetrieval2D",
-        entry_point="kinder.envs.kinematic2d.clutteredretrieval2d:ClutteredRetrieval2DEnv", # pylint: disable=line-too-long
+        entry_point="kinder.envs.kinematic2d.clutteredretrieval2d:ClutteredRetrieval2DEnv",  # pylint: disable=line-too-long
         category="Kinematic2D",
         variant_ids=variant_ids,
     )
@@ -78,7 +78,7 @@ def register_all_environments() -> None:
         variant_id = f"kinder/ClutteredStorage2D-b{num_block}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.kinematic2d.clutteredstorage2d:ClutteredStorage2DEnv", # pylint: disable=line-too-long
+            entry_point="kinder.envs.kinematic2d.clutteredstorage2d:ClutteredStorage2DEnv",  # pylint: disable=line-too-long
             kwargs={"num_blocks": num_block},
         )
         variant_ids.append(variant_id)

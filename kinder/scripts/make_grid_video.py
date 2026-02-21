@@ -38,8 +38,8 @@ DYNAMIC2D_ENVS = {
 
 def get_category(name: str) -> int:
     """
-        Return sort key for category order: Dynamic3D, Kinematic3D, 
-        Dynamic2D, Kinematic2D.
+    Return sort key for category order: Dynamic3D, Kinematic3D,
+    Dynamic2D, Kinematic2D.
     """
     if name in KINEMATIC3D_ENVS:
         return 1  # Kinematic3D
