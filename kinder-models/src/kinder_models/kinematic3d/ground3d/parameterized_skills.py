@@ -12,8 +12,8 @@ from bilevel_planning.trajectory_samplers.trajectory_sampler import (
 )
 from gymnasium.spaces import Box
 from kinder.envs.kinematic3d.ground3d import (
-    Kinematic3DRobotType,
     Ground3DObjectCentricState,
+    Kinematic3DRobotType,
     ObjectCentricGround3DEnv,
 )
 from kinder.envs.kinematic3d.object_types import (

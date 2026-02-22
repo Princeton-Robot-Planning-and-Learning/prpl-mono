@@ -170,7 +170,9 @@ class Transport3DObjectCentricState(Kinematic3DObjectCentricState):
 
 
 class ObjectCentricTransport3DEnv(
-    ObjectCentricKinematic3DRobotEnv[Kinematic3DObjectCentricState, Transport3DEnvConfig]
+    ObjectCentricKinematic3DRobotEnv[
+        Kinematic3DObjectCentricState, Transport3DEnvConfig
+    ]
 ):
     """PyBullet environment where cubes and boxes must be transported onto a table."""
 

@@ -367,8 +367,12 @@ def test_rectangle_circle_intersection():
 def test_lobject_rectangle_intersection():
     """Tests for Lobject intersection."""
     lobject = Lobject(x=0, y=0, width=1, lengths=[1, 1], theta=0)
-    assert kinematic2ds_intersect(lobject, Rectangle(x=0, y=0, width=1, height=1, theta=0))
-    assert kinematic2ds_intersect(Rectangle(x=0, y=0, width=1, height=1, theta=0), lobject)
+    assert kinematic2ds_intersect(
+        lobject, Rectangle(x=0, y=0, width=1, height=1, theta=0)
+    )
+    assert kinematic2ds_intersect(
+        Rectangle(x=0, y=0, width=1, height=1, theta=0), lobject
+    )
 
 
 def test_lobject_circle_intersection():
@@ -440,8 +444,12 @@ def test_tobject_rectangle_intersection():
     tobject = Tobject(
         x=0, y=0, width=1, length_horizontal=2, length_vertical=2, theta=0
     )
-    assert kinematic2ds_intersect(tobject, Rectangle(x=0, y=0, width=1, height=1, theta=0))
-    assert kinematic2ds_intersect(Rectangle(x=0, y=0, width=1, height=1, theta=0), tobject)
+    assert kinematic2ds_intersect(
+        tobject, Rectangle(x=0, y=0, width=1, height=1, theta=0)
+    )
+    assert kinematic2ds_intersect(
+        Rectangle(x=0, y=0, width=1, height=1, theta=0), tobject
+    )
 
 
 def test_tobject_circle_intersection():

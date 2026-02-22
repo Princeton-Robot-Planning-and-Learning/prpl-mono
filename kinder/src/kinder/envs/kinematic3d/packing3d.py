@@ -714,7 +714,9 @@ class ObjectCentricPacking3DEnv(
             ]
         )
         state = create_state_from_dict(
-            state_dict, Kinematic3DEnvTypeFeatures, state_cls=Packing3DObjectCentricState
+            state_dict,
+            Kinematic3DEnvTypeFeatures,
+            state_cls=Packing3DObjectCentricState,
         )
         assert isinstance(state, Packing3DObjectCentricState)
         return state

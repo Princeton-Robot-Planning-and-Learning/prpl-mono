@@ -188,7 +188,9 @@ def main() -> None:
         description="Run teleoperation in kinder environment"
     )
     parser.add_argument(
-        "--output-dir", default="data/teleop_kinematic3d", help="Directory to save episodes"
+        "--output-dir",
+        default="data/teleop_kinematic3d",
+        help="Directory to save episodes",
     )
     parser.add_argument(
         "--seed", type=int, default=123, help="Random seed for reproducibility"
