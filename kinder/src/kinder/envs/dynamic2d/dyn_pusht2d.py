@@ -30,7 +30,7 @@ from kinder.envs.dynamic2d.utils import (
     get_dot_robot_action_from_gui_input,
     on_dot_robot_collision_w_static,
 )
-from kinder.envs.geom2d.structs import SE2Pose, ZOrder
+from kinder.envs.kinematic2d.structs import SE2Pose, ZOrder
 from kinder.envs.utils import sample_se2_pose, state_2d_has_collision
 
 # Define custom object types for the PushT environment
@@ -221,7 +221,7 @@ class ObjectCentricDynPushT2DEnv(ObjectCentricDynamic2DRobotEnv[DynPushT2DEnvCon
             full_state = state.copy()
             full_state.data.update(self.initial_constant_state.data)
             all_objects = set(full_state)
-            # We use Geom2D collision checker for now
+            # We use Kinematic2D collision checker for now
             if state_2d_has_collision(full_state, all_objects, all_objects, {}):
                 continue
             return state
