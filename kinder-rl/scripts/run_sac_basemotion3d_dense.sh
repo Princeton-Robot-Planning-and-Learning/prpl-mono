@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 # Activate the monorepo virtual environment
 source "$(dirname "$0")/../../.venv/bin/activate"
 
-for seed in 0 1 2 3 4
+for seed in 301 302 303 304 305
 do
 python experiments/run_experiment.py \
     agent=sac_basemotion3d \
