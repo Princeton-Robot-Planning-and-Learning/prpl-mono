@@ -188,7 +188,7 @@ def run_astar(
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as f:
             f.write(json.dumps({
-                "initial_state": [int(x) for x in initial_state] if hasattr(initial_state, "__iter__") else int(initial_state),
+                "initial_state": initial_state,
                 "num_evals": metrics.num_evals,
                 "num_expansions": metrics.num_expansions,
             }) + "\n")
