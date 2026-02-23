@@ -183,7 +183,7 @@ def run_astar(
         timeout,
         lazy_expansion,
     )
-    if metrics_path := os.environ.get(""):
+    if metrics_path := os.environ.get("astar_metrics_path"):
         path = Path(metrics_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a") as f:
