@@ -186,7 +186,7 @@ def run_astar(
     if metrics_path := os.environ.get("astar_metrics_path"):
         path = Path(metrics_path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a") as f:
+        with path.open("a", encoding="utf-8") as f:
             f.write(json.dumps({
                 "initial_state": initial_state,
                 "num_evals": metrics.num_evals,
