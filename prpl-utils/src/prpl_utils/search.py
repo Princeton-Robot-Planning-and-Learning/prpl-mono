@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import heapq as hq
 import itertools
+import json
+import os
 import time
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -170,7 +173,7 @@ def run_astar(
 ) -> tuple[list[_S], list[_A], SearchMetrics]:
     """A* search."""
     get_priority = lambda n: heuristic(n.state) + n.cumulative_cost
-    return _run_heuristic_search(
+    states, actions, metrics = _run_heuristic_search(
         initial_state,
         check_goal,
         get_successors,
@@ -180,6 +183,16 @@ def run_astar(
         timeout,
         lazy_expansion,
     )
+    if metrics_path := os.environ.get(""):
+        path = Path(metrics_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a") as f:
+            f.write(json.dumps({
+                "initial_state": initial_state,
+                "num_evals": metrics.num_evals,
+                "num_expansions": metrics.num_expansions,
+            }) + "\n")
+    return states, actions, metrics
 
 
 def run_hill_climbing(
