@@ -31,7 +31,7 @@ from kinder.envs.dynamic2d.utils import (
     on_collision_w_static,
     on_gripper_grasp,
 )
-from kinder.envs.geom2d.structs import MultiBody2D, SE2Pose, ZOrder
+from kinder.envs.kinematic2d.structs import MultiBody2D, SE2Pose, ZOrder
 from kinder.envs.utils import (
     BLACK,
     BROWN,

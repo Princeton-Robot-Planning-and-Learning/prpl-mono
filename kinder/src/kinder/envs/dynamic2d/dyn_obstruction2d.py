@@ -25,8 +25,8 @@ from kinder.envs.dynamic2d.utils import (
     KinRobotActionSpace,
     create_walls_from_world_boundaries,
 )
-from kinder.envs.geom2d.structs import MultiBody2D, SE2Pose, ZOrder
-from kinder.envs.geom2d.utils import is_inside, is_on
+from kinder.envs.kinematic2d.structs import MultiBody2D, SE2Pose, ZOrder
+from kinder.envs.kinematic2d.utils import is_inside, is_on
 from kinder.envs.utils import PURPLE, sample_se2_pose, state_2d_has_collision
 
 # Define custom object types for the obstruction environment
@@ -164,9 +164,9 @@ class ObjectCentricDynObstruction2DEnv(
     """Dynamic environment where a block must be placed on an obstructed target. Uses
     PyMunk physics simulation.
 
-    Key difference from Geom2DEnv is that the robot can interact with dynamic objects
-    with realistic physics (friction, collisions, etc). This means some objects should
-    be *pushed* instead of *grasped*.
+    Key difference from Kinematic2DEnv is that the robot can interact with dynamic
+    objects with realistic physics (friction, collisions, etc). This means some objects
+    should be *pushed* instead of *grasped*.
     """
 
     def __init__(
@@ -285,7 +285,7 @@ class ObjectCentricDynObstruction2DEnv(
             full_state = state.copy()
             full_state.data.update(self.initial_constant_state.data)
             all_objects = set(full_state)
-            # We use Geom2D collision checker for now, maybe need to update it.
+            # We use Kinematic2D collision checker for now, maybe need to update it.
             if state_2d_has_collision(full_state, all_objects, all_objects, {}):
                 continue
             if self._surface_outside_table(full_state, {}):
@@ -549,7 +549,7 @@ class ObjectCentricDynObstruction2DEnv(
     ) -> bool:
         """Check if the target condition is satisfied.
 
-        This is borrowed from geom2d obstruction env for now.
+        This is borrowed from kinematic2d obstruction env for now.
         """
         target_objects = state.get_objects(TargetBlockType)
         assert len(target_objects) == 1

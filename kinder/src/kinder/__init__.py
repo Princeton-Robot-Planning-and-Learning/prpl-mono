@@ -34,7 +34,7 @@ def register_all_environments() -> None:
             os.environ["MUJOCO_GL"] = "osmesa"
             os.environ["PYOPENGL_PLATFORM"] = "osmesa"
 
-    # ******* Geom2D Environments *******
+    # ******* Kinematic2D Environments *******
     # Obstructions2D environment with different numbers of obstructions.
     num_obstructions = [0, 1, 2, 3, 4]
     variant_ids = []
@@ -42,14 +42,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/Obstruction2D-o{num_obstruction}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom2d.obstruction2d:Obstruction2DEnv",
+            entry_point="kinder.envs.kinematic2d.obstruction2d:Obstruction2DEnv",
             kwargs={"num_obstructions": num_obstruction},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="Obstruction2D",
-        entry_point="kinder.envs.geom2d.obstruction2d:Obstruction2DEnv",
-        category="Geom2D",
+        entry_point="kinder.envs.kinematic2d.obstruction2d:Obstruction2DEnv",
+        category="Kinematic2D",
         variant_ids=variant_ids,
     )
 
@@ -60,14 +60,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/ClutteredRetrieval2D-o{num_obstruction}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom2d.clutteredretrieval2d:ClutteredRetrieval2DEnv",  # pylint: disable=line-too-long
+            entry_point="kinder.envs.kinematic2d.clutteredretrieval2d:ClutteredRetrieval2DEnv",  # pylint: disable=line-too-long
             kwargs={"num_obstructions": num_obstruction},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="ClutteredRetrieval2D",
-        entry_point="kinder.envs.geom2d.clutteredretrieval2d:ClutteredRetrieval2DEnv",
-        category="Geom2D",
+        entry_point="kinder.envs.kinematic2d.clutteredretrieval2d:ClutteredRetrieval2DEnv",  # pylint: disable=line-too-long
+        category="Kinematic2D",
         variant_ids=variant_ids,
     )
 
@@ -78,14 +78,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/ClutteredStorage2D-b{num_block}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom2d.clutteredstorage2d:ClutteredStorage2DEnv",
+            entry_point="kinder.envs.kinematic2d.clutteredstorage2d:ClutteredStorage2DEnv",  # pylint: disable=line-too-long
             kwargs={"num_blocks": num_block},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="ClutteredStorage2D",
-        entry_point="kinder.envs.geom2d.clutteredstorage2d:ClutteredStorage2DEnv",
-        category="Geom2D",
+        entry_point="kinder.envs.kinematic2d.clutteredstorage2d:ClutteredStorage2DEnv",
+        category="Kinematic2D",
         variant_ids=variant_ids,
     )
 
@@ -96,14 +96,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/Motion2D-p{num_passage}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom2d.motion2d:Motion2DEnv",
+            entry_point="kinder.envs.kinematic2d.motion2d:Motion2DEnv",
             kwargs={"num_passages": num_passage},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="Motion2D",
-        entry_point="kinder.envs.geom2d.motion2d:Motion2DEnv",
-        category="Geom2D",
+        entry_point="kinder.envs.kinematic2d.motion2d:Motion2DEnv",
+        category="Kinematic2D",
         variant_ids=variant_ids,
     )
 
@@ -114,14 +114,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/StickButton2D-b{num_button}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom2d.stickbutton2d:StickButton2DEnv",
+            entry_point="kinder.envs.kinematic2d.stickbutton2d:StickButton2DEnv",
             kwargs={"num_buttons": num_button},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="StickButton2D",
-        entry_point="kinder.envs.geom2d.stickbutton2d:StickButton2DEnv",
-        category="Geom2D",
+        entry_point="kinder.envs.kinematic2d.stickbutton2d:StickButton2DEnv",
+        category="Kinematic2D",
         variant_ids=variant_ids,
     )
 
@@ -129,12 +129,12 @@ def register_all_environments() -> None:
     variant_id = "kinder/PushPullHook2D-v0"
     _register(
         id=variant_id,
-        entry_point="kinder.envs.geom2d.pushpullhook2d:PushPullHook2DEnv",
+        entry_point="kinder.envs.kinematic2d.pushpullhook2d:PushPullHook2DEnv",
     )
     _register_env_class(
         class_name="PushPullHook2D",
-        entry_point="kinder.envs.geom2d.pushpullhook2d:PushPullHook2DEnv",
-        category="Geom2D",
+        entry_point="kinder.envs.kinematic2d.pushpullhook2d:PushPullHook2DEnv",
+        category="Kinematic2D",
         variant_ids=[variant_id],
     )
 
@@ -210,18 +210,18 @@ def register_all_environments() -> None:
         variant_ids=variant_ids,
     )
 
-    # ******* Geom3D Environments *******
+    # ******* Kinematic3D Environments *******
 
     # Motion3D environment.
     variant_id = "kinder/Motion3D-v0"
     _register(
         id=variant_id,
-        entry_point="kinder.envs.geom3d.motion3d:Motion3DEnv",
+        entry_point="kinder.envs.kinematic3d.motion3d:Motion3DEnv",
     )
     _register_env_class(
         class_name="Motion3D",
-        entry_point="kinder.envs.geom3d.motion3d:Motion3DEnv",
-        category="Geom3D",
+        entry_point="kinder.envs.kinematic3d.motion3d:Motion3DEnv",
+        category="Kinematic3D",
         variant_ids=[variant_id],
     )
 
@@ -229,12 +229,12 @@ def register_all_environments() -> None:
     variant_id = "kinder/BaseMotion3D-v0"
     _register(
         id=variant_id,
-        entry_point="kinder.envs.geom3d.base_motion3d:BaseMotion3DEnv",
+        entry_point="kinder.envs.kinematic3d.base_motion3d:BaseMotion3DEnv",
     )
     _register_env_class(
         class_name="BaseMotion3D",
-        entry_point="kinder.envs.geom3d.base_motion3d:BaseMotion3DEnv",
-        category="Geom3D",
+        entry_point="kinder.envs.kinematic3d.base_motion3d:BaseMotion3DEnv",
+        category="Kinematic3D",
         variant_ids=[variant_id],
     )
 
@@ -245,14 +245,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/Ground3D-o{num_cube}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom3d.ground3d:Ground3DEnv",
+            entry_point="kinder.envs.kinematic3d.ground3d:Ground3DEnv",
             kwargs={"num_cubes": num_cube},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="Ground3D",
-        entry_point="kinder.envs.geom3d.ground3d:Ground3DEnv",
-        category="Geom3D",
+        entry_point="kinder.envs.kinematic3d.ground3d:Ground3DEnv",
+        category="Kinematic3D",
         variant_ids=variant_ids,
     )
 
@@ -263,14 +263,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/Table3D-o{num_cube}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom3d.table3d:Table3DEnv",
+            entry_point="kinder.envs.kinematic3d.table3d:Table3DEnv",
             kwargs={"num_cubes": num_cube},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="Table3D",
-        entry_point="kinder.envs.geom3d.table3d:Table3DEnv",
-        category="Geom3D",
+        entry_point="kinder.envs.kinematic3d.table3d:Table3DEnv",
+        category="Kinematic3D",
         variant_ids=variant_ids,
     )
 
@@ -282,14 +282,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/Transport3D-o{num_cube}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom3d.transport3d:Transport3DEnv",
+            entry_point="kinder.envs.kinematic3d.transport3d:Transport3DEnv",
             kwargs={"num_cubes": num_cube, "num_boxes": num_boxes},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="Transport3D",
-        entry_point="kinder.envs.geom3d.transport3d:Transport3DEnv",
-        category="Geom3D",
+        entry_point="kinder.envs.kinematic3d.transport3d:Transport3DEnv",
+        category="Kinematic3D",
         variant_ids=variant_ids,
     )
 
@@ -300,14 +300,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/Shelf3D-o{num_cube}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom3d.shelf3d:Shelf3DEnv",
+            entry_point="kinder.envs.kinematic3d.shelf3d:Shelf3DEnv",
             kwargs={"num_cubes": num_cube},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="Shelf3D",
-        entry_point="kinder.envs.geom3d.shelf3d:Shelf3DEnv",
-        category="Geom3D",
+        entry_point="kinder.envs.kinematic3d.shelf3d:Shelf3DEnv",
+        category="Kinematic3D",
         variant_ids=variant_ids,
     )
 
@@ -318,14 +318,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/Obstruction3D-o{num_obstruction}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom3d.obstruction3d:Obstruction3DEnv",
+            entry_point="kinder.envs.kinematic3d.obstruction3d:Obstruction3DEnv",
             kwargs={"num_obstructions": num_obstruction},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="Obstruction3D",
-        entry_point="kinder.envs.geom3d.obstruction3d:Obstruction3DEnv",
-        category="Geom3D",
+        entry_point="kinder.envs.kinematic3d.obstruction3d:Obstruction3DEnv",
+        category="Kinematic3D",
         variant_ids=variant_ids,
     )
 
@@ -336,14 +336,14 @@ def register_all_environments() -> None:
         variant_id = f"kinder/Packing3D-p{num_part}-v0"
         _register(
             id=variant_id,
-            entry_point="kinder.envs.geom3d.packing3d:Packing3DEnv",
+            entry_point="kinder.envs.kinematic3d.packing3d:Packing3DEnv",
             kwargs={"num_parts": num_part},
         )
         variant_ids.append(variant_id)
     _register_env_class(
         class_name="Packing3D",
-        entry_point="kinder.envs.geom3d.packing3d:Packing3DEnv",
-        category="Geom3D",
+        entry_point="kinder.envs.kinematic3d.packing3d:Packing3DEnv",
+        category="Kinematic3D",
         variant_ids=variant_ids,
     )
 
@@ -437,7 +437,7 @@ def _register_env_class(
     Args:
         class_name: Base name of the environment class (e.g., "ClutteredStorage2D")
         entry_point: Python import path to the environment class
-        category: Category of the environment (e.g., "Geom2D", "Dynamic2D")
+        category: Category of the environment (e.g., "Kinematic2D", "Dynamic2D")
         variant_ids: List of registered variant IDs for this class
     """
     ENV_CLASSES[class_name] = {
@@ -463,7 +463,7 @@ def get_env_classes() -> dict[str, dict[str, Any]]:
     Returns:
         Dictionary mapping class names to their metadata including:
         - entry_point: Python import path to the class
-        - category: Environment category (e.g., "Geom2D", "Dynamic2D")
+        - category: Environment category (e.g., "Kinematic2D", "Dynamic2D")
         - variants: List of registered variant IDs
     """
     return ENV_CLASSES.copy()

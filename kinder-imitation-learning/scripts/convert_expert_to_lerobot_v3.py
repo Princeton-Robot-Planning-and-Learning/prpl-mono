@@ -93,7 +93,7 @@ def convert(
         fps=fps,
         features=features,
         root=output_dir,
-        robot_type=metadata.get("env_name", metadata.get("env_type", "geom2d")),
+        robot_type=metadata.get("env_name", metadata.get("env_type", "kinematic2d")),
         use_videos=False,
     )
 
@@ -104,7 +104,7 @@ def convert(
     env_name = str(metadata.get("env_name", "motion2d")).lower()
     task_name = env_name.replace("/", "_")
     if not task_name:
-        task_name = "geom2d_task"
+        task_name = "kinematic2d_task"
 
     # Write episodes
     total_frames = 0

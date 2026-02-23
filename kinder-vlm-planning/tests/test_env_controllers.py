@@ -19,7 +19,7 @@ def test_get_controllers_for_environment_success():
         mock_import.return_value = mock_controllers
 
         controllers = get_controllers_for_environment(
-            "geom2d", "motion2d", action_space=Mock()
+            "kinematic2d", "motion2d", action_space=Mock()
         )
 
         assert controllers == mock_controllers
@@ -54,9 +54,9 @@ def test_import_lifted_controllers_success():
 
     with patch("importlib.import_module", return_value=mock_module):
         controllers = _import_lifted_controllers(
-            "kinder_models.geom2d.envs.motion2d.parameterized_skills",
+            "kinder_models.kinematic2d.envs.motion2d.parameterized_skills",
             "motion2d",
-            "geom2d",
+            "kinematic2d",
             action_space=Mock(),
         )
 
@@ -74,9 +74,9 @@ def test_import_lifted_controllers_missing_method():
             match="does not have a create_lifted_controllers method",
         ):
             _import_lifted_controllers(
-                "kinder_models.geom2d.envs.motion2d.parameterized_skills",
+                "kinder_models.kinematic2d.envs.motion2d.parameterized_skills",
                 "motion2d",
-                "geom2d",
+                "kinematic2d",
                 action_space=None,
             )
 
@@ -85,7 +85,7 @@ def test_import_lifted_controllers_import_error():
     """Test import when module cannot be imported."""
     with patch("importlib.import_module", side_effect=ImportError("Module not found")):
         controllers = _import_lifted_controllers(
-            "nonexistent.module.path", "test_env", "geom2d", action_space=None
+            "nonexistent.module.path", "test_env", "kinematic2d", action_space=None
         )
 
         assert controllers is None
@@ -95,9 +95,9 @@ def test_import_lifted_controllers_exception():
     """Test import when an unexpected exception occurs."""
     with patch("importlib.import_module", side_effect=Exception("Unexpected error")):
         controllers = _import_lifted_controllers(
-            "kinder_models.geom2d.envs.motion2d.parameterized_skills",
+            "kinder_models.kinematic2d.envs.motion2d.parameterized_skills",
             "motion2d",
-            "geom2d",
+            "kinematic2d",
             action_space=None,
         )
 
@@ -111,9 +111,9 @@ def test_import_lifted_controllers_empty_result():
 
     with patch("importlib.import_module", return_value=mock_module):
         controllers = _import_lifted_controllers(
-            "kinder_models.geom2d.envs.motion2d.parameterized_skills",
+            "kinder_models.kinematic2d.envs.motion2d.parameterized_skills",
             "motion2d",
-            "geom2d",
+            "kinematic2d",
             action_space=None,
         )
 
@@ -135,9 +135,9 @@ def test_import_lifted_controllers_with_action_space():
 
     with patch("importlib.import_module", return_value=mock_module):
         controllers = _import_lifted_controllers(
-            "kinder_models.geom2d.envs.motion2d.parameterized_skills",
+            "kinder_models.kinematic2d.envs.motion2d.parameterized_skills",
             "motion2d",
-            "geom2d",
+            "kinematic2d",
             action_space=mock_action_space,
         )
 

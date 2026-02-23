@@ -167,7 +167,7 @@ def load_teleop_demonstrations(
 
     metadata = {
         "env_name": env_id or "Motion2D",
-        "env_type": "geom2d",
+        "env_type": "kinematic2d",
         "data_type": "teleoperated",
     }
 
@@ -247,7 +247,7 @@ def group_by_episode(frames: List[Dict[str, Any]]) -> Dict[int, List[Dict[str, A
 def iter_teleop_episodes(
     teleop_data_dir: Path,
     render_images: bool = False,
-    use_geom3d: bool = False,
+    use_kinematic3d: bool = False,
     use_dynamics3d: bool = False,
 ) -> Generator[Tuple[int, List[Dict[str, Any]], Dict[str, Any]], None, None]:
     """Iterate over teleoperated demonstrations one episode at a time.
@@ -323,7 +323,7 @@ def iter_teleop_episodes(
         episode_images = None
         if render_images:
             if env is None:
-                if use_geom3d:
+                if use_kinematic3d:
                     env = gym.make(env_id, render_mode="rgb_array", realistic_bg=True)
                 elif use_dynamics3d:
                     env = gym.make(env_id, render_mode="rgb_array", scene_bg=True)
@@ -374,7 +374,7 @@ def iter_teleop_episodes(
                     # _visualize_image_in_window(overview_image, "overview")
                     # _visualize_image_in_window(base_image, "base")
                     # _visualize_image_in_window(wrist_image, "wrist")
-            elif use_geom3d:
+            elif use_kinematic3d:
                 all_images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore # pylint: disable=protected-access
                 episode_images = [all_images]
 
@@ -416,7 +416,7 @@ def iter_teleop_episodes(
             }
 
             if episode_images is not None and frame_idx < len(episode_images):
-                if use_geom3d or use_dynamics3d:
+                if use_kinematic3d or use_dynamics3d:
                     frame["observation.overview_image"] = episode_images[frame_idx][
                         "overview"
                     ]
@@ -432,7 +432,7 @@ def iter_teleop_episodes(
         # Build metadata
         metadata = {
             "env_name": env_id or "Motion2D",
-            "env_type": "geom2d",
+            "env_type": "kinematic2d",
             "data_type": "teleoperated",
             "total_episodes": total_episodes,
         }
