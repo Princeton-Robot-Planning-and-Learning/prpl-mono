@@ -379,7 +379,9 @@ class GroundMoveController(Dynamic2dRobotController):
         action_space: KinRobotActionSpace,
         init_constant_state: Optional[ObjectCentricState] = None,
     ) -> None:
-        super().__init__(objects, action_space, init_constant_state)
+        super().__init__(
+            objects, action_space, init_constant_state, skip_collision_check=True
+        )
         self._action_space = action_space
         env_config = DynObstruction2DEnvConfig()
         self.world_x_min = env_config.world_min_x + env_config.robot_base_radius
