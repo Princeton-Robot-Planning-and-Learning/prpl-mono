@@ -1126,6 +1126,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
     def _is_terminated(self, obs: dict[str, Any]) -> bool:
         """Check if episode should terminate."""
+        # pylint: disable=unused-argument
         return self._check_goals()
 
     def render(self) -> NDArray[np.uint8]:  # type: ignore
