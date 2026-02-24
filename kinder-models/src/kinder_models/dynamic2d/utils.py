@@ -28,6 +28,7 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
         objects: Sequence[Object],
         action_space: KinRobotActionSpace,
         init_constant_state: Optional[ObjectCentricState] = None,
+        skip_collision_check: bool = False,
     ) -> None:
         self._robot = objects[0]
         assert self._robot.is_instance(KinRobotType)
@@ -36,6 +37,7 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
         self._current_plan: Union[list[NDArray[np.float32]], None] = None
         self._current_state: Union[ObjectCentricState, None] = None
         self._init_constant_state = init_constant_state
+        self._skip_collision_check = skip_collision_check
         # Extract max deltas from action space bounds
         self._max_delta_x = action_space.high[0]
         self._max_delta_y = action_space.high[1]
@@ -170,6 +172,9 @@ class Dynamic2dRobotController(GroundParameterizedController, abc.ABC):
 
         def collision_fn(pt: tuple[SE2Pose, float]) -> bool:
             """Check if a configuration is collision-free."""
+            if self._skip_collision_check:
+                return False
+
             pose, arm = pt
 
             # Update state with robot configuration
