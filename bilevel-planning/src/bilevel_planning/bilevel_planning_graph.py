@@ -1,5 +1,6 @@
 """Bilevel planning graphs: primarily for visualization, analysis, debugging."""
 
+import json
 import pickle
 from pathlib import Path
 from typing import Callable, Generic, Hashable, TypeVar
@@ -30,7 +31,9 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
     def __init__(self) -> None:
         self.states: list[_X] = []
         self._state_ids: set[int] = set()  # prevent duplicates
-        self._state_id_to_state: dict[int, _X] = {}  # reverse lookup: id -> state, todo: remove _state_ids
+        self._state_id_to_state: dict[int, _X] = (
+            {}
+        )  # reverse lookup: id -> state, todo: remove _state_ids
         self.abstract_states: list[_S] = []
         self.action_edges: list[tuple[_X, _U, _X]] = []
         self._action_edge_ids: set[int] = set()  # prevent duplicates
@@ -115,7 +118,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         state = states[idx]
         return state
 
-    # TODO: make more efficient, use .append() and .reverse()
+    # Could be made more efficient with .append() followed by .reverse().
     def extract_plan(self, final_state: _X) -> Plan:
         """Follow backpointers from final state and create a plan."""
         x_plan: list[_X] = [final_state]
@@ -298,7 +301,6 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         )
         anim.save(save_path, writer="pillow")
 
-
     def _build_graph_structure(
         self,
         final_state: _X | None = None,
@@ -321,7 +323,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             metadata: Dictionary with plan_nodes, start_node, goal_node, z_top, z_bottom
         """
 
-        G = nx.DiGraph()
+        G: nx.DiGraph = nx.DiGraph()
         pos: dict[str, tuple[float, float, float]] = {}
         metadata: dict = {}
 
@@ -329,11 +331,11 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         # for visualization purposes
         adj: dict[int, set[int]] = {}  # state_id -> list of next state_ids
         rev_adj: dict[int, set[int]] = {}  # state_id -> list of prev state_ids
-        
-        for u, _, v in self.action_edges:
-            uid = self._state_to_id(u)
-            vid = self._state_to_id(v)
-            
+
+        for source_state, _, target_state in self.action_edges:
+            uid = self._state_to_id(source_state)
+            vid = self._state_to_id(target_state)
+
             adj.setdefault(uid, set()).add(vid)
             rev_adj.setdefault(vid, set()).add(uid)
 
@@ -344,7 +346,6 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             for state in plan.states:
                 plan_state_ids.add(self._state_to_id(state))
 
-
         # Track which concrete nodes have mapping to abstract nodes
         state_to_abstract = {}
         for x, s in self.state_abstractor_edges:
@@ -352,28 +353,28 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         # Determine Kept Nodes
         kept_state_ids = set()
-        
+
         for state in self.states:
             sid = self._state_to_id(state)
             in_d = len(rev_adj.get(sid, set()))
             out_d = len(adj.get(sid, set()))
-            
+
             # Non-critical nodes: indegree = 1 AND outdegree = 1
             # i.e., intermediate nodes that represent motion planning steps
             is_critical = (
-                in_d == 0 or  # Root
-                out_d == 0 or  # Leaf
-                out_d > 1 or  # Branch
-                in_d > 1  or # Merge
-                sid in state_to_abstract # Has abstract mapping
+                in_d == 0  # Root
+                or out_d == 0  # Leaf
+                or out_d > 1  # Branch
+                or in_d > 1  # Merge
+                or sid in state_to_abstract  # Has abstract mapping
             )
-            
+
             if is_critical:
                 kept_state_ids.add(sid)
 
         # Build layout graph with only critical nodes
         # Then we'll add back some pruned nodes later by interpolating along edges
-        G_layout = nx.DiGraph()
+        G_layout: nx.DiGraph = nx.DiGraph()
 
         # Record pruned segments for interpolation later
         # Ex: if critical nodes A, D pass through intermediate pruned nodes B, C
@@ -383,16 +384,18 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         for sid in kept_state_ids:
             G_layout.add_node(f"x:{sid}")
 
-        # Stitch edges of the kept nodes together, and record the 
+        # Stitch edges of the kept nodes together, and record the
         # intermediate pruned nodes along the way for later interpolation
         for sid in kept_state_ids:
-            children = adj.get(sid, [])
+            children: set[int] = adj.get(sid, set())
             for child_id in children:
                 curr = child_id
                 path: list[int] = []
                 visited: set[int] = set()
                 # Traverse down pruned nodes (degree-1 chains)
-                while curr not in kept_state_ids and curr in adj and curr not in visited:
+                while (
+                    curr not in kept_state_ids and curr in adj and curr not in visited
+                ):
                     visited.add(curr)
                     path.append(curr)
                     next_nodes = adj[curr]
@@ -406,39 +409,41 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
                     forward_segments[(sid, curr)] = path
 
         # Run Layout on Concrete Nodes
-        layout_pos = graphviz_layout(G_layout, prog="dot", args="-Granksep=2.0 -Gnodesep=0.5")
+        layout_pos = graphviz_layout(
+            G_layout, prog="dot", args="-Granksep=2.0 -Gnodesep=0.5"
+        )
 
         # Post-process layout: Center and Scale
         if layout_pos:
             xs = [p[0] for p in layout_pos.values()]
             ys = [p[1] for p in layout_pos.values()]
-            
+
             min_x, max_x = min(xs), max(xs)
             min_y, max_y = min(ys), max(ys)
-            
+
             width = max_x - min_x if max_x != min_x else 1.0
             height = max_y - min_y if max_y != min_y else 1.0
-            
+
             center_x = (min_x + max_x) / 2.0
             center_y = (min_y + max_y) / 2.0
-            
+
             # Fix Aspect Ratio: If width >> height, stretch Y (depth)
-            target_aspect = 1.5 # Allow some width, but not too much
+            target_aspect = 1.5  # Allow some width, but not too much
             current_aspect = width / height
-            
+
             y_scale = 1.0
             if current_aspect > target_aspect:
                 # Stretch Y to match target aspect
                 y_scale = current_aspect / target_aspect
-                
+
             # Normalize to fit in a box of size [-10, 10]
             max_dim = max(width, height * y_scale)
             scale_factor = 20.0 / max_dim if max_dim > 0 else 1.0
-            
+
             # Apply transformation (flip Y so roots appear at top)
-            for nid, (x, y) in layout_pos.items():
-                new_x = (x - center_x) * scale_factor
-                new_y = (y - center_y) * y_scale * scale_factor
+            for nid, (layout_x, layout_y) in layout_pos.items():
+                new_x = (layout_x - center_x) * scale_factor
+                new_y = (layout_y - center_y) * y_scale * scale_factor
                 layout_pos[nid] = (new_x, new_y)
 
         # Construct Final G and pos
@@ -490,9 +495,9 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
                 nid = f"x:{sid}"
                 if nid not in pos:
                     t = i / segments
-                    x = ux + t * (vx - ux)
-                    y = uy + t * (vy - uy)
-                    pos[nid] = (x, y, z)
+                    interp_x = ux + t * (vx - ux)
+                    interp_y = uy + t * (vy - uy)
+                    pos[nid] = (interp_x, interp_y, z)
                     G.add_node(nid, type="concrete")
 
             # Add edges along the expanded sequence
@@ -530,8 +535,9 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         # Metadata
 
-        # z_top, z_bottom previously used to visualize abstract nodes on a separate plane
-        # currently only used to set zaxis range of plotly, but keep in case we want to add abstract nodes back in later
+        # z_top, z_bottom previously used to visualize abstract nodes on a
+        # separate plane. They are currently only used for plotly z-axis range,
+        # and kept in case abstract nodes are added back to rendering.
         metadata["z_top"] = 1.0
         metadata["z_bottom"] = 0.0
 
@@ -547,7 +553,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         # timeline index range (used for slider range in plotly)
         metadata["min_time"] = min_time
         metadata["max_time"] = max_time
-        
+
         # Pass through colors/sizes for export
         metadata["node_size"] = node_size
         metadata["edge_alpha"] = edge_alpha
@@ -568,12 +574,12 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
                 sid = self._state_to_id(s)
                 if sid in kept_state_ids:
                     plan_nodes.append(f"x:{sid}")
-            
+
             metadata["plan_nodes"] = plan_nodes
             if plan_nodes:
                 metadata["start_node"] = plan_nodes[0]
                 metadata["goal_node"] = plan_nodes[-1]
-            
+
             # Identify abstract plan nodes
             abstract_plan_nodes = []
             for x_node in plan_nodes:
@@ -615,7 +621,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             action_edge_color=action_edge_color,
             abstract_action_edge_color=abstract_action_edge_color,
             node_alpha=node_alpha,
-            edge_alpha=edge_alpha
+            edge_alpha=edge_alpha,
         )
 
         # Color mapping from matplotlib to RGB
@@ -653,30 +659,39 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             # Attach time index for rendered concrete nodes
             if not is_abstract and node_id in node_time_index:
                 node_dict["time_index"] = node_time_index[node_id]
-            
+
             # Add abstract state ID for concrete nodes (if associated)
             if not is_abstract and node_id.startswith("x:"):
                 state_id = int(node_id.split(":")[1])
                 if state_id in metadata["state_to_abstract_id"]:
-                    node_dict["abstract_state_id"] = metadata["state_to_abstract_id"][state_id]
-
+                    node_dict["abstract_state_id"] = metadata["state_to_abstract_id"][
+                        state_id
+                    ]
 
             # Color based on node type, plan membership, and abstract association
             if in_plan:
                 # Plan coloring
-                color = "rgb(255, 165, 0)" if "abstract_state_id" in node_dict else convert_color(metadata["plan_color"])
+                color = (
+                    "rgb(255, 165, 0)"
+                    if "abstract_state_id" in node_dict
+                    else convert_color(metadata["plan_color"])
+                )
                 alpha = 1.0
             else:
                 # Non-plan coloring...
                 if node_dict["type"] == "concrete":
-                    color = convert_color(metadata["abstract_state_color"]) if "abstract_state_id" in node_dict else convert_color(metadata["state_color"])
+                    color = (
+                        convert_color(metadata["abstract_state_color"])
+                        if "abstract_state_id" in node_dict
+                        else convert_color(metadata["state_color"])
+                    )
                 else:
                     color = convert_color(metadata["abstract_state_color"])
                 alpha = metadata["node_alpha"]
 
             node_dict["color"] = color
             node_dict["alpha"] = alpha
-            
+
             nodes.append(node_dict)
 
         # Build edges list
@@ -694,13 +709,15 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
                 edge_type = "abstract_action"
                 color = convert_color(metadata["abstract_action_edge_color"])
 
-            edges.append({
-                "source": source,
-                "target": target,
-                "type": edge_type,
-                "color": color,
-                "alpha": metadata["edge_alpha"],
-            })
+            edges.append(
+                {
+                    "source": source,
+                    "target": target,
+                    "type": edge_type,
+                    "color": color,
+                    "alpha": metadata["edge_alpha"],
+                }
+            )
 
         # Build plan info
         plan_info = {
@@ -716,7 +733,10 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         }
 
         # Include time index range in config if available
-        if metadata.get("min_time") is not None and metadata.get("max_time") is not None:
+        if (
+            metadata.get("min_time") is not None
+            and metadata.get("max_time") is not None
+        ):
             config["min_time"] = metadata["min_time"]
             config["max_time"] = metadata["max_time"]
 
@@ -736,13 +756,12 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             "config": config,
             "state_data": state_data,
         }
-        
+
         return graph_data
-    
-    
+
     def export_state_data_pickle(self, pickle_path: Path) -> None:
         """
-        Export pickled state data dictionary for backend use.  
+        Export pickled state data dictionary for backend use.
         This saves a dictionary mapping node IDs to actual state objects (not strings).
         The backend can load this pickle to access the original state representations.
         """
@@ -753,30 +772,28 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             node_id = f"x:{state_id}"
             # Store the actual state object, not string representation
             state_data_pickle[node_id] = state
-        
+
         # Save as pickle
-        with open(pickle_path, 'wb') as f:
+        with open(pickle_path, "wb") as f:
             pickle.dump(state_data_pickle, f)
-    
+
     def export_graph_with_pickle(
         self,
         json_path: Path,
         pickle_path: Path,
         final_state: _X | None = None,
-        **kwargs
+        **kwargs,
     ) -> dict:
         """
         Export graph to JSON and pickle state data.
         """
-        import json
-        
         # Export JSON graph data
         graph_data = self.export_graph_for_web(final_state=final_state, **kwargs)
-        
-        with open(json_path, 'w') as f:
+
+        with open(json_path, "w", encoding="utf-8") as f:
             json.dump(graph_data, f, indent=2)
-        
+
         # Export pickled state data
         self.export_state_data_pickle(pickle_path)
-        
+
         return graph_data
