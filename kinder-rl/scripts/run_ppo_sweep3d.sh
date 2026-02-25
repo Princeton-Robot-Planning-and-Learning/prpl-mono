@@ -1,20 +1,10 @@
 #!/bin/bash
-# PPO training on TidyBot3D tool_use environment (sweep blocks into drawer)
-# Usage: ./run_ppo_shelf3d.sh [seed]
-
-# SEED=${1:-0}       # Default seed: 0
-
-# cd "$(dirname "$0")/.."
-
-# # Activate the monorepo virtual environment
-# source "$(dirname "$0")/../../.venv/bin/activate"
-
 for seed in 301 302 303 304 305
 do
 python experiments/run_experiment.py \
     agent=ppo_tidybot3d \
-    env_id="kinder/TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0" \
-    max_episode_steps=600 \
+    env_id="kinder/SweepIntoDrawer3D-o5-v0" \
+    max_episode_steps=500 \
     eval_episodes=50 \
     seed=${seed} \
     agent.args.total_timesteps=1000000 \

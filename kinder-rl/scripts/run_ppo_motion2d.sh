@@ -1,51 +1,16 @@
-#!/bin/bash
-# Script to run PPO training on Motion2D for 0 and 2 passages with multiple random seeds
+# Activate the monorepo virtual environment
+source "$(dirname "$0")/../../.venv/bin/activate"
 
-# Navigate to the kinder-rl directory
-cd "$(dirname "$0")/.." || exit 1
-
-# Define the seeds to run
-SEEDS=(0 1 2 3 4)
-
-echo "Starting PPO Motion2D training experiments..."
-echo "=============================================="
-
-# Run experiments for 0 passages
-echo ""
-echo "Running experiments for 0 passages (p0)..."
-for seed in "${SEEDS[@]}"; do
-    echo "  - Running seed ${seed}..."
-    python experiments/run_experiment.py \
-        agent=ppo_motion2d_0_passage \
-        env_id=kinder/Motion2D-p0-v0 \
-        seed=${seed} \
-        agent.exp_name="ppo_m2d_0_passage_seed_${seed}"
-
-    if [ $? -eq 0 ]; then
-        echo "    ✓ Seed ${seed} completed successfully"
-    else
-        echo "    ✗ Seed ${seed} failed"
-    fi
+for seed in 301 302 303 304 305
+do
+python experiments/run_experiment.py \
+    agent=ppo_motion2d_0_passage \
+    env_id="kinder/Motion2D-p0-v0" \
+    max_episode_steps=200 \
+    eval_episodes=50 \
+    seed=${seed} \
+    agent.args.total_timesteps=1000000 \
+    agent.args.num_envs=16 \
+    agent.args.num_steps=256 \
+    agent.args.hidden_size=128
 done
-
-# Run experiments for 2 passages
-echo ""
-echo "Running experiments for 2 passages (p2)..."
-for seed in "${SEEDS[@]}"; do
-    echo "  - Running seed ${seed}..."
-    python experiments/run_experiment.py \
-        agent=ppo_motion2d_2_passages \
-        env_id=kinder/Motion2D-p2-v0 \
-        seed=${seed} \
-        agent.exp_name="ppo_m2d_2_passage_seed_${seed}"
-
-    if [ $? -eq 0 ]; then
-        echo "    ✓ Seed ${seed} completed successfully"
-    else
-        echo "    ✗ Seed ${seed} failed"
-    fi
-done
-
-echo ""
-echo "=============================================="
-echo "All experiments completed!"
