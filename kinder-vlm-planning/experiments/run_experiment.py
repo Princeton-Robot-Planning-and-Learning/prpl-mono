@@ -13,7 +13,8 @@ Examples:
         vlm_model=gpt-5 rgb_observation=true,false temperature=1
     python experiments/run_experiment.py -m seed='range(0,3)' \
         env=BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0 \
-        vlm_model=gpt-5 rgb_observation=true,false temperature=1 hydra/launcher=joblib
+        vlm_model=gpt-5 rgb_observation=true,false temperature=1 hydra/launcher=joblib \
+        hydra.launcher.n_jobs=-1
 """
 
 import logging
