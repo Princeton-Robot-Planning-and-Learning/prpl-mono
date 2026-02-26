@@ -29,4 +29,4 @@ runs:
       run: uv venv --python=${{ inputs.python-version }}
     - name: Install the project
       shell: bash
-      run: uv run python scripts/install_affected.py
+      run: uv run python scripts/install_all.py
