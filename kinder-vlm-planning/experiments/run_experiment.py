@@ -11,7 +11,7 @@ Examples:
     python experiments/run_experiment.py -m seed='range(0,3)' \
         env=Motion2D-p0-v0,StickButton2D-b1-v0 \
         vlm_model=gpt-5 rgb_observation=true,false temperature=1
-    python exeriments/run_experiment.py -m seed='range(0,3)' \
+    python experiments/run_experiment.py -m seed='range(0,3)' \
         env=BaseMotion3D-v0,Transport3D-o2-v0,Shelf3D-o1-v0 \
         vlm_model=gpt-5 rgb_observation=true,false temperature=1 hydra/launcher=joblib
 """
@@ -48,9 +48,9 @@ def _main(cfg: DictConfig) -> None:
     ), "We use the entry point to identify env class"
     entry_point = env.spec.entry_point
     assert isinstance(entry_point, str), "Entry point must be a string"
-    module_path = entry_point.split(":")[0]  # "kinder_envs.geom2d.motion2d"
+    module_path = entry_point.split(":")[0]  # "kinder_envs.kinematic2d.motion2d"
     parts = module_path.split(".")
-    env_class_name = parts[-2]  # "geom2d"
+    env_class_name = parts[-2]  # "kinematic2d"
     env_name = parts[-1]  # "motion2d"
 
     # Load environment-specific controllers if available.

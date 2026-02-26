@@ -5,8 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Geom3D environments (from kinder registration)
-GEOM3D_ENVS = {
+# Kinematic3D environments (from kinder registration)
+KINEMATIC3D_ENVS = {
     "Motion3D",
     "BaseMotion3D",
     "Ground3D",
@@ -17,8 +17,8 @@ GEOM3D_ENVS = {
     "Packing3D",
 }
 
-# Geom2D environments
-GEOM2D_ENVS = {
+# Kinematic2D environments
+KINEMATIC2D_ENVS = {
     "Obstruction2D",
     "ClutteredRetrieval2D",
     "ClutteredStorage2D",
@@ -37,11 +37,14 @@ DYNAMIC2D_ENVS = {
 
 
 def get_category(name: str) -> int:
-    """Return sort key for category order: Dynamic3D, Geom3D, Dynamic2D, Geom2D."""
-    if name in GEOM3D_ENVS:
-        return 1  # Geom3D
-    if name in GEOM2D_ENVS:
-        return 3  # Geom2D
+    """
+    Return sort key for category order: Dynamic3D, Kinematic3D,
+    Dynamic2D, Kinematic2D.
+    """
+    if name in KINEMATIC3D_ENVS:
+        return 1  # Kinematic3D
+    if name in KINEMATIC2D_ENVS:
+        return 3  # Kinematic2D
     if name in DYNAMIC2D_ENVS:
         return 2  # Dynamic2D
     if name.endswith("3D"):
