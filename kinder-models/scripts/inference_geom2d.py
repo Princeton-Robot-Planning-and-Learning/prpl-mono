@@ -222,6 +222,7 @@ def run_inference(
                 "BaseMotion3D" in env_name
                 or "TidyBot" in env_name
                 or "Transport3D" in env_name
+                or "Sweep" in env_name
             ):
                 target_object_key = "target"
             elif "Motion3D" in env_name:
@@ -253,7 +254,15 @@ def run_inference(
                     time.sleep(0.0001)
 
                 # Get robot state
-                robot = state.get_object_from_name("robot")
+                if (
+                    "TidyBot" in env_name
+                    or "BaseMotion3D" in env_name
+                    or "Transport3D" in env_name
+                    or "Sweep" in env_name
+                ):
+                    robot = state.get_object_from_name("robot_0")
+                else:
+                    robot = state.get_object_from_name("robot")
                 if "Transport3D" in env_name:
                     gripper_state = state.get(robot, "finger_state")
                     if gripper_state > 0.1:
@@ -272,7 +281,7 @@ def run_inference(
                         _visualize_image_in_window(overview_image, "overview")
                         _visualize_image_in_window(base_image, "base")
                         _visualize_image_in_window(wrist_image, "wrist")
-                elif "TidyBot" in env_name:
+                elif "TidyBot" in env_name or "Sweep" in env_name:
                     robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
                     env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
                     overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
@@ -309,12 +318,12 @@ def run_inference(
                         if remove_velocity and "TidyBot" in env_name:
                             obs_dict = {
                                 "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
-                                    obs, "robot"
+                                    obs, "robot_0"
                                 )[
                                     :11
                                 ],
                                 "env_state": env.observation_space.get_vector_excluding_object(  # pylint: disable=line-too-long
-                                    obs, "robot"
+                                    obs, "robot_0"
                                 ),
                                 "overview_image": overview_image,
                                 "base_image": base_image,
@@ -323,10 +332,10 @@ def run_inference(
                         else:
                             obs_dict = {
                                 "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
-                                    obs, "robot"
+                                    obs, "robot_0"
                                 ),
                                 "env_state": env.observation_space.get_vector_excluding_object(  # pylint: disable=line-too-long
-                                    obs, "robot"
+                                    obs, "robot_0"
                                 ),
                                 "overview_image": overview_image,
                                 "base_image": base_image,
@@ -335,10 +344,10 @@ def run_inference(
                     else:
                         obs_dict = {
                             "robot_state": env.observation_space.get_object_subvector(
-                                obs, "robot"
+                                obs, "robot_0"
                             ),
                             "env_state": env.observation_space.get_vector_excluding_object(  # pylint: disable=line-too-long
-                                obs, "robot"
+                                obs, "robot_0"
                             ),
                             "image": image,
                         }
@@ -347,11 +356,12 @@ def run_inference(
                         "TidyBot" in env_name
                         or "BaseMotion3D" in env_name
                         or "Transport3D" in env_name
+                        or "Sweep" in env_name
                     ):
                         if remove_velocity and "TidyBot" in env_name:
                             obs_dict = {
                                 "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
-                                    obs, "robot"
+                                    obs, "robot_0"
                                 )[
                                     :11
                                 ],
@@ -362,7 +372,7 @@ def run_inference(
                         else:
                             obs_dict = {
                                 "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
-                                    obs, "robot"
+                                    obs, "robot_0"
                                 ),
                                 "overview_image": overview_image,
                                 "base_image": base_image,

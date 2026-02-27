@@ -855,7 +855,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Get object-centric observation
         self._current_state = self._get_object_centric_state()
 
-        return self._get_current_state(), {}, self._get_obs()
+        return self._get_current_state(), {}, self._get_all_obs()
 
     def set_state(self, state: ObjectCentricState) -> None:
         """Set the environment to the current state.
@@ -913,16 +913,16 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         assert self._current_state is not None, "Need to call reset() first"
         return self._current_state.copy()
 
-    def _get_obs(self) -> dict[str, Any]:
+    def _get_all_obs(self) -> dict[str, Any]:
         """Get the current raw observation (for compatibility with reward functions)."""
         assert self._robot_env is not None, "Robot environment not initialized"
-        obs = self._robot_env.get_obs()
-        vec_obs = self._vectorize_observation(obs)
+        raw_obs = self._robot_env.get_obs()
+        vec_obs = self._vectorize_observation(raw_obs)
         object_centric_state = self._get_object_centric_state()
         return {
             "vec": vec_obs,
             "object_centric_state": object_centric_state,
-            "raw_obs": obs,
+            "raw_obs": raw_obs,
         }
 
     def _get_object_centric_state(self) -> ObjectCentricState:
@@ -952,7 +952,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self._current_state = self._get_object_centric_state()
 
         # Get raw observation for reward calculation
-        raw_obs = self._get_obs()
+        all_obs = self._get_all_obs()
 
         # Visualization loop for rendered image
         if self.show_images:
@@ -966,11 +966,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         )
 
         # Calculate reward and termination
-        reward = self.reward(raw_obs)
-        terminated = self._is_terminated(raw_obs)
+        reward = self.reward(all_obs)
+        terminated = self._is_terminated(all_obs)
         truncated = False
 
-        return self._get_current_state(), reward, terminated, truncated, {}, raw_obs
+        return self._get_current_state(), reward, terminated, truncated, {}, all_obs
 
     def step(
         self, action: Array
@@ -984,7 +984,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         self._current_state = self._get_object_centric_state()
 
         # Get raw observation for reward calculation
-        raw_obs = self._get_obs()
+        all_obs = self._get_all_obs()
 
         # Visualization loop for rendered image
         if self.show_images:
@@ -998,8 +998,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                         )
 
         # Calculate reward and termination
-        reward = self.reward(raw_obs)
-        terminated = self._is_terminated(raw_obs)
+        reward = self.reward(all_obs)
+        terminated = self._is_terminated(all_obs)
         truncated = False
 
         return self._get_current_state(), reward, terminated, truncated, {}
@@ -1011,6 +1011,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Get all goal predicates, and determine if they should
         # be combined with "and" or "or"
         goal_predicates = self.task_config.get("goal_state", [])
+
+        if len(goal_predicates) == 0:
+            return False
+
         if goal_predicates[0] == "or":
             goal_conjunction = "or"
             goal_predicates = goal_predicates[1:]
@@ -1122,8 +1126,8 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
     def _is_terminated(self, obs: dict[str, Any]) -> bool:
         """Check if episode should terminate."""
-        # return self._check_goals()
-        return self._reward_calculator.is_terminated(obs)
+        # pylint: disable=unused-argument
+        return self._check_goals()
 
     def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the environment."""
