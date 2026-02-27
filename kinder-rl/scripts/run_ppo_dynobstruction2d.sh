@@ -1,16 +1,7 @@
-#!/bin/bash
-# PPO training on DynObstruction2D environment
-# Usage: ./run_ppo_dynobstruction2d.sh [num_obstructions] [seed]
+# Activate the monorepo virtual environment
+source "$(dirname "$0")/../../.venv/bin/activate"
 
-# NUM_OBS=${1:-1}  # Default: 1 obstruction
-# SEED=${2:-0}     # Default seed: 0
-
-# cd "$(dirname "$0")/.."
-
-# # Activate the monorepo virtual environment
-# source "$(dirname "$0")/../../.venv/bin/activate"
-
-for seed in 0 1 2 3 4
+for seed in 301 302 303 304 305
 do
 python experiments/run_experiment.py \
     agent=ppo_basemotion3d \
