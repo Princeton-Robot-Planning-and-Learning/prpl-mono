@@ -15,7 +15,7 @@ from kinder.envs.dynamic2d.dyn_obstruction2d import (
 )
 from kinder.envs.dynamic2d.object_types import DynRectangleType, KinRobotType
 from kinder.envs.dynamic2d.utils import KinRobotActionSpace
-from kinder.envs.geom2d.structs import SE2Pose
+from kinder.envs.kinematic2d.structs import SE2Pose
 from kinder.envs.utils import state_2d_has_collision
 from prpl_utils.utils import wrap_angle
 from relational_structs.object_centric_state import ObjectCentricState
@@ -379,7 +379,9 @@ class GroundMoveController(Dynamic2dRobotController):
         action_space: KinRobotActionSpace,
         init_constant_state: Optional[ObjectCentricState] = None,
     ) -> None:
-        super().__init__(objects, action_space, init_constant_state)
+        super().__init__(
+            objects, action_space, init_constant_state, skip_collision_check=True
+        )
         self._action_space = action_space
         env_config = DynObstruction2DEnvConfig()
         self.world_x_min = env_config.world_min_x + env_config.robot_base_radius

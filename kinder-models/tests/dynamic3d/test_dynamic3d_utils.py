@@ -9,7 +9,7 @@ from tomsgeoms2d.structs import Rectangle
 
 from kinder_models.dynamic3d.utils import (
     get_bounding_box,
-    get_overhead_geom2ds,
+    get_overhead_kinematic2ds,
     get_overhead_object_se2_pose,
     get_overhead_robot_se2_pose,
     plot_overhead_scene,
@@ -69,13 +69,13 @@ def test_get_overhead_robot_se2_pose():
     assert np.isclose(pose1.theta(), pose2.theta())
 
 
-def test_get_overhead_geom2ds():
-    """Tests for get_overhead_geom2ds()."""
+def test_get_overhead_kinematic2ds():
+    """Tests for get_overhead_kinematic2ds()."""
     env = kinder.make("kinder/TidyBot3D-ground-o1-v0")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     obs, _ = env.reset(seed=123)
     state = env.observation_space.devectorize(obs)
-    geoms = get_overhead_geom2ds(state)
+    geoms = get_overhead_kinematic2ds(state)
     assert len(geoms) == 2
     robot_geom = geoms["robot_0"]
     assert isinstance(robot_geom, Rectangle)
