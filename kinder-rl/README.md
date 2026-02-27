@@ -33,7 +33,7 @@ Run:
 cd prpl-mono
 python kinder-rl/experiments/gen_results.py --outputs_dir kinder-rl/outputs --runs_dir kinder-rl/runs
 ```
-
+You should see: `kinder-rl/results.csv`.
 
 ### Running Experiments
 

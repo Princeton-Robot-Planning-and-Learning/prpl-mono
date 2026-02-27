@@ -43,6 +43,7 @@ def measure_inference_time(
     env_id: str,
     max_episode_steps: int,
     checkpoint_path: Path,
+    hidden_size: int,
     num_steps: int = 100,
     seed: int = 0,
 ) -> float:
@@ -53,6 +54,7 @@ def measure_inference_time(
         env_id: Environment ID
         max_episode_steps: Max steps per episode
         checkpoint_path: Path to the checkpoint file
+        hidden_size: Hidden layer size used during training
         num_steps: Number of steps to run for timing
         seed: Random seed
 
@@ -63,7 +65,7 @@ def measure_inference_time(
     env = create_simple_env(env_id, max_episode_steps)
 
     # Create agent with minimal config (no logging)
-    cfg = DictConfig({"tf_log": False, "cuda": False})
+    cfg = DictConfig({"tf_log": False, "cuda": False, "hidden_size": hidden_size})
 
     agent: PPOAgent | SACAgent
     if agent_type == "ppo":
@@ -112,6 +114,7 @@ def measure_inference_time(
         inference_times.append(end_time - start_time)
 
         action_np = action.cpu().numpy()[0]
+        action_np = np.clip(action_np, env.action_space.low, env.action_space.high)
         obs, _, terminated, truncated, _ = env.step(action_np)
 
         if terminated or truncated:
@@ -180,6 +183,7 @@ def process_experiment(
         max_episode_steps = config["max_episode_steps"]
         env_id = config["env_id"]
         seed = config["seed"]
+        hidden_size = config["agent"]["args"]["hidden_size"]
 
         # Load eval results
         df = pd.read_csv(eval_file)
@@ -211,6 +215,7 @@ def process_experiment(
                     env_id=env_id,
                     max_episode_steps=max_episode_steps,
                     checkpoint_path=checkpoint_path,
+                    hidden_size=hidden_size,
                     num_steps=100,
                     seed=seed,
                 )
@@ -276,6 +281,7 @@ def main(outputs_dir: Path, runs_dir: Path, output_file: Path | None = None):
         runs_dir: Directory containing training runs (with checkpoints)
         output_file: Output CSV file path
     """
+    kinder.register_all_environments()
     print(f"Outputs directory: {outputs_dir}")
     print(f"Runs directory: {runs_dir}")
     print("=" * 80)
