@@ -14,6 +14,7 @@ from prpl_llm_utils.models import (
     CannedResponseModel,
     GeminiModel,
     OpenAIModel,
+    OpenAIResponsesModel,
     OrderedResponseModel,
 )
 from prpl_llm_utils.structs import Query, Response
@@ -59,6 +60,98 @@ def test_openai_model():
         with pytest.raises(ValueError) as e:
             llm.query("What's up?")
         assert "Missing cached responses" in str(e)
+
+
+@runllms
+def test_openai_responses_model_text():
+    """Tests for OpenAIResponsesModel() using the new Responses API (Text only)."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as cache_dir:
+        cache_path = Path(cache_dir)
+        cache = FilePretrainedLargeModelCache(cache_path)
+        llm = OpenAIResponsesModel("gpt-5.2-pro", cache)
+        # Test hyperparameters
+        hp = {"max_output_tokens": 50}
+
+        response1 = llm.query("Hello! Just say 'Hi'.", hyperparameters=hp, seed=42)
+
+        assert hasattr(response1, "text")
+        assert hasattr(response1, "metadata")
+        assert len(response1.text) > 0
+
+        # Query with same seed - should use cache
+        llm_cached = OpenAIResponsesModel("gpt-5.2-pro", cache, use_cache_only=True)
+        response2 = llm_cached.query(
+            "Hello! Just say 'Hi'.", hyperparameters=hp, seed=42
+        )
+        assert response1.text == response2.text
+
+        # Missing cache test
+        with pytest.raises(ValueError) as e:
+            llm_cached.query("What's up?")
+        assert "Missing cached responses" in str(e)
+
+
+@runllms
+def test_openai_responses_model_vision():
+    """Tests for OpenAIResponsesModel() using the new Responses API (Vision)."""
+
+    def fetch_mnist_image(name: str) -> PIL.Image.Image:
+        mnist_path = Path(__file__).parent / "mnist_samples" / name
+        return PIL.Image.open(mnist_path)
+
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as cache_dir:
+        cache_path = Path(cache_dir) / "cache.db"
+        cache = SQLite3PretrainedLargeModelCache(cache_path)
+        llm = OpenAIResponsesModel("gpt-5.2-pro", cache)
+
+        img2 = fetch_mnist_image("2.png")
+
+        response1 = llm.query(
+            "What is the number in this image? Give a very short answer.",
+            [img2],
+            seed=100,
+        )
+
+        assert hasattr(response1, "text")
+        assert hasattr(response1, "metadata")
+        assert "2" in response1.text
+
+        # Test cache hit
+        llm_cached = OpenAIResponsesModel("gpt-5.2-pro", cache, use_cache_only=True)
+        response2 = llm_cached.query(
+            "What is the number in this image? Give a very short answer.",
+            [img2],
+            seed=100,
+        )
+        assert response1.text == response2.text
+
+
+@runllms
+def test_openai_responses_model_multi_response():
+    """Tests for OpenAIResponsesModel() multi-response via the Responses API."""
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as cache_dir:
+        cache_path = Path(cache_dir) / "cache.db"
+        cache = SQLite3PretrainedLargeModelCache(cache_path)
+        llm = OpenAIResponsesModel("gpt-5.2-pro", cache)
+
+        responses = llm.query_multi_response(
+            "Give a one-word color.", num_responses=3, seed=0
+        )
+
+        assert len(responses) == 3
+        for i, r in enumerate(responses):
+            assert hasattr(r, "text")
+            assert len(r.text) > 0
+            assert r.metadata.get("response_index") == i
+
+        # Verify cache works
+        llm_cached = OpenAIResponsesModel("gpt-5.2-pro", cache, use_cache_only=True)
+        cached_responses = llm_cached.query_multi_response(
+            "Give a one-word color.", num_responses=3, seed=0
+        )
+        assert len(cached_responses) == 3
+        for orig, cached in zip(responses, cached_responses):
+            assert orig.text == cached.text
 
 
 @runllms

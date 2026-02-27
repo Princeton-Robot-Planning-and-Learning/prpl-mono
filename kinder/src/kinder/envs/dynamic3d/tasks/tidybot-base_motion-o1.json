@@ -130,5 +130,12 @@
             "cube1",
             "ground_1_object_init_region"
         ]
+    ],
+    "goal_state": [
+        [
+            "on",
+            "robot_0",
+            "ground_1_object_init_region"
+        ]
     ]
 }

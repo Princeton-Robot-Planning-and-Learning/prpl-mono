@@ -28,14 +28,14 @@ dynamic2d = [
    "pygame>=2.5.2",
    "pymunk==7.1.0",
 ]
-geom2d = [
+kinematic2d = [
 ]
 tidybot = [
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
    "gdown",
 ]
-geom3d = [
+kinematic3d = [
    "pybullet>=3.2.5",
 ]
 develop = [
