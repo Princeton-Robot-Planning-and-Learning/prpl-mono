@@ -254,7 +254,15 @@ def run_inference(
                     time.sleep(0.0001)
 
                 # Get robot state
-                robot = state.get_object_from_name("robot_0")
+                if (
+                    "TidyBot" in env_name
+                    or "BaseMotion3D" in env_name
+                    or "Transport3D" in env_name
+                    or "Sweep" in env_name
+                ):
+                    robot = state.get_object_from_name("robot_0")
+                else:
+                    robot = state.get_object_from_name("robot")
                 if "Transport3D" in env_name:
                     gripper_state = state.get(robot, "finger_state")
                     if gripper_state > 0.1:
@@ -373,7 +381,7 @@ def run_inference(
                     else:
                         obs_dict = {
                             "robot_state": env.observation_space.get_object_subvector(
-                                obs, "robot_0"
+                                obs, "robot"
                             ),
                             "image": image,
                         }
