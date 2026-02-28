@@ -29,14 +29,14 @@ A pretrained π0.5 VLA finetuned on the same demos as imitation learning.
 
 ### Data Collection
 
-(1): Using a PS5 controller to collect demonstrations for 2D environments. 
+1: Using a PS5 controller to collect demonstrations for 2D environments. 
 
 ```bash
 cd prpl-mono/kinder/scripts
 python collect_demos.py $ENV_ID
 ```
 
-(2): Using an iPhone web app to collect demonstrations for 3D environments. 
+2: Using an iPhone web app to collect demonstrations for 3D environments. 
 
 ```bash
 cd prpl-mono/kinder-models/scripts
@@ -53,11 +53,11 @@ Specific Steps:
 2.6: Press “Start episode” to begin teleoperation and then move your iphone
 
 
-(3): Using a VR headset to collect demosntrations for 3D environments. 
+3: Using a VR headset to collect demosntrations for 3D environments. 
 
 TODO
 
-(4): Using bilevel planning and parameterized skills to collect demonstrations. 
+4: Using bilevel planning and parameterized skills to collect demonstrations. 
 
 ```bash
 cd prpl-mono/kinder-ds-policies/experiments
@@ -74,17 +74,15 @@ python demos_to_hdf5.py --teleop_data_dir $YOUR_DATA_DIR --output_path $OUTPUT_H
 ### Training
 
 
-Clone diffusion policy repo: 
+1： Clone diffusion policy repo: 
 
 ```bash
 git clone git@github.com:Princeton-Robot-Planning-and-Learning/kinder-diffusion-policy.git
 ```
 
-Create conda/mamba environment following the instructions on kinder-diffusion-policy. 
+2： Create conda/mamba environment following the instructions on kinder-diffusion-policy. 
 
-```bash
-git clone git@github.com:Princeton-Robot-Planning-and-Learning/kinder-diffusion-policy.git
-```
+3： Run trainig
 
 ```bash
 cd ~/kinder-diffusion-policy
