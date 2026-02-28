@@ -35,7 +35,12 @@ function extractProgram() {
     for (var i = 0; i < topBlocks.length; i++) {
         var block = topBlocks[i];
         while (block) {
-            blocks.push({type: block.type});
+            var entry = {type: block.type};
+            if (block.type === 'move_base_to_target') {
+                entry.x = block.getFieldValue('X');
+                entry.y = block.getFieldValue('Y');
+            }
+            blocks.push(entry);
             block = block.getNextBlock();
         }
     }

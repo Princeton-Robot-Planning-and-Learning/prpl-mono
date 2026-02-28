@@ -5,12 +5,15 @@ from typing import Any
 
 import kinder
 import numpy as np
-from kinder.envs.kinematic3d.base_motion3d import ObjectCentricBaseMotion3DEnv
-from kinder_models.kinematic3d.base_motion3d.parameterized_skills import (
-    create_lifted_controllers,
+from kinder.envs.kinematic3d.base_motion3d import (
+    BaseMotion3DObjectCentricState,
+    ObjectCentricBaseMotion3DEnv,
 )
 from numpy.typing import NDArray
-from relational_structs.spaces import ObjectCentricBoxSpace
+from pybullet_helpers.geometry import SE2Pose
+from pybullet_helpers.motion_planning import (
+    run_single_arm_mobile_base_motion_planning,
+)
 
 kinder.register_all_environments()
 
@@ -41,7 +44,7 @@ def execute_program(
     Yields an initial frame after reset, then intermediate frames during skill
     execution.
     """
-    blocks: list[dict[str, str]] = program.get("blocks", [])
+    blocks: list[dict[str, Any]] = program.get("blocks", [])
     if not blocks:
         return
 
@@ -52,15 +55,9 @@ def execute_program(
     )
     try:
         obs, _ = env.reset(seed=seed)
-        assert isinstance(env.observation_space, ObjectCentricBoxSpace)
-        state = env.observation_space.devectorize(obs)
+        state = env.observation_space.devectorize(obs)  # type: ignore[attr-defined]
 
         sim = ObjectCentricBaseMotion3DEnv()
-        controllers = create_lifted_controllers(
-            env.action_space, sim  # type: ignore[arg-type]
-        )
-
-        rng = np.random.default_rng(seed)
 
         frame: NDArray[np.uint8] = env.render()  # type: ignore[assignment]
         yield frame
@@ -68,36 +65,50 @@ def execute_program(
         for block in blocks:
             block_type = block["type"]
             if block_type == "move_base_to_target":
-                yield from _run_move_base_to_target(env, state, controllers, rng)
+                target_x = float(block.get("x", 0.0))
+                target_y = float(block.get("y", 0.0))
+                state, frames = _run_move_base_to(env, state, sim, target_x, target_y)
+                yield from frames
     finally:
         env.close()  # type: ignore[no-untyped-call]
 
 
-def _run_move_base_to_target(
+def _run_move_base_to(
     env: Any,
     state: Any,
-    controllers: dict[str, Any],
-    rng: np.random.Generator,
-) -> Iterator[NDArray[np.uint8]]:
-    """Run the move_base_to_target controller, yielding frames."""
-    lifted_controller = controllers["move_base_to_target"]
-    robot = state.get_object_from_name("robot")
-    target = state.get_object_from_name("target")
-    controller = lifted_controller.ground((robot, target))
+    sim: ObjectCentricBaseMotion3DEnv,
+    target_x: float,
+    target_y: float,
+) -> tuple[Any, list[NDArray[np.uint8]]]:
+    """Move the robot base to (target_x, target_y), return updated state and frames."""
+    assert isinstance(state, BaseMotion3DObjectCentricState)
+    sim.set_state(state)  # type: ignore[no-untyped-call]
 
-    params = controller.sample_parameters(state, rng)
-    controller.reset(state, params)
+    goal_pose = SE2Pose(target_x, target_y, 0.0)
+    base_plan = run_single_arm_mobile_base_motion_planning(
+        sim.robot,
+        sim.robot.base.get_pose(),
+        goal_pose,
+        collision_bodies=set(),
+        seed=0,
+    )
+    if base_plan is None:
+        raise RuntimeError(f"Motion planning to ({target_x}, {target_y}) failed")
 
-    for step_i in range(MAX_STEPS):
-        action = controller.step()
+    plan = base_plan[1:]
+    frames: list[NDArray[np.uint8]] = []
+
+    for step_i, waypoint in enumerate(plan):
+        current_base_pose = state.base_pose
+        delta = waypoint - current_base_pose
+        action_lst = [delta.x, delta.y, delta.rot] + [0.0] * 8
+        action = np.array(action_lst, dtype=np.float32)
+
         obs, _, _, _, _ = env.step(action)
-        next_state = env.observation_space.devectorize(obs)
-        controller.observe(next_state)
-        state = next_state
+        state = env.observation_space.devectorize(obs)  # type: ignore[attr-defined]
 
-        if step_i % FRAME_SKIP == 0 or controller.terminated():
+        if step_i % FRAME_SKIP == 0 or step_i == len(plan) - 1:
             frame: NDArray[np.uint8] = env.render()  # type: ignore[assignment]
-            yield frame
+            frames.append(frame)
 
-        if controller.terminated():
-            break
+    return state, frames
