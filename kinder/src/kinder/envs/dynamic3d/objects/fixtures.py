@@ -1676,7 +1676,7 @@ class Cupboard(MujocoFixture):
         """
         # Get base fixture state from parent class
         state = super().get_object_centric_state()
-        
+
         # Create symbolic objects for each drawer and add to state
         for joint_name in self.drawer_joints:
             # Create drawer symbolic object if not already created
@@ -1686,13 +1686,13 @@ class Cupboard(MujocoFixture):
                 self._drawer_symbolic_objects[joint_name] = Object(
                     drawer_name, MujocoDrawerObjectType
                 )
-            
+
             # Get the symbolic object for this drawer
             drawer_symbolic_object = self._drawer_symbolic_objects[joint_name]
-            
+
             # Initialize drawer state with default position
             drawer_data = {"pos": 0.0}
-            
+
             # Retrieve drawer position from simulation if environment is available
             if self.env is not None:
                 try:
@@ -1704,7 +1704,7 @@ class Cupboard(MujocoFixture):
                     # Joint not found or environment doesn't support it
                     # Keep default value of 0.0
                     pass
-            
+
             # Add drawer state to dictionary
             state[drawer_symbolic_object] = drawer_data
 
