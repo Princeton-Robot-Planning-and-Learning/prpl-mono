@@ -240,7 +240,7 @@ def test_place_target_obstruction_controller():
     params = controller.sample_parameters(state, rng)
 
     # Ensure that the robot goes to the target location
-    controller.reset(state, (0.1, 0.6, 0.25))
+    controller.reset(state, (0.1))
     for _ in range(500):
         action = controller.step()
         obs, _, _, _, _ = env.step(action)
