@@ -8,6 +8,7 @@ from typing import Any, cast
 
 import numpy as np
 from numpy.typing import NDArray
+from relational_structs import Object
 
 from kinder.envs.dynamic3d import utils
 from kinder.envs.dynamic3d.mujoco_utils import MujocoEnv
@@ -16,6 +17,7 @@ from kinder.envs.dynamic3d.objects.base import (
     Region,
     register_fixture,
 )
+from kinder.envs.dynamic3d.object_types import MujocoDrawerObjectType
 
 
 @register_fixture
@@ -37,6 +39,7 @@ class Table(MujocoFixture):
         position: list[float] | NDArray[np.float32],
         yaw: float,
         regions: dict | None = None,
+        env: MujocoEnv | None = None,
     ) -> None:
         """Initialize a Table object.
 
@@ -51,9 +54,10 @@ class Table(MujocoFixture):
                 - "diameter": Diameter of circular table in meters (for circle)
             position: Position of the table as [x, y, z]
             yaw: Yaw orientation of the table in radians
+            env: Reference to the environment (needed for accessing joint data)
         """
         # Initialize base class
-        super().__init__(name, fixture_config, position, yaw, regions)
+        super().__init__(name, fixture_config, position, yaw, regions, env)
 
         # Parse table configuration
         self.table_shape = str(self.fixture_config["shape"])
@@ -487,6 +491,7 @@ class Cupboard(MujocoFixture):
         position: list[float] | NDArray[np.float32],
         yaw: float,
         regions: dict | None = None,
+        env: MujocoEnv | None = None,
     ) -> None:
         """Initialize a Cupboard object.
 
@@ -521,9 +526,10 @@ class Cupboard(MujocoFixture):
                   (optional, default 0.02)
             position: Position of the cupboard as [x, y, z]
             yaw: Yaw orientation of the cupboard in radians
+            env: Optional reference to the MujocoEnv for accessing joint data
         """
         # Initialize base class
-        super().__init__(name, fixture_config, position, yaw, regions)
+        super().__init__(name, fixture_config, position, yaw, regions, env)
 
         # Parse cupboard configuration
         self.cupboard_length = float(self.fixture_config["length"])
@@ -673,6 +679,13 @@ class Cupboard(MujocoFixture):
 
         # Precompute shelf z positions for efficiency
         self._shelf_z_positions = self._compute_shelf_z_positions()
+
+        # Initialize drawer joints list (populated during XML creation)
+        self.drawer_joints: list[str] = []
+
+        # Initialize mapping of drawer joint names to drawer symbolic objects
+        # This will be populated in get_object_centric_state()
+        self._drawer_symbolic_objects: dict[str, Object] = {}
 
         # Create the XML element
         self.xml_element = self._create_xml_element()
@@ -1203,11 +1216,14 @@ class Cupboard(MujocoFixture):
 
         # Create sliding joint inside the drawer body
         joint = ET.SubElement(drawer_body, "joint")
-        joint.set("name", f"{self.name}_drawer_{drawer_index}_joint")
+        joint_name = f"{self.name}_drawer_{drawer_index}_joint"
+        joint.set("name", joint_name)
         joint.set("type", "slide")
         joint.set("axis", "0 1 0")  # Slide along Y axis (in/out)
         joint.set("range", f"0 {self.drawer_max_slide}")
         joint.set("damping", str(self.drawer_damping))
+        # Track this joint for object-centric data
+        self.drawer_joints.append(joint_name)
 
         # Vertical clearance: reduce wall height to avoid collision with shelf above
         vertical_clearance = 4 * wall_t
@@ -1645,6 +1661,54 @@ class Cupboard(MujocoFixture):
                 return True
 
         return False
+
+    def get_object_centric_state(self) -> dict[Object, dict[str, Any]]:
+        """Get object-centric state for the cupboard, including drawer joint positions.
+
+        Returns:
+            Dictionary with symbolic_object as key for the cupboard and drawer objects,
+            and data (including drawer positions) as values. Each drawer gets its own
+            symbolic object as a key with its slide position as the value.
+
+        Note:
+            This method retrieves drawer joint positions from the MuJoCo simulation
+            if the environment is set. If not, drawer positions default to 0.0.
+        """
+        # Get base fixture state from parent class
+        state = super().get_object_centric_state()
+        
+        # Create symbolic objects for each drawer and add to state
+        for joint_name in self.drawer_joints:
+            # Create drawer symbolic object if not already created
+            if joint_name not in self._drawer_symbolic_objects:
+                # Create a symbolic object for this drawer using MujocoDrawerObjectType
+                drawer_name = joint_name.replace("_joint", "")
+                self._drawer_symbolic_objects[joint_name] = Object(
+                    drawer_name, MujocoDrawerObjectType
+                )
+            
+            # Get the symbolic object for this drawer
+            drawer_symbolic_object = self._drawer_symbolic_objects[joint_name]
+            
+            # Initialize drawer state with default position
+            drawer_data = {"pos": 0.0}
+            
+            # Retrieve drawer position from simulation if environment is available
+            if self.env is not None:
+                try:
+                    pos, _ = self.env.get_joint_pos_quat(joint_name)
+                    # Extract first dimension for slide joint
+                    pos_value = float(pos[0]) if hasattr(pos, "__len__") else float(pos)
+                    drawer_data["pos"] = pos_value
+                except (ValueError, KeyError, AttributeError, TypeError):
+                    # Joint not found or environment doesn't support it
+                    # Keep default value of 0.0
+                    pass
+            
+            # Add drawer state to dictionary
+            state[drawer_symbolic_object] = drawer_data
+
+        return state
 
     def visualize_regions(self) -> None:
         """Visualize the cupboard's regions in the MuJoCo environment.

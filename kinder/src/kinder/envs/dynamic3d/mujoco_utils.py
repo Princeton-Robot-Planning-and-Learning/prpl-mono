@@ -161,33 +161,68 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         return obs, reward, terminated, truncated, info
 
     def set_joint_pos_quat(
-        self, name: str, pos: NDArray[np.float32], quat: NDArray[np.float32]
+        self,
+        name: str,
+        pos: NDArray[np.float32],
+        quat: NDArray[np.float32] | None = None,
     ) -> None:
-        """Set joint position and orientation in the environment."""
+        """Set joint position and/or orientation in the environment.
+
+        For free joints, sets both position and orientation.
+        For slide joints, sets only the position (quat is ignored).
+
+        Args:
+            name: Name of the joint
+            pos: Position values
+            quat: Orientation quaternion (required for free joints, ignored for slide joints)
+        """
         assert self.sim is not None, "Simulation not initialized"
 
-        # Check if it's a freejoint
         joint_type = self.sim.model.get_joint_type(name)
-        assert (
-            joint_type == mujoco.mjtJoint.mjJNT_FREE  # pylint: disable=no-member
-        ), f"Joint '{name}' must be a freejoint, got type {joint_type}"
-
         joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
 
-        self.sim.data.mj_data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = np.array(
-            [float(x) for x in pos] + [float(q) for q in quat]
-        )
+        if joint_type == mujoco.mjtJoint.mjJNT_FREE:  # pylint: disable=no-member
+            assert quat is not None, "quat is required for free joints"
+            self.sim.data.mj_data.qpos[joint_qpos_addr : joint_qpos_addr + 7] = (
+                np.array([float(x) for x in pos] + [float(q) for q in quat])
+            )
+        elif joint_type == mujoco.mjtJoint.mjJNT_SLIDE:  # pylint: disable=no-member
+            self.sim.data.mj_data.qpos[joint_qpos_addr : joint_qpos_addr + 1] = (
+                np.array([float(x) for x in pos])
+            )
+        else:
+            raise ValueError(f"Unsupported joint type {joint_type} for joint '{name}'")
 
     def get_joint_pos_quat(
         self, name: str
     ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
-        """Get joint position and orientation in the environment."""
+        """Get joint position and/or orientation in the environment.
 
+        For free joints, returns (position, quaternion).
+        For slide joints, returns (position, empty array).
+
+        Args:
+            name: Name of the joint
+
+        Returns:
+            Tuple of (position, quaternion/empty array)
+        """
         assert self.sim is not None, "Simulation not initialized"
+
+        joint_type = self.sim.model.get_joint_type(name)
         joint_qpos_addr = self.sim.model.get_joint_qpos_addr(name)
-        pos = self.sim.data.mj_data.qpos[joint_qpos_addr : joint_qpos_addr + 3]
-        quat = self.sim.data.mj_data.qpos[joint_qpos_addr + 3 : joint_qpos_addr + 7]
-        return pos, quat
+
+        if joint_type == mujoco.mjtJoint.mjJNT_FREE:  # pylint: disable=no-member
+            pos = self.sim.data.mj_data.qpos[joint_qpos_addr : joint_qpos_addr + 3]
+            quat = self.sim.data.mj_data.qpos[joint_qpos_addr + 3 : joint_qpos_addr + 7]
+            return pos, quat
+        elif joint_type == mujoco.mjtJoint.mjJNT_SLIDE:  # pylint: disable=no-member
+            pos = self.sim.data.mj_data.qpos[
+                joint_qpos_addr : joint_qpos_addr + 1
+            ].copy()
+            return pos, np.array([], dtype=np.float32)
+        else:
+            raise ValueError(f"Unsupported joint type {joint_type} for joint '{name}'")
 
     def set_joint_vel(
         self,

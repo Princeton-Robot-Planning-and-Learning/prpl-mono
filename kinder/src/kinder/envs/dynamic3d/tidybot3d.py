@@ -495,6 +495,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                             position=fixture_pos,
                             yaw=fixture_yaw,
                             regions=regions_in_fixture,
+                            env=self._robot_env,
                         )
                         new_fixture.visualize_regions()
                         self._fixtures_dict[fixture_name] = new_fixture
@@ -930,11 +931,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Collect object-centric data for all objects
         state_dict = {}
         for obj in self._objects:
-            obj_data = obj.get_object_centric_data()
-            state_dict[obj.symbolic_object] = obj_data
+            obj_state = obj.get_object_centric_state()
+            state_dict.update(obj_state)
         for fixture in self._fixtures_dict.values():
-            fixture_data = fixture.get_object_centric_data()
-            state_dict[fixture.symbolic_object] = fixture_data
+            fixture_state = fixture.get_object_centric_state()
+            state_dict.update(fixture_state)
         # Add robot into object-centric state.
         robot_state_dict = self._get_object_centric_robot_data()
         state_dict.update(robot_state_dict)
