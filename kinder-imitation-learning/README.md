@@ -8,12 +8,12 @@ We strongly recommend [uv](https://docs.astral.sh/uv/getting-started/installatio
 # Install PRPL dependencies.
 uv pip install -r prpl_requirements.txt
 # Install this package and third-party dependencies.
-uv pip install -e ".[develop]"
+uv pip install -e “.[develop]”
 ```
 
 ## Introduction
 
-We provide three implemtations for imitation learning baselines. 
+We provide three implementations for imitation learning baselines. 
 
 ### Diffusion Policy (DP): 
 Imitation learning over RGB images, trained with ~100 demos per environment.
@@ -49,11 +49,11 @@ Specific Steps:
 2.2: Run the teleoperation script.
 2.3: get the <server-hostname> of your mac/ubuntu by ipconfig getifaddr en0.
 2.4: Make sure your iPhone and your Mac/Ubuntu are under the same wifi.
-2.5: on your iphone XR Browser, navigate to <server-hostname>:5000 to open the teleoperation web app
-2.6: Press “Start episode” to begin teleoperation and then move your iphone
+2.5: On your iPhone XR Browser, navigate to <server-hostname>:5000 to open the teleoperation web app
+2.6: Press “Start episode” to begin teleoperation and then move your iPhone
 
 
-3: Using a VR headset to collect demosntrations for 3D environments. 
+3: Using a VR headset to collect demonstrations for 3D environments. 
 
 TODO
 
@@ -74,15 +74,15 @@ python demos_to_hdf5.py --teleop_data_dir $YOUR_DATA_DIR --output_path $OUTPUT_H
 ### Training
 
 
-1： Clone diffusion policy repo: 
+1： Clone the diffusion policy repo: 
 
 ```bash
 git clone git@github.com:Princeton-Robot-Planning-and-Learning/kinder-diffusion-policy.git
 ```
 
-2： Create conda/mamba environment following the instructions on kinder-diffusion-policy. 
+2： Create a conda/mamba environment following the instructions on kinder-diffusion-policy. 
 
-3： Run trainig
+3： Run training
 
 ```bash
 cd ~/kinder-diffusion-policy
@@ -94,7 +94,7 @@ python train.py --config-name=train_sweep3d_image
 
 1: Download checkpoint path or use your own checkpoint
 
-2: run policy server
+2: Run policy server
 
 ```bash
 cd ~/kinder-diffusion-policy
@@ -102,7 +102,7 @@ mamba activate robodiff
 python policy_server.py --ckpt-path $Checkpoint_path 
 ```
 
-3: start environment
+3: Start environment
 
 ```bash
 cd prpl-mono/kinder-models/scripts
@@ -115,5 +115,5 @@ python inference_geom2d.py --env-name $ENV_ID --save-videos --num-seeds 1 --num-
 
 ```bash
 brew install ffmpeg
-PKG_CONFIG_PATH="/opt/homebrew/opt/ffmpeg/lib/pkgconfig" uv pip install av==15.1.0 --no-binary av
+PKG_CONFIG_PATH=“/opt/homebrew/opt/ffmpeg/lib/pkgconfig” uv pip install av==15.1.0 --no-binary av
 ```
