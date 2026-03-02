@@ -184,7 +184,7 @@ def render_2dstate(
         ax_callback(ax)
     img = fig2data(fig)
     plt.close()
-    return img
+    return img[:, :, :3]
 
 
 # ****** State to MultiBody2D conversion helpers ******
