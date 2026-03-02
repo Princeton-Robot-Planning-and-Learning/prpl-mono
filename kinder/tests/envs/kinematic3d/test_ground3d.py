@@ -63,7 +63,9 @@ def test_motion_planning_in_ground3d_env(env):  # pylint: disable=redefined-oute
     obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricGround3DEnv(config=config, realistic_bg=False)
+    sim = ObjectCentricGround3DEnv(
+        config=config, realistic_bg=False, allow_state_access=True
+    )
     sim.set_state(obs)
 
     # For this unit test, make sure that the cubes are collision bodies.
@@ -124,7 +126,9 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     obs = Ground3DObjectCentricState(oc_obs.data, oc_obs.type_features)
 
     # Create a simulator for planning.
-    sim = ObjectCentricGround3DEnv(num_cubes=2, config=config, realistic_bg=False)
+    sim = ObjectCentricGround3DEnv(
+        num_cubes=2, config=config, realistic_bg=False, allow_state_access=True
+    )
     sim.set_state(obs)
 
     if MAKE_VIDEOS:

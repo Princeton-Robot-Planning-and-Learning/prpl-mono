@@ -12,12 +12,12 @@ from relational_structs import Object
 
 from kinder.envs.dynamic3d import utils
 from kinder.envs.dynamic3d.mujoco_utils import MujocoEnv
+from kinder.envs.dynamic3d.object_types import MujocoDrawerObjectType
 from kinder.envs.dynamic3d.objects.base import (
     MujocoFixture,
     Region,
     register_fixture,
 )
-from kinder.envs.dynamic3d.object_types import MujocoDrawerObjectType
 
 
 @register_fixture

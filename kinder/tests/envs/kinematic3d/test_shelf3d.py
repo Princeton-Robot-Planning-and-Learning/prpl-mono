@@ -148,7 +148,11 @@ def test_pick_place(env):  # pylint: disable=redefined-outer-name
 
     # Create a simulator for planning.
     sim = ObjectCentricShelf3DEnv(
-        num_cubes=2, config=config, use_gui=False, realistic_bg=False
+        num_cubes=2,
+        config=config,
+        use_gui=False,
+        realistic_bg=False,
+        allow_state_access=True,
     )
     sim.set_state(obs)
 

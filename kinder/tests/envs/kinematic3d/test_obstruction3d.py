@@ -70,7 +70,10 @@ def test_pick_place_no_obstructions(env):  # pylint: disable=redefined-outer-nam
 
     # Create a simulator for planning.
     sim = ObjectCentricObstruction3DEnv(
-        num_obstructions=0, config=config, realistic_bg=False
+        num_obstructions=0,
+        config=config,
+        realistic_bg=False,
+        allow_state_access=True,
     )
     sim.set_state(obs)
 

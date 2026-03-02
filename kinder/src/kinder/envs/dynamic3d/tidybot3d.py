@@ -77,9 +77,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         show_images: bool = False,
         scene_bg: bool | str | None = None,
         scene_render_camera: str | None = None,
+        **kwargs,
     ) -> None:
         # Initialize ObjectCentricKinDEREnv first
-        super().__init__(config)
+        super().__init__(config, **kwargs)
 
         # Store instance attributes from kwargs
         self.scene_type = scene_type
@@ -858,11 +859,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         return self._get_current_state(), {}, self._get_all_obs()
 
-    def set_state(self, state: ObjectCentricState) -> None:
-        """Set the environment to the current state.
+    def _get_state(self) -> ObjectCentricState:
+        assert self._current_state is not None, "Need to call reset() first"
+        return self._current_state.copy()
 
-        This is useful for planning baselines.
-        """
+    def _set_state(self, state: ObjectCentricState) -> None:
+        """Set the environment to the given state."""
         # Reset the robot.
         self._set_robot_state(state)
 

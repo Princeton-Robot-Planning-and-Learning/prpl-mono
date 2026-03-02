@@ -36,7 +36,9 @@ def test_pick_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricObstruction3DEnv(num_obstructions=1, use_gui=False)
+    sim = ObjectCentricObstruction3DEnv(
+        num_obstructions=1, use_gui=False, allow_state_access=True
+    )
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -89,7 +91,7 @@ def test_pick_place_controller():
     ep_terminated = False
     ep_truncated = False
 
-    sim = ObjectCentricObstruction3DEnv(num_obstructions=0)
+    sim = ObjectCentricObstruction3DEnv(num_obstructions=0, allow_state_access=True)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,

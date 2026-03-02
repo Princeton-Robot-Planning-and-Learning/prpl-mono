@@ -263,6 +263,12 @@ class ObjectCentricDynamic2DRobotEnv(
         """The types and features for this environment."""
         return Dynamic2DRobotEnvTypeFeatures
 
+    def _get_state(self) -> ObjectCentricState:
+        return self._get_obs()
+
+    def _set_state(self, state: ObjectCentricState) -> None:
+        self.reset(options={"init_state": state})
+
     def _get_obs(self) -> ObjectCentricState:
         """Get observation by reading from the physics simulation."""
         self._read_state_from_space()

@@ -86,7 +86,10 @@ def test_pick_place_on_rack():
     ep_truncated = False
 
     sim = ObjectCentricPacking3DEnv(
-        num_parts=num_parts, config=config, realistic_bg=False
+        num_parts=num_parts,
+        config=config,
+        realistic_bg=False,
+        allow_state_access=True,
     )
     sim.reset()
     sim.set_state(obs)

@@ -328,7 +328,9 @@ def test_pick_place_ground():
     # Create the environment.
     num_cubes = 1
     env = kinder.make(
-        f"kinder/TidyBot3D-ground-o{num_cubes}-v0", render_mode="rgb_array"
+        f"kinder/TidyBot3D-ground-o{num_cubes}-v0",
+        render_mode="rgb_array",
+        allow_state_access=True,
     )
     if MAKE_VIDEOS:
         env = RecordVideo(
@@ -534,7 +536,9 @@ def test_pick_place_shelf():
     # Create the environment.
     num_cubes = 1
     env = kinder.make(
-        f"kinder/TidyBot3D-cupboard_real-o{num_cubes}-v0", render_mode="rgb_array"
+        f"kinder/TidyBot3D-cupboard_real-o{num_cubes}-v0",
+        render_mode="rgb_array",
+        allow_state_access=True,
     )
     if MAKE_VIDEOS:
         env = RecordVideo(
@@ -936,7 +940,9 @@ def test_velocity_tracking_mode():
     # Create the environment.
     num_cubes = 1
     env = kinder.make(
-        f"kinder/TidyBot3D-ground-o{num_cubes}-v0", render_mode="rgb_array"
+        f"kinder/TidyBot3D-ground-o{num_cubes}-v0",
+        render_mode="rgb_array",
+        allow_state_access=True,
     )
     if MAKE_VIDEOS:
         env = RecordVideo(

@@ -48,6 +48,7 @@ def create_bilevel_planning_models(
     sim = ObjectCentricTidyBot3DEnv(
         scene_type="cupboard_real",
         num_objects=num_objects,
+        allow_state_access=True,
     )
 
     # State and goal abstractors.
