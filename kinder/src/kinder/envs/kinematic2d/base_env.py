@@ -203,6 +203,14 @@ class ObjectCentricKinematic2DRobotEnv(
         """The types and features for this environment."""
         return Kinematic2DRobotEnvTypeFeatures
 
+    def _get_state(self) -> ObjectCentricState:
+        assert self._current_state is not None, "Need to call reset()"
+        return self._current_state.copy()
+
+    def _set_state(self, state: ObjectCentricState) -> None:
+        self._current_state = state.copy()
+        self._static_object_body_cache = {}
+
     def _get_obs(self) -> ObjectCentricState:
         assert self._current_state is not None, "Need to call reset()"
         # NOTE: Based on the discussion, we commit to providing

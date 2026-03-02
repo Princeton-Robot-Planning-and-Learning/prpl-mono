@@ -79,7 +79,11 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
     num_cubes = 2
     # Create a simulator for planning.
     sim = ObjectCentricTable3DEnv(
-        num_cubes=num_cubes, config=config, use_gui=False, realistic_bg=False
+        num_cubes=num_cubes,
+        config=config,
+        use_gui=False,
+        realistic_bg=False,
+        allow_state_access=True,
     )
     sim.set_state(obs)
 

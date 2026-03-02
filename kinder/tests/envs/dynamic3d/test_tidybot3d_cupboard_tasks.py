@@ -31,6 +31,7 @@ def test_tidybot_cupboard_real_o1_goals():
         num_objects=1,
         task_config_path=str(task_config_path),
         scene_bg=False,
+        allow_state_access=True,
     )
 
     # Reset the environment
@@ -208,6 +209,7 @@ def test_tidybot_lab2_kitchen_o5_sweep_blocks_goal():
         num_objects=5,
         task_config_path=str(task_config_path),
         scene_bg=False,
+        allow_state_access=True,
     )
 
     # Reset the environment

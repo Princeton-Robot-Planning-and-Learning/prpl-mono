@@ -51,7 +51,9 @@ class Transport3DScriptedPolicy(StatefulPolicy):
         self._rng = np.random.default_rng(seed)
 
         # Create simulator for controllers.
-        self._sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
+        self._sim = ObjectCentricTransport3DEnv(
+            num_cubes=num_cubes, use_gui=False, allow_state_access=True
+        )
 
         # Create controllers with settings for motion smoothness.
         self._controllers = create_lifted_controllers(

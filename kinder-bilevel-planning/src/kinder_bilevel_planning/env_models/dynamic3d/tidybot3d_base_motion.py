@@ -41,6 +41,7 @@ def create_bilevel_planning_models(
     sim = ObjectCentricTidyBot3DEnv(
         scene_type="base_motion",
         num_objects=1,
+        allow_state_access=True,
     )
 
     # Need to call reset to initialize the qpos, qvel.

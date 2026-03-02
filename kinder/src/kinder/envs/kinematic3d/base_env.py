@@ -434,7 +434,7 @@ class ObjectCentricKinematic3DRobotEnv(
 
         # For testing purposes, the options may specify an initial state.
         if options is not None and "init_state" in options:
-            self.set_state(options["init_state"])
+            self._set_state(options["init_state"])
         else:
             # Reset the held object info.
             self._grasped_object = None
@@ -452,17 +452,17 @@ class ObjectCentricKinematic3DRobotEnv(
 
         return self._get_obs(), {}
 
-    def set_state(self, obs: _ObsType) -> None:
-        """Set the state of the environment to the given one.
+    def _get_state(self) -> _ObsType:
+        return self._get_obs()
 
-        This is useful when treating the environment as a simulator.
-        """
+    def _set_state(self, state: _ObsType) -> None:
+        """Set the state of the environment to the given one."""
         self._set_robot_and_held_object(
-            obs.base_pose, obs.joint_positions, obs.finger_state
+            state.base_pose, state.joint_positions, state.finger_state
         )
-        self._grasped_object = obs.grasped_object
-        self._grasped_object_transform = obs.grasped_object_transform
-        self._set_object_states(obs)
+        self._grasped_object = state.grasped_object
+        self._grasped_object_transform = state.grasped_object_transform
+        self._set_object_states(state)
 
     def _is_inside_object(
         self,

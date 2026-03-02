@@ -174,7 +174,7 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         Args:
             name: Name of the joint
             pos: Position values
-            quat: Orientation quaternion (required for free joints, 
+            quat: Orientation quaternion (required for free joints,
                 ignored for slide joints)
         """
         assert self.sim is not None, "Simulation not initialized"

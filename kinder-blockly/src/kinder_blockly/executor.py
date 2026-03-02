@@ -57,7 +57,7 @@ def execute_program(
         obs, _ = env.reset(seed=seed)
         state = env.observation_space.devectorize(obs)  # type: ignore[attr-defined]
 
-        sim = ObjectCentricBaseMotion3DEnv()
+        sim = ObjectCentricBaseMotion3DEnv(allow_state_access=True)
 
         frame: NDArray[np.uint8] = env.render()  # type: ignore[assignment]
         yield frame
