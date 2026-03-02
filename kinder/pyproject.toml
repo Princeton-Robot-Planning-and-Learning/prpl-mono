@@ -59,6 +59,10 @@ develop = [
    "nbmake",
    "ipykernel"
 ]
+docs = [
+   "sphinx-book-theme",
+   "myst-parser",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
