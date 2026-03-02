@@ -174,7 +174,8 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
         Args:
             name: Name of the joint
             pos: Position values
-            quat: Orientation quaternion (required for free joints, ignored for slide joints)
+            quat: Orientation quaternion (required for free joints, 
+                ignored for slide joints)
         """
         assert self.sim is not None, "Simulation not initialized"
 
@@ -216,13 +217,12 @@ class MujocoEnv(gymnasium.Env[MjObs, Array]):
             pos = self.sim.data.mj_data.qpos[joint_qpos_addr : joint_qpos_addr + 3]
             quat = self.sim.data.mj_data.qpos[joint_qpos_addr + 3 : joint_qpos_addr + 7]
             return pos, quat
-        elif joint_type == mujoco.mjtJoint.mjJNT_SLIDE:  # pylint: disable=no-member
+        if joint_type == mujoco.mjtJoint.mjJNT_SLIDE:  # pylint: disable=no-member
             pos = self.sim.data.mj_data.qpos[
                 joint_qpos_addr : joint_qpos_addr + 1
             ].copy()
             return pos, np.array([], dtype=np.float32)
-        else:
-            raise ValueError(f"Unsupported joint type {joint_type} for joint '{name}'")
+        raise ValueError(f"Unsupported joint type {joint_type} for joint '{name}'")
 
     def set_joint_vel(
         self,
