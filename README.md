@@ -43,6 +43,19 @@ uv pip install "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-L
 ```
 But beware that things are changing. Pinning commits is a good idea if you need stable code.
 
+### Building Documentation
+
+To build docs locally, first install dependencies:
+```
+cd kinder
+uv pip install -e ".[docs]"
+```
+Build docs:
+```
+cd docs
+make html
+```
+
 ## Troubleshooting
 
 We are doing our best to make installation easy across platforms, but here are some known issues and workarounds.
