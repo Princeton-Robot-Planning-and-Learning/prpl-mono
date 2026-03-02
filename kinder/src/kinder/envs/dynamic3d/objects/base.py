@@ -546,7 +546,7 @@ class MujocoObject:
             Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max] array
         """
 
-    def get_object_centric_data(self) -> dict[str, float]:
+    def _get_object_centric_data(self) -> dict[str, float]:
         """Get the object's current data.
 
         Returns:
@@ -582,6 +582,15 @@ class MujocoObject:
             "bb_z": bb_z,
         }
         return obj_data
+
+    def get_object_centric_state(self) -> dict[Object, dict[str, float]]:
+        """Get object-centric state with symbolic object as key.
+
+        Returns:
+            Dictionary mapping symbolic_object to its data for use in state creation
+        """
+        obj_data = self._get_object_centric_data()
+        return {self.symbolic_object: obj_data}
 
     def check_in_region(
         self,
@@ -647,6 +656,7 @@ class MujocoFixture(abc.ABC):
         position: list[float] | NDArray[np.float32],
         yaw: float,
         regions: dict | None = None,
+        env: MujocoEnv | None = None,
     ) -> None:
         """Initialize a MujocoFixture.
 
@@ -655,12 +665,14 @@ class MujocoFixture(abc.ABC):
             fixture_config: Dictionary containing fixture configuration
             position: Position of the fixture as [x, y, z]
             yaw: Yaw orientation of the fixture in radians
+            env: Reference to the environment (needed for accessing joint data)
         """
         self.name = name
         self.fixture_config = fixture_config
         self.position = position
         self.yaw = yaw
         self.regions = regions
+        self.env = env
 
         # Create the corresponding Object for state representation key
         self.symbolic_object = Object(self.name, MujocoFixtureObjectType)
@@ -710,7 +722,7 @@ class MujocoFixture(abc.ABC):
             Bounding box as [x_min, y_min, z_min, x_max, y_max, z_max] array
         """
 
-    def get_object_centric_data(self) -> dict[str, float]:
+    def _get_object_centric_data(self) -> dict[str, float]:
         """Get the object's current data.
 
         Returns:
@@ -733,6 +745,15 @@ class MujocoFixture(abc.ABC):
             "qz": quat[3],
         }
         return obj_data
+
+    def get_object_centric_state(self) -> dict[Object, dict[str, float]]:
+        """Get object-centric state with symbolic object as key.
+
+        Returns:
+            Dictionary mapping symbolic_object to its data for use in state creation
+        """
+        obj_data = self._get_object_centric_data()
+        return {self.symbolic_object: obj_data}
 
     @abc.abstractmethod
     def _create_xml_element(self) -> ET.Element:
