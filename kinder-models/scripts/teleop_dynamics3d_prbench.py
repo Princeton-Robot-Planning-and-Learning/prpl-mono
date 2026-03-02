@@ -17,7 +17,11 @@ from relational_structs.spaces import ObjectCentricBoxSpace
 from kinder_models.dynamic3d.fk_solver import TidybotFKSolver
 from kinder_models.dynamic3d.ik_solver import TidybotIKSolver
 from kinder_models.policy_constants import POLICY_CONTROL_PERIOD
-from kinder_models.teleop_utils import TeleopPolicy, _visualize_image_in_window
+from kinder_models.teleop_utils import (
+    QuestTeleopPolicy,
+    TeleopPolicy,
+    _visualize_image_in_window,
+)
 
 kinder.register_all_environments()
 
@@ -85,6 +89,7 @@ def run_teleop(
     port: int = 5000,
     show_images: bool = False,
     env_name: str = "TidyBot3D-cupboard_real-o2-v0",
+    teleop_device: str = "phone",
 ) -> None:
     """Run teleoperation in the kinder environment.
 
@@ -98,6 +103,7 @@ def run_teleop(
         port: Port for the WebXR web server.
         show_images: Whether to show images in OpenCV windows.
         env_name: Name of the kinder environment.
+        teleop_device: Type of teleoperation interface ("phone" for WebXR or "vr" for Quest).
     """
     env_id = f"kinder/{env_name}"
     demo_dir = Path(output_dir)
@@ -113,8 +119,15 @@ def run_teleop(
     fk_solver = TidybotFKSolver(ee_offset=0.12)
     ik_solver = TidybotIKSolver(ee_offset=0.12)
 
-    # Create teleop policy
-    policy = TeleopPolicy(enable_web_server=enable_web_server, port=port)
+    # Create teleop policy based on type
+    if teleop_device == "phone":
+        policy = TeleopPolicy(enable_web_server=enable_web_server, port=port)
+    elif teleop_device == "vr":
+        policy = QuestTeleopPolicy(debug=False)
+    else:
+        raise ValueError(
+            f"Invalid teleop_device '{teleop_device}'. Must be 'phone' or 'vr'."
+        )
 
     try:
         for episode_idx in range(num_episodes):
@@ -146,7 +159,7 @@ def run_teleop(
                     time.sleep(0.0001)
 
                 # Get robot state
-                robot = state.get_object_from_name("robot")
+                robot = state.get_object_from_name("robot_0")
                 current_joints = np.array(
                     [state.get(robot, f"pos_arm_joint{i}") for i in range(1, 8)]
                 )
@@ -319,6 +332,13 @@ def main() -> None:
         default="TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0",  # pylint: disable=line-too-long
         help="Name of the environment",
     )
+    parser.add_argument(
+        "--teleop-device",
+        type=str,
+        default="phone",
+        choices=["phone", "vr"],
+        help="Type of teleoperation interface: 'phone' for WebXR or 'vr' for Quest VR",
+    )
 
     args = parser.parse_args()
 
@@ -332,6 +352,7 @@ def main() -> None:
         enable_web_server=args.enable_web_server,
         port=args.port,
         show_images=args.show_images,
+        teleop_device=args.teleop_device,
     )
 
 
