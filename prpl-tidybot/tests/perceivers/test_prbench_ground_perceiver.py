@@ -40,6 +40,7 @@ def test_real_to_sim_kinder_ground():
     sim = ObjectCentricTidyBot3DEnv(
         scene_type="base_motion",
         num_objects=1,
+        allow_state_access=True,
     )
 
     # Get the real state from the perceiver.
