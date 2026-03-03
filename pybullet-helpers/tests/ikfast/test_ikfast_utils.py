@@ -28,9 +28,10 @@ def _robot_with_no_ikfast_info_fixture():
 
 def test_get_jointwise_difference():
     """Test for get_jointwise_difference."""
+    rng = np.random.default_rng(0)
     joint_infos = 7 * [Mock(is_circular=False)]
-    joint_vals1 = np.random.rand(7)
-    joint_vals2 = np.random.rand(7)
+    joint_vals1 = rng.random(7)
+    joint_vals2 = rng.random(7)
     expected_difference = joint_vals1 - joint_vals2
     difference_fn = partial(get_jointwise_difference, joint_infos)
     assert np.allclose(

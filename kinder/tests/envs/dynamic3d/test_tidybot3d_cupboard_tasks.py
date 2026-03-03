@@ -142,7 +142,7 @@ def test_tidybot_cupboard_real_o1_goals():
     start_of_shelf -= 0.02  # extra offset so that block is always outside of shelf
     print("start_of_shelf:", start_of_shelf)  ##DEBUG## == 1.353
     front_bbox = np.array([1.28, -0.1, 0.4, start_of_shelf, 0.1, 0.6])
-    rng = np.random.RandomState(seed=42)
+    rng = np.random.default_rng(seed=42)
     front_positions = []
     for _ in range(20):
         x = rng.uniform(front_bbox[0], front_bbox[3])

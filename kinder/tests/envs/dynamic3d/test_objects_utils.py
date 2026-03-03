@@ -150,10 +150,11 @@ def test_save_mesh_multiple_faces():
 def test_save_mesh_large_mesh():
     """Test save_mesh with a larger mesh."""
     # Create a simple icosphere-like mesh with many vertices
+    rng = np.random.default_rng(0)
     num_vertices = 100
-    vertices = np.random.randn(num_vertices, 3).astype(np.float32)
+    vertices = rng.standard_normal((num_vertices, 3)).astype(np.float32)
     num_faces = 50
-    faces = np.random.randint(0, num_vertices, (num_faces, 3), dtype=np.int32)
+    faces = rng.integers(0, num_vertices, (num_faces, 3)).astype(np.int32)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         mesh_file = save_mesh(vertices, faces, temp_dir)
