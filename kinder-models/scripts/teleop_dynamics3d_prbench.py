@@ -2,6 +2,14 @@
 
 Saves demonstrations in the same format as collect_demos_ds.py for compatibility with
 generate_demo_video.py and other kinder tools.
+
+Example usage:
+    python teleop_dynamics3d_prbench.py \
+        --teleop-device vr \
+        --env-name Tossing3D-o1-v0 \
+        --show-images \
+        --max-steps 10000
+
 """
 
 import argparse
@@ -159,7 +167,11 @@ def run_teleop(
                     time.sleep(0.0001)
 
                 # Get robot state
-                robot = state.get_object_from_name("robot_0")
+                robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
+                robot_type = env.unwrapped._object_centric_env.robot_type  # type: ignore # pylint: disable=protected-access
+                robot = state.get_object_from_name(robot_name)
+                assert robot is not None, f"Robot with name '{robot_name}' not found in state"
+                assert robot_type == "tidybot", f"Expected robot type 'tidybot', but got '{robot_type}'"
                 current_joints = np.array(
                     [state.get(robot, f"pos_arm_joint{i}") for i in range(1, 8)]
                 )
@@ -167,20 +179,14 @@ def run_teleop(
                     current_joints
                 )
 
-                robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
-                env.unwrapped._object_centric_env.set_render_camera("agent_overview")  # type: ignore # pylint: disable=protected-access
-                overview_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
-                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_base")  # type: ignore # pylint: disable=protected-access
-                base_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
-                env.unwrapped._object_centric_env.set_render_camera(robot_name + "_wrist")  # type: ignore # pylint: disable=protected-access,line-too-long
-                wrist_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
-                env.unwrapped._object_centric_env.set_render_camera("agentview_1")  # type: ignore # pylint: disable=protected-access
-                agent_image = env.unwrapped._object_centric_env.render()  # type: ignore # pylint: disable=protected-access
+                # Render images
+                images = env.unwrapped._object_centric_env.render_all_cameras()
+                task_view_image = images["task_view_image"]
+                base_image = images[robot_name + "_base_image"]
+                wrist_image = images[robot_name + "_wrist_image"]
+
                 if show_images:
-                    _visualize_image_in_window(overview_image, "agent_overview")
-                    _visualize_image_in_window(base_image, "base")
-                    _visualize_image_in_window(wrist_image, "wrist")
-                    _visualize_image_in_window(agent_image, "agentview_1")
+                    _visualize_image_in_window(task_view_image, "task_view")
 
                 # Create observation dict for policy
                 obs_dict = {
@@ -196,7 +202,7 @@ def run_teleop(
                     "gripper_pos": np.array([state.get(robot, "pos_gripper")]),
                     "base_image": base_image,
                     "wrist_image": wrist_image,
-                    "overview_image": overview_image,
+                    "task_view_image": task_view_image,
                 }
 
                 # Get action from policy
