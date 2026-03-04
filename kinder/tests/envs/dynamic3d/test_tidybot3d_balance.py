@@ -26,6 +26,7 @@ def _get_balance_env() -> ObjectCentricTidyBot3DEnv:
         scene_type="balance",
         num_objects=4,
         task_config_path=str(tasks_root / "tidybot-balance-o4.json"),
+        allow_state_access=True,
     )
 
 

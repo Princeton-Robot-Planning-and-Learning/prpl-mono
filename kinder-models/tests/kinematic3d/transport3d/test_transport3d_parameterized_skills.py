@@ -30,7 +30,9 @@ def test_pick_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTransport3DEnv(num_cubes=1, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(
+        num_cubes=1, use_gui=False, allow_state_access=True
+    )
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -74,7 +76,9 @@ def test_pick_and_place_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTransport3DEnv(num_cubes=1, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(
+        num_cubes=1, use_gui=False, allow_state_access=True
+    )
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -142,7 +146,9 @@ def test_pick_and_place_inside_box_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(
+        num_cubes=num_cubes, use_gui=False, allow_state_access=True
+    )
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
@@ -293,7 +299,9 @@ def test_pick_cube_and_place_on_table_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes, use_gui=False)
+    sim = ObjectCentricTransport3DEnv(
+        num_cubes=num_cubes, use_gui=False, allow_state_access=True
+    )
     controllers = create_lifted_controllers(
         env.action_space,
         sim,

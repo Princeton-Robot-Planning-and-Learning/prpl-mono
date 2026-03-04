@@ -49,6 +49,20 @@ class ObjectCentricDynamic3DRobotEnv(
     def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Subclasses must implement."""
 
+    @abc.abstractmethod
+    def _get_state(self) -> ObjectCentricState:
+        """Get the current state.
+
+        Subclasses must implement.
+        """
+
+    @abc.abstractmethod
+    def _set_state(self, state: ObjectCentricState) -> None:
+        """Set the state.
+
+        Subclasses must implement.
+        """
+
     @property
     def type_features(self) -> dict[Type, list[str]]:
         """The types and features for this environment."""

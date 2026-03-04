@@ -103,6 +103,7 @@ def test_tidybot_cupboard_constrained_fitting_goals():
         scene_type="cupboard",
         num_objects=12,
         task_config_path=str(task_config_path),
+        allow_state_access=True,
     )
 
     # Reset the environment

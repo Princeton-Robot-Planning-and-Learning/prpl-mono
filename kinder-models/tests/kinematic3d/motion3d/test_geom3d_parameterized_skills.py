@@ -27,7 +27,7 @@ def test_move_to_target_controller():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     state = env.observation_space.devectorize(obs)
 
-    sim = ObjectCentricMotion3DEnv()
+    sim = ObjectCentricMotion3DEnv(allow_state_access=True)
     controllers = create_lifted_controllers(
         env.action_space,
         sim,
