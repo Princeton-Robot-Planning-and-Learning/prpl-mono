@@ -141,35 +141,53 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         """Allow users to determine xy position of nodes in the graph for rendering."""
         self._get_abstract_state_pos = fn
 
-    def render_gif(
+    def _build_render_graph(
         self,
-        save_path: Path,
         final_state: _X | None = None,
-        title: str | None = None,
-        figsize: tuple[int, int] = (4, 3),
-        customize_fig_ax: Callable[[Figure, Axes], None] | None = None,
-        abstract_state_color: str = "tab:purple",
-        state_color: str = "tab:blue",
-        plan_color: str = "tab:green",
-        text_size: int = 10,
-        node_size: int = 50,
-        state_abstractor_edge_color: str = "gray",
-        action_edge_color: str = "black",
-        abstract_action_edge_color: str = "black",
-        node_alpha: float = 0.7,
-        edge_alpha: float = 0.7,
-        frame_skip: int = 5,
-        anim_interval: int = 50,
-        view_elevation: int = 20,
-    ) -> None:
-        """Visualize the bilevel planning graph in 3D with animation.
+        max_concrete_states: int | None = None,
+    ) -> tuple[
+        nx.DiGraph,
+        dict[str, tuple[float, float, int]],
+        list[str],
+        str | None,
+        str | None,
+    ]:
+        """Build the networkx graph used for rendering.
 
-        Abstract states/actions are on z=1, concrete states/actions on z=0.
+        Returns (G, pos, plan_nodes, start_node, goal_node).
         """
-        G: nx.DiGraph = nx.DiGraph()
-        pos = {}
         z_top = 1
         z_bottom = 0
+
+        # Determine plan state IDs (always kept during subsampling).
+        plan_state_ids: set[int] = set()
+        if final_state is not None:
+            plan = self.extract_plan(final_state)
+            for state in plan.states:
+                plan_state_ids.add(self._state_to_id(state))
+
+        # Determine which concrete states to include.
+        if max_concrete_states is not None and len(self.states) > max_concrete_states:
+            rng = np.random.default_rng(0)
+            non_plan = [
+                s for s in self.states if self._state_to_id(s) not in plan_state_ids
+            ]
+            budget = max(0, max_concrete_states - len(plan_state_ids))
+            if budget < len(non_plan):
+                indices = rng.choice(len(non_plan), size=budget, replace=False)
+                sampled = [non_plan[i] for i in sorted(indices)]
+            else:
+                sampled = non_plan
+            kept_states = [
+                s for s in self.states if self._state_to_id(s) in plan_state_ids
+            ] + sampled
+            kept_ids = {self._state_to_id(s) for s in kept_states}
+        else:
+            kept_states = self.states
+            kept_ids = self._state_ids
+
+        G: nx.DiGraph = nx.DiGraph()
+        pos: dict[str, tuple[float, float, int]] = {}
 
         # Place abstract states on top plane.
         for abstract_state in self.abstract_states:
@@ -183,7 +201,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             pos[f"s:{i}"] = (node_x, node_y, z_top)
 
         # Place concrete states on bottom plane.
-        for state in self.states:
+        for state in kept_states:
             i = self._state_to_id(state)
             G.add_node(f"x:{i}")
             if self._get_state_pos is None:
@@ -203,21 +221,20 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         for state1, _, state2 in self.action_edges:
             i = self._state_to_id(state1)
             j = self._state_to_id(state2)
-            G.add_edge(f"x:{i}", f"x:{j}")
+            if i in kept_ids and j in kept_ids:
+                G.add_edge(f"x:{i}", f"x:{j}")
 
         # Add state-abstractor edges (vertical).
         for state1, abstract_state1 in self.state_abstractor_edges:
             i = self._state_to_id(state1)
+            if i not in kept_ids:
+                continue
             j = self._abstract_state_to_id(abstract_state1)
             G.add_edge(f"x:{i}", f"s:{j}")
 
         # Find the plan nodes to color differently.
         if final_state is not None:
-            plan = self.extract_plan(final_state)
-            plan_nodes = []
-            for state in plan.states:
-                i = self._state_to_id(state)
-                plan_nodes.append(f"x:{i}")
+            plan_nodes = [f"x:{sid}" for sid in plan_state_ids]
             start_node = plan_nodes[0]
             goal_node = plan_nodes[-1]
         else:
@@ -225,8 +242,30 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             goal_node = None
             plan_nodes = []
 
-        fig = plt.figure(figsize=figsize)
-        ax = fig.add_subplot(111, projection="3d")
+        return G, pos, plan_nodes, start_node, goal_node
+
+    def _draw_graph(
+        self,
+        ax: Axes,
+        G: nx.DiGraph,
+        pos: dict[str, tuple[float, float, int]],
+        plan_nodes: list[str],
+        start_node: str | None,
+        goal_node: str | None,
+        abstract_state_color: str,
+        state_color: str,
+        plan_color: str,
+        text_size: int,
+        node_size: int,
+        state_abstractor_edge_color: str,
+        action_edge_color: str,
+        abstract_action_edge_color: str,
+        node_alpha: float,
+        edge_alpha: float,
+    ) -> None:
+        """Draw the graph onto a 3D axes."""
+        z_top = 1
+        z_bottom = 0
 
         # Draw nodes.
         for node, (x, y, z) in pos.items():
@@ -263,6 +302,117 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
                 assert z1 == z_top
                 color = abstract_action_edge_color
             ax.plot([x0, x1], [y0, y1], [z0, z1], c=color, alpha=edge_alpha)
+
+    def render_image(
+        self,
+        save_path: Path,
+        final_state: _X | None = None,
+        max_concrete_states: int | None = None,
+        title: str | None = None,
+        figsize: tuple[int, int] = (4, 3),
+        dpi: int = 72,
+        customize_fig_ax: Callable[[Figure, Axes], None] | None = None,
+        abstract_state_color: str = "tab:purple",
+        state_color: str = "tab:blue",
+        plan_color: str = "tab:green",
+        text_size: int = 10,
+        node_size: int = 50,
+        state_abstractor_edge_color: str = "gray",
+        action_edge_color: str = "black",
+        abstract_action_edge_color: str = "black",
+        node_alpha: float = 0.7,
+        edge_alpha: float = 0.7,
+        view_elevation: int = 20,
+        view_azimuth: int = 30,
+    ) -> None:
+        """Render the bilevel planning graph as a single static PNG."""
+        G, pos, plan_nodes, start_node, goal_node = self._build_render_graph(
+            final_state=final_state, max_concrete_states=max_concrete_states
+        )
+
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_subplot(111, projection="3d")
+
+        self._draw_graph(
+            ax,
+            G,
+            pos,
+            plan_nodes,
+            start_node,
+            goal_node,
+            abstract_state_color,
+            state_color,
+            plan_color,
+            text_size,
+            node_size,
+            state_abstractor_edge_color,
+            action_edge_color,
+            abstract_action_edge_color,
+            node_alpha,
+            edge_alpha,
+        )
+
+        ax.set_axis_off()
+        if title is not None:
+            ax.set_title(title)
+        if customize_fig_ax is not None:
+            customize_fig_ax(fig, ax)
+
+        ax.view_init(elev=view_elevation, azim=view_azimuth)  # type: ignore
+        fig.savefig(save_path, dpi=dpi)
+        plt.close(fig)
+
+    def render_gif(
+        self,
+        save_path: Path,
+        final_state: _X | None = None,
+        max_concrete_states: int | None = None,
+        title: str | None = None,
+        figsize: tuple[int, int] = (4, 3),
+        customize_fig_ax: Callable[[Figure, Axes], None] | None = None,
+        abstract_state_color: str = "tab:purple",
+        state_color: str = "tab:blue",
+        plan_color: str = "tab:green",
+        text_size: int = 10,
+        node_size: int = 50,
+        state_abstractor_edge_color: str = "gray",
+        action_edge_color: str = "black",
+        abstract_action_edge_color: str = "black",
+        node_alpha: float = 0.7,
+        edge_alpha: float = 0.7,
+        frame_skip: int = 5,
+        anim_interval: int = 50,
+        view_elevation: int = 20,
+    ) -> None:
+        """Visualize the bilevel planning graph in 3D with animation.
+
+        Abstract states/actions are on z=1, concrete states/actions on z=0.
+        """
+        G, pos, plan_nodes, start_node, goal_node = self._build_render_graph(
+            final_state=final_state, max_concrete_states=max_concrete_states
+        )
+
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_subplot(111, projection="3d")
+
+        self._draw_graph(
+            ax,
+            G,
+            pos,
+            plan_nodes,
+            start_node,
+            goal_node,
+            abstract_state_color,
+            state_color,
+            plan_color,
+            text_size,
+            node_size,
+            state_abstractor_edge_color,
+            action_edge_color,
+            abstract_action_edge_color,
+            node_alpha,
+            edge_alpha,
+        )
 
         ax.set_axis_off()
         if title is not None:
