@@ -45,7 +45,7 @@ But beware that things are changing. Pinning commits is a good idea if you need 
 
 ### Building Documentation
 
-To build docs locally, first install dependencies:
+Install Sphinx by following the instructions [here](https://www.sphinx-doc.org/en/master/usage/installation.html). To build docs locally, first install dependencies:
 ```
 cd kinder
 uv pip install -e ".[docs]"
