@@ -7,10 +7,10 @@ import threading
 import time
 from queue import Queue
 
-import cv2 as cv
+import cv2 as cv  # type: ignore[import-untyped]
 import numpy as np
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
+from flask import Flask, render_template  # type: ignore[import-untyped]
+from flask_socketio import SocketIO, emit  # type: ignore[import-untyped]
 from numpy.typing import NDArray
 from scipy.spatial.transform import Rotation as R  # type: ignore
 
@@ -381,6 +381,11 @@ class TeleopPolicy(Policy):
         # No explicit cleanup needed for teleop policy
 
 
+# ============================================================================
+# Quest Teleop Controller
+# ============================================================================
+
+
 class QuestImageViewer:
     """Utility class to display images in OpenCV windows.
 
@@ -402,9 +407,9 @@ class QuestController:
 
     def __init__(self, debug: bool = False) -> None:
         try:
-            from oculus_reader import (  # pylint: disable=import-outside-toplevel
+            from oculus_reader import (  # pylint: disable=import-outside-toplevel  # type: ignore[import-untyped]
                 OculusReader,
-            )  # type: ignore
+            )
         except ImportError:
             raise ImportError(
                 "oculus_reader not found. Install it to use Quest controllers."
