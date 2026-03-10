@@ -130,7 +130,9 @@ def run_teleop(
 
     # Create teleop policy based on type
     if teleop_device == "phone":
-        policy = TeleopPolicy(enable_web_server=enable_web_server, port=port)
+        policy: TeleopPolicy | QuestTeleopPolicy = TeleopPolicy(
+            enable_web_server=enable_web_server, port=port
+        )
     elif teleop_device == "vr":
         policy = QuestTeleopPolicy(debug=False)
     else:
@@ -168,8 +170,8 @@ def run_teleop(
                     time.sleep(0.0001)
 
                 # Get robot state
-                robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
-                robot_type = env.unwrapped._object_centric_env.robot_type  # type: ignore # pylint: disable=protected-access
+                robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore[attr-defined] # pylint: disable=protected-access
+                robot_type = env.unwrapped._object_centric_env.robot_type  # type: ignore[attr-defined] # pylint: disable=protected-access
                 robot = state.get_object_from_name(robot_name)
                 assert (
                     robot is not None
@@ -185,7 +187,7 @@ def run_teleop(
                 )
 
                 # Render images
-                images = env.unwrapped._object_centric_env.render_all_cameras()  # pylint: disable=protected-access
+                images = env.unwrapped._object_centric_env.render_all_cameras()  # type: ignore[attr-defined] # pylint: disable=protected-access
                 task_view_image = images["task_view_image"]
                 base_image = images[robot_name + "_base_image"]
                 wrist_image = images[robot_name + "_wrist_image"]
@@ -340,7 +342,7 @@ def main() -> None:
     parser.add_argument(
         "--env-name",
         type=str,
-        default="TidyBot3D-tool_use-lab2_kitchen-o5-sweep_the_blocks_into_the_top_drawer_of_the_kitchen_island-v0",  # pylint: disable=line-too-long
+        default="Tossing3D-o1-v0",
         help="Name of the environment",
     )
     parser.add_argument(

@@ -407,7 +407,7 @@ class QuestController:
 
     def __init__(self, debug: bool = False) -> None:
         try:
-            from oculus_reader import (  # pylint: disable=import-outside-toplevel  # type: ignore[import-untyped]
+            from oculus_reader import (  # pylint: disable=import-outside-toplevel  # type: ignore[import-untyped,import-not-found]
                 OculusReader,
             )
         except ImportError:
@@ -443,11 +443,11 @@ class QuestController:
         self.right_controller_init_rot = np.array([1.0, 0.0, 0.0, 0.0])  # wxyz
 
         # Robot reference poses
-        self.base_ref_pose = None
-        self.arm_ref_pos = None
-        self.arm_ref_rot = None
-        self.arm_ref_base_pose = None
-        self.gripper_ref_pos = None
+        self.base_ref_pose: np.ndarray | None = None
+        self.arm_ref_pos: np.ndarray | None = None
+        self.arm_ref_rot: R | None = None
+        self.arm_ref_base_pose: np.ndarray | None = None
+        self.gripper_ref_pos: np.ndarray | None = None
 
         # Controller offset from robot base frame
         # Quest coordinate system: adjust as needed for your setup
@@ -683,6 +683,7 @@ class QuestController:
             # Initialize reference pose
             self.left_controller_init_pos = controller_curr_pos.copy()
             self.left_controller_init_rot = self.controller_offset @ controller_curr_ori
+            assert self.base_pose is not None
             self.base_ref_pose = self.base_pose.copy()
             self.initialize_left_pose = False
             if self.verbose:
@@ -694,6 +695,7 @@ class QuestController:
         )
 
         # Update base XY position
+        assert self.base_target_pose is not None and self.base_ref_pose is not None
         self.base_target_pose[:2] = self.base_ref_pose[:2] + dpos[:2]
 
         # Update base orientation from controller rotation
@@ -702,11 +704,13 @@ class QuestController:
 
         # Extract yaw angle from rotation matrix
         base_fwd_vec = rot_delta @ np.array([1.0, 0.0, 0.0])
+        assert self.base_ref_pose is not None
         base_target_theta = self.base_ref_pose[2] + math.atan2(
             base_fwd_vec[1], base_fwd_vec[0]
         )
 
         # Unwrap angle
+        assert self.base_target_pose is not None
         self.base_target_pose[2] += (
             base_target_theta - self.base_target_pose[2] + math.pi
         ) % TWO_PI - math.pi
@@ -722,6 +726,10 @@ class QuestController:
             self.right_controller_init_rot = (
                 self.controller_offset @ controller_curr_ori
             )
+            assert self.arm_target_pos is not None
+            assert self.arm_target_rot is not None
+            assert self.base_pose is not None
+            assert self.gripper_target_pos is not None
             self.arm_ref_pos = self.arm_target_pos.copy()
             self.arm_ref_rot = self.arm_target_rot
             self.arm_ref_base_pose = self.base_pose.copy()
@@ -731,6 +739,7 @@ class QuestController:
                 print("Initialized right controller (arm) reference pose")
 
         # Rotations around z-axis: global frame (base) <-> local frame (arm)
+        assert self.base_pose is not None and self.arm_ref_base_pose is not None
         z_rot = R.from_rotvec(np.array([0.0, 0.0, 1.0]) * self.base_pose[2])
         z_rot_inv = z_rot.inv()
         ref_z_rot = R.from_rotvec(np.array([0.0, 0.0, 1.0]) * self.arm_ref_base_pose[2])
@@ -741,6 +750,7 @@ class QuestController:
         )
 
         # Compensate for base rotation and translation
+        assert self.arm_ref_pos is not None
         pos_diff = dpos_controller
         pos_diff += ref_z_rot.apply(self.arm_ref_pos) - z_rot.apply(self.arm_ref_pos)
         pos_diff[:2] += self.arm_ref_base_pose[:2] - self.base_pose[:2]
@@ -754,8 +764,10 @@ class QuestController:
 
         # Convert to scipy Rotation and apply
         rot_delta_R = R.from_matrix(rot_delta)
+        assert self.arm_ref_rot is not None
         self.arm_target_rot = (z_rot_inv * rot_delta_R * ref_z_rot) * self.arm_ref_rot
 
+        assert self.gripper_ref_pos is not None
         if self.right_grip_pressed:
             # Close gripper when grip button is pressed
             self.gripper_target_pos = np.array([1.0])
