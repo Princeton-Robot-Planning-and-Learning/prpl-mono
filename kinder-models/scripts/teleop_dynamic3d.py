@@ -111,7 +111,8 @@ def run_teleop(
         port: Port for the WebXR web server.
         show_images: Whether to show images in OpenCV windows.
         env_name: Name of the kinder environment.
-        teleop_device: Type of teleoperation interface ("phone" for WebXR or "vr" for Quest).
+        teleop_device: Type of teleop interface ("phone" for WebXR or "vr"
+            for Quest).
     """
     env_id = f"kinder/{env_name}"
     demo_dir = Path(output_dir)
@@ -170,8 +171,12 @@ def run_teleop(
                 robot_name = env.unwrapped._object_centric_env.robot_name  # type: ignore # pylint: disable=protected-access
                 robot_type = env.unwrapped._object_centric_env.robot_type  # type: ignore # pylint: disable=protected-access
                 robot = state.get_object_from_name(robot_name)
-                assert robot is not None, f"Robot with name '{robot_name}' not found in state"
-                assert robot_type == "tidybot", f"Expected robot type 'tidybot', but got '{robot_type}'"
+                assert (
+                    robot is not None
+                ), f"Robot with name '{robot_name}' not found in state"
+                assert (
+                    robot_type == "tidybot"
+                ), f"Expected robot type 'tidybot', but got '{robot_type}'"
                 current_joints = np.array(
                     [state.get(robot, f"pos_arm_joint{i}") for i in range(1, 8)]
                 )
@@ -180,7 +185,9 @@ def run_teleop(
                 )
 
                 # Render images
-                images = env.unwrapped._object_centric_env.render_all_cameras()
+                images = (  # pylint: disable=protected-access
+                    env.unwrapped._object_centric_env.render_all_cameras()
+                )
                 task_view_image = images["task_view_image"]
                 base_image = images[robot_name + "_base_image"]
                 wrist_image = images[robot_name + "_wrist_image"]

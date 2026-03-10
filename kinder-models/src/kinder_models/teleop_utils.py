@@ -388,16 +388,13 @@ class QuestImageViewer:
     """
 
     def __init__(self, window_name: str) -> None:
-        import cv2
-
         self.window_name = window_name
-        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        cv.namedWindow(self.window_name, cv.WINDOW_NORMAL)  # pylint: disable=no-member
 
     def show_image(self, image: np.ndarray) -> None:
-        import cv2
-
-        cv2.imshow(self.window_name, image)
-        cv2.waitKey(1)
+        """Display image in OpenCV window."""
+        cv.imshow(self.window_name, image)  # pylint: disable=no-member
+        cv.waitKey(1)  # pylint: disable=no-member
 
 
 class QuestController:
@@ -405,7 +402,9 @@ class QuestController:
 
     def __init__(self, debug: bool = False) -> None:
         try:
-            from oculus_reader import OculusReader  # type: ignore
+            from oculus_reader import (  # pylint: disable=import-outside-toplevel
+                OculusReader,
+            )  # type: ignore
         except ImportError:
             raise ImportError(
                 "oculus_reader not found. Install it to use Quest controllers."
@@ -498,7 +497,8 @@ class QuestController:
         """
         print("\n=== Controller Calibration ===")
         print(
-            "Press and hold the A button while moving the RIGHT controller along the robot's X-axis"
+            "Press and hold the A button while moving the RIGHT controller "
+            "along the robot's X-axis"
         )
         print("(robot's forward direction)...")
 
@@ -538,7 +538,8 @@ class QuestController:
 
         print(f"X-axis mapped to controller axis {kx} with sign {np.sign(delta[kx])}")
         print(
-            "\nNow press and hold the A button while moving the RIGHT controller along the robot's Y-axis"
+            "\nNow press and hold the A button while moving the RIGHT controller "
+            "along the robot's Y-axis"
         )
         print("(robot's left direction)...")
 
@@ -604,7 +605,7 @@ class QuestController:
             return None
         return controller_data
 
-    def process_controllers(self, obs: dict) -> dict | str | None:
+    def process_controllers(self, obs: dict) -> dict | str | None:  # pylint: disable=unused-argument
         """Process Quest controller input and generate action."""
         if not self.targets_initialized:
             return None
