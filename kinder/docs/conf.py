@@ -1,8 +1,9 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""Configuration file for the Sphinx documentation builder.
+
+This file contains a selection of the most common options. For a full
+list see the documentation:
+https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""
 
 # -- Path setup --------------------------------------------------------------
 
@@ -18,8 +19,15 @@
 # -- Project information -----------------------------------------------------
 
 project = 'kinder'
-copyright = '2026, Yixuan Huang, Bowen Li, Vaibhav Saxena, Utkarsh Aashu Mishra, Yichao Liang, Liang Ji, Lihan Zha, Jimmy Wu, Nishanth Kumar, Sebastian Scherer, Danfei Xu, Tom Silver'
-author = 'Yixuan Huang, Bowen Li, Vaibhav Saxena, Utkarsh Aashu Mishra, Yichao Liang, Liang Ji, Lihan Zha, Jimmy Wu, Nishanth Kumar, Sebastian Scherer, Danfei Xu, Tom Silver'
+
+_AUTHORS = (
+    'Yixuan Huang, Bowen Li, Vaibhav Saxena, Utkarsh Aashu Mishra, '
+    'Yichao Liang, Liang Ji, Lihan Zha, Jimmy Wu, Nishanth Kumar, '
+    'Sebastian Scherer, Danfei Xu, Tom Silver'
+)
+
+copyright = f'2026, {_AUTHORS}'  # pylint: disable=redefined-builtin
+author = _AUTHORS
 
 # The full version, including alpha/beta/rc tags
 release = '1.0'
