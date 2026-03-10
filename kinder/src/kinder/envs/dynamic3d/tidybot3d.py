@@ -1131,7 +1131,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         """Check if episode should terminate."""
         # pylint: disable=unused-argument
         return self._check_goals()
-    
+
     def render_all_cameras(self) -> dict[str, NDArray[np.uint8]]:
         """Render all available cameras in the environment."""
         if self.render_mode == "rgb_array":
