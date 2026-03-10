@@ -185,9 +185,7 @@ def run_teleop(
                 )
 
                 # Render images
-                images = (  # pylint: disable=protected-access
-                    env.unwrapped._object_centric_env.render_all_cameras()
-                )
+                images = env.unwrapped._object_centric_env.render_all_cameras()  # pylint: disable=protected-access
                 task_view_image = images["task_view_image"]
                 base_image = images[robot_name + "_base_image"]
                 wrist_image = images[robot_name + "_wrist_image"]
