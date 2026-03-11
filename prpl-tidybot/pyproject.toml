@@ -27,10 +27,12 @@ dependencies = [
    "phoenix6",
    "pygame",
    "spatialmath-python",
-   "kortex-api",
 ]
 
 [project.optional-dependencies]
+kortex = [
+   "kortex-api",
+]
 develop = [
     "black",
     "docformatter",
