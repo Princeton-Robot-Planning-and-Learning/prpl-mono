@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools<75"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "prpl_utils"
-version = "0.1.0"
+version = "0.0.1"
 description = "Common Python utilities for the Princeton Robot Planning and Learning lab."
 readme = "README.md"
 requires-python = ">=3.10"

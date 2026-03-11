@@ -43,6 +43,37 @@ uv pip install "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-L
 ```
 But beware that things are changing. Pinning commits is a good idea if you need stable code.
 
+## Publishing Packages to PyPI
+
+Some packages in this monorepo are published to PyPI. To publish a new version:
+
+1. Update the `version` in the package's `pyproject.toml`.
+2. From the package directory, build and publish:
+```bash
+cd <package-dir>
+rm -rf dist/ build/ src/*.egg-info/
+uv build
+uv publish dist/*
+```
+
+`uv publish` requires a PyPI token. Set it via:
+```bash
+export UV_PUBLISH_TOKEN=pypi-YOUR_TOKEN_HERE
+```
+
+### Packages currently on PyPI
+
+| Package | PyPI name | Directory |
+|---------|-----------|-----------|
+| prpl_utils | `prpl_utils` | `prpl-utils/` |
+| relational_structs | `relational_structs` | `relational-structs/` |
+| tomsgeoms2d | `tomsgeoms2d` | `toms-geoms-2d/` |
+| pybullet_helpers | `pybullet_helpers` | `pybullet-helpers/` |
+
+### When to publish
+
+Publish a new version whenever you make changes to a package that external repos (e.g. `kinder`) depend on. Remember to bump the version number each time — PyPI does not allow re-uploading the same version.
+
 ## Troubleshooting
 
 We are doing our best to make installation easy across platforms, but here are some known issues and workarounds.

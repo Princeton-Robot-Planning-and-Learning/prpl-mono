@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "relational_structs"
-version = "0.1.0"
+version = "0.0.1"
 description = "Data structures for relational state and action spaces in robot environments."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,6 +15,7 @@ dependencies = [
    "tabulate",
    "multimethod",
    "pyperplan",
+   "prpl_utils>=0.0.1",
 ]
 
 [project.optional-dependencies]
