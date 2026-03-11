@@ -46,8 +46,8 @@ develop = [
 [tool.uv]
 override-dependencies = ["protobuf==3.20.0"]
 
-[tool.uv.sources]
-kortex-api = {path = "kortex_wheels/kortex_api-2.6.0.post3-py3-none-any.whl"}
+# To install kortex-api locally:
+#   uv pip install kortex_wheels/kortex_api-2.6.0.post3-py3-none-any.whl
 
 [tool.setuptools.packages.find]
 where = ["src"]
