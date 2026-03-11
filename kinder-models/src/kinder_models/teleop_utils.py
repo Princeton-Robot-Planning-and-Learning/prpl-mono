@@ -714,12 +714,11 @@ class QuestController:
 
         # Unwrap angle
         # Type ignore: base_target_pose is set in step()
+        angle_diff = (
+            base_target_theta - self.base_target_pose[2] + math.pi  # type: ignore[index]
+        )
         self.base_target_pose[2] += (  # type: ignore[index]
-            (
-                base_target_theta - self.base_target_pose[2] + math.pi  # type: ignore[index]
-            )
-            % TWO_PI
-            - math.pi
+            angle_diff % TWO_PI - math.pi
         )
 
     def _process_right_controller(self, transform: np.ndarray) -> None:
@@ -771,14 +770,17 @@ class QuestController:
             self.arm_ref_pos  # type: ignore[arg-type]
         ) - z_rot.apply(self.arm_ref_pos)  # type: ignore[arg-type]
         # Type ignore: arm_ref_base_pose, base_pose set earlier
-        pos_diff[:2] += (
-            self.arm_ref_base_pose[:2] - self.base_pose[:2]  # type: ignore[index,operator]
+        base_delta = (
+            self.arm_ref_base_pose[:2]  # type: ignore[index]
+            - self.base_pose[:2]  # type: ignore[index,operator]
         )
+        pos_diff[:2] += base_delta  # type: ignore
 
         # Update arm target position
         # Type ignore: arm_ref_pos set in initialize block
+        arm_delta = z_rot_inv.apply(pos_diff)
         self.arm_target_pos = (
-            self.arm_ref_pos + z_rot_inv.apply(pos_diff)  # type: ignore[operator,assignment]
+            self.arm_ref_pos + arm_delta  # type: ignore[operator,assignment]
         )
 
         # Compute orientation delta
@@ -788,8 +790,9 @@ class QuestController:
         # Convert to scipy Rotation and apply
         rot_delta_R = R.from_matrix(rot_delta)
         # Type ignore: arm_ref_rot is set in initialize block
+        rot_combined = z_rot_inv * rot_delta_R * ref_z_rot
         self.arm_target_rot = (
-            (z_rot_inv * rot_delta_R * ref_z_rot) * self.arm_ref_rot  # type: ignore[operator,assignment]
+            rot_combined * self.arm_ref_rot  # type: ignore[operator,assignment]
         )
 
         # Type ignore: gripper_ref_pos is set in initialize block
