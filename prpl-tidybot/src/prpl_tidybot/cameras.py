@@ -9,9 +9,6 @@ import time
 
 import cv2 as cv
 import numpy as np
-from kortex_api.autogen.client_stubs.DeviceManagerClientRpc import DeviceManagerClient
-from kortex_api.autogen.client_stubs.VisionConfigClientRpc import VisionConfigClient
-from kortex_api.autogen.messages import DeviceConfig_pb2, VisionConfig_pb2
 
 from prpl_tidybot.constants import BASE_CAMERA_SERIAL
 from prpl_tidybot.kinova import DeviceConnection
@@ -131,6 +128,14 @@ class KinovaCamera(Camera):
     def apply_camera_settings(self):
         # Note: This function adds significant camera latency when it is called
         # directly in __init__, so we call it in a separate thread instead
+        # Lazy import: kortex-api is an optional dependency (bundled wheel).
+        from kortex_api.autogen.client_stubs.DeviceManagerClientRpc import (
+            DeviceManagerClient,
+        )
+        from kortex_api.autogen.client_stubs.VisionConfigClientRpc import (
+            VisionConfigClient,
+        )
+        from kortex_api.autogen.messages import DeviceConfig_pb2, VisionConfig_pb2
 
         # Use Kortex API to set camera settings
         with DeviceConnection.createTcpConnection() as router:
