@@ -337,10 +337,11 @@ class ObjectCentricDynamic2DRobotEnv(
 
     def _get_state(self) -> ObjectCentricState:
         obs = self._get_obs()
-        # Snapshot the arbiter cache alongside this state.
+        # Snapshot the arbiter cache alongside this state. Only keep the
+        # most recent snapshot to avoid unbounded memory growth.
         if self.pymunk_space is not None:
             key = self._state_key(obs)
-            self._arbiter_snapshots[key] = self._snapshot_arbiter_cache()
+            self._arbiter_snapshots = {key: self._snapshot_arbiter_cache()}
         return obs
 
     def _set_state(self, state: ObjectCentricState) -> None:
