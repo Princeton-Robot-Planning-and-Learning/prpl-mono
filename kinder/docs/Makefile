@@ -25,4 +25,4 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 apidoc:
-	@$(APIDOC) $(PACKAGE) -o "$(APIDIR)" --no-toc --force --module-first
+	@$(APIDOC) $(PACKAGE) -o "$(APIDIR)" --maxdepth 7 --separate --implicit-namespaces --force --module-first

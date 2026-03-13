@@ -11,9 +11,9 @@ https://www.sphinx-doc.org/en/master/usage/configuration.html
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../src'))
 
 
 # -- Project information -----------------------------------------------------
@@ -42,6 +42,17 @@ extensions = [
     'sphinx.ext.autodoc',  # Automatically generate documentation from docstrings
     'sphinx.ext.napoleon',  # Support for Google-style and NumPy-style docstrings
     'myst_parser',  # Support for Markdown files
+]
+
+# Mock imports for packages that are not available during doc build
+autodoc_mock_imports = [
+    'relational_structs',
+    'mujoco',
+    'dm_control',
+    'pybullet',
+    'pybullet_helpers',
+    'gymnasium',
+    'gym',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
