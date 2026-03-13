@@ -18,7 +18,7 @@ https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 # -- Project information -----------------------------------------------------
 
-project = 'kinder'
+project = 'KinDER'
 
 _AUTHORS = (
     'Yixuan Huang, Bowen Li, Vaibhav Saxena, Utkarsh Aashu Mishra, '

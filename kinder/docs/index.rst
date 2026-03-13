@@ -13,10 +13,36 @@ Welcome to the KinDER documentation!
    README
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Environments
 
    envs/BalanceBeam3D
+   envs/BaseMotion3D
+   envs/ClutteredRetrieval2D
+   envs/ClutteredStorage2D
+   envs/ConstrainedCupboard3D
+   envs/DynObstruction2D
+   envs/DynPushPullHook2D
+   envs/DynPushT2D
+   envs/DynScoopPour2D
+   envs/Dynamo3D
+   envs/Ground3D
+   envs/Motion2D
+   envs/Motion3D
+   envs/Obstruction2D
+   envs/Obstruction3D
+   envs/Packing3D
+   envs/PushPullHook2D
+   envs/Rearrange3D
+   envs/ScoopPour3D
+   envs/Shelf3D
+   envs/SortClutteredBlocks3D
+   envs/StickButton2D
+   envs/SweepIntoDrawer3D
+   envs/SweepSimple3D
+   envs/Table3D
+   envs/Tossing3D
+   envs/Transport3D
 
 
 Indices and tables
