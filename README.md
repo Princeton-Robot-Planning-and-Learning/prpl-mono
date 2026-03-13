@@ -74,26 +74,6 @@ export UV_PUBLISH_TOKEN=pypi-YOUR_TOKEN_HERE
 
 Publish a new version whenever you make changes to a package that external repos (e.g. `kinder`) depend on. Remember to bump the version number each time — PyPI does not allow re-uploading the same version.
 
-## Troubleshooting
-
-We are doing our best to make installation easy across platforms, but here are some known issues and workarounds.
-
-### Installing PyBullet on Recent MacOS
-
-If you encounter issues installing PyBullet on recent versions of MacOS, try this workaround (adapted from [here](github.com/phospho-app/phosphobot/issues/174)):
-1. Make sure you are in the virtual environment where you are installing the mono repo.
-2. Clone PyBullet: `git clone https://github.com/bulletphysics/bullet3`
-3. In `bullet3`, open `examples/ThirdPartyLibs/zlib/zutil.h` and comment out this line by adding `//` at the beginning:
-```
-#define fdopen(fd, mode) NULL
-```
-4. Install from source:
-```
-uv pip install setuptools
-python setup.py build
-python setup.py install
-```
-
 ### Installing `gymnasium[box2d]` on MacOS
 
 If you encounter issues installing `gymnasium[box2d]` on MacOS, do `brew install swig` first and then retry.
