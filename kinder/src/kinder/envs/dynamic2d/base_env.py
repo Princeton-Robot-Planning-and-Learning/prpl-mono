@@ -7,7 +7,12 @@ from typing import Any, Generic, TypeVar
 import gymnasium
 import numpy as np
 import pymunk
+import pymunk._chipmunk_cffi as _cp
 from numpy.typing import NDArray
+from pymunk.arbiter import (
+    _arbiter_from_dict,
+    _arbiter_to_dict,
+)
 from pymunk.vec2d import Vec2d
 from relational_structs import (
     Array,
@@ -122,6 +127,11 @@ class ObjectCentricDynamic2DRobotEnv(
         self._state_obj_to_pymunk_body: dict[Object, pymunk.Body] = {}
         # Used for collision checking with Kinematic2D.
         self._static_object_body_cache: dict[Object, MultiBody2D] = {}
+        # Arbiter cache snapshots keyed by state vector bytes. When get_state
+        # is called, the collision cache (warm-starting impulses) is saved.
+        # When set_state restores that state, the cache is also restored,
+        # ensuring deterministic solver behavior after MPC rollouts.
+        self._arbiter_snapshots: dict[bytes, tuple[int, list]] = {}
 
     def _create_observation_space(self, config: _ConfigType) -> ObjectCentricStateSpace:
         types = set(self.type_features)
@@ -300,8 +310,38 @@ class ObjectCentricDynamic2DRobotEnv(
         """The types and features for this environment."""
         return Dynamic2DRobotEnvTypeFeatures
 
+    def _snapshot_arbiter_cache(self) -> tuple[int, list]:
+        """Save the collision arbiter cache (warm-starting impulses)."""
+        assert self.pymunk_space is not None
+        stamp = _cp.lib.cpSpaceGetTimestamp(self.pymunk_space._space)
+        arbs = self.pymunk_space._get_arbiters()
+        arb_dicts = [_arbiter_to_dict(a, self.pymunk_space) for a in arbs]
+        return (stamp, arb_dicts)
+
+    def _restore_arbiter_cache(self, snapshot: tuple[int, list]) -> None:
+        """Restore the collision arbiter cache from a snapshot."""
+        assert self.pymunk_space is not None
+        stamp, arb_dicts = snapshot
+        # Clear all existing cached arbiters.
+        _cp.lib.cpSpaceClearCachedArbiters(self.pymunk_space._space)
+        # Restore stamp and re-add saved arbiters.
+        _cp.lib.cpSpaceSetTimestamp(self.pymunk_space._space, stamp)
+        for d in arb_dicts:
+            arb = _arbiter_from_dict(d, self.pymunk_space)
+            _cp.lib.cpSpaceAddCachedArbiter(self.pymunk_space._space, arb)
+
+    def _state_key(self, state: ObjectCentricState) -> bytes:
+        """Compute a hash key for an ObjectCentricState."""
+        objs = sorted(state, key=lambda o: o.name)
+        return state.vec(objs).tobytes()
+
     def _get_state(self) -> ObjectCentricState:
-        return self._get_obs()
+        obs = self._get_obs()
+        # Snapshot the arbiter cache alongside this state.
+        if self.pymunk_space is not None:
+            key = self._state_key(obs)
+            self._arbiter_snapshots[key] = self._snapshot_arbiter_cache()
+        return obs
 
     def _set_state(self, state: ObjectCentricState) -> None:
         if self.pymunk_space is None or not self._state_obj_to_pymunk_body:
@@ -312,6 +352,10 @@ class ObjectCentricDynamic2DRobotEnv(
         assert self.pymunk_space is not None
         for body in list(self.pymunk_space.bodies):
             self.pymunk_space.reindex_shapes_for_body(body)
+        # Restore the arbiter cache if we have a snapshot for this state.
+        key = self._state_key(state)
+        if key in self._arbiter_snapshots:
+            self._restore_arbiter_cache(self._arbiter_snapshots[key])
 
     def _get_obs(self) -> ObjectCentricState:
         """Get observation by reading from the physics simulation."""

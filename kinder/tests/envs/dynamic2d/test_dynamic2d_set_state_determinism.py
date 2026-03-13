@@ -170,15 +170,10 @@ def test_mpc_rollout_does_not_corrupt_state(env_id):
         inner.set_state(current_state)
         obs, _, _, _, _ = env.step(actions[step_idx])
 
-        # Tolerance is 1e-4 because Chipmunk's collision cache retains
-        # warm-starting impulses from rollout trajectories. These stale
-        # impulses slightly bias the first solver iterations after state
-        # restore. The deterministic arbiter sort eliminates ordering
-        # artifacts, but cached impulse values remain.
         np.testing.assert_allclose(
             obs,
             ground_truth_states[step_idx + 1],
-            atol=1e-4,
+            atol=1e-6,
             err_msg=(
                 f"[{env_id}] MPC rollouts corrupted state at step {step_idx + 1}"
             ),
