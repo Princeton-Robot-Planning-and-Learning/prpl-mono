@@ -128,7 +128,7 @@ git clone git@github.com:Princeton-Robot-Planning-and-Learning/kinder-openpi.git
 
 1: Download checkpoint path or use your own checkpoint
 
-2: Launch the Policy Server
+2: Launch the policy server
 
 ```bash
 uv run scripts/serve_policy.py policy:checkpoint \
@@ -136,14 +136,14 @@ uv run scripts/serve_policy.py policy:checkpoint \
   --policy.dir=checkpoints/<exp_name>/<epoch>
 ```
 
-3: Run the Evaluation Script
+3: Run the evaluation script
 
 ```bash
 cd ~/kinder-openpi
 python scripts/eval.py --use_overview_image
 ```
 
-3: Start environment
+4: Start environment
 
 ```bash
 cd prpl-mono/kinder-models/scripts
