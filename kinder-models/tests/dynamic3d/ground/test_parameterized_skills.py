@@ -1155,7 +1155,7 @@ def test_pick_toss():
     cube = state.get_object_from_name("bin_0")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
-    target_distance = 1.12
+    target_distance = 1.35
     target_rotation = 0.0
     params = np.array([target_distance, target_rotation])
 
