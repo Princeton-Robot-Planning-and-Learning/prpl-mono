@@ -152,6 +152,7 @@ class ObjectCentricDynPushT2DEnv(ObjectCentricDynamic2DRobotEnv[DynPushT2DEnvCon
         self.pymunk_space.gravity = 0, self.config.gravity_y
         self.pymunk_space.damping = self.config.damping
         self.pymunk_space.collision_slop = self.config.collision_slop
+        self.pymunk_space.collision_persistence = 1
 
         # Create DotRobot instead of KinRobot
         self.dot_robot = DotRobot(
