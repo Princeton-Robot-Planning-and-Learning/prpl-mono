@@ -1,7 +1,6 @@
 """Base class for Dynamic2D (PyMunk) robot environments."""
 
 import abc
-import logging
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
@@ -196,6 +195,8 @@ class ObjectCentricDynamic2DRobotEnv(
     def _reset_robot_in_space(self, obj: Object, state: ObjectCentricState) -> None:
         """Reset the robot in the PyMunk space."""
         assert self.pymunk_space is not None, "Space not initialized"
+        assert self.robot is not None, "Robot not initialized"
+
         robot_base_x = state.get(obj, "x")
         robot_base_y = state.get(obj, "y")
         robot_theta = state.get(obj, "theta")
@@ -225,7 +226,7 @@ class ObjectCentricDynamic2DRobotEnv(
             Vec2d(robot_gripper_vx, robot_gripper_vy),
             robot_gripper_omega,
         )
-        assert self.robot is not None, "Robot not initialized"
+
         self.robot.reset_positions(
             base_x=robot_base_x,
             base_y=robot_base_y,
@@ -238,6 +239,32 @@ class ObjectCentricDynamic2DRobotEnv(
             gripper_vel_r=robot_gripper_vel_r,
         )
 
+    def _restore_robot_body_positions(
+        self, obj: Object, state: ObjectCentricState
+    ) -> None:
+        """Override robot body positions with actual stored positions.
+
+        Called during in-place state restore to avoid position drift from SE2Pose
+        reconstruction of arm_joint/finger_gap scalars.
+        """
+        assert self.robot is not None
+        self.robot._gripper_base_body.position = (
+            state.get(obj, "x_arm"),
+            state.get(obj, "y_arm"),
+        )
+        self.robot._gripper_base_body.angle = state.get(obj, "theta_arm")
+        self.robot._left_finger_body.position = (
+            state.get(obj, "x_finger_l"),
+            state.get(obj, "y_finger_l"),
+        )
+        self.robot._left_finger_body.angle = state.get(obj, "theta_finger_l")
+        self.robot._right_finger_body.position = (
+            state.get(obj, "x_finger_r"),
+            state.get(obj, "y_finger_r"),
+        )
+        self.robot._right_finger_body.angle = state.get(obj, "theta_finger_r")
+        self.robot.update_last_state()
+
     @abc.abstractmethod
     def _add_state_to_space(self, state: ObjectCentricState) -> None:
         """Add objects from the state to the PyMunk space."""
@@ -245,6 +272,16 @@ class ObjectCentricDynamic2DRobotEnv(
     @abc.abstractmethod
     def _read_state_from_space(self) -> None:
         """Read the current state from the PyMunk space."""
+
+    @abc.abstractmethod
+    def _restore_state_in_space(self, state: ObjectCentricState) -> None:
+        """Update existing pymunk bodies in-place from the given state.
+
+        Unlike _add_state_to_space which creates new bodies, this method updates the
+        positions, velocities, and angles of bodies that already exist in the space.
+        This preserves internal pymunk state (body IDs, hash tables) ensuring
+        deterministic simulation after set_state.
+        """
 
     @abc.abstractmethod
     def _create_constant_initial_state_dict(self) -> dict[Object, dict[str, float]]:
@@ -267,7 +304,14 @@ class ObjectCentricDynamic2DRobotEnv(
         return self._get_obs()
 
     def _set_state(self, state: ObjectCentricState) -> None:
-        self.reset(options={"init_state": state})
+        if self.pymunk_space is None or not self._state_obj_to_pymunk_body:
+            self.reset(options={"init_state": state})
+            return
+        self._current_state = state.copy()
+        self._restore_state_in_space(self.full_state)
+        assert self.pymunk_space is not None
+        for body in list(self.pymunk_space.bodies):
+            self.pymunk_space.reindex_shapes_for_body(body)
 
     def _get_obs(self) -> ObjectCentricState:
         """Get observation by reading from the physics simulation."""
@@ -318,10 +362,6 @@ class ObjectCentricDynamic2DRobotEnv(
         if options is not None and "init_state" in options:
             self._current_state = options["init_state"].copy()
             stablize_sim = False
-            logging.warning(
-                "Resetting dynamic2d with a provided initial state is unstable, \
-                replaying the same action won't produce the same result."
-            )
         # Otherwise, set up the initial scene here.
         else:
             self._current_state = self._sample_initial_state()

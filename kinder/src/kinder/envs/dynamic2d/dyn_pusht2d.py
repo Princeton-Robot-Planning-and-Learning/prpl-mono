@@ -412,6 +412,21 @@ class ObjectCentricDynPushT2DEnv(ObjectCentricDynamic2DRobotEnv[DynPushT2DEnvCon
             vel=pymunk.Vec2d(robot_vx, robot_vy),
         )
 
+    def _restore_state_in_space(self, state: ObjectCentricState) -> None:
+        """Update existing pymunk bodies in-place from the given state."""
+        assert self.pymunk_space is not None
+        for obj in state:
+            if obj.is_instance(DotRobotType):
+                self._reset_robot_in_space(obj, state)
+            elif obj in self._state_obj_to_pymunk_body:
+                if state.get(obj, "static"):
+                    continue
+                body = self._state_obj_to_pymunk_body[obj]
+                body.angle = state.get(obj, "theta")
+                body.position = (state.get(obj, "x"), state.get(obj, "y"))
+                body.velocity = (state.get(obj, "vx"), state.get(obj, "vy"))
+                body.angular_velocity = state.get(obj, "omega")
+
     def _read_state_from_space(self) -> None:
         """Read the current state from the PyMunk space."""
         assert self.pymunk_space is not None, "Space not initialized"

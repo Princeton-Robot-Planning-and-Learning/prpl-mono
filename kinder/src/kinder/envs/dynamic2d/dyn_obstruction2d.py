@@ -309,6 +309,12 @@ class ObjectCentricDynObstruction2DEnv(
 
         # Create the robot.
         robot = Object("robot", KinRobotType)
+        arm_joint = self.config.robot_base_radius
+        finger_gap = self.config.gripper_base_height
+        fw = self.config.gripper_finger_width
+        grip = robot_pose * SE2Pose(arm_joint, 0.0, 0.0)
+        fl = grip * SE2Pose(fw / 2, finger_gap / 2, 0.0)
+        fr = grip * SE2Pose(fw / 2, -finger_gap / 2, 0.0)
         init_state_dict[robot] = {
             "x": robot_pose.x,
             "y": robot_pose.y,
@@ -316,22 +322,31 @@ class ObjectCentricDynObstruction2DEnv(
             "vx_base": 0.0,
             "vy_base": 0.0,
             "omega_base": 0.0,
+            "x_arm": grip.x,
+            "y_arm": grip.y,
+            "theta_arm": grip.theta,
             "vx_arm": 0.0,
             "vy_arm": 0.0,
             "omega_arm": 0.0,
+            "x_finger_l": fl.x,
+            "y_finger_l": fl.y,
+            "theta_finger_l": fl.theta,
             "vx_gripper_l": 0.0,
             "vy_gripper_l": 0.0,
             "omega_gripper_l": 0.0,
+            "x_finger_r": fr.x,
+            "y_finger_r": fr.y,
+            "theta_finger_r": fr.theta,
             "vx_gripper_r": 0.0,
             "vy_gripper_r": 0.0,
             "omega_gripper_r": 0.0,
             "static": False,
             "base_radius": self.config.robot_base_radius,
-            "arm_joint": self.config.robot_base_radius,
+            "arm_joint": arm_joint,
             "arm_length": self.config.robot_arm_length_max,
             "gripper_base_width": self.config.gripper_base_width,
             "gripper_base_height": self.config.gripper_base_height,
-            "finger_gap": self.config.gripper_base_height,
+            "finger_gap": finger_gap,
             "finger_height": self.config.gripper_finger_height,
             "finger_width": self.config.gripper_finger_width,
         }
@@ -488,6 +503,22 @@ class ObjectCentricDynObstruction2DEnv(
                         assert self.robot is not None, "Robot not initialized"
                         self.robot.add_to_hand((body, [shape]), mass)
 
+    def _restore_state_in_space(self, state: ObjectCentricState) -> None:
+        """Update existing pymunk bodies in-place from the given state."""
+        assert self.pymunk_space is not None
+        for obj in state:
+            if obj.is_instance(KinRobotType):
+                self._reset_robot_in_space(obj, state)
+                self._restore_robot_body_positions(obj, state)
+            elif obj in self._state_obj_to_pymunk_body:
+                if state.get(obj, "static"):
+                    continue
+                body = self._state_obj_to_pymunk_body[obj]
+                body.position = (state.get(obj, "x"), state.get(obj, "y"))
+                body.angle = state.get(obj, "theta")
+                body.velocity = (state.get(obj, "vx"), state.get(obj, "vy"))
+                body.angular_velocity = state.get(obj, "omega")
+
     def _read_state_from_space(self) -> None:
         """Read the current state from the PyMunk space."""
         assert self.pymunk_space is not None, "Space not initialized"
@@ -509,14 +540,23 @@ class ObjectCentricDynObstruction2DEnv(
                 state.set(robot_obj, "vx_base", self.robot.base_vel[0].x)
                 state.set(robot_obj, "vy_base", self.robot.base_vel[0].y)
                 state.set(robot_obj, "omega_base", self.robot.base_vel[1])
+                state.set(robot_obj, "x_arm", self.robot.gripper_base_pose.x)
+                state.set(robot_obj, "y_arm", self.robot.gripper_base_pose.y)
+                state.set(robot_obj, "theta_arm", self.robot.gripper_base_pose.theta)
                 state.set(robot_obj, "arm_joint", self.robot.curr_arm_length)
                 state.set(robot_obj, "vx_arm", self.robot.gripper_base_vel[0].x)
                 state.set(robot_obj, "vy_arm", self.robot.gripper_base_vel[0].y)
                 state.set(robot_obj, "omega_arm", self.robot.gripper_base_vel[1])
+                state.set(robot_obj, "x_finger_l", self.robot.finger_poses_l.x)
+                state.set(robot_obj, "y_finger_l", self.robot.finger_poses_l.y)
+                state.set(robot_obj, "theta_finger_l", self.robot.finger_poses_l.theta)
                 state.set(robot_obj, "finger_gap", self.robot.curr_gripper)
                 state.set(robot_obj, "vx_gripper_l", self.robot.finger_vel_l[0].x)
                 state.set(robot_obj, "vy_gripper_l", self.robot.finger_vel_l[0].y)
                 state.set(robot_obj, "omega_gripper_l", self.robot.finger_vel_l[1])
+                state.set(robot_obj, "x_finger_r", self.robot.finger_poses_r.x)
+                state.set(robot_obj, "y_finger_r", self.robot.finger_poses_r.y)
+                state.set(robot_obj, "theta_finger_r", self.robot.finger_poses_r.theta)
                 state.set(robot_obj, "vx_gripper_r", self.robot.finger_vel_r[0].x)
                 state.set(robot_obj, "vy_gripper_r", self.robot.finger_vel_r[0].y)
                 state.set(robot_obj, "omega_gripper_r", self.robot.finger_vel_r[1])
