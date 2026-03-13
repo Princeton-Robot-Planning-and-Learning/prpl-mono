@@ -83,7 +83,11 @@ def test_pick_place_after_moving(env):  # pylint: disable=redefined-outer-name
 
     # Create a simulator for planning.
     sim = ObjectCentricTransport3DEnv(
-        num_cubes=2, num_boxes=1, config=config, realistic_bg=False
+        num_cubes=2,
+        num_boxes=1,
+        config=config,
+        realistic_bg=False,
+        allow_state_access=True,
     )
     sim.set_state(obs)
 

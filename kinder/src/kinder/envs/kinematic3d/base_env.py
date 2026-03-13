@@ -60,12 +60,6 @@ class Kinematic3DEnvConfig(KinDEREnvConfig):
     # Robot.
     robot_name: str = "tidybot-kinova"
     robot_base_home_pose: SE2Pose = SE2Pose.identity()
-    randomize_base_pose: bool = False
-    if randomize_base_pose:
-        initialize_x = np.random.uniform(-0.05, 0.05)
-        initialize_y = np.random.uniform(-0.05, 0.05)
-        initialize_rot = np.random.uniform(-np.pi / 4, np.pi / 4)
-        robot_base_home_pose = SE2Pose(initialize_x, initialize_y, initialize_rot)
     robot_base_pose_lower_bound: SE2Pose = SE2Pose(-10.0, -10.0, -np.pi)
     robot_base_pose_upper_bound: SE2Pose = SE2Pose(10.0, 10.0, np.pi)
     robot_base_z: float = 0.0
@@ -434,7 +428,7 @@ class ObjectCentricKinematic3DRobotEnv(
 
         # For testing purposes, the options may specify an initial state.
         if options is not None and "init_state" in options:
-            self.set_state(options["init_state"])
+            self._set_state(options["init_state"])
         else:
             # Reset the held object info.
             self._grasped_object = None
@@ -452,17 +446,17 @@ class ObjectCentricKinematic3DRobotEnv(
 
         return self._get_obs(), {}
 
-    def set_state(self, obs: _ObsType) -> None:
-        """Set the state of the environment to the given one.
+    def _get_state(self) -> _ObsType:
+        return self._get_obs()
 
-        This is useful when treating the environment as a simulator.
-        """
+    def _set_state(self, state: _ObsType) -> None:
+        """Set the state of the environment to the given one."""
         self._set_robot_and_held_object(
-            obs.base_pose, obs.joint_positions, obs.finger_state
+            state.base_pose, state.joint_positions, state.finger_state
         )
-        self._grasped_object = obs.grasped_object
-        self._grasped_object_transform = obs.grasped_object_transform
-        self._set_object_states(obs)
+        self._grasped_object = state.grasped_object
+        self._grasped_object_transform = state.grasped_object_transform
+        self._set_object_states(state)
 
     def _is_inside_object(
         self,

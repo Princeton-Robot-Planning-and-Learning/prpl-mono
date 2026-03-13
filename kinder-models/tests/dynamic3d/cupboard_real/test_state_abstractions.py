@@ -29,7 +29,9 @@ def test_cupboard_real_state_abstraction():
             "unit_test_videos",
             name_prefix="TidyBot3D-cupboard-real-state-abstraction",
         )
-    sim = ObjectCentricTidyBot3DEnv(scene_type="cupboard_real", num_objects=num_objects)
+    sim = ObjectCentricTidyBot3DEnv(
+        scene_type="cupboard_real", num_objects=num_objects, allow_state_access=True
+    )
     abstractor = CupboardRealStateAbstractor(sim)
 
     # Check state abstraction in the initial state. The robot's hand should be empty

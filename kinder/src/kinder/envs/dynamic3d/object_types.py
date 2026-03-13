@@ -56,6 +56,12 @@ MujocoObjectTypeFeatures[MujocoFixtureObjectType] = [
     "qz",
 ]
 
+MujocoDrawerObjectType = Type("mujoco_drawer", parent=MujocoObjectType)
+MujocoObjectTypeFeatures[MujocoDrawerObjectType] = [
+    # Drawer slide position (0.0 to max_slide).
+    "pos",
+]
+
 MujocoTidyBotRobotObjectType = Type("mujoco_tidybot_robot")
 MujocoObjectTypeFeatures[MujocoTidyBotRobotObjectType] = [
     "pos_base_x",

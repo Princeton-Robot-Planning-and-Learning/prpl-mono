@@ -79,7 +79,11 @@ def test_namo_goal_satisfied_when_robot_in_region():
     region, potentially by pushing the obstacle out of the way.
     """
     kinder.register_all_environments()
-    env = kinder.make("kinder/Dynamo3D-o1-v0", render_mode="rgb_array")
+    env = kinder.make(
+        "kinder/Dynamo3D-o1-v0",
+        render_mode="rgb_array",
+        allow_state_access=True,
+    )
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_goal_satisfied")
@@ -120,7 +124,11 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
     3. Checking that the goal is now satisfied
     """
     kinder.register_all_environments()
-    env = kinder.make("kinder/Dynamo3D-o1-v0", render_mode="rgb_array")
+    env = kinder.make(
+        "kinder/Dynamo3D-o1-v0",
+        render_mode="rgb_array",
+        allow_state_access=True,
+    )
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_teleport_goal")

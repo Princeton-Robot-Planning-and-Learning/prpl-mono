@@ -9,8 +9,10 @@ description = "A robotics benchmark for physical reasoning."
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
 dependencies = [
+   "gymnasium",
    "matplotlib",
    "numpy",
+   "Pillow",
    "shapely>=2.1.2",
    "scipy>=1.14.0",
 ]
@@ -22,7 +24,6 @@ all = [
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
    "pybullet>=3.2.5",
-   "gymnasium"
 ]
 dynamic2d = [
    "pygame>=2.5.2",
@@ -54,7 +55,9 @@ develop = [
    "coverage",
    "gdown",
    "scipy-stubs>=1.15.3.0",
-   "types-shapely>=2.1.0"
+   "types-shapely>=2.1.0",
+   "nbmake",
+   "ipykernel"
 ]
 
 [tool.setuptools.packages.find]

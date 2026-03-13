@@ -391,17 +391,13 @@ class GroundMoveController(Dynamic2dRobotController):
 
     def sample_parameters(
         self, x: ObjectCentricState, rng: np.random.Generator
-    ) -> tuple[float, float, float]:
+    ) -> float:
         # Sample robot pose
         abs_x = rng.uniform(self.world_x_min, self.world_x_max)
-        abs_y = rng.uniform(self.world_y_min, self.world_y_max)
-        abs_theta = rng.uniform(-np.pi, np.pi)
 
         rel_x = (abs_x - self.world_x_min) / (self.world_x_max - self.world_x_min)
-        rel_y = (abs_y - self.world_y_min) / (self.world_y_max - self.world_y_min)
-        rel_theta = (abs_theta + np.pi) / (2 * np.pi)
 
-        return (rel_x, rel_y, rel_theta)
+        return rel_x
 
     def _get_gripper_actions(self, state: ObjectCentricState) -> tuple[float, float]:
         """Get gripper actions for pushing: keep closed during and after movement.
@@ -421,14 +417,12 @@ class GroundMoveController(Dynamic2dRobotController):
         robot_theta = wrap_angle(state.get(self._robot, "theta"))
         robot_arm_joint = state.get(self._robot, "arm_joint")
         # Calculate place position
-        params = cast(tuple[float, ...], self._current_params)
+        params = cast(float, self._current_params)
         final_robot_x = (
-            self.world_x_min + (self.world_x_max - self.world_x_min) * params[0]
+            self.world_x_min + (self.world_x_max - self.world_x_min) * params
         )
-        final_robot_y = (
-            self.world_y_min + (self.world_y_max - self.world_y_min) * params[1]
-        )
-        final_robot_theta = wrap_angle(-np.pi + (2 * np.pi) * params[2])
+        final_robot_y = robot_y
+        final_robot_theta = robot_theta
         final_robot_pose = SE2Pose(final_robot_x, final_robot_y, final_robot_theta)
 
         current_wp = (
