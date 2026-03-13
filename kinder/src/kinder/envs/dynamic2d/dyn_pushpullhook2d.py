@@ -258,7 +258,6 @@ class ObjectCentricDynPushPullHook2DEnv(
         self.pymunk_space.gravity = 0, self.config.gravity_y
         self.pymunk_space.damping = self.config.damping
         self.pymunk_space.collision_slop = self.config.collision_slop
-        self.pymunk_space.collision_persistence = 1
 
         # Create robot
         self.robot = KinRobot(

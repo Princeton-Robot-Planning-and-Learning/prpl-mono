@@ -112,13 +112,10 @@ def test_get_next_state_matches_step(env_id):
         inner.set_state(state_before)
         obs_via_step, _, _, _, _ = env.step(action)
 
-        # Tolerance is 1e-4 because each set_state call introduces a tiny
-        # warm-starting artifact (~1e-6) from Chipmunk's collision cache,
-        # and these compound over the loop iterations.
         np.testing.assert_allclose(
             next_via_rollout,
             obs_via_step,
-            atol=1e-4,
+            atol=1e-6,
             err_msg=f"[{env_id}] get_next_state != set_state+step at step {i}",
         )
 
@@ -173,15 +170,15 @@ def test_mpc_rollout_does_not_corrupt_state(env_id):
         inner.set_state(current_state)
         obs, _, _, _, _ = env.step(actions[step_idx])
 
-        # Tolerance is 1e-3 because Chipmunk's iterative solver uses
-        # warm-starting from cached collision impulses. Rollouts create
-        # stale cache entries that slightly affect the first few solver
-        # iterations after state restore. The error is small and bounded
-        # but non-zero due to this solver artifact.
+        # Tolerance is 1e-4 because Chipmunk's collision cache retains
+        # warm-starting impulses from rollout trajectories. These stale
+        # impulses slightly bias the first solver iterations after state
+        # restore. The deterministic arbiter sort eliminates ordering
+        # artifacts, but cached impulse values remain.
         np.testing.assert_allclose(
             obs,
             ground_truth_states[step_idx + 1],
-            atol=1e-3,
+            atol=1e-4,
             err_msg=(
                 f"[{env_id}] MPC rollouts corrupted state at step {step_idx + 1}"
             ),
