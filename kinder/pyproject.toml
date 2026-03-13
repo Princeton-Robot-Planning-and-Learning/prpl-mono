@@ -23,7 +23,7 @@ all = [
    "pymunk==7.1.0",
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
-   "pybullet-arm64>=3.2.7",
+   "pybullet-arm64>=3.2.8",
 ]
 dynamic2d = [
    "pygame>=2.5.2",
@@ -37,14 +37,14 @@ tidybot = [
    "gdown",
 ]
 kinematic3d = [
-   "pybullet-arm64>=3.2.7",
+   "pybullet-arm64>=3.2.8",
 ]
 develop = [
    "pygame>=2.5.2",
    "pymunk==7.1.0",
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
-   "pybullet-arm64>=3.2.7",
+   "pybullet-arm64>=3.2.8",
    "black",
    "docformatter",
    "isort",
