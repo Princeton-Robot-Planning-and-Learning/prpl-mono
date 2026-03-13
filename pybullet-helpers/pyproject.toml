@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
    "numpy>=1.23.5,<2.0",
-   "pybullet>=3.2.5",
+   "pybullet-arm64>=3.2.7",
    "gymnasium>=0.29.1",
    "scipy==1.14.0",
    "hello-robot-stretch-urdf",
