@@ -5,7 +5,7 @@ from __future__ import annotations
 import functools
 import logging
 from dataclasses import dataclass
-from typing import Collection, Iterator
+from typing import Callable, Collection, Iterator
 
 from pyperplan.heuristics.heuristic_base import Heuristic as _PyperplanBaseHeuristic
 from pyperplan.planner import HEURISTICS as _PYPERPLAN_HEURISTICS
@@ -84,6 +84,41 @@ def create_pyperplan_heuristic(
     )
 
 
+# for heuristic llm generation for alphatamp
+def create_pyperplan_heuristic_from_fn(
+    llm_factory_fn: Callable,
+    pddl_domain: PDDLDomain,
+    pddl_problem: PDDLProblem,
+    ground_ops: set[GroundOperator],
+) -> PyperplanHeuristicWrapper:
+    """Create a heuristic wrapper from an LLM-generated factory function
+
+    The factory function has signature: generate_heuristic(task) -> instance
+    where the returned instance has __call__(node) -> float.
+    """
+
+    static_atoms = get_static_atoms(ground_ops, pddl_problem.init_atoms)
+    pyperplan_task = _create_pyperplan_task(
+        set(pddl_problem.init_atoms),
+        set(pddl_problem.goal),
+        ground_ops,
+        pddl_domain.predicates,
+        pddl_problem.objects,
+        static_atoms,
+    )
+    pyperplan_heuristic = llm_factory_fn(pyperplan_task)
+    pyperplan_goal = _atoms_to_pyperplan_facts(set(pddl_problem.goal) - static_atoms)
+    return PyperplanHeuristicWrapper(
+        "llm",
+        pddl_problem.init_atoms,
+        set(pddl_problem.goal),
+        ground_ops,
+        static_atoms,
+        pyperplan_heuristic,
+        pyperplan_goal,
+    )
+
+
 _PyperplanFacts = frozenset[str]
 
 
@@ -113,6 +148,7 @@ class _PyperplanTask:
     initial_state: _PyperplanFacts
     goals: _PyperplanFacts
     operators: Collection[_PyperplanOperator]
+    static: _PyperplanFacts = frozenset()  # what is the frozenset?
 
 
 @dataclass(frozen=True)
@@ -183,7 +219,13 @@ def _create_pyperplan_task(
         )
         pyperplan_operators.add(pyperplan_operator)
     return _PyperplanTask(
-        pyperplan_facts, pyperplan_state, pyperplan_goal, pyperplan_operators
+        pyperplan_facts,
+        pyperplan_state,
+        pyperplan_goal,
+        pyperplan_operators,
+        _atoms_to_pyperplan_facts(
+            static_atoms
+        ),  # added this last bit for static actoms
     )
 
 
