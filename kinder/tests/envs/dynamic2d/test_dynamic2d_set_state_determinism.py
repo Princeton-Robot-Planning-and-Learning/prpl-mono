@@ -138,13 +138,16 @@ def test_mpc_rollout_does_not_corrupt_state(env_id):
     obs, _ = env.reset(seed=42)
     initial_state = inner.get_state()
 
-    # Run a "ground truth" trajectory with no rollouts, starting from
-    # set_state so both paths have the same collision cache state.
+    # Run a "ground truth" trajectory with no rollouts. Each step goes
+    # through get_state/set_state so both paths have identical arbiter
+    # cache serialization roundtrips.
     num_real_steps = 8
     actions = [env.action_space.sample() for _ in range(num_real_steps)]
     inner.set_state(initial_state)
     ground_truth_states = [inner.get_state()]
     for action in actions:
+        current = inner.get_state()
+        inner.set_state(current)
         obs, _, _, _, _ = env.step(action)
         ground_truth_states.append(obs.copy())
 
@@ -170,15 +173,10 @@ def test_mpc_rollout_does_not_corrupt_state(env_id):
         inner.set_state(current_state)
         obs, _, _, _, _ = env.step(actions[step_idx])
 
-        # Tolerance is 1e-4 (not 1e-6) because the arbiter cache
-        # save/restore roundtrip (C struct → Python dict → new C struct)
-        # can introduce tiny floating-point differences that compound
-        # over multiple MPC steps. All other determinism tests
-        # (set_state+replay, get_next_state, cross-env) pass at 1e-6.
         np.testing.assert_allclose(
             obs,
             ground_truth_states[step_idx + 1],
-            atol=1e-4,
+            atol=1e-6,
             err_msg=(f"[{env_id}] MPC rollouts corrupted state at step {step_idx + 1}"),
         )
 
