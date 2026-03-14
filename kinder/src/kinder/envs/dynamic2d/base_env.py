@@ -258,6 +258,7 @@ class ObjectCentricDynamic2DRobotEnv(
         reconstruction of arm_joint/finger_gap scalars.
         """
         assert self.robot is not None
+        # pylint: disable=protected-access
         self.robot._gripper_base_body.position = (
             state.get(obj, "x_arm"),
             state.get(obj, "y_arm"),
@@ -273,6 +274,7 @@ class ObjectCentricDynamic2DRobotEnv(
             state.get(obj, "y_finger_r"),
         )
         self.robot._right_finger_body.angle = state.get(obj, "theta_finger_r")
+        # pylint: enable=protected-access
         self.robot.update_last_state()
 
     @abc.abstractmethod
@@ -313,22 +315,26 @@ class ObjectCentricDynamic2DRobotEnv(
     def _snapshot_arbiter_cache(self) -> tuple[int, list]:
         """Save the collision arbiter cache (warm-starting impulses)."""
         assert self.pymunk_space is not None
-        stamp = _cp.lib.cpSpaceGetTimestamp(self.pymunk_space._space)
-        arbs = self.pymunk_space._get_arbiters()
-        arb_dicts = [_arbiter_to_dict(a, self.pymunk_space) for a in arbs]
+        space = self.pymunk_space
+        # pylint: disable=protected-access
+        stamp = _cp.lib.cpSpaceGetTimestamp(space._space)
+        arbs = space._get_arbiters()
+        # pylint: enable=protected-access
+        arb_dicts = [_arbiter_to_dict(a, space) for a in arbs]
         return (stamp, arb_dicts)
 
     def _restore_arbiter_cache(self, snapshot: tuple[int, list]) -> None:
         """Restore the collision arbiter cache from a snapshot."""
         assert self.pymunk_space is not None
+        space = self.pymunk_space
         stamp, arb_dicts = snapshot
-        # Clear all existing cached arbiters.
-        _cp.lib.cpSpaceClearCachedArbiters(self.pymunk_space._space)
-        # Restore stamp and re-add saved arbiters.
-        _cp.lib.cpSpaceSetTimestamp(self.pymunk_space._space, stamp)
-        for d in arb_dicts:
-            arb = _arbiter_from_dict(d, self.pymunk_space)
-            _cp.lib.cpSpaceAddCachedArbiter(self.pymunk_space._space, arb)
+        # pylint: disable=protected-access
+        _cp.lib.cpSpaceClearCachedArbiters(space._space)
+        _cp.lib.cpSpaceSetTimestamp(space._space, stamp)
+        for arb_dict in arb_dicts:
+            arb = _arbiter_from_dict(arb_dict, space)
+            _cp.lib.cpSpaceAddCachedArbiter(space._space, arb)
+        # pylint: enable=protected-access
 
     def _state_key(self, state: ObjectCentricState) -> bytes:
         """Compute a hash key for an ObjectCentricState."""

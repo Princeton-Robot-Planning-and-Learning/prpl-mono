@@ -89,15 +89,15 @@ def test_obstruction2d_set_state_determinism():
 
 @pytest.mark.parametrize("env_id", DYNAMIC2D_ENVS)
 def test_get_next_state_matches_step(env_id):
-    """Tests that get_next_state(s, a) produces the same result as
-    set_state(s) followed by step(a).
+    """Tests that get_next_state(s, a) produces the same result as set_state(s) followed
+    by step(a).
 
     This is the core invariant that MPC rollouts depend on.
     """
     kinder.register_all_environments()
     env = kinder.make(env_id, allow_state_access=True)
     inner = env.unwrapped
-    obs, _ = env.reset(seed=42)
+    env.reset(seed=42)
 
     num_steps = 10
     actions = [env.action_space.sample() for _ in range(num_steps)]
@@ -174,19 +174,17 @@ def test_mpc_rollout_does_not_corrupt_state(env_id):
             obs,
             ground_truth_states[step_idx + 1],
             atol=1e-6,
-            err_msg=(
-                f"[{env_id}] MPC rollouts corrupted state at step {step_idx + 1}"
-            ),
+            err_msg=(f"[{env_id}] MPC rollouts corrupted state at step {step_idx + 1}"),
         )
 
 
 @pytest.mark.parametrize("env_id", DYNAMIC2D_ENVS)
 def test_cross_environment_determinism(env_id):
-    """Tests that planning in one environment instance and executing in
-    another produces identical results.
+    """Tests that planning in one environment instance and executing in another produces
+    identical results.
 
-    This is critical for MPC where a 'planning env' simulates rollouts
-    and an 'execution env' runs the chosen actions.
+    This is critical for MPC where a 'planning env' simulates rollouts and an 'execution
+    env' runs the chosen actions.
     """
     kinder.register_all_environments()
     plan_env = kinder.make(env_id, allow_state_access=True)
