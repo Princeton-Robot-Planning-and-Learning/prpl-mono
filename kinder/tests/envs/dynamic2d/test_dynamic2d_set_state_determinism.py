@@ -171,10 +171,10 @@ def test_mpc_rollout_does_not_corrupt_state(env_id):
         obs, _, _, _, _ = env.step(actions[step_idx])
 
         # Tolerance is 1e-4 (not 1e-6) because the arbiter cache
-        # serialization roundtrip introduces tiny platform-dependent FP
-        # differences that compound over multiple MPC steps. All other
-        # determinism tests (set_state+replay, get_next_state, cross-env)
-        # pass at 1e-6.
+        # save/restore roundtrip (C struct → Python dict → new C struct)
+        # can introduce tiny floating-point differences that compound
+        # over multiple MPC steps. All other determinism tests
+        # (set_state+replay, get_next_state, cross-env) pass at 1e-6.
         np.testing.assert_allclose(
             obs,
             ground_truth_states[step_idx + 1],
