@@ -133,7 +133,7 @@ def test_mpc_rollout_does_not_corrupt_state(env_id):
     kinder.register_all_environments()
     env = kinder.make(env_id, allow_state_access=True)
     inner = env.unwrapped
-    rng = np.random.RandomState(99)
+    rng = np.random.default_rng(99)
 
     obs, _ = env.reset(seed=42)
     initial_state = inner.get_state()
