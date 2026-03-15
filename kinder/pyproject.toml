@@ -20,14 +20,14 @@ dependencies = [
 [project.optional-dependencies]
 all = [
    "pygame>=2.5.2",
-   "pymunk @ git+https://github.com/tomsilver/pymunk.git@deterministic-solver",
+   "pymunk-deterministic>=7.2.0.post2",
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
    "pybullet-arm64>=3.2.8",
 ]
 dynamic2d = [
    "pygame>=2.5.2",
-   "pymunk @ git+https://github.com/tomsilver/pymunk.git@deterministic-solver",
+   "pymunk-deterministic>=7.2.0.post2",
 ]
 kinematic2d = [
 ]
@@ -41,7 +41,7 @@ kinematic3d = [
 ]
 develop = [
    "pygame>=2.5.2",
-   "pymunk @ git+https://github.com/tomsilver/pymunk.git@deterministic-solver",
+   "pymunk-deterministic>=7.2.0.post2",
    "mujoco==3.2.4",
    "opencv-python>=4.9.0",
    "pybullet-arm64>=3.2.8",
