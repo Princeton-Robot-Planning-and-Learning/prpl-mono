@@ -24,10 +24,6 @@ DETERMINISTIC_REPLAY_BLACKLIST = {
         "Non-deterministic behavior in physics simulation. "
         "Test passes on local machines but fails inconsistently on GitHub Actions CI."
     ),
-    "DynObstruction": (
-        "Non-deterministic behavior in physics simulation. "
-        "Test passes on local machines but fails inconsistently on GitHub Actions CI."
-    ),
     "DynPushPullHook": (
         "Non-deterministic behavior in physics simulation. "
         "Test passes on local machines but fails inconsistently on GitHub Actions CI."
