@@ -24,6 +24,7 @@ Same as DP, but with state vectors also provided as input.
 ### Finetuned VLA:
 A pretrained π0.5 VLA finetuned on the same demos as imitation learning.
 
+This is the entry point for both imitation learning and VLA baselines, and that the main logic is implemented in the [kinder-diffusion-policy](https://github.com/Princeton-Robot-Planning-and-Learning/kinder-diffusion-policy/tree/main) (based on [diffusion_policy](https://github.com/real-stanford/diffusion_policy)) and [kinder-openpi](https://github.com/Princeton-Robot-Planning-and-Learning/kinder-openpi/) (based on [OpenPI](https://github.com/Physical-Intelligence/openpi)) repos.
 
 ## Usage
 
