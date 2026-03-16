@@ -7,8 +7,14 @@ Welcome to the KinDER documentation!
 ====================================
 
 .. toctree::
+   :maxdepth: 5
+   :caption: API
+
+   api/modules
+
+.. toctree::
    :maxdepth: 2
-   :caption: Contents
+   :caption: Overview
 
    README
 

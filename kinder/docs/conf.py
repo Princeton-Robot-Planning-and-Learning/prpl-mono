@@ -47,12 +47,42 @@ extensions = [
 # Mock imports for packages that are not available during doc build
 autodoc_mock_imports = [
     'relational_structs',
+    'relational_structs.spaces',
     'mujoco',
     'dm_control',
     'pybullet',
     'pybullet_helpers',
+    'pybullet_helpers.camera',
+    'pybullet_helpers.geometry',
+    'pybullet_helpers.gui',
+    'pybullet_helpers.inverse_kinematics',
+    'pybullet_helpers.joint',
+    'pybullet_helpers.robots',
+    'pybullet_helpers.robots.single_arm',
+    'pybullet_helpers.utils',
     'gymnasium',
+    'gymnasium.envs',
+    'gymnasium.envs.registration',
+    'gymnasium.spaces',
     'gym',
+    'matplotlib',
+    'matplotlib.pyplot',
+    'prpl_utils',
+    'prpl_utils.utils',
+    'tomsgeoms2d',
+    'tomsgeoms2d.structs',
+    'tomsgeoms2d.utils',
+    'prpl_geoms_2d',
+    'dill',
+    'scipy',
+    'scipy.spatial',
+    'scipy.spatial.transform',
+    'cv2',
+    'numba',
+    'trimesh',
+    'robocasa',
+    'pymunk',
+    'pymunk.vec2d',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,7 +99,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+# html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
