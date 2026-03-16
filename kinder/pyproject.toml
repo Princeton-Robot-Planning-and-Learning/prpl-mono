@@ -62,6 +62,7 @@ develop = [
 docs = [
    "sphinx-book-theme",
    "myst-parser",
+   "sphinx_rtd_theme"
 ]
 
 [tool.setuptools.packages.find]
