@@ -53,6 +53,7 @@ uv pip install -e ".[docs]"
 Build docs:
 ```
 cd docs
+make apidoc
 make html
 ```
 
