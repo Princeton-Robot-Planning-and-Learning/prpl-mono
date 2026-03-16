@@ -24,6 +24,7 @@ Same as DP, but with state vectors also provided as input.
 ### Finetuned VLA:
 A pretrained π0.5 VLA finetuned on the same demos as imitation learning.
 
+This is the entry point for both imitation learning and VLA baselines, and that the main logic is implemented in the [kinder-diffusion-policy](https://github.com/Princeton-Robot-Planning-and-Learning/kinder-diffusion-policy/tree/main) (based on [diffusion_policy](https://github.com/real-stanford/diffusion_policy)) and [kinder-openpi](https://github.com/Princeton-Robot-Planning-and-Learning/kinder-openpi/) (based on [OpenPI](https://github.com/Physical-Intelligence/openpi)) repos.
 
 ## Usage
 
@@ -55,7 +56,10 @@ Specific Steps:
 
 3: Using a VR headset to collect demonstrations for 3D environments. 
 
-TODO
+```bash
+cd prpl-mono/kinder-models/scripts
+python teleop_dynamics3d_prbench.py --teleop-device vr --env-name $ENV_ID --show-images
+```
 
 4: Using bilevel planning and parameterized skills to collect demonstrations. 
 
@@ -71,7 +75,9 @@ cd prpl-mono/kinder-models/scripts
 python demos_to_hdf5.py --teleop_data_dir $YOUR_DATA_DIR --output_path $OUTPUT_HDF5_PATH --render_images
 ```
 
-### Training
+### Diffusion Policy
+
+#### Training
 
 
 1： Clone the diffusion policy repo: 
@@ -90,7 +96,7 @@ mamba activate robodiff
 python train.py --config-name=train_sweep3d_image
 ```
 
-### Inference/Evaluations
+#### Inference/Evaluations
 
 1: Download checkpoint path or use your own checkpoint
 
@@ -103,6 +109,42 @@ python policy_server.py --ckpt-path $Checkpoint_path
 ```
 
 3: Start environment
+
+```bash
+cd prpl-mono/kinder-models/scripts
+python inference_geom2d.py --env-name $ENV_ID --save-videos --num-seeds 1 --num-episodes 5 --max-steps 200
+```
+
+### Vision-language-action Models
+
+#### Training
+
+Clone the kinder-openpi repo and follow the README: 
+
+```bash
+git clone git@github.com:Princeton-Robot-Planning-and-Learning/kinder-openpi.git
+```
+
+#### Inference/Evaluations
+
+1: Download checkpoint path or use your own checkpoint
+
+2: Launch the policy server
+
+```bash
+uv run scripts/serve_policy.py policy:checkpoint \
+  --policy.config=pi05_kinder_finetune \
+  --policy.dir=checkpoints/<exp_name>/<epoch>
+```
+
+3: Run the evaluation script
+
+```bash
+cd ~/kinder-openpi
+python scripts/eval.py --use_overview_image
+```
+
+4: Start environment
 
 ```bash
 cd prpl-mono/kinder-models/scripts
