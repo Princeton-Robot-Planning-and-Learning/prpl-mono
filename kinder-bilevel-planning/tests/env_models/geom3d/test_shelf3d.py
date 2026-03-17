@@ -167,7 +167,10 @@ def test_shelf3d_bilevel_planning(seed):
     """Tests for bilevel planning in the Shelf3D environment."""
 
     num_objects = 2
-    env = kinder.make(f"kinder/KinematicShelf3D-o{num_objects}-v0", render_mode="rgb_array")
+    env = kinder.make(
+        f"kinder/KinematicShelf3D-o{num_objects}-v0",
+        render_mode="rgb_array",
+    )
 
     if MAKE_VIDEOS:
         env = RecordVideo(
