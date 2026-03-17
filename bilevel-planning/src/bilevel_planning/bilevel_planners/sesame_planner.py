@@ -10,7 +10,7 @@ from bilevel_planning.bilevel_planners.bilevel_planner import BilevelPlanner
 from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
 from bilevel_planning.refiners.backtracking_refiner import BacktrackingRefiner
 from bilevel_planning.refiners.refiner import Refiner
-from bilevel_planning.structs import Plan, PlanningProblem
+from bilevel_planning.structs import Plan, PlanningProblem, RefinementMetrics
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySampler,
 )
@@ -37,9 +37,11 @@ class SesamePlanner(BilevelPlanner[_X, _U, _S, _A]):
         self._abstract_plan_generator = abstract_plan_generator
         self._trajectory_sampler = trajectory_sampler
         self._max_abstract_plans = max_abstract_plans
-        self._refiner: Refiner[_X, _U, _S, _A] = BacktrackingRefiner(
+        self._backtracking_refiner = BacktrackingRefiner(
             self._trajectory_sampler, num_sampling_attempts_per_step, seed=self._seed
         )
+        self._refiner: Refiner[_X, _U, _S, _A] = self._backtracking_refiner
+        self.last_metrics: RefinementMetrics | None = None
 
     def run(
         self, problem: PlanningProblem[_X, _U], timeout: float
@@ -84,6 +86,7 @@ class SesamePlanner(BilevelPlanner[_X, _U, _S, _A]):
             plan = self._refiner(x0, s_plan, a_plan, remaining_time, bpg)
             # Plan successfully found.
             if plan is not None:
+                self.last_metrics = self._backtracking_refiner.metrics
                 return plan, bpg
 
         return None, bpg

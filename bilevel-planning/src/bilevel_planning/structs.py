@@ -249,3 +249,46 @@ class SesameModels(Generic[_O, _X, _U]):
 
 class TransitionFailure(BaseException):
     """May be raised by transition functions."""
+
+
+@dataclass
+class RefinementMetrics:
+    """Metrics collected during plan refinement via backtracking search.
+
+    attempts_per_step[i] = total number of trajectory sampling calls made
+    for abstract action i before a successful end-to-end refinement was found.
+    This includes retries caused by TrajectorySamplingFailure *and* retries
+    caused by downstream backtracking from later steps.
+    """
+
+    attempts_per_step: list[int]
+
+    @property
+    def num_steps(self) -> int:
+        """Number of actions in the refined plan."""
+        return len(self.attempts_per_step)
+
+    @property
+    def avg_attempts_per_step(self) -> float:
+        """Average sampling attempts across all steps."""
+        if not self.attempts_per_step:
+            return 0.0
+        return sum(self.attempts_per_step) / len(self.attempts_per_step)
+
+    @property
+    def total_attempts(self) -> int:
+        """Total sampling calls made across all steps."""
+        return sum(self.attempts_per_step)
+
+    def steps_above_threshold(self, threshold: int = 5) -> int:
+        """Number of steps that required more than threshold attempts."""
+        return sum(1 for a in self.attempts_per_step if a > threshold)
+
+    def to_dict(self) -> dict:
+        """Serialize to a plain dict for JSON storage."""
+        return {
+            "num_steps": self.num_steps,
+            "attempts_per_step": self.attempts_per_step,
+            "avg_attempts_per_step": self.avg_attempts_per_step,
+            "total_attempts": self.total_attempts,
+        }

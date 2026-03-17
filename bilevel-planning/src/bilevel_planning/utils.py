@@ -83,13 +83,12 @@ def create_pyperplan_heuristic(
         pyperplan_goal,
     )
 
-
 # for heuristic llm generation for alphatamp
 def create_pyperplan_heuristic_from_fn(
-    llm_factory_fn: Callable,
-    pddl_domain: PDDLDomain,
-    pddl_problem: PDDLProblem,
-    ground_ops: set[GroundOperator],
+        llm_factory_fn: Callable,
+        pddl_domain: PDDLDomain,
+        pddl_problem: PDDLProblem,
+        ground_ops: set[GroundOperator],
 ) -> PyperplanHeuristicWrapper:
     """Create a heuristic wrapper from an LLM-generated factory function
 
@@ -117,7 +116,6 @@ def create_pyperplan_heuristic_from_fn(
         pyperplan_heuristic,
         pyperplan_goal,
     )
-
 
 _PyperplanFacts = frozenset[str]
 
@@ -148,7 +146,7 @@ class _PyperplanTask:
     initial_state: _PyperplanFacts
     goals: _PyperplanFacts
     operators: Collection[_PyperplanOperator]
-    static: _PyperplanFacts = frozenset()  # what is the frozenset?
+    static: _PyperplanFacts = frozenset() # what is the frozenset?
 
 
 @dataclass(frozen=True)
@@ -219,13 +217,8 @@ def _create_pyperplan_task(
         )
         pyperplan_operators.add(pyperplan_operator)
     return _PyperplanTask(
-        pyperplan_facts,
-        pyperplan_state,
-        pyperplan_goal,
-        pyperplan_operators,
-        _atoms_to_pyperplan_facts(
-            static_atoms
-        ),  # added this last bit for static actoms
+        pyperplan_facts, pyperplan_state, pyperplan_goal, pyperplan_operators,
+        _atoms_to_pyperplan_facts(static_atoms) # added this last bit for static actoms
     )
 
 

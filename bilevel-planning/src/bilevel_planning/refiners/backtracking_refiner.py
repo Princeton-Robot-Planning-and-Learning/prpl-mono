@@ -7,7 +7,7 @@ import numpy as np
 
 from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
 from bilevel_planning.refiners.refiner import Refiner
-from bilevel_planning.structs import Plan
+from bilevel_planning.structs import Plan, RefinementMetrics
 from bilevel_planning.trajectory_samplers.trajectory_sampler import (
     TrajectorySampler,
     TrajectorySamplingFailure,
@@ -44,6 +44,8 @@ class BacktrackingRefiner(Refiner[_X, _U, _S, _A]):
     ) -> Plan | None:
         """Returns a plan or None if none are found."""
         assert len(s_plan) > 0 and len(a_plan) > 0, "Abstract plans cannot be empty"
+        self._step_attempt_counts: dict[int, int] = {}
+        self.metrics: RefinementMetrics | None = None
         try:
             success, full_plan = self._refine_from_step(
                 0, x0, s_plan, a_plan, timeout, bpg
@@ -52,6 +54,11 @@ class BacktrackingRefiner(Refiner[_X, _U, _S, _A]):
             return None
         if success:
             assert full_plan is not None
+            self.metrics = RefinementMetrics(
+                attempts_per_step=[
+                    self._step_attempt_counts.get(i, 0) for i in range(len(a_plan))
+                ]
+            )
             return self._combine_plan_steps(full_plan)
         return None
 
@@ -76,6 +83,9 @@ class BacktrackingRefiner(Refiner[_X, _U, _S, _A]):
 
         start_time = time.perf_counter()
         for _ in range(self._num_sampling_attempts_per_step):
+            self._step_attempt_counts[index] = (
+                self._step_attempt_counts.get(index, 0) + 1
+            )
             try:
                 x_traj, u_traj = self._trajectory_sampler(x, s, a, ns, bpg, self._rng)
                 time_elapsed = time.perf_counter() - start_time
