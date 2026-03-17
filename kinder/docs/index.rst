@@ -50,12 +50,6 @@ Welcome to the KinDER documentation!
    envs/Tossing3D
    envs/Transport3D
 
-.. toctree::
-   :maxdepth: 4
-   :caption: API
-
-   api/modules
-
 
 Indices and tables
 ==================
