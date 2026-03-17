@@ -43,6 +43,21 @@ uv pip install "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-L
 ```
 But beware that things are changing. Pinning commits is a good idea if you need stable code.
 
+### Building Documentation
+
+Install Sphinx by following the instructions [here](https://www.sphinx-doc.org/en/master/usage/installation.html). To build docs locally, first install dependencies:
+```
+cd kinder
+uv pip install -e ".[docs]"
+```
+Build docs:
+```
+cd docs
+make apidoc
+make html
+```
+
+## Troubleshooting
 ## Publishing Packages to PyPI
 
 Some packages in this monorepo are published to PyPI. To publish a new version:
