@@ -18,7 +18,7 @@ def test_pick_controller():
     """Test pick controller in Shelf3D environment."""
 
     env = kinder.make(
-        "kinder/Shelf3D-o1-v0",
+        "kinder/KinematicShelf3D-o1-v0",
         render_mode="rgb_array",
         use_gui=False,
         realistic_bg=True,
@@ -63,7 +63,7 @@ def test_pick_and_place_controller():
     """Test pick and place controller in Shelf3D environment."""
 
     env = kinder.make(
-        "kinder/Shelf3D-o1-v0",
+        "kinder/KinematicShelf3D-o1-v0",
         render_mode="rgb_array",
         use_gui=False,
         realistic_bg=True,
