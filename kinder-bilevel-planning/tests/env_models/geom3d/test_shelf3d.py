@@ -14,7 +14,7 @@ kinder.register_all_environments()
 
 def test_shelf3d_observation_to_state():
     """Tests for observation_to_state() in the Shelf3D environment."""
-    env = kinder.make("kinder/Shelf3D-o1-v0")
+    env = kinder.make("kinder/KinematicShelf3D-o1-v0")
     env_models = create_bilevel_planning_models(
         "shelf3d", env.observation_space, env.action_space
     )
@@ -29,7 +29,7 @@ def test_shelf3d_observation_to_state():
 
 def test_shelf3d_transition_fn():
     """Tests for transition_fn() in the Shelf3D environment."""
-    env = kinder.make("kinder/Shelf3D-o1-v0")
+    env = kinder.make("kinder/KinematicShelf3D-o1-v0")
     env.action_space.seed(123)
     env_models = create_bilevel_planning_models(
         "shelf3d", env.observation_space, env.action_space
@@ -50,7 +50,7 @@ def test_shelf3d_transition_fn():
 
 def test_shelf3d_goal_deriver():
     """Tests for goal_deriver() in the Shelf3D environment."""
-    env = kinder.make("kinder/Shelf3D-o1-v0")
+    env = kinder.make("kinder/KinematicShelf3D-o1-v0")
     env_models = create_bilevel_planning_models(
         "shelf3d", env.observation_space, env.action_space
     )
@@ -64,7 +64,7 @@ def test_shelf3d_goal_deriver():
 
 def test_shelf3d_state_abstractor():
     """Tests for state_abstractor() in the Shelf3D environment."""
-    env = kinder.make("kinder/Shelf3D-o1-v0")
+    env = kinder.make("kinder/KinematicShelf3D-o1-v0")
     env_models = create_bilevel_planning_models(
         "shelf3d", env.observation_space, env.action_space
     )
@@ -117,7 +117,7 @@ def _skill_test_helper(ground_skill, env_models, env, obs, params=None):
 
 def test_shelf3d_skills():
     """Tests for skills in the Shelf3D environment."""
-    env = kinder.make("kinder/Shelf3D-o1-v0")
+    env = kinder.make("kinder/KinematicShelf3D-o1-v0")
     env_models = create_bilevel_planning_models(
         "shelf3d", env.observation_space, env.action_space
     )
@@ -167,7 +167,10 @@ def test_shelf3d_bilevel_planning(seed):
     """Tests for bilevel planning in the Shelf3D environment."""
 
     num_objects = 2
-    env = kinder.make(f"kinder/Shelf3D-o{num_objects}-v0", render_mode="rgb_array")
+    env = kinder.make(
+        f"kinder/KinematicShelf3D-o{num_objects}-v0",
+        render_mode="rgb_array",
+    )
 
     if MAKE_VIDEOS:
         env = RecordVideo(
