@@ -610,7 +610,9 @@ class QuestController:
             return None
         return controller_data
 
-    def process_controllers(self, obs: dict) -> dict | str | None:  # pylint: disable=unused-argument
+    def process_controllers(
+        self, obs: dict
+    ) -> dict | str | None:  # pylint: disable=unused-argument
         """Process Quest controller input and generate action."""
         if not self.targets_initialized:
             return None
@@ -707,9 +709,8 @@ class QuestController:
         # Extract yaw angle from rotation matrix
         base_fwd_vec = rot_delta @ np.array([1.0, 0.0, 0.0])
         # Type ignore: base_ref_pose is set in initialize block or step()
-        base_target_theta = (
-            self.base_ref_pose[2]  # type: ignore[index]
-            + math.atan2(base_fwd_vec[1], base_fwd_vec[0])
+        base_target_theta = self.base_ref_pose[2] + math.atan2(  # type: ignore[index]
+            base_fwd_vec[1], base_fwd_vec[0]
         )
 
         # Unwrap angle
@@ -733,13 +734,9 @@ class QuestController:
                 self.controller_offset @ controller_curr_ori
             )
             # Type ignore: these are set in step() before this is called
-            self.arm_ref_pos = (
-                self.arm_target_pos.copy()  # type: ignore[attr-defined]
-            )
+            self.arm_ref_pos = self.arm_target_pos.copy()  # type: ignore[attr-defined]
             self.arm_ref_rot = self.arm_target_rot
-            self.arm_ref_base_pose = (
-                self.base_pose.copy()  # type: ignore[attr-defined]
-            )
+            self.arm_ref_base_pose = self.base_pose.copy()  # type: ignore[attr-defined]
             self.gripper_ref_pos = (
                 self.gripper_target_pos.copy()  # type: ignore[attr-defined]
             )
@@ -768,7 +765,9 @@ class QuestController:
         pos_diff = dpos_controller
         pos_diff += ref_z_rot.apply(
             self.arm_ref_pos  # type: ignore[arg-type]
-        ) - z_rot.apply(self.arm_ref_pos)  # type: ignore[arg-type]
+        ) - z_rot.apply(
+            self.arm_ref_pos
+        )  # type: ignore[arg-type]
         # Type ignore: arm_ref_base_pose, base_pose set earlier
         base_delta = (
             self.arm_ref_base_pose[:2]  # type: ignore[index]
@@ -818,16 +817,10 @@ class QuestController:
         # Initialize targets
         if not self.targets_initialized:
             # Type ignore: obs values are expected to be numpy arrays
-            self.base_target_pose = (
-                obs["base_pose"].copy()  # type: ignore
-            )
-            self.arm_target_pos = (
-                obs["arm_pos"].copy()  # type: ignore
-            )
+            self.base_target_pose = obs["base_pose"].copy()  # type: ignore
+            self.arm_target_pos = obs["arm_pos"].copy()  # type: ignore
             self.arm_target_rot = R.from_quat(obs["arm_quat"])  # type: ignore
-            self.gripper_target_pos = (
-                obs["gripper_pos"].copy()  # type: ignore
-            )
+            self.gripper_target_pos = obs["gripper_pos"].copy()  # type: ignore
             self.targets_initialized = True
 
         # Process controllers and check for control signals

@@ -254,12 +254,7 @@ def run_inference(
                     time.sleep(0.0001)
 
                 # Get robot state
-                if (
-                    "TidyBot" in env_name
-                    or "BaseMotion3D" in env_name
-                    or "Transport3D" in env_name
-                    or "Sweep" in env_name
-                ):
+                if "TidyBot" in env_name or "Sweep" in env_name:
                     robot = state.get_object_from_name("robot_0")
                 else:
                     robot = state.get_object_from_name("robot")
@@ -358,7 +353,9 @@ def run_inference(
                         or "Transport3D" in env_name
                         or "Sweep" in env_name
                     ):
-                        if remove_velocity and "TidyBot" in env_name:
+                        if remove_velocity and (
+                            "TidyBot" in env_name or "Sweep" in env_name
+                        ):
                             obs_dict = {
                                 "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
                                     obs, "robot_0"
@@ -372,7 +369,7 @@ def run_inference(
                         else:
                             obs_dict = {
                                 "robot_state": env.observation_space.get_object_subvector(  # pylint: disable=line-too-long
-                                    obs, "robot_0"
+                                    obs, "robot"
                                 ),
                                 "overview_image": overview_image,
                                 "base_image": base_image,
