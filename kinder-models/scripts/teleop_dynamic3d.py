@@ -9,7 +9,6 @@ Example usage:
         --env-name Tossing3D-o1-v0 \
         --show-images \
         --max-steps 10000
-
 """
 
 import argparse
