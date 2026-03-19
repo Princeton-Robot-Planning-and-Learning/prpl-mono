@@ -147,7 +147,9 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
     current_state = oc_env._get_current_state()  # pylint: disable=protected-access
 
     # Get the robot and obstacle chair objects
-    robot = current_state.get_object_from_name(oc_env.robot_name)  # type: ignore[attr-defined]
+    robot = current_state.get_object_from_name(
+        oc_env.robot_name
+    )  # type: ignore[attr-defined]
     obstacle_chair = current_state.get_object_from_name("obstacle_chair")
 
     # Create modified state
