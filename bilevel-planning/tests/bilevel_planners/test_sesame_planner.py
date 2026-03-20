@@ -131,15 +131,8 @@ def test_sesame(
     initial_state = np.array([10.0, 5.0])
 
     def transition_fn(x, u):
-        # Simulate dependent samples: once x[0] < 8, reject any state whose
-        # y-coordinate has drifted more than 0.2 from the nearest integer.
-        # This makes the success of later refinements depend on the precise
-        # continuous state produced by earlier ones -- small y offsets
-        # accumulated from imprecise controllers become fatal downstream.
         if dependent_samples and x[0] < 8 and abs(x[1] - round(x[1])) > 0.2:
             raise TransitionFailure
-        # Simulate a circular obstacle near (9, 5) that blocks the shortest
-        # abstract plan, forcing the planner to try alternative abstract plans.
         if obstacle and ((x[0] - 9.0) ** 2 + (x[1] - 5.0) ** 2 < 1.0):
             raise TransitionFailure
         return x + u
