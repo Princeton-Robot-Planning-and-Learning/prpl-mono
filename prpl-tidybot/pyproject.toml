@@ -27,6 +27,7 @@ dependencies = [
    "phoenix6",
    "pygame",
    "spatialmath-python",
+   "kindergarden",
 ]
 
 [project.optional-dependencies]
