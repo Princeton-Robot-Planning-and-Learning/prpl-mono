@@ -17,6 +17,24 @@ pip install -e ".[develop]"
 
 ## Usage
 
+### Inspect Results
+
+Download [PPO results](https://drive.google.com/file/d/1lxE4IRT2fQiGWLSdmegQAJJvq68UDKLg/view?usp=drive_link) or 
+[SAC results](https://drive.google.com/file/d/16llJIk3TYx40KwgW2Pa3WYD1QItVL7Ai/view?usp=drive_link).
+You should expect folder structure:
+```
+prpl-mono/
+  kinder-rl/
+    outputs/
+    runs/
+```
+Run:
+```
+cd prpl-mono
+python kinder-rl/experiments/gen_results.py --outputs_dir kinder-rl/outputs --runs_dir kinder-rl/runs
+```
+You should see: `kinder-rl/results.csv`.
+
 ### Running Experiments
 
 Experiments are configured using [Hydra](https://hydra.cc/). Run from the `kinder-rl` directory:
@@ -25,6 +43,8 @@ Experiments are configured using [Hydra](https://hydra.cc/). Run from the `kinde
 cd kinder-rl
 python experiments/run_experiment.py agent=<agent_config> env_id=<environment_id> [options]
 ```
+
+See all of the scripts in `scripts/` for running different agents on different environments.
 
 ### Available Agents
 

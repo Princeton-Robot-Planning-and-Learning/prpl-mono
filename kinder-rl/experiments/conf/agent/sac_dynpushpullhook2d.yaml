@@ -9,6 +9,7 @@ args:
   num_envs: 8
   buffer_size: 100000
   learning_starts: 5000
+  async_envs: true  # Use AsyncVectorEnv for faster parallel stepping
   
 # Training settings
 torch_deterministic: true
