@@ -72,7 +72,7 @@ There are different ways that abstractions can help with planning. We discuss a 
 4. _Abstract action edges_: between abstract state nodes, associated with abstract actions $`a \in \mathcal{A}`$
 5. _State abstractor edges_: from a state node with $`x`$ to an abstract state node with $`s`$ where $`\Psi(x) = s`$
 
-Note that this graph is certainly "partial" in the sense that not it does not include all states, abstract states, actions, and abstract actions. The job of a bilevel planner is to determine which nodes and edges to create while searching for a plan.
+Note that this graph is certainly "partial" in the sense that it does not include all states, abstract states, actions, and abstract actions. The job of a bilevel planner is to determine which nodes and edges to create while searching for a plan.
 
 ### Bilevel Planner Examples
 
