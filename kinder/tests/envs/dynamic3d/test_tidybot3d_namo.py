@@ -97,7 +97,9 @@ def test_namo_goal_satisfied_when_robot_in_region():
     current_state = oc_env._get_current_state()  # pylint: disable=protected-access
 
     # Get the robot object
-    robot = current_state.get_object_from_name(oc_env.robot_name)  # type: ignore[attr-defined]
+    robot = current_state.get_object_from_name(
+        oc_env.robot_name
+    )  # type: ignore[attr-defined]
 
     # Move robot to the goal region (center of goal region is at x=1.0, y=0.0)
     modified_state = current_state.copy()
