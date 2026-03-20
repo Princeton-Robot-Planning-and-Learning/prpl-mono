@@ -4,8 +4,10 @@ import kinder
 import numpy as np
 from conftest import MAKE_VIDEOS
 from gymnasium.wrappers import RecordVideo
+from kinder.envs.dynamic3d.object_types import MujocoTidyBotRobotObjectType
 from prpl_tidybot.interfaces.interface import FakeInterface
 from prpl_tidybot.perceivers.kinder_ground_perceiver import KinDERGroundPerceiver
+from relational_structs import ObjectCentricState
 from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2
 
@@ -16,6 +18,13 @@ from kinder_models.dynamic3d.ground.parameterized_skills import (
 )
 
 kinder.register_all_environments()
+
+
+def _get_robot_from_state(state: ObjectCentricState):
+    """Helper to get robot object from state by type."""
+    robots = state.get_objects(MujocoTidyBotRobotObjectType)
+    assert len(robots) == 1, f"Expected 1 robot, got {len(robots)}"
+    return list(robots)[0]
 
 
 def test_get_target_robot_pose_from_parameters():
@@ -95,7 +104,7 @@ def test_move_to_target_controller_one_cube():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -140,7 +149,7 @@ def test_move_to_target_arm_configuration():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_arm_to_conf"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_conf = np.zeros(7)
@@ -183,7 +192,7 @@ def test_move_to_target_arm_end_effector():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_arm_to_end_effector"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     relative_target_end_effector_pose = np.array(
@@ -237,7 +246,7 @@ def test_close_gripper_controller():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["close_gripper"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
 
@@ -256,7 +265,7 @@ def test_close_gripper_controller():
 
     # move the arm to the target configuration
     lifted_controller = controllers["move_arm_to_conf"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_conf = np.deg2rad([0, -20, 180, -146, 0, -50, 90])  # retract configuration
@@ -278,7 +287,7 @@ def test_close_gripper_controller():
     # Create the move-base controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -302,7 +311,7 @@ def test_close_gripper_controller():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["open_gripper"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
 
@@ -357,7 +366,7 @@ def test_pick_place_ground():
     # Create the move-base controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -380,7 +389,7 @@ def test_pick_place_ground():
 
     # create the move-arm controller.
     lifted_controller = controllers["move_arm_to_end_effector"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_end_effector_pose = np.array(
@@ -413,7 +422,7 @@ def test_pick_place_ground():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["close_gripper"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
 
@@ -432,7 +441,7 @@ def test_pick_place_ground():
 
     # move the arm to the target configuration
     lifted_controller = controllers["move_arm_to_conf"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_conf = np.deg2rad([0, -20, 180, -146, 0, -50, 90])  # retract configuration
@@ -454,7 +463,7 @@ def test_pick_place_ground():
     # Create the move-base controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -477,7 +486,7 @@ def test_pick_place_ground():
 
     # create the move-arm controller.
     lifted_controller = controllers["move_arm_to_end_effector"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_end_effector_pose = np.array(
@@ -510,7 +519,7 @@ def test_pick_place_ground():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["open_gripper"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
 
@@ -565,7 +574,7 @@ def test_pick_place_shelf():
     # Create the move-base controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -588,7 +597,7 @@ def test_pick_place_shelf():
 
     # create the move-arm controller.
     lifted_controller = controllers["move_arm_to_end_effector"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_end_effector_pose = np.array(
@@ -621,7 +630,7 @@ def test_pick_place_shelf():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["close_gripper"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
 
@@ -640,7 +649,7 @@ def test_pick_place_shelf():
 
     # move the arm to the target configuration
     lifted_controller = controllers["move_arm_to_conf"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_conf = np.deg2rad([0, -20, 180, -146, 0, -50, 90])  # retract configuration
@@ -662,7 +671,7 @@ def test_pick_place_shelf():
     # Create the move-base controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -685,7 +694,7 @@ def test_pick_place_shelf():
 
     # create the move-arm controller.
     lifted_controller = controllers["move_arm_to_end_effector"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_end_effector_pose = np.array(
@@ -718,7 +727,7 @@ def test_pick_place_shelf():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["open_gripper"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
 
@@ -765,7 +774,7 @@ def test_pick_place_skill():
 
     # create the pick ground controller.
     lifted_controller = controllers["pick_ground"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -787,7 +796,7 @@ def test_pick_place_skill():
 
     # create the place ground controller.
     lifted_controller = controllers["place_ground"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     cupboard = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube, cupboard)
@@ -837,7 +846,7 @@ def test_pick_place_two_cubes_skill():
     controllers = create_lifted_controllers(env.action_space, pybullet_sim=pybullet_sim)
     # create the pick ground controller.
     lifted_controller = controllers["pick_ground"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -860,7 +869,7 @@ def test_pick_place_two_cubes_skill():
 
     # create the place ground controller.
     lifted_controller = controllers["place_ground"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     cupboard = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube, cupboard)
@@ -885,7 +894,7 @@ def test_pick_place_two_cubes_skill():
 
     # create the pick ground controller.
     lifted_controller = controllers["pick_ground"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube2")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -908,7 +917,7 @@ def test_pick_place_two_cubes_skill():
 
     # create the place ground controller.
     lifted_controller = controllers["place_ground"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube2")
     cupboard = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube, cupboard)
@@ -969,7 +978,7 @@ def test_velocity_tracking_mode():
     # Create the move-base controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -992,7 +1001,7 @@ def test_velocity_tracking_mode():
 
     # create the move-arm controller.
     lifted_controller = controllers["move_arm_to_end_effector"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_end_effector_pose = np.array(
@@ -1054,7 +1063,7 @@ def test_pick_toss():
     # Create the move-base controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube_0")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -1077,7 +1086,7 @@ def test_pick_toss():
 
     # create the move-arm controller.
     lifted_controller = controllers["move_arm_to_end_effector"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_end_effector_pose = np.array(
@@ -1110,7 +1119,7 @@ def test_pick_toss():
     # Create the controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["close_gripper"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
 
@@ -1129,7 +1138,7 @@ def test_pick_toss():
 
     # move the arm to the target configuration
     lifted_controller = controllers["move_arm_to_conf"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_conf = np.deg2rad([0, -20, 180, -146, 0, -50, 90])  # retract configuration
@@ -1151,7 +1160,7 @@ def test_pick_toss():
     # Create the move-base controller.
     controllers = create_lifted_controllers(env.action_space)
     lifted_controller = controllers["move_to_target"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("bin_0")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -1174,7 +1183,7 @@ def test_pick_toss():
 
     # move the arm to the target configuration
     lifted_controller = controllers["move_arm_to_conf"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_conf = np.deg2rad([0, 50, 180, -110, 0, -100, 90])  # pre toss
@@ -1195,7 +1204,7 @@ def test_pick_toss():
 
     # move the arm to the target configuration
     lifted_controller = controllers["toss"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     object_parameters = (robot,)
     controller = lifted_controller.ground(object_parameters)
     target_conf = np.deg2rad([0, 20, 180, -35, 0, 25, 90])  # toss

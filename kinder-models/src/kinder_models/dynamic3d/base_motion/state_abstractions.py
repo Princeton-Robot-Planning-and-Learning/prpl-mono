@@ -25,7 +25,9 @@ def state_abstractor(state: ObjectCentricState) -> RelationalAbstractState:
     atoms: set[GroundAtom] = set()
 
     target = state.get_object_from_name("cube1")
-    robot = state.get_object_from_name("robot_0")
+    robots = state.get_objects(MujocoTidyBotRobotObjectType)
+    assert len(robots) == 1, f"Expected 1 robot, got {len(robots)}"
+    robot = list(robots)[0]
     target_x = state.get(target, "x")
     target_y = state.get(target, "y")
     robot_x = state.get(robot, "pos_base_x")
@@ -44,6 +46,8 @@ def state_abstractor(state: ObjectCentricState) -> RelationalAbstractState:
 def goal_deriver(state: ObjectCentricState) -> RelationalAbstractGoal:
     """The goal is to have the robot on the target."""
     target = state.get_object_from_name("cube1")
-    robot = state.get_object_from_name("robot_0")
+    robots = state.get_objects(MujocoTidyBotRobotObjectType)
+    assert len(robots) == 1, f"Expected 1 robot, got {len(robots)}"
+    robot = list(robots)[0]
     atoms = {GroundAtom(AtTarget, [robot, target])}
     return RelationalAbstractGoal(atoms, state_abstractor)

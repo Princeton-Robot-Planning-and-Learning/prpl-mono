@@ -1,7 +1,10 @@
 """Tests for utils.py."""
 
 import kinder
-from kinder.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from kinder.envs.dynamic3d.tidybot3d import (
+    MujocoTidyBotRobotObjectType,
+    ObjectCentricTidyBot3DEnv,
+)
 from kinder_bilevel_planning.env_models.dynamic3d.tidybot3d_base_motion import (
     create_bilevel_planning_models,
 )
@@ -10,6 +13,12 @@ from kinder_models.utils import (
     KinDERParameterizedSkillEnv,
     ParameterizedSkillReference,
 )
+
+
+def _get_robot_from_state(state):
+    """Helper to get robot from state by type."""
+    robots = state.get_objects(MujocoTidyBotRobotObjectType)
+    return list(robots)[0]
 
 
 def test_kinder_parameterized_skill_env():
@@ -35,7 +44,7 @@ def test_kinder_parameterized_skill_env():
     obs, _ = env.reset(seed=123)
 
     # Make a plan.
-    robot = obs.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(obs)
     cube = obs.get_object_from_name("cube1")
     move_to_cube = ParameterizedSkillReference(
         "MoveToTargetGroundController", objects=[robot, cube], params={}
