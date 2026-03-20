@@ -46,7 +46,7 @@ def create_bilevel_planning_models(
     assert isinstance(observation_space, ObjectCentricBoxSpace)
     assert isinstance(action_space, Kinematic3DRobotActionSpace)
 
-    sim = ObjectCentricShelf3DEnv(num_cubes=num_objects)
+    sim = ObjectCentricShelf3DEnv(num_cubes=num_objects, allow_state_access=True)
 
     # Convert observations into states. The important thing is that states are hashable.
     def observation_to_state(o: NDArray[np.float32]) -> ObjectCentricState:

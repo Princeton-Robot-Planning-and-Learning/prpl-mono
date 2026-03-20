@@ -77,9 +77,10 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         show_images: bool = False,
         scene_bg: bool | str | None = None,
         scene_render_camera: str | None = None,
+        **kwargs,
     ) -> None:
         # Initialize ObjectCentricKinDEREnv first
-        super().__init__(config)
+        super().__init__(config, **kwargs)
 
         # Store instance attributes from kwargs
         self.scene_type = scene_type
@@ -495,6 +496,7 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
                             position=fixture_pos,
                             yaw=fixture_yaw,
                             regions=regions_in_fixture,
+                            env=self._robot_env,
                         )
                         new_fixture.visualize_regions()
                         self._fixtures_dict[fixture_name] = new_fixture
@@ -857,11 +859,12 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
 
         return self._get_current_state(), {}, self._get_all_obs()
 
-    def set_state(self, state: ObjectCentricState) -> None:
-        """Set the environment to the current state.
+    def _get_state(self) -> ObjectCentricState:
+        assert self._current_state is not None, "Need to call reset() first"
+        return self._current_state.copy()
 
-        This is useful for planning baselines.
-        """
+    def _set_state(self, state: ObjectCentricState) -> None:
+        """Set the environment to the given state."""
         # Reset the robot.
         self._set_robot_state(state)
 
@@ -930,11 +933,11 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # Collect object-centric data for all objects
         state_dict = {}
         for obj in self._objects:
-            obj_data = obj.get_object_centric_data()
-            state_dict[obj.symbolic_object] = obj_data
+            obj_state = obj.get_object_centric_state()
+            state_dict.update(obj_state)
         for fixture in self._fixtures_dict.values():
-            fixture_data = fixture.get_object_centric_data()
-            state_dict[fixture.symbolic_object] = fixture_data
+            fixture_state = fixture.get_object_centric_state()
+            state_dict.update(fixture_state)
         # Add robot into object-centric state.
         robot_state_dict = self._get_object_centric_robot_data()
         state_dict.update(robot_state_dict)
@@ -1129,6 +1132,16 @@ class ObjectCentricRobotEnv(ObjectCentricDynamic3DRobotEnv[TidyBot3DConfig]):
         # pylint: disable=unused-argument
         return self._check_goals()
 
+    def render_all_cameras(self) -> dict[str, NDArray[np.uint8]]:
+        """Render all available cameras in the environment."""
+        if self.render_mode == "rgb_array":
+            assert self._robot_env is not None, "Robot environment not initialized"
+            images = self._robot_env.get_camera_images()
+            if images is not None:
+                return images
+            raise RuntimeError("No camera images available in observation.")
+        raise NotImplementedError(f"Render mode {self.render_mode} not supported")
+
     def render(self) -> NDArray[np.uint8]:  # type: ignore
         """Render the environment."""
         if self.render_mode == "rgb_array":
@@ -1220,7 +1233,10 @@ class ObjectCentricTidyBot3DEnv(ObjectCentricRobotEnv):
         """Set the robot state in the simulation."""
         assert self._robot_env is not None, "Robot environment not initialized"
 
-        robot_obj = state.get_object_from_name(self.robot_name)
+        # Get robot by type instead of by name for flexibility
+        robots = state.get_objects(MujocoTidyBotRobotObjectType)
+        assert len(robots) == 1, f"Expected exactly 1 robot, got {len(robots)}"
+        robot_obj = list(robots)[0]
 
         # Reset the robot base position.
         robot_base_pos = [
@@ -1389,7 +1405,10 @@ class ObjectCentricRBY1A3DEnv(ObjectCentricRobotEnv):
         """Set the robot state in the simulation."""
         assert self._robot_env is not None, "Robot environment not initialized"
 
-        robot_obj = state.get_object_from_name(self.robot_name)
+        # Get robot by type instead of by name for flexibility
+        robots = state.get_objects(MujocoRBY1ARobotObjectType)
+        assert len(robots) == 1, f"Expected exactly 1 robot, got {len(robots)}"
+        robot_obj = list(robots)[0]
 
         # Reset the robot base position.
         assert self._robot_env.qpos is not None

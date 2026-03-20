@@ -2,10 +2,19 @@
 
 import numpy as np
 import spatialmath
+from kinder.envs.dynamic3d.object_types import MujocoTidyBotRobotObjectType
 from kinder.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
+from relational_structs import ObjectCentricState
 
 from prpl_tidybot.interfaces.interface import FakeInterface
 from prpl_tidybot.perceivers.kinder_ground_perceiver import KinDERGroundPerceiver
+
+
+def _get_robot_from_state(state: ObjectCentricState):
+    """Helper to get robot object from state by type."""
+    robots = state.get_objects(MujocoTidyBotRobotObjectType)
+    assert len(robots) == 1, f"Expected 1 robot, got {len(robots)}"
+    return list(robots)[0]
 
 
 def test_kinder_ground_perceiver():
@@ -15,7 +24,7 @@ def test_kinder_ground_perceiver():
     interface.base_interface.map_base_state = spatialmath.SE2(x=1.0, y=0.0, theta=0.0)
     perceiver = KinDERGroundPerceiver(interface)
     state = perceiver.get_state()
-    robot_obj = state.get_object_from_name("robot_0")
+    robot_obj = _get_robot_from_state(state)
     assert np.isclose(state.get(robot_obj, "pos_arm_joint1"), 1.0)
     assert np.isclose(state.get(robot_obj, "pos_arm_joint2"), 0.0)
     assert np.isclose(state.get(robot_obj, "pos_arm_joint3"), 0.0)
@@ -40,6 +49,7 @@ def test_real_to_sim_kinder_ground():
     sim = ObjectCentricTidyBot3DEnv(
         scene_type="base_motion",
         num_objects=1,
+        allow_state_access=True,
     )
 
     # Get the real state from the perceiver.

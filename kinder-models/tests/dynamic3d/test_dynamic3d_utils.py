@@ -2,7 +2,9 @@
 
 import kinder
 import numpy as np
+from kinder.envs.dynamic3d.object_types import MujocoTidyBotRobotObjectType
 from matplotlib import pyplot as plt
+from relational_structs import ObjectCentricState
 from relational_structs.spaces import ObjectCentricBoxSpace
 from spatialmath import SE2
 from tomsgeoms2d.structs import Rectangle
@@ -17,6 +19,13 @@ from kinder_models.dynamic3d.utils import (
 )
 
 kinder.register_all_environments()
+
+
+def _get_robot_from_state(state: ObjectCentricState):
+    """Helper to get robot object from state by type."""
+    robots = state.get_objects(MujocoTidyBotRobotObjectType)
+    assert len(robots) == 1, f"Expected 1 robot, got {len(robots)}"
+    return list(robots)[0]
 
 
 def test_get_overhead_object_se2_pose():
@@ -55,7 +64,7 @@ def test_get_overhead_robot_se2_pose():
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     obs, _ = env.reset(seed=123)
     state1 = env.observation_space.devectorize(obs)
-    robot = state1.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state1)
 
     # Extract the initial SE2 pose.
     pose1 = get_overhead_robot_se2_pose(state1, robot)
@@ -77,7 +86,8 @@ def test_get_overhead_kinematic2ds():
     state = env.observation_space.devectorize(obs)
     geoms = get_overhead_kinematic2ds(state)
     assert len(geoms) == 2
-    robot_geom = geoms["robot_0"]
+    robot = _get_robot_from_state(state)
+    robot_geom = geoms[robot.name]
     assert isinstance(robot_geom, Rectangle)
     cube_geom = geoms["cube1"]
     assert isinstance(cube_geom, Rectangle)
@@ -140,7 +150,7 @@ def test_run_base_motion_planning():
         max_y=y_bounds[1],
     )
     assert isinstance(fig, plt.Figure)
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     robot_width, robot_height, _ = get_bounding_box(state, robot)
     for pose in base_motion_plan:
         robot_geom = Rectangle.from_center(

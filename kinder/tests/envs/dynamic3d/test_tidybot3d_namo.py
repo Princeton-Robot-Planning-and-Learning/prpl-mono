@@ -79,7 +79,11 @@ def test_namo_goal_satisfied_when_robot_in_region():
     region, potentially by pushing the obstacle out of the way.
     """
     kinder.register_all_environments()
-    env = kinder.make("kinder/Dynamo3D-o1-v0", render_mode="rgb_array")
+    env = kinder.make(
+        "kinder/Dynamo3D-o1-v0",
+        render_mode="rgb_array",
+        allow_state_access=True,
+    )
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_goal_satisfied")
@@ -93,7 +97,9 @@ def test_namo_goal_satisfied_when_robot_in_region():
     current_state = oc_env._get_current_state()  # pylint: disable=protected-access
 
     # Get the robot object
-    robot = current_state.get_object_from_name("robot_0")
+    robot = current_state.get_object_from_name(
+        oc_env.robot_name
+    )  # type: ignore[attr-defined]
 
     # Move robot to the goal region (center of goal region is at x=1.0, y=0.0)
     modified_state = current_state.copy()
@@ -120,7 +126,11 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
     3. Checking that the goal is now satisfied
     """
     kinder.register_all_environments()
-    env = kinder.make("kinder/Dynamo3D-o1-v0", render_mode="rgb_array")
+    env = kinder.make(
+        "kinder/Dynamo3D-o1-v0",
+        render_mode="rgb_array",
+        allow_state_access=True,
+    )
 
     if MAKE_VIDEOS:
         env = RecordVideo(env, "unit_test_videos_namo_teleport_goal")
@@ -139,7 +149,9 @@ def test_namo_goal_achieved_after_teleporting_chair_and_robot():
     current_state = oc_env._get_current_state()  # pylint: disable=protected-access
 
     # Get the robot and obstacle chair objects
-    robot = current_state.get_object_from_name("robot_0")
+    robot = current_state.get_object_from_name(
+        oc_env.robot_name
+    )  # type: ignore[attr-defined]
     obstacle_chair = current_state.get_object_from_name("obstacle_chair")
 
     # Create modified state
@@ -209,7 +221,8 @@ def test_namo_robot_can_navigate_to_goal():
 
     # Get initial state
     state = env.observation_space.devectorize(obs)
-    robot = state.get_object_from_name("robot_0")
+    robot_name = oc_env.robot_name  # type: ignore[attr-defined]
+    robot = state.get_object_from_name(robot_name)
     robot_x = state.get(robot, "pos_base_x")
     robot_y = state.get(robot, "pos_base_y")
 

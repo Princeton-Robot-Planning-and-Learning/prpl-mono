@@ -1,5 +1,6 @@
 """Parameterized skills for the TidyBot3D ground environment."""
 
+import math
 from typing import Any
 
 import numpy as np
@@ -50,6 +51,9 @@ from kinder_models.dynamic3d.utils import (
 )
 
 # Constants.
+_CONTROL_DT = 0.1  # Control period in seconds (10 Hz).
+_ARM_MAX_VEL = np.deg2rad(np.array([80.0, 80.0, 80.0, 80.0, 70.0, 70.0, 70.0]))
+_ARM_MAX_ACCEL = np.deg2rad(np.array([297.0, 150.0, 150.0, 150.0, 150.0, 150.0, 150.0]))
 MAX_BASE_MOVEMENT_MAGNITUDE = 1e-1
 GRIPPER_OPEN_THRESHOLD = 0.01
 GRASP_CLOSE_THRESHOLD = 1.0  # for stable grasp
@@ -68,6 +72,93 @@ PLACE_SAMPLER_X_OFFSET_BOUNDS = (-0.10, 0)
 PLACE_SAMPLER_Y_OFFSET_BOUNDS = (-0.15, 0.15)
 MAX_SAMPLER_ATTEMPTS = 100
 BASE_TO_CUPBOARD_ROTATION = -np.pi / 2
+
+
+# Based on https://github.com/jimmyyhwu/tidybot/blob/main/robot/kinova.py#L310
+def _trapezoidal_motion_profile(
+    total_dist: float,
+    max_vel: float,
+    max_accel: float,
+    max_decel: float,
+    step_size: float,
+) -> np.ndarray:
+    """Compute a trapezoidal motion profile.
+
+    Returns array of positions along the path sampled at step_size.
+    """
+    assert total_dist >= 0
+
+    # Duration of each phase.
+    if total_dist < 0.5 * max_vel**2 / max_accel + 0.5 * max_vel**2 / max_decel:
+        accel_duration = (
+            2 * total_dist / (max_accel + max_accel**2 / max_decel)
+        ) ** 0.5
+        decel_duration = (max_accel / max_decel) * accel_duration
+        const_duration = 0.0
+    else:
+        accel_duration = max_vel / max_accel
+        decel_duration = max_vel / max_decel
+        const_duration = (
+            total_dist / max_vel - 0.5 * max_vel / max_accel - 0.5 * max_vel / max_decel
+        )
+    total_duration = accel_duration + const_duration + decel_duration
+
+    t = np.arange(0, total_duration + step_size, step_size)
+    pos = np.zeros_like(t)
+
+    accel_idx = math.ceil(accel_duration / step_size)
+    pos[:accel_idx] = 0.5 * max_accel * t[:accel_idx] ** 2
+
+    decel_idx = math.ceil((accel_duration + const_duration) / step_size)
+    pos[accel_idx:decel_idx] = 0.5 * max_accel * accel_duration**2 + max_vel * (
+        t[accel_idx:decel_idx] - accel_duration
+    )
+
+    tmp = t[decel_idx:] - (accel_duration + const_duration)
+    pos[decel_idx:] = 0.5 * max_accel * accel_duration**2 + max_vel * const_duration
+    pos[decel_idx:] += (max_decel * decel_duration) * tmp - 0.5 * max_decel * tmp**2
+
+    return pos
+
+
+def _compute_per_joint_profile(
+    start_conf: np.ndarray,
+    end_conf: np.ndarray,
+    max_vel: np.ndarray,
+    max_accel: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute trapezoidal profile along a straight-line joint path.
+
+    Parameterizes the path as q(s) = start + direction * s, where s goes from 0 to
+    total_dist. The scalar max velocity and acceleration along the path are determined
+    by the most constrained joint.
+
+    Returns (trajectory_positions, direction) where trajectory_positions is a 1-D array
+    of s values at each control step.
+    """
+    dq = end_conf - start_conf
+    s_total = float(np.linalg.norm(dq))
+    if s_total < 1e-8:
+        return np.array([0.0]), np.zeros(len(end_conf))
+
+    direction = dq / s_total
+    abs_dir = np.abs(direction)
+
+    # The effective scalar limits along the path: for each joint i,
+    # |dir_i| * ds/dt <= max_vel_i  =>  ds/dt <= max_vel_i / |dir_i|
+    # Take the minimum across joints that actually move.
+    moving = abs_dir > 1e-6
+    effective_max_vel = float(np.min(max_vel[moving] / abs_dir[moving]))
+    effective_max_accel = float(np.min(max_accel[moving] / abs_dir[moving]))
+
+    trajectory = _trapezoidal_motion_profile(
+        s_total,
+        max_vel=effective_max_vel,
+        max_accel=effective_max_accel,
+        max_decel=effective_max_accel,
+        step_size=_CONTROL_DT,
+    )
+    return trajectory, direction
 
 
 # Utility functions.
@@ -206,7 +297,7 @@ class MoveToTargetGroundController(
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
+        robot_obj = self.objects[0]  # Robot is first parameter
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -310,7 +401,9 @@ class PyBulletSim:
     ) -> None:
         """Update the internal state of the simulator from an object-centric state."""
         # Update the robot state.
-        robot_obj = x.get_object_from_name("robot_0")
+        robots = x.get_objects(MujocoTidyBotRobotObjectType)
+        assert len(robots) == 1, f"Expected 1 robot, got {len(robots)}"
+        robot_obj = list(robots)[0]
         # Update the arm base.
         base_pose = Pose.from_rpy(
             (x.get(robot_obj, "pos_base_x"), x.get(robot_obj, "pos_base_y"), 0.0),
@@ -427,117 +520,9 @@ class MoveArmToConfController(GroundParameterizedController[ObjectCentricState, 
         self._current_params: np.ndarray | None = None
         self._current_arm_joint_plan: list[JointPositions] | None = None
         self._pybullet_sim: PyBulletSim | None = None
-
-    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
-        # We can later implement sampling if it's helpful, but usually the user would
-        # want to specify the target arm conf themselves.
-        raise NotImplementedError
-
-    def reset(self, x: ObjectCentricState, params: Any) -> None:
-        # Initialize the PyBullet interface if this is the first time ever.
-        if self._pybullet_sim is None:
-            self._pybullet_sim = PyBulletSim(x)
-        # Update the current state and parameters.
-        self._last_state = x
-        assert isinstance(params, np.ndarray)
-        self._current_params = params.copy()
-        target_joints = self._current_params.tolist() + ([0.0] * 6)
-        # Reset PyBullet given the current state.
-        self._pybullet_sim.set_state(x)
-        # Run motion planning.
-        plan = run_motion_planning(
-            self._pybullet_sim.robot,
-            self._pybullet_sim.get_robot_joints(),
-            target_joints,
-            collision_bodies=self._pybullet_sim.get_collision_bodies(),
-            seed=0,  # use a constant seed to make this effectively deterministic
-            physics_client_id=self._pybullet_sim.physics_client_id,
-        )
-        assert plan is not None, "Motion planning failed"
-        self._current_arm_joint_plan = plan
-
-    def terminated(self) -> bool:
-        assert self._current_arm_joint_plan is not None
-        return self._robot_is_close_to_conf(self._current_arm_joint_plan[-1])
-
-    def step(self) -> Array:
-        assert self._current_arm_joint_plan is not None
-        while len(self._current_arm_joint_plan) > 1:
-            peek_conf = self._current_arm_joint_plan[0]
-            # Close enough, pop and continue.
-            if self._robot_is_close_to_conf(peek_conf):
-                self._current_arm_joint_plan.pop(0)
-            # Not close enough, stop popping.
-            break
-        robot_conf = self._get_current_robot_arm_conf()
-        gripper_pose = self._get_current_robot_gripper_pose()
-        next_conf = self._current_arm_joint_plan[0]
-        action = np.zeros(11, dtype=np.float32)
-        action[3:10] = np.subtract(next_conf, robot_conf)[:7]
-        action[-1] = gripper_pose
-        return action
-
-    def observe(self, x: ObjectCentricState) -> None:
-        self._last_state = x
-
-    def _get_current_robot_arm_conf(self) -> JointPositions:
-        x = self._last_state
-        assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
-        return [
-            x.get(robot_obj, "pos_arm_joint1"),
-            x.get(robot_obj, "pos_arm_joint2"),
-            x.get(robot_obj, "pos_arm_joint3"),
-            x.get(robot_obj, "pos_arm_joint4"),
-            x.get(robot_obj, "pos_arm_joint5"),
-            x.get(robot_obj, "pos_arm_joint6"),
-            x.get(robot_obj, "pos_arm_joint7"),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-        ]
-
-    def _get_current_robot_gripper_pose(self) -> float:
-        x = self._last_state
-        assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
-        if x.get(robot_obj, "pos_gripper") > 0.2:
-            return GRASP_CLOSE_THRESHOLD
-        return 0.0
-
-    def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
-        current_conf = self._get_current_robot_arm_conf()
-        assert self._pybullet_sim is not None
-        dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 6 * 1e-2
-
-
-class TossController(GroundParameterizedController[ObjectCentricState, Array]):
-    """Controller for motion planning the arm to reach a target conf.
-
-    The object parameters are:
-        robot: The robot itself.
-
-    The continuous parameters are:
-        joint1_target: float
-        joint2_target: float
-        ...
-        joint7_target: float
-
-    The controller uses motion planning in pybullet.
-    """
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._last_state: ObjectCentricState | None = None
-        self._current_params: np.ndarray | None = None
-        self._current_arm_joint_plan: list[JointPositions] | None = None
-        self._pybullet_sim: PyBulletSim | None = None
-        self._largest_velocity: np.ndarray = np.zeros(7)
-        self._gripper_release_step: int = 15
+        self._trajectory: np.ndarray = np.array([])
+        self._traj_dir: np.ndarray = np.zeros(7)
+        self._start_joint_angles: np.ndarray = np.zeros(7)
         self._step_idx: int = 0
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
@@ -567,32 +552,41 @@ class TossController(GroundParameterizedController[ObjectCentricState, Array]):
         )
         assert plan is not None, "Motion planning failed"
         self._current_arm_joint_plan = plan
+        # Compute trapezoidal velocity profile along the path.
+        curr = np.array(self._get_current_robot_arm_conf()[:7])
+        final = np.array(self._current_arm_joint_plan[-1][:7])
+        self._trajectory, self._traj_dir = _compute_per_joint_profile(
+            curr,
+            final,
+            _ARM_MAX_VEL,
+            _ARM_MAX_ACCEL,
+        )
+        self._start_joint_angles = curr.copy()
+        self._step_idx = 0
 
     def terminated(self) -> bool:
-        assert self._current_arm_joint_plan is not None
-        return self._robot_is_close_to_conf(self._current_arm_joint_plan[-1])
+        return self._step_idx >= len(self._trajectory)
 
     def step(self) -> Array:
-        assert self._current_arm_joint_plan is not None
-        while len(self._current_arm_joint_plan) > 1:
-            peek_conf = self._current_arm_joint_plan[0]
-            # Close enough, pop and continue.
-            if self._robot_is_close_to_conf(peek_conf):
-                self._current_arm_joint_plan.pop(0)
-            # Not close enough, stop popping.
-            break
-        robot_conf = self._get_current_robot_arm_conf()
         gripper_pose = self._get_current_robot_gripper_pose()
-        next_conf = self._current_arm_joint_plan[0]
         action = np.zeros(18, dtype=np.float32)
-        action[3:10] = np.subtract(next_conf, robot_conf)[:7]
-        if len(self._current_arm_joint_plan) < self._gripper_release_step:
-            action[10] = 0.0
-            action[11:18] = self._largest_velocity
+
+        idx = min(self._step_idx, len(self._trajectory) - 1)
+        s = float(self._trajectory[idx])
+
+        # Velocity via finite difference.
+        if idx > 0:
+            ds = (self._trajectory[idx] - self._trajectory[idx - 1]) / _CONTROL_DT
         else:
-            action[10] = gripper_pose
-            action[11:18] = 0.8 * action[3:10] * self._step_idx
-            self._largest_velocity = action[11:18].copy()
+            ds = 0.0
+
+        kp = 2.0
+        kv = 2.0
+        curr = np.array(self._get_current_robot_arm_conf()[:7])
+        target = self._start_joint_angles + self._traj_dir * s
+        action[3:10] = kp * (target - curr)
+        action[11:18] = self._traj_dir * (ds * kv)
+        action[10] = gripper_pose
 
         self._step_idx += 1
         return action
@@ -603,7 +597,7 @@ class TossController(GroundParameterizedController[ObjectCentricState, Array]):
     def _get_current_robot_arm_conf(self) -> JointPositions:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
+        robot_obj = self.objects[0]  # Robot is first parameter
         return [
             x.get(robot_obj, "pos_arm_joint1"),
             x.get(robot_obj, "pos_arm_joint2"),
@@ -623,7 +617,159 @@ class TossController(GroundParameterizedController[ObjectCentricState, Array]):
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
+        robot_obj = self.objects[0]  # Robot is first parameter
+        if x.get(robot_obj, "pos_gripper") > 0.2:
+            return GRASP_CLOSE_THRESHOLD
+        return 0.0
+
+
+class TossController(GroundParameterizedController[ObjectCentricState, Array]):
+    """Controller for motion planning the arm to reach a target conf.
+
+    The object parameters are:
+        robot: The robot itself.
+
+    The continuous parameters are:
+        joint1_target: float
+        joint2_target: float
+        ...
+        joint7_target: float
+
+    The controller uses motion planning in pybullet.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._last_state: ObjectCentricState | None = None
+        self._current_params: np.ndarray | None = None
+        self._current_arm_joint_plan: list[JointPositions] | None = None
+        self._pybullet_sim: PyBulletSim | None = None
+        # Fraction of toss path at which to release gripper.
+        self._release_fraction: float = 0.46
+        self._step_idx: int = 0
+        self._toss_dir: np.ndarray = np.zeros(7)
+        self._trajectory: np.ndarray = np.array([])
+        self._has_released: bool = False
+        self._start_joint_angles: np.ndarray = np.zeros(7)
+
+    def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
+        # We can later implement sampling if it's helpful, but usually the user would
+        # want to specify the target arm conf themselves.
+        raise NotImplementedError
+
+    def reset(self, x: ObjectCentricState, params: Any) -> None:
+        # Initialize the PyBullet interface if this is the first time ever.
+        if self._pybullet_sim is None:
+            self._pybullet_sim = PyBulletSim(x)
+        # Update the current state and parameters.
+        self._last_state = x
+        assert isinstance(params, np.ndarray)
+        self._current_params = params.copy()
+        target_joints = self._current_params.tolist() + ([0.0] * 6)
+        # Reset PyBullet given the current state.
+        self._pybullet_sim.set_state(x)
+        # Run motion planning.
+        plan = run_motion_planning(
+            self._pybullet_sim.robot,
+            self._pybullet_sim.get_robot_joints(),
+            target_joints,
+            collision_bodies=self._pybullet_sim.get_collision_bodies(),
+            seed=0,  # use a constant seed to make this effectively deterministic
+            physics_client_id=self._pybullet_sim.physics_client_id,
+        )
+        assert plan is not None, "Motion planning failed"
+        self._current_arm_joint_plan = plan
+        # Compute trapezoidal velocity profile along the path.
+        curr_joint_angles = self._get_current_robot_arm_conf()
+        final_joint_angles = self._current_arm_joint_plan[-1]
+        dq = np.subtract(final_joint_angles, curr_joint_angles)[:7]
+        s_total = float(np.linalg.norm(dq))
+        if s_total > 1e-4:
+            self._toss_dir = dq / s_total
+        else:
+            self._toss_dir = np.zeros(7)
+        self._trajectory = _trapezoidal_motion_profile(
+            s_total,
+            max_vel=np.deg2rad(140),
+            max_accel=np.deg2rad(300),
+            max_decel=np.deg2rad(200),
+            step_size=_CONTROL_DT,
+        )
+        self._start_joint_angles = np.array(curr_joint_angles[:7])
+        self._has_released = False
+        self._step_idx = 0
+
+    def terminated(self) -> bool:
+        # Terminate when we've gone through the entire profile.
+        return self._step_idx >= len(self._trajectory)
+
+    def step(self) -> Array:
+        assert self._current_arm_joint_plan is not None
+        gripper_pose = self._get_current_robot_gripper_pose()
+        action = np.zeros(18, dtype=np.float32)
+
+        # Look up target distance along path from precomputed trapezoidal profile.
+        idx = min(self._step_idx, len(self._trajectory) - 1)
+        s = float(self._trajectory[idx])
+        # Compute velocity via finite difference of the profile.
+        if idx > 0:
+            ds = (self._trajectory[idx] - self._trajectory[idx - 1]) / _CONTROL_DT
+        else:
+            ds = 0.0
+
+        # Position target with feedforward gain to compensate for tracking lag.
+        kp = 2.0
+        kv = 2.0
+        curr_joint_angles = self._get_current_robot_arm_conf()
+        target_joint_angles = self._start_joint_angles + self._toss_dir * s
+        action[3:10] = kp * (target_joint_angles - np.array(curr_joint_angles[:7]))
+
+        # Velocity feedforward along the toss direction.
+        action[11:18] = self._toss_dir * (ds * kv)
+
+        # Determine release point based on fraction of total distance.
+        s_total = self._trajectory[-1] if len(self._trajectory) > 0 else 0.0
+        fraction_covered = s / s_total if s_total > 0 else 1.0
+        should_release = (
+            self._has_released or fraction_covered >= self._release_fraction
+        )
+
+        if should_release:
+            action[10] = 0.0
+            self._has_released = True
+        else:
+            action[10] = gripper_pose
+
+        self._step_idx += 1
+        return action
+
+    def observe(self, x: ObjectCentricState) -> None:
+        self._last_state = x
+
+    def _get_current_robot_arm_conf(self) -> JointPositions:
+        x = self._last_state
+        assert x is not None
+        robot_obj = self.objects[0]  # Robot is first parameter
+        return [
+            x.get(robot_obj, "pos_arm_joint1"),
+            x.get(robot_obj, "pos_arm_joint2"),
+            x.get(robot_obj, "pos_arm_joint3"),
+            x.get(robot_obj, "pos_arm_joint4"),
+            x.get(robot_obj, "pos_arm_joint5"),
+            x.get(robot_obj, "pos_arm_joint6"),
+            x.get(robot_obj, "pos_arm_joint7"),
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+        ]
+
+    def _get_current_robot_gripper_pose(self) -> float:
+        x = self._last_state
+        assert x is not None
+        robot_obj = self.objects[0]  # Robot is first parameter
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
@@ -655,6 +801,10 @@ class MoveArmToEndEffectorController(
         self._current_params: np.ndarray | None = None
         self._current_arm_joint_plan: list[JointPositions] | None = None
         self._pybullet_sim: PyBulletSim | None = None
+        self._trajectory: np.ndarray = np.array([])
+        self._traj_dir: np.ndarray = np.zeros(7)
+        self._start_joint_angles: np.ndarray = np.zeros(7)
+        self._step_idx: int = 0
 
     def sample_parameters(self, x: ObjectCentricState, rng: np.random.Generator) -> Any:
         # We can later implement sampling if it's helpful, but usually the user would
@@ -716,26 +866,43 @@ class MoveArmToEndEffectorController(
 
         assert plan is not None, "Motion planning failed"
         self._current_arm_joint_plan = plan
+        # Compute trapezoidal velocity profile along the path.
+        curr = np.array(self._get_current_robot_arm_conf()[:7])
+        final = np.array(self._current_arm_joint_plan[-1][:7])
+        self._trajectory, self._traj_dir = _compute_per_joint_profile(
+            curr,
+            final,
+            _ARM_MAX_VEL,
+            _ARM_MAX_ACCEL,
+        )
+        self._start_joint_angles = curr.copy()
+        self._step_idx = 0
 
     def terminated(self) -> bool:
-        assert self._current_arm_joint_plan is not None
-        return self._robot_is_close_to_conf(self._current_arm_joint_plan[-1])
+        return self._step_idx >= len(self._trajectory)
 
     def step(self) -> Array:
-        assert self._current_arm_joint_plan is not None
-        while len(self._current_arm_joint_plan) > 1:
-            peek_conf = self._current_arm_joint_plan[0]
-            # Close enough, pop and continue.
-            if self._robot_is_close_to_conf(peek_conf):
-                self._current_arm_joint_plan.pop(0)
-            # Not close enough, stop popping.
-            break
-        robot_conf = self._get_current_robot_arm_conf()
         gripper_pose = self._get_current_robot_gripper_pose()
-        next_conf = self._current_arm_joint_plan[0]
-        action = np.zeros(11, dtype=np.float32)
-        action[3:10] = np.subtract(next_conf, robot_conf)[:7]
-        action[-1] = gripper_pose
+        action = np.zeros(18, dtype=np.float32)
+
+        idx = min(self._step_idx, len(self._trajectory) - 1)
+        s = float(self._trajectory[idx])
+
+        # Velocity via finite difference.
+        if idx > 0:
+            ds = (self._trajectory[idx] - self._trajectory[idx - 1]) / _CONTROL_DT
+        else:
+            ds = 0.0
+
+        kp = 2.0
+        kv = 2.0
+        curr = np.array(self._get_current_robot_arm_conf()[:7])
+        target = self._start_joint_angles + self._traj_dir * s
+        action[3:10] = kp * (target - curr)
+        action[11:18] = self._traj_dir * (ds * kv)
+        action[10] = gripper_pose
+
+        self._step_idx += 1
         return action
 
     def observe(self, x: ObjectCentricState) -> None:
@@ -744,7 +911,7 @@ class MoveArmToEndEffectorController(
     def _get_current_robot_arm_conf(self) -> JointPositions:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
+        robot_obj = self.objects[0]  # Robot is first parameter
         return [
             x.get(robot_obj, "pos_arm_joint1"),
             x.get(robot_obj, "pos_arm_joint2"),
@@ -764,16 +931,10 @@ class MoveArmToEndEffectorController(
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
+        robot_obj = self.objects[0]  # Robot is first parameter
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
         return 0.0
-
-    def _robot_is_close_to_conf(self, conf: JointPositions) -> bool:
-        current_conf = self._get_current_robot_arm_conf()
-        assert self._pybullet_sim is not None
-        dist = self._pybullet_sim.get_joint_distance(current_conf, conf)
-        return dist < 6 * 1e-2
 
 
 class CloseGripperController(GroundParameterizedController[ObjectCentricState, Array]):
@@ -962,7 +1123,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
         self._current_base_motion_plan = base_motion_plan
 
         plan_x = x.copy()
-        robot = plan_x.get_object_from_name("robot_0")
+        robot = self.objects[0]  # Robot is first parameter
         target_base_pose = self._current_base_motion_plan[-1]
         if not self._navigated:
             plan_x.set(robot, "pos_base_x", target_base_pose.x)
@@ -1162,7 +1323,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
     def _get_current_robot_arm_conf(self) -> JointPositions:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
+        robot_obj = self.objects[0]  # Robot is first parameter
         return [
             x.get(robot_obj, "pos_arm_joint1"),
             x.get(robot_obj, "pos_arm_joint2"),
@@ -1182,7 +1343,7 @@ class PickGroundController(GroundParameterizedController[ObjectCentricState, Arr
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
+        robot_obj = self.objects[0]  # Robot is first parameter
         # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD
@@ -1317,7 +1478,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
         self._current_base_motion_plan = base_motion_plan
 
         plan_x = x.copy()
-        robot = plan_x.get_object_from_name("robot_0")
+        robot = self.objects[0]  # Robot is first parameter
         target_base_pose = self._current_base_motion_plan[-1]
         plan_x.set(robot, "pos_base_x", target_base_pose.x)
         plan_x.set(robot, "pos_base_y", target_base_pose.y)
@@ -1493,7 +1654,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
     def _get_current_robot_arm_conf(self) -> JointPositions:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
+        robot_obj = self.objects[0]  # Robot is first parameter
         return [
             x.get(robot_obj, "pos_arm_joint1"),
             x.get(robot_obj, "pos_arm_joint2"),
@@ -1513,7 +1674,7 @@ class PlaceGroundController(GroundParameterizedController[ObjectCentricState, Ar
     def _get_current_robot_gripper_pose(self) -> float:
         x = self._last_state
         assert x is not None
-        robot_obj = x.get_object_from_name("robot_0")
+        robot_obj = self.objects[0]  # Robot is first parameter
         # return x.get(robot_obj, "pos_gripper")
         if x.get(robot_obj, "pos_gripper") > 0.2:
             return GRASP_CLOSE_THRESHOLD

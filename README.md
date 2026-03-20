@@ -43,25 +43,51 @@ uv pip install "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-L
 ```
 But beware that things are changing. Pinning commits is a good idea if you need stable code.
 
+### Building Documentation
+
+Install Sphinx by following the instructions [here](https://www.sphinx-doc.org/en/master/usage/installation.html). To build docs locally, first install dependencies:
+```
+cd kinder
+uv pip install -e ".[docs]"
+```
+Build docs:
+```
+cd docs
+make apidoc
+make html
+```
+
 ## Troubleshooting
+## Publishing Packages to PyPI
 
-We are doing our best to make installation easy across platforms, but here are some known issues and workarounds.
+Some packages in this monorepo are published to PyPI. To publish a new version:
 
-### Installing PyBullet on Recent MacOS
+1. Update the `version` in the package's `pyproject.toml`.
+2. From the package directory, build and publish:
+```bash
+cd <package-dir>
+rm -rf dist/ build/ src/*.egg-info/
+uv build
+uv publish dist/*
+```
 
-If you encounter issues installing PyBullet on recent versions of MacOS, try this workaround (adapted from [here](github.com/phospho-app/phosphobot/issues/174)):
-1. Make sure you are in the virtual environment where you are installing the mono repo.
-2. Clone PyBullet: `git clone https://github.com/bulletphysics/bullet3`
-3. In `bullet3`, open `examples/ThirdPartyLibs/zlib/zutil.h` and comment out this line by adding `//` at the beginning:
+`uv publish` requires a PyPI token. Set it via:
+```bash
+export UV_PUBLISH_TOKEN=pypi-YOUR_TOKEN_HERE
 ```
-#define fdopen(fd, mode) NULL
-```
-4. Install from source:
-```
-uv pip install setuptools
-python setup.py build
-python setup.py install
-```
+
+### Packages currently on PyPI
+
+| Package | PyPI name | Directory |
+|---------|-----------|-----------|
+| prpl_utils | `prpl_utils` | `prpl-utils/` |
+| relational_structs | `relational_structs` | `relational-structs/` |
+| tomsgeoms2d | `tomsgeoms2d` | `toms-geoms-2d/` |
+| pybullet_helpers | `pybullet_helpers` | `pybullet-helpers/` |
+
+### When to publish
+
+Publish a new version whenever you make changes to a package that external repos (e.g. `kinder`) depend on. Remember to bump the version number each time — PyPI does not allow re-uploading the same version.
 
 ### Installing `gymnasium[box2d]` on MacOS
 

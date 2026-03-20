@@ -4,6 +4,7 @@ import kinder
 import numpy as np
 from conftest import MAKE_VIDEOS  # pylint: disable=import-error
 from gymnasium.wrappers import RecordVideo
+from kinder.envs.dynamic3d.object_types import MujocoTidyBotRobotObjectType
 from kinder.envs.dynamic3d.tidybot3d import ObjectCentricTidyBot3DEnv
 from relational_structs import ObjectCentricState
 
@@ -14,6 +15,13 @@ from kinder_models.dynamic3d.ground.parameterized_skills import (
     PyBulletSim,
     create_lifted_controllers,
 )
+
+
+def _get_robot_from_state(state: ObjectCentricState):
+    """Helper to get robot object from state by type."""
+    robots = state.get_objects(MujocoTidyBotRobotObjectType)
+    assert len(robots) == 1, f"Expected 1 robot, got {len(robots)}"
+    return list(robots)[0]
 
 
 def test_cupboard_real_state_abstraction():
@@ -29,7 +37,9 @@ def test_cupboard_real_state_abstraction():
             "unit_test_videos",
             name_prefix="TidyBot3D-cupboard-real-state-abstraction",
         )
-    sim = ObjectCentricTidyBot3DEnv(scene_type="cupboard_real", num_objects=num_objects)
+    sim = ObjectCentricTidyBot3DEnv(
+        scene_type="cupboard_real", num_objects=num_objects, allow_state_access=True
+    )
     abstractor = CupboardRealStateAbstractor(sim)
 
     # Check state abstraction in the initial state. The robot's hand should be empty
@@ -40,8 +50,10 @@ def test_cupboard_real_state_abstraction():
     state = env.observation_space.devectorize(obs)
     assert isinstance(state, ObjectCentricState)
     abstract_state = abstractor.state_abstractor(state)
+    robot = _get_robot_from_state(state)
     assert (
-        str(sorted(abstract_state.atoms)) == "[(HandEmpty robot_0), (OnGround cube1)]"
+        str(sorted(abstract_state.atoms))
+        == f"[(HandEmpty {robot.name}), (OnGround cube1)]"
     )
 
     pybullet_sim = PyBulletSim(state, rendering=False)
@@ -50,7 +62,7 @@ def test_cupboard_real_state_abstraction():
 
     # Pick up the cube.
     lifted_controller = controllers["pick_ground"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     object_parameters = (robot, cube)
     controller = lifted_controller.ground(object_parameters)
@@ -73,11 +85,12 @@ def test_cupboard_real_state_abstraction():
 
     # Check updated state abstraction: the robot should be Holding the cube.
     abstract_state = abstractor.state_abstractor(state)
-    assert str(sorted(abstract_state.atoms)) == "[(Holding robot_0 cube1)]"
+    robot = _get_robot_from_state(state)
+    assert str(sorted(abstract_state.atoms)) == f"[(Holding {robot.name} cube1)]"
 
     # Plce the cube.
     lifted_controller = controllers["place_ground"]
-    robot = state.get_object_from_name("robot_0")
+    robot = _get_robot_from_state(state)
     cube = state.get_object_from_name("cube1")
     cupboard = state.get_object_from_name("cupboard_1")
     object_parameters = (robot, cube, cupboard)
@@ -101,9 +114,10 @@ def test_cupboard_real_state_abstraction():
         assert False, "Controller did not terminate"
 
     abstract_state = abstractor.state_abstractor(state)
+    robot = _get_robot_from_state(state)
     assert (
         str(sorted(abstract_state.atoms))
-        == "[(HandEmpty robot_0), (OnFixture cube1 cupboard_1)]"
+        == f"[(HandEmpty {robot.name}), (OnFixture cube1 cupboard_1)]"
     )
 
     env.close()

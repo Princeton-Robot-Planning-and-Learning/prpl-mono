@@ -40,7 +40,11 @@ def test_inside_object_state_restoration(env):  # pylint: disable=redefined-oute
 
     # Create a simulator.
     sim = ObjectCentricTransport3DEnv(
-        num_cubes=2, num_boxes=1, config=config, realistic_bg=False
+        num_cubes=2,
+        num_boxes=1,
+        config=config,
+        realistic_bg=False,
+        allow_state_access=True,
     )
     sim.set_state(obs)
 
@@ -74,7 +78,11 @@ def test_inside_object_state_restoration(env):  # pylint: disable=redefined-oute
 
     # Now create a NEW simulator and restore state to it
     sim2 = ObjectCentricTransport3DEnv(
-        num_cubes=2, num_boxes=1, config=config, realistic_bg=False
+        num_cubes=2,
+        num_boxes=1,
+        config=config,
+        realistic_bg=False,
+        allow_state_access=True,
     )
     sim2.set_state(obs_with_grasp)
 

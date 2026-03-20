@@ -1,7 +1,7 @@
 """Base class for Dynamic2D (PyMunk) robot environments."""
 
 import abc
-import logging
+import warnings
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
@@ -36,6 +36,10 @@ from kinder.envs.dynamic2d.utils import (
 )
 from kinder.envs.kinematic2d.structs import MultiBody2D
 from kinder.envs.utils import render_2dstate
+
+
+class PymunkNondeterminismWarning(UserWarning):
+    """Warns that pymunk state replay is nondeterministic."""
 
 
 @dataclass(frozen=True)
@@ -263,6 +267,12 @@ class ObjectCentricDynamic2DRobotEnv(
         """The types and features for this environment."""
         return Dynamic2DRobotEnvTypeFeatures
 
+    def _get_state(self) -> ObjectCentricState:
+        return self._get_obs()
+
+    def _set_state(self, state: ObjectCentricState) -> None:
+        self.reset(options={"init_state": state})
+
     def _get_obs(self) -> ObjectCentricState:
         """Get observation by reading from the physics simulation."""
         self._read_state_from_space()
@@ -312,9 +322,14 @@ class ObjectCentricDynamic2DRobotEnv(
         if options is not None and "init_state" in options:
             self._current_state = options["init_state"].copy()
             stablize_sim = False
-            logging.warning(
-                "Resetting dynamic2d with a provided initial state is unstable, \
-                replaying the same action won't produce the same result."
+            warnings.warn(
+                "Resetting dynamic2d with a provided initial state is "
+                "nondeterministic due to pymunk internals — replaying the "
+                "same actions may not produce the same result. Suppress with: "
+                "warnings.filterwarnings('ignore', "
+                "category=PymunkNondeterminismWarning)",
+                PymunkNondeterminismWarning,
+                stacklevel=2,
             )
         # Otherwise, set up the initial scene here.
         else:

@@ -132,7 +132,7 @@ def test_tidybot3d_object_centric_data():
     env = ObjectCentricTidyBot3DEnv(num_objects=3)
     env.reset()
     for obj in env._objects:
-        data = obj.get_object_centric_data()
+        data = obj._get_object_centric_data()  # pylint: disable=protected-access
         assert isinstance(data, dict), "Object-centric data should be a dict"
         object_type = obj.symbolic_object.type
         expected_keys = set(MujocoObjectTypeFeatures[object_type])
@@ -167,7 +167,7 @@ def test_tidybot3d_env_set_state():
     # Generate a random trajectory.
     states = []
     actions = []
-    env = ObjectCentricTidyBot3DEnv(num_objects=3)
+    env = ObjectCentricTidyBot3DEnv(num_objects=3, allow_state_access=True)
     obs, _ = env.reset(seed=123)
     states.append(obs)
     for _ in range(5):

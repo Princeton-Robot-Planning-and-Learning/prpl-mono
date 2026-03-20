@@ -57,32 +57,38 @@ def collect_data(
 
     # Create the pick ground controller.
     if "Shelf3D" in env_name:
-        sim = ObjectCentricShelf3DEnv(num_cubes=num_cubes)
+        sim = ObjectCentricShelf3DEnv(num_cubes=num_cubes, allow_state_access=True)
         from kinder_models.kinematic3d.shelf3d.parameterized_skills import (  # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
     elif "Ground3D" in env_name:
-        sim = ObjectCentricGround3DEnv(num_cubes=num_cubes)  # type: ignore
+        sim = ObjectCentricGround3DEnv(  # type: ignore
+            num_cubes=num_cubes, allow_state_access=True
+        )
         from kinder_models.kinematic3d.ground3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
     elif "Transport3D" in env_name:
-        sim = ObjectCentricTransport3DEnv(num_cubes=num_cubes)  # type: ignore
+        sim = ObjectCentricTransport3DEnv(  # type: ignore
+            num_cubes=num_cubes, allow_state_access=True
+        )
         from kinder_models.kinematic3d.transport3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
     elif "BaseMotion3D" in env_name:
-        sim = ObjectCentricBaseMotion3DEnv()  # type: ignore
+        sim = ObjectCentricBaseMotion3DEnv(allow_state_access=True)  # type: ignore
         from kinder_models.kinematic3d.base_motion3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
     elif "Motion3D" in env_name:
-        sim = ObjectCentricMotion3DEnv()  # type: ignore
+        sim = ObjectCentricMotion3DEnv(allow_state_access=True)  # type: ignore
         from kinder_models.kinematic3d.motion3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )
     elif "Obstruction3D" in env_name:
-        sim = ObjectCentricObstruction3DEnv(num_obstructions=num_cubes)  # type: ignore
+        sim = ObjectCentricObstruction3DEnv(  # type: ignore
+            num_obstructions=num_cubes, allow_state_access=True
+        )
         from kinder_models.kinematic3d.obstruction3d.parameterized_skills import (  # type: ignore # pylint: disable=import-outside-toplevel
             create_lifted_controllers,
         )

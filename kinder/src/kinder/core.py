@@ -63,10 +63,14 @@ class ObjectCentricKinDEREnv(
     metadata = {"render_modes": ["rgb_array"]}
 
     def __init__(
-        self, config: _ConfigType, render_mode: str | None = "rgb_array"
+        self,
+        config: _ConfigType,
+        render_mode: str | None = "rgb_array",
+        allow_state_access: bool = False,
     ) -> None:
         self.config = config
         self.render_mode = render_mode
+        self._allow_state_access = allow_state_access
         self.observation_space = self._create_observation_space(config)
         # Set up metadata for rendering. Subclasses will add to the metadata.
         self.metadata = {
@@ -135,6 +139,45 @@ class ObjectCentricKinDEREnv(
         del gui_input
         return np.array([])  # type: ignore
 
+    def _check_state_access(self) -> None:
+        if not self._allow_state_access:
+            msg = "State access is not allowed. Set allow_state_access=True to enable."
+            raise RuntimeError(msg)
+
+    @abc.abstractmethod
+    def _get_state(self) -> _ObsType:
+        """Get the current state.
+
+        Subclasses must implement.
+        """
+
+    @abc.abstractmethod
+    def _set_state(self, state: _ObsType) -> None:
+        """Set the state.
+
+        Subclasses must implement.
+        """
+
+    def get_state(self) -> _ObsType:
+        """Get the current state of the environment."""
+        self._check_state_access()
+        return self._get_state()
+
+    def set_state(self, state: _ObsType) -> None:
+        """Set the state of the environment."""
+        self._check_state_access()
+        self._set_state(state)
+
+    def get_next_state(self, state: _ObsType, action: _ActType) -> _ObsType:
+        """Get the next state given a state and action.
+
+        Default implementation sets state and steps. Subclasses can override.
+        """
+        self._check_state_access()
+        self._set_state(state)
+        obs, _, _, _, _ = self.step(action)
+        return obs
+
 
 class ConstantObjectKinDEREnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
     """Defined by an object-centric KinDER environment and a constant object set.
@@ -149,9 +192,17 @@ class ConstantObjectKinDEREnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
     # gym.make extracts render_modes from the class (entry_point) before instantiation.
     metadata: dict[str, Any] = {"render_modes": ["rgb_array"]}
 
-    def __init__(self, *args, render_mode: str | None = None, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        render_mode: str | None = None,
+        allow_state_access: bool = False,
+        **kwargs,
+    ) -> None:
         super().__init__()
-        self._object_centric_env = self._create_object_centric_env(*args, **kwargs)
+        self._object_centric_env = self._create_object_centric_env(
+            *args, allow_state_access=allow_state_access, **kwargs
+        )
         # Create a Box version of the observation space by extracting the constant
         # objects from an exemplar state.
         exemplar_object_centric_state, _ = self._object_centric_env.reset()
@@ -289,6 +340,25 @@ class ConstantObjectKinDEREnv(gymnasium.Env[NDArray[Any], NDArray[Any]]):
         assert isinstance(self.observation_space, ObjectCentricBoxSpace)
         vec_obs = self.observation_space.vectorize(obs)
         return vec_obs, reward, terminated, truncated, done, raw_obs
+
+    def get_state(self) -> NDArray[Any]:
+        """Get the current state as a vectorized array."""
+        state = self._object_centric_env.get_state()
+        assert isinstance(self.observation_space, ObjectCentricBoxSpace)
+        return self.observation_space.vectorize(state)
+
+    def set_state(self, state: NDArray[Any]) -> None:
+        """Set the state from a vectorized array."""
+        assert isinstance(self.observation_space, ObjectCentricBoxSpace)
+        obj_state = self.observation_space.devectorize(state)
+        self._object_centric_env.set_state(obj_state)
+
+    def get_next_state(self, state: NDArray[Any], action: NDArray[Any]) -> NDArray[Any]:
+        """Get the next state given a state and action."""
+        assert isinstance(self.observation_space, ObjectCentricBoxSpace)
+        obj_state = self.observation_space.devectorize(state)
+        next_state = self._object_centric_env.get_next_state(obj_state, action)
+        return self.observation_space.vectorize(next_state)
 
     def render(self):
         return self._object_centric_env.render()
