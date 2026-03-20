@@ -15,8 +15,9 @@ from prpl_tidybot.perceivers.base_perceiver import Perceiver
 class KinDERGroundPerceiver(Perceiver[ObjectCentricState]):
     """A perceiver for the KinDER Dynamic 3D Ground environment."""
 
-    def __init__(self, interface: Interface) -> None:
+    def __init__(self, interface: Interface, robot_name: str = "robot_0") -> None:
         self._interface = interface
+        self._robot_name = robot_name
 
     def get_state(self) -> ObjectCentricState:
         state_dict: dict[Object, dict[str, float]] = {}
@@ -27,7 +28,7 @@ class KinDERGroundPerceiver(Perceiver[ObjectCentricState]):
         gripper_state = self._interface.get_gripper_state()
 
         # Add robot into object-centric state.
-        robot = Object("robot_0", MujocoTidyBotRobotObjectType)
+        robot = Object(self._robot_name, MujocoTidyBotRobotObjectType)
 
         # Build this super explicitly, even though verbose, to be careful.
         state_dict[robot] = {
