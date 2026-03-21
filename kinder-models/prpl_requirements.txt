@@ -1,6 +1,0 @@
-# PRPL mono requirements.
-../relational-structs
-../bilevel-planning
-../kinder
-../prpl-tidybot
-../kinder-imitation-learning

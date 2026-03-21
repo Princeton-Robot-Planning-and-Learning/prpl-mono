@@ -1,4 +1,0 @@
-# @package _global_
-# Configuration for Motion2D-p0-v0
-env: "Motion2D-p0-v0"
-max_eval_steps: 200

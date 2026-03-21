@@ -7,7 +7,6 @@ logs
 llm_cache.db
 vlm_cache
 unit_test_videos*
-kinder-vlm-planning/outputs
 data/
 
 # Byte-compiled / optimized / DLL files
