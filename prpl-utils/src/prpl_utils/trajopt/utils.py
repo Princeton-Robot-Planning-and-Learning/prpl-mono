@@ -21,8 +21,11 @@ def spline_to_trajopt_trajectory(
     state_list = [initial_state]
     state = initial_state
     action_list: list[TrajOptAction] = []
+    low = problem.action_space.low
+    high = problem.action_space.high
+    dtype = problem.action_space.dtype
     for t in range(horizon):
-        action = solution(t)
+        action = np.clip(solution(t), low, high).astype(dtype)
         action_list.append(action)
         state = problem.get_next_state(state, action)
         state_list.append(state)
