@@ -1,7 +1,9 @@
 """Tests for IKFast loading and installation module."""
 
 import os
-from unittest.mock import call, patch
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -29,20 +31,23 @@ def _ikfast_info_fixture() -> IKFastInfo:
 
 def test_install_ikfast_module():
     """Test for install_ikfast_module."""
-    with patch(f"{_MODULE_PATH}.os") as mock_os:
-        mock_os.system.return_value = 0
-        install_ikfast_module("/path/to/ikfast")
-        mock_os.system.assert_called_once_with("cd /path/to/ikfast; python setup.py")
+    with patch(f"{_MODULE_PATH}.subprocess") as mock_subprocess:
+        mock_subprocess.run.return_value = MagicMock(returncode=0)
+        ikfast_dir = Path("/path/to/ikfast")
+        install_ikfast_module(ikfast_dir)
+        mock_subprocess.run.assert_called_once_with(
+            [sys.executable, "setup.py"], cwd=ikfast_dir, check=False
+        )
 
 
 @pytest.mark.parametrize("exit_code", list(range(1, 5)))
 def test_install_ikfast_module_raises_error(exit_code):
-    """Test install_ikfast_module raises error if os.system returns non- zero."""
-    with patch(f"{_MODULE_PATH}.os") as mock_os:
-        mock_os.system.return_value = exit_code
+    """Test install_ikfast_module raises error if subprocess returns non-zero."""
+    with patch(f"{_MODULE_PATH}.subprocess") as mock_subprocess:
+        mock_subprocess.run.return_value = MagicMock(returncode=exit_code)
 
         with pytest.raises(RuntimeError):
-            install_ikfast_module("/path/to/ikfast")
+            install_ikfast_module(Path("/path/to/ikfast"))
 
 
 def test_install_ikfast_if_required_installs_ikfast_module(ikfast_info):
