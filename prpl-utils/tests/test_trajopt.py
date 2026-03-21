@@ -5,7 +5,6 @@ from functools import cached_property
 
 import numpy as np
 from gymnasium.spaces import Box
-from numpy.typing import NDArray
 
 from prpl_utils.structs import Image
 from prpl_utils.trajopt.mpc_wrapper import MPCWrapper
@@ -103,9 +102,9 @@ def test_pendulum():
     env = PendulumTrajOptProblem()
     assert env.state_space.contains(env.initial_state)
     rng = np.random.default_rng(0)
-    states: list[NDArray[np.float64]] = [env.initial_state]
+    states = [env.initial_state]
     state = env.initial_state
-    actions: list[NDArray[np.float64]] = []
+    actions = []
     for _ in range(env.horizon):
         action = rng.standard_normal(env.action_space.shape).astype(np.float64)
         state = env.get_next_state(state, action)
