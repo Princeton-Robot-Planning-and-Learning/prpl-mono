@@ -1,3 +1,9 @@
+> # ⚠️ Kinder has moved!
+>
+> **Kinder** is now at **<https://github.com/Princeton-Robot-Planning-and-Learning/kindergarden>**
+>
+> **Baselines** are now at **<https://github.com/Princeton-Robot-Planning-and-Learning/kinder-baselines>**
+
 # Princeton Robot Planning and Learning Monorepo
 
 This repository contains code under active development by the Princeton Robot Planning and Learning group.
