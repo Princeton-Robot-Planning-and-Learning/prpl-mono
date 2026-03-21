@@ -59,9 +59,9 @@ class PredictiveSamplingSolver(TrajOptSolver):
 
     def _get_initialization(self, horizon: int) -> Trajectory:
         assert self._problem is not None
-        assert self._problem.action_space.shape == (1,)
+        action_dim = self._problem.action_space.shape[0]
         return sample_standard_normal_spline(
-            self._rng, self._config.num_control_points, horizon
+            self._rng, self._config.num_control_points, horizon, action_dim
         )
 
     def _sample_from_nominal(
@@ -71,33 +71,28 @@ class PredictiveSamplingSolver(TrajOptSolver):
     ) -> list[Trajectory]:
         assert self._problem is not None
         # Sample by adding Gaussian noise around the nominal trajectory.
-        control_times = np.linspace(
-            0,
-            nominal.duration,
-            num=self._config.num_control_points,
-            endpoint=True,
-        )
-        nominal_control_points = np.array([nominal(t) for t in control_times])
-        noise_shape = self._problem.action_space.shape + (
-            len(control_times),
-            num_samples,
-        )
+        num_cp = self._config.num_control_points
+        control_times = np.linspace(0, nominal.duration, num=num_cp, endpoint=True)
+        # (num_cp, action_dim)
+        nominal_cp = np.array([nominal(t) for t in control_times])
+        # (num_samples, num_cp, action_dim)
         noise = self._rng.normal(
-            loc=0, scale=self._config.noise_scale, size=noise_shape
+            loc=0,
+            scale=self._config.noise_scale,
+            size=(num_samples, num_cp, nominal_cp.shape[1]),
         )
-        new_control_points = (nominal_control_points + noise).T
+        all_cp = nominal_cp + noise
         # Clip to obey bounds.
         low = self._problem.action_space.low
         high = self._problem.action_space.high
-        clipped_control_points = [
-            [np.clip(a, low, high).astype(np.float64) for a in actions]
-            for actions in new_control_points
-        ]
+        all_cp = np.clip(all_cp, low, high)
         # Convert to trajectories.
         dt = control_times[1] - control_times[0]
         return [
-            point_sequence_to_trajectory(actions, dt=dt)
-            for actions in clipped_control_points
+            point_sequence_to_trajectory(
+                [pt.astype(np.float64) for pt in sample_cp], dt=dt
+            )
+            for sample_cp in all_cp
         ]
 
     def _score_sample(
