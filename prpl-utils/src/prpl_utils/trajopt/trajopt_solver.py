@@ -37,7 +37,7 @@ class TrajOptSolver(abc.ABC):
         initial_state: TrajOptState | None = None,
         horizon: int | None = None,
     ) -> TrajOptTraj:
-        """Get the most recent state and return an action."""
+        """Solve the trajectory optimization problem and return a trajectory."""
         assert self._problem is not None, "Call reset() before solve()"
         if initial_state is None:
             initial_state = self._problem.initial_state
