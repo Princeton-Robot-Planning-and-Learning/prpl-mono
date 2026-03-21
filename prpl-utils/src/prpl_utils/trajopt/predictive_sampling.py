@@ -16,7 +16,7 @@ class PredictiveSamplingHyperparameters:
     """Hyperparameters for predictive sampling."""
 
     num_rollouts: int = 100
-    noise_scale: float = 1.0
+    noise_scale: float | NDArray[np.floating] = 1.0
     num_control_points: int = 10
 
 
