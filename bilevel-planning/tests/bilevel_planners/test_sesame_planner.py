@@ -93,15 +93,29 @@ class MockController(ParameterizedController[X, U]):
 @pytest.mark.parametrize(
     "max_abstract_plans, samples_per_step, dependent_samples, obstacle, expected_out",
     [
-        # # Easy mode: no dependent samples and no obstacle.
+        # Easy mode: no dependent samples and no obstacle. Even the greedy
+        # planner (1 abstract plan, 1 sample) succeeds (README: "Single Abstract
+        # Plan + Greedy Refinement").
         (1, 1, False, False, True),
         (1, 10, False, False, True),
         (10, 10, False, False, True),
-        # # Dependent samples, so naive planner will fail.
+        # Dependent samples: the transition function rejects states where y
+        # drifts >0.2 from the nearest integer (once x<8). This means an
+        # early refinement can make later transitions unrefinable --
+        # the README's cup-grasped-from-top example. The greedy planner (1
+        # plan, 1 sample) fails because it can't retry earlier steps, but
+        # backtracking (samples_per_step=10) recovers by re-sampling earlier
+        # refinements (README: "Single Abstract Plan + Backtracking
+        # Refinement").
         (1, 1, True, False, False),
         (1, 10, True, False, True),
         (10, 10, True, False, True),
-        # # Dependent samples and obsacles, so full sesame is required.
+        # Obstacle: a circular obstacle near (9,5) blocks the only abstract
+        # plan found by a single call to abstract search. Backtracking alone
+        # can't help because the abstract plan itself is infeasible -- we need
+        # multiple abstract plans to find an alternative route around the
+        # obstacle (README: "Multi-Abstract Plan + Backtracking Refinement
+        # (SeSamE)").
         (1, 1, False, True, False),
         (1, 10, False, True, False),
         (10, 10, False, True, True),
@@ -117,10 +131,8 @@ def test_sesame(
     initial_state = np.array([10.0, 5.0])
 
     def transition_fn(x, u):
-        # Make samples dependent by preventing the accumulation of small y movement.
         if dependent_samples and x[0] < 8 and abs(x[1] - round(x[1])) > 0.2:
             raise TransitionFailure
-        # Simulate obstacle.
         if obstacle and ((x[0] - 9.0) ** 2 + (x[1] - 5.0) ** 2 < 1.0):
             raise TransitionFailure
         return x + u
