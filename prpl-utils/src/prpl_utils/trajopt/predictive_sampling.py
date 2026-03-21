@@ -64,7 +64,8 @@ class PredictiveSamplingSolver(TrajOptSolver):
         assert self._problem is not None
         low = self._problem.action_space.low
         high = self._problem.action_space.high
-        clipped = np.clip(control_points, low, high)
+        dtype = self._problem.action_space.dtype
+        clipped = np.clip(control_points, low, high).astype(dtype)
         dt = duration / (len(clipped) - 1)
         return point_sequence_to_trajectory(list(clipped), dt=dt)
 
