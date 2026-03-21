@@ -27,7 +27,7 @@ class MPCWrapper:
         assert self._problem is not None, "Call reset() before step()"
         traj = self._solver.solve(
             initial_state=state,
-            horizon=(self._problem.horizon - self._timestep),
+            horizon=self._problem.horizon,
         )
         action = traj.actions[0]
         self._timestep += 1

@@ -86,20 +86,14 @@ class _ConcatTrajectory(Trajectory):
     def get_sub_trajectory(self, start_time: float, end_time: float) -> Trajectory:
         new_trajs: list[Trajectory] = []
         st = 0.0
-        keep_traj = False
         for traj in self.trajs:
             et = st + traj.duration
-            if st <= start_time < et:
-                keep_traj = True
-                traj = traj.get_sub_trajectory(start_time - st, traj.duration)
-                st = start_time
-            if st < end_time <= et:
-                traj = traj.get_sub_trajectory(0, end_time - st)
-                assert keep_traj
-                new_trajs.append(traj)
+            seg_start = max(start_time, st) - st
+            seg_end = min(end_time, et) - st
+            if seg_end - seg_start > 1e-10:
+                new_trajs.append(traj.get_sub_trajectory(seg_start, seg_end))
+            if et >= end_time:
                 break
-            if keep_traj:
-                new_trajs.append(traj)
             st = et
         return concatenate_trajectories(new_trajs)
 
