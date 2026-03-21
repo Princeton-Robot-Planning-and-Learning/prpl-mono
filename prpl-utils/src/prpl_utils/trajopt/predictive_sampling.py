@@ -16,7 +16,7 @@ class PredictiveSamplingHyperparameters:
     """Hyperparameters for predictive sampling."""
 
     num_rollouts: int = 100
-    noise_scale: float = 1.0
+    noise_scale: float | NDArray[np.floating] = 1.0
     num_control_points: int = 10
 
 
@@ -39,10 +39,15 @@ class PredictiveSamplingSolver(TrajOptSolver):
     ) -> Trajectory:
         # Warm start by advancing the last solution by one step.
         sample_list: list[Trajectory] = []
-        if self._warm_start and self._last_solution is not None:
-            assert isinstance(self._last_solution, Trajectory)
-            assert np.isclose(self._last_solution.duration, horizon + 1)
-            nominal = self._last_solution.get_sub_trajectory(1, horizon + 1)
+        if (
+            self._warm_start
+            and self._last_solution is not None
+            and isinstance(self._last_solution, Trajectory)
+            and self._last_solution.duration > 1
+        ):
+            nominal = self._last_solution.get_sub_trajectory(
+                1, self._last_solution.duration
+            )
         else:
             nominal = self._get_initialization(horizon)
         sample_list.append(nominal)
