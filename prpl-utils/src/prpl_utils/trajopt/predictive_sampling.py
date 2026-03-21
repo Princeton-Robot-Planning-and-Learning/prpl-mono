@@ -3,14 +3,12 @@
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 
 from prpl_utils.trajopt.trajectory import Trajectory, point_sequence_to_trajectory
 from prpl_utils.trajopt.trajopt_problem import TrajOptState, TrajOptTraj
 from prpl_utils.trajopt.trajopt_solver import TrajOptSolver
-from prpl_utils.trajopt.utils import (
-    sample_standard_normal_spline,
-    spline_to_trajopt_trajectory,
-)
+from prpl_utils.trajopt.utils import spline_to_trajopt_trajectory
 
 
 @dataclass(frozen=True)
@@ -57,12 +55,27 @@ class PredictiveSamplingSolver(TrajOptSolver):
             sample_list, key=lambda s: self._score_sample(s, initial_state, horizon)
         )
 
+    def _control_points_to_trajectory(
+        self,
+        control_points: NDArray[np.float64],
+        duration: float,
+    ) -> Trajectory:
+        """Clip control points to action bounds and build a trajectory."""
+        assert self._problem is not None
+        low = self._problem.action_space.low
+        high = self._problem.action_space.high
+        clipped = np.clip(control_points, low, high)
+        dt = duration / (len(clipped) - 1)
+        return point_sequence_to_trajectory(
+            [pt.astype(np.float64) for pt in clipped], dt=dt
+        )
+
     def _get_initialization(self, horizon: int) -> Trajectory:
         assert self._problem is not None
         action_dim = self._problem.action_space.shape[0]
-        return sample_standard_normal_spline(
-            self._rng, self._config.num_control_points, horizon, action_dim
-        )
+        num_cp = self._config.num_control_points
+        control_points = self._rng.standard_normal(size=(num_cp, action_dim))
+        return self._control_points_to_trajectory(control_points, horizon)
 
     def _sample_from_nominal(
         self,
@@ -70,7 +83,6 @@ class PredictiveSamplingSolver(TrajOptSolver):
         num_samples: int,
     ) -> list[Trajectory]:
         assert self._problem is not None
-        # Sample by adding Gaussian noise around the nominal trajectory.
         num_cp = self._config.num_control_points
         control_times = np.linspace(0, nominal.duration, num=num_cp, endpoint=True)
         # (num_cp, action_dim)
@@ -82,17 +94,8 @@ class PredictiveSamplingSolver(TrajOptSolver):
             size=(num_samples, num_cp, nominal_cp.shape[1]),
         )
         all_cp = nominal_cp + noise
-        # Clip to obey bounds.
-        low = self._problem.action_space.low
-        high = self._problem.action_space.high
-        all_cp = np.clip(all_cp, low, high)
-        # Convert to trajectories.
-        dt = control_times[1] - control_times[0]
         return [
-            point_sequence_to_trajectory(
-                [pt.astype(np.float64) for pt in sample_cp], dt=dt
-            )
-            for sample_cp in all_cp
+            self._control_points_to_trajectory(cp, nominal.duration) for cp in all_cp
         ]
 
     def _score_sample(
