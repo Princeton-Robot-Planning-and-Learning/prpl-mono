@@ -1,5 +1,0 @@
-_target_: hydra_plugins.hydra_joblib_launcher.joblib_launcher.JoblibLauncher
-n_jobs: -1  # Use all CPU cores, or set a specific number like 10
-backend: loky  # Use 'loky' for better isolation, or 'threading' for IO-bound tasks
-verbose: 10  # Set verbosity level
-pre_dispatch: 2*n_jobs  # Number of jobs to pre-dispatch

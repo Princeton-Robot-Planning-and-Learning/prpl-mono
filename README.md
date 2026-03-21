@@ -16,10 +16,6 @@ prpl-mono/
     pyproject.toml
     src/prpl-llm-utils
     tests/
-  kinder/
-    pyproject.toml
-    src/kinder
-    tests/
   ...
 ```
 
@@ -43,21 +39,6 @@ uv pip install "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-L
 ```
 But beware that things are changing. Pinning commits is a good idea if you need stable code.
 
-### Building Documentation
-
-Install Sphinx by following the instructions [here](https://www.sphinx-doc.org/en/master/usage/installation.html). To build docs locally, first install dependencies:
-```
-cd kinder
-uv pip install -e ".[docs]"
-```
-Build docs:
-```
-cd docs
-make apidoc
-make html
-```
-
-## Troubleshooting
 ## Publishing Packages to PyPI
 
 Some packages in this monorepo are published to PyPI. To publish a new version:
@@ -85,9 +66,7 @@ export UV_PUBLISH_TOKEN=pypi-YOUR_TOKEN_HERE
 | tomsgeoms2d | `tomsgeoms2d` | `toms-geoms-2d/` |
 | pybullet_helpers | `pybullet_helpers` | `pybullet-helpers/` |
 
-### When to publish
-
-Publish a new version whenever you make changes to a package that external repos (e.g. `kinder`) depend on. Remember to bump the version number each time — PyPI does not allow re-uploading the same version.
+## Troubleshooting
 
 ### Installing `gymnasium[box2d]` on MacOS
 

@@ -1,7 +1,5 @@
 # PRPL TidyBot
 
-![workflow](https://github.com/tomsilver/prpl-tidybot/actions/workflows/ci.yml/badge.svg)
-
 Code for interfacing with the real TidyBot++ robot.
 
 ## Installation

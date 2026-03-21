@@ -1,3 +1,0 @@
-# PRPL mono requirements for just the core of kinder.
-../relational-structs
-../prpl-utils

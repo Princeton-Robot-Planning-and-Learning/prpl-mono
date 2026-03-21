@@ -27,6 +27,8 @@ dependencies = [
    "phoenix6",
    "pygame",
    "spatialmath-python",
+   "kindergarden",
+   "kinder_models@git+https://github.com/Princeton-Robot-Planning-and-Learning/kinder-baselines.git#subdirectory=kinder-models",
 ]
 
 [project.optional-dependencies]

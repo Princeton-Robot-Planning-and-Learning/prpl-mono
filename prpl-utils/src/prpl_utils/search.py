@@ -187,11 +187,16 @@ def run_astar(
         path = Path(metrics_path)
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps({
-                "initial_state": initial_state,
-                "num_evals": metrics.num_evals,
-                "num_expansions": metrics.num_expansions,
-            }) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "initial_state": initial_state,
+                        "num_evals": metrics.num_evals,
+                        "num_expansions": metrics.num_expansions,
+                    }
+                )
+                + "\n"
+            )
     return states, actions, metrics
 
 
