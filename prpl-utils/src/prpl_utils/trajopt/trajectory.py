@@ -20,10 +20,10 @@ class Trajectory:
         """The length of the trajectory in time."""
 
     @abc.abstractmethod
-    def __call__(self, time: float) -> NDArray[np.float64]:
+    def __call__(self, time: float) -> NDArray[np.floating]:
         """Get the point at the given time."""
 
-    def __getitem__(self, key: float | slice) -> NDArray[np.float64] | Trajectory:
+    def __getitem__(self, key: float | slice) -> NDArray[np.floating] | Trajectory:
         """Shorthand for indexing or sub-trajectory creation."""
         if isinstance(key, float):
             return self(key)
@@ -42,15 +42,15 @@ class Trajectory:
 class _TrajectorySegment(Trajectory):
     """A trajectory defined by a single start and end point."""
 
-    start: NDArray[np.float64]
-    end: NDArray[np.float64]
+    start: NDArray[np.floating]
+    end: NDArray[np.floating]
     _duration: float = 1.0
 
     @cached_property
     def duration(self) -> float:
         return self._duration
 
-    def __call__(self, time: float) -> NDArray[np.float64]:
+    def __call__(self, time: float) -> NDArray[np.floating]:
         time = np.clip(time, 0, self.duration)
         s = time / self.duration
         return self.start + (self.end - self.start) * s
@@ -72,7 +72,7 @@ class _ConcatTrajectory(Trajectory):
     def duration(self) -> float:
         return sum(t.duration for t in self.trajs)
 
-    def __call__(self, time: float) -> NDArray[np.float64]:
+    def __call__(self, time: float) -> NDArray[np.floating]:
         time = np.clip(time, 0, self.duration)
         start_time = 0.0
         for traj in self.trajs:
@@ -118,7 +118,7 @@ def concatenate_trajectories(
 
 
 def point_sequence_to_trajectory(
-    point_sequence: list[NDArray[np.float64]],
+    point_sequence: list[NDArray[np.floating]],
     dt: float,
 ) -> Trajectory:
     """Convert a sequence of points to a trajectory."""

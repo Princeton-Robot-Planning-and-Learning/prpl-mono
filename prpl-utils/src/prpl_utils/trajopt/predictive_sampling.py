@@ -57,7 +57,7 @@ class PredictiveSamplingSolver(TrajOptSolver):
 
     def _control_points_to_trajectory(
         self,
-        control_points: NDArray[np.float64],
+        control_points: NDArray[np.floating],
         duration: float,
     ) -> Trajectory:
         """Clip control points to action bounds and build a trajectory."""
@@ -66,9 +66,7 @@ class PredictiveSamplingSolver(TrajOptSolver):
         high = self._problem.action_space.high
         clipped = np.clip(control_points, low, high)
         dt = duration / (len(clipped) - 1)
-        return point_sequence_to_trajectory(
-            [pt.astype(np.float64) for pt in clipped], dt=dt
-        )
+        return point_sequence_to_trajectory(list(clipped), dt=dt)
 
     def _get_initialization(self, horizon: int) -> Trajectory:
         assert self._problem is not None

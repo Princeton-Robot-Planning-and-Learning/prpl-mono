@@ -12,16 +12,16 @@ from numpy.typing import NDArray
 
 from prpl_utils.structs import Image
 
-TrajOptState: TypeAlias = NDArray[np.float64]
-TrajOptAction: TypeAlias = NDArray[np.float64]
+TrajOptState: TypeAlias = NDArray[np.floating]
+TrajOptAction: TypeAlias = NDArray[np.floating]
 
 
 @dataclass
 class TrajOptTraj:
     """A trajectory of states and actions."""
 
-    states: NDArray[np.float64]  # array of TrajOptState
-    actions: NDArray[np.float64]  # array of TrajOptAction
+    states: NDArray[np.floating]  # array of TrajOptState
+    actions: NDArray[np.floating]  # array of TrajOptAction
 
     def __post_init__(self) -> None:
         assert len(self.states) == len(self.actions) + 1
