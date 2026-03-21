@@ -14,7 +14,7 @@ class MockLegacyGymEnv:
 
     def __init__(self) -> None:
         self.observation_space = spaces.Box(low=-1, high=1, shape=(4,))
-        self.action_space = spaces.Discrete(2)
+        self.action_space: spaces.Space[int] = spaces.Discrete(2)
         self.spec = None
 
     def reset(self) -> np.ndarray:
