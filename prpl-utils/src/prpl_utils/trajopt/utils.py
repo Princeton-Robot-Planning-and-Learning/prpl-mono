@@ -34,6 +34,14 @@ def sample_standard_normal_spline(
     rng: np.random.Generator, num_points: int, horizon: int
 ) -> Trajectory:
     """Sample a spline by sampling points and interpolating."""
+    if num_points < 2:
+        raise ValueError(
+            "sample_standard_normal_spline requires num_points >= 2 to define a spline."
+        )
+    if horizon <= 0:
+        raise ValueError(
+            "sample_standard_normal_spline requires horizon > 0."
+        )
     points = list(rng.standard_normal(size=(num_points, 1)))
     dt = horizon / (len(points) - 1)
     return point_sequence_to_trajectory(points, dt=dt)
