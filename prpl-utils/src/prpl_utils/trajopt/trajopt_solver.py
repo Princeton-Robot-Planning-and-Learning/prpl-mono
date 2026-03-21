@@ -22,7 +22,7 @@ class TrajOptSolver(abc.ABC):
         self._rng = np.random.default_rng(seed)
         self._problem: TrajOptProblem | None = None
         self._warm_start = warm_start
-        self._last_solution: TrajOptTraj | None = None
+        self._last_solution: _TrajOptSolution | None = None
 
     def reset(
         self,
