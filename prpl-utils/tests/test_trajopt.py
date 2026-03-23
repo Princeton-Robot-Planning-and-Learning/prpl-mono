@@ -140,6 +140,26 @@ def test_predictive_sampling():
     assert cost > 0
 
 
+def test_mpc_replan_interval():
+    """Test that replan_interval > 1 reuses actions between replans."""
+    solver_config = PredictiveSamplingHyperparameters(
+        num_rollouts=5, num_control_points=3
+    )
+    solver = PredictiveSamplingSolver(123, config=solver_config)
+    replan_interval = 3
+    mpc = MPCWrapper(solver, replan_interval=replan_interval)
+    env_config = PendulumHyperparameters(horizon=9)
+    env = PendulumTrajOptProblem(config=env_config)
+    mpc.reset(env)
+    state = env.initial_state
+    actions = []
+    for _ in range(env.horizon):
+        action = mpc.step(state)
+        state = env.get_next_state(state, action)
+        actions.append(action)
+    assert len(actions) == 9
+
+
 def test_warm_start_duration_near_one():
     """Test that warm-start doesn't crash when duration is ~1 + epsilon."""
     # pylint: disable=protected-access
