@@ -43,7 +43,7 @@ class PredictiveSamplingSolver(TrajOptSolver):
             self._warm_start
             and self._last_solution is not None
             and isinstance(self._last_solution, Trajectory)
-            and self._last_solution.duration > 1
+            and self._last_solution.duration > 1 + 1e-6
         ):
             nominal = self._last_solution.get_sub_trajectory(
                 1, self._last_solution.duration

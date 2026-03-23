@@ -12,6 +12,7 @@ from prpl_utils.trajopt.predictive_sampling import (
     PredictiveSamplingHyperparameters,
     PredictiveSamplingSolver,
 )
+from prpl_utils.trajopt.trajectory import point_sequence_to_trajectory
 from prpl_utils.trajopt.trajopt_problem import (
     TrajOptAction,
     TrajOptProblem,
@@ -137,3 +138,22 @@ def test_predictive_sampling():
     traj = TrajOptTraj(np.array(states), np.array(actions))
     cost = env.get_traj_cost(traj)
     assert cost > 0
+
+
+def test_warm_start_duration_near_one():
+    """Test that warm-start doesn't crash when duration is ~1 + epsilon."""
+    # pylint: disable=protected-access
+    solver_config = PredictiveSamplingHyperparameters(
+        num_rollouts=5, num_control_points=3
+    )
+    solver = PredictiveSamplingSolver(42, config=solver_config)
+    env_config = PendulumHyperparameters(horizon=10)
+    env = PendulumTrajOptProblem(config=env_config)
+    solver.reset(env)
+    action_dim = env.action_space.shape[0]
+    duration = 1 + 1e-14
+    dt = duration / 2
+    points = [np.zeros(action_dim) for _ in range(3)]
+    solver._last_solution = point_sequence_to_trajectory(points, dt=dt)
+    assert abs(solver._last_solution.duration - duration) < 1e-15
+    solver.solve(env.initial_state, horizon=10)
