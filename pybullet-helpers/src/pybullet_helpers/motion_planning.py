@@ -607,7 +607,8 @@ def run_base_motion_planning(
             smooth_amt=hyperparameters.birrt_smooth_amt,
         )
 
-        return birrt.query(initial_pose, goal)
+        path, _ = birrt.query(initial_pose, goal)
+        return path
 
     # Use RRT is the goal is a function.
     rrt = RRT(
@@ -621,7 +622,8 @@ def run_base_motion_planning(
         smooth_amt=hyperparameters.birrt_smooth_amt,
     )
 
-    return rrt.query_to_goal_fn(initial_pose, goal)
+    path, _ = rrt.query_to_goal_fn(initial_pose, goal)
+    return path
 
 
 def run_single_arm_mobile_base_motion_planning(
