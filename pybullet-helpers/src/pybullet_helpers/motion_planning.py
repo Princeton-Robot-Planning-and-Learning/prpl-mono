@@ -146,7 +146,8 @@ def run_motion_planning(
     if direct_path_only:
         return birrt.try_direct_path(initial_positions, target_positions)
 
-    return birrt.query(initial_positions, target_positions)
+    path, _ = birrt.query(initial_positions, target_positions)
+    return path
 
 
 def get_motion_plan_distance(
