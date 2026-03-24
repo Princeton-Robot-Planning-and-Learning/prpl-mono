@@ -146,7 +146,8 @@ def run_motion_planning(
     if direct_path_only:
         return birrt.try_direct_path(initial_positions, target_positions)
 
-    return birrt.query(initial_positions, target_positions)
+    path, _ = birrt.query(initial_positions, target_positions)
+    return path
 
 
 def get_motion_plan_distance(
@@ -606,7 +607,8 @@ def run_base_motion_planning(
             smooth_amt=hyperparameters.birrt_smooth_amt,
         )
 
-        return birrt.query(initial_pose, goal)
+        path, _ = birrt.query(initial_pose, goal)
+        return path
 
     # Use RRT is the goal is a function.
     rrt = RRT(
@@ -620,7 +622,8 @@ def run_base_motion_planning(
         smooth_amt=hyperparameters.birrt_smooth_amt,
     )
 
-    return rrt.query_to_goal_fn(initial_pose, goal)
+    path, _ = rrt.query_to_goal_fn(initial_pose, goal)
+    return path
 
 
 def run_single_arm_mobile_base_motion_planning(
