@@ -100,7 +100,23 @@ def all_ground_operators(
     ground_operators: Set[GroundOperator] = set()
     for operator in operators:
         types = [p.type for p in operator.parameters]
-        for choice in get_object_combinations(objects, types):
-            ground_operator = operator.ground(tuple(choice))
+        if operator.name in ("open_drawer", "pick_wiper", "sweep"):
+            filtered_pool = [
+                obj for obj in objects
+                if "kitchen" not in obj.name or obj.name == "kitchen_island_drawer_s1c1"
+            ]
+            ordered = []
+            remaining = list(filtered_pool)
+            for typ in types:
+                for i, obj in enumerate(remaining):
+                    if obj.is_instance(typ):
+                        ordered.append(obj)
+                        remaining.pop(i)
+                        break
+            ground_operator = operator.ground(tuple(ordered))
             ground_operators.add(ground_operator)
+        else:
+            for choice in get_object_combinations(objects, types):
+                ground_operator = operator.ground(tuple(choice))
+                ground_operators.add(ground_operator)
     return ground_operators
