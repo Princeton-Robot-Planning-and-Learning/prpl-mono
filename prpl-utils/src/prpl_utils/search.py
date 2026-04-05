@@ -8,13 +8,13 @@ import json
 import os
 import time
 from collections import defaultdict
-from collections.abc import Hashable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import (
     Any,
     Callable,
     Generic,
+    Hashable,
     Iterator,
     Optional,
     TypeVar,
