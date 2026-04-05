@@ -222,13 +222,17 @@ class RelationalAbstractSuccessorGenerator:
     """A successor generator that uses relational states and actions."""
 
     operators: set[LiftedOperator]
+    precomputed_ground_operators: set[GroundOperator] | None = None
 
     def __call__(
         self, abstract_state: RelationalAbstractState
     ) -> Iterator[tuple[GroundOperator, RelationalAbstractState]]:
-        ground_operators = cached_all_ground_operators(
-            self.operators, abstract_state.objects
-        )
+        if self.precomputed_ground_operators is not None:
+            ground_operators = self.precomputed_ground_operators
+        else:
+            ground_operators = cached_all_ground_operators(
+                self.operators, abstract_state.objects
+            )
         for ground_operator in ground_operators:
             if ground_operator.preconditions.issubset(abstract_state.atoms):
                 next_atoms = (
