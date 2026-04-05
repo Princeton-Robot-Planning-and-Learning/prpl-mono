@@ -71,6 +71,7 @@ export UV_PUBLISH_TOKEN=pypi-YOUR_TOKEN_HERE
 | relational_structs | `relational_structs` | `relational-structs/` |
 | tomsgeoms2d | `tomsgeoms2d` | `toms-geoms-2d/` |
 | pybullet_helpers | `pybullet_helpers` | `pybullet-helpers/` |
+| bilevel_planning | `bilevel_planning` | `bilevel-planning/` |
 
 ## Troubleshooting
 
