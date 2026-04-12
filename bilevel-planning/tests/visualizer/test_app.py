@@ -17,6 +17,18 @@ from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
 from bilevel_planning.visualizer import app as visualizer_app
 from bilevel_planning.visualizer.app import create_app
 
+# Source for a renderer the test client can post to /api/set_renderer; turns
+# the (3,) state arrays from _build_demo_bundle_bytes into a small solid-color
+# patch so the PNG round-trip is easy to assert against.
+RENDERER_SOURCE = """
+import numpy as np
+def render_state(state):
+    color = np.asarray(state, dtype=np.uint8).reshape(-1)[:3]
+    if color.size < 3:
+        color = np.pad(color, (0, 3 - color.size))
+    return np.broadcast_to(color, (8, 8, 3)).astype(np.uint8)
+"""
+
 
 @pytest.fixture(autouse=True)
 def _reset_module_state():
@@ -34,14 +46,6 @@ def _reset_module_state():
     visualizer_app.GRAPH_DATA = {}
     visualizer_app.STATE_DATA = {}
     visualizer_app.RENDER_FN = None
-
-
-def _constant_color_renderer(state: np.ndarray) -> np.ndarray:
-    """Render each state as a small solid-color patch."""
-    color = np.asarray(state, dtype=np.uint8).reshape(-1)[:3]
-    if color.size < 3:
-        color = np.pad(color, (0, 3 - color.size))
-    return np.broadcast_to(color, (8, 8, 3)).astype(np.uint8)
 
 
 def _build_demo_bundle_bytes(tmp_path: Path) -> tuple[bytes, list[str]]:
@@ -77,9 +81,13 @@ def _upload_bundle(client, bundle_bytes: bytes, filename: str = "demo.pkl"):
     )
 
 
+def _apply_renderer(client, source: str = RENDERER_SOURCE):
+    return client.post("/api/set_renderer", json={"source": source})
+
+
 def test_health_endpoint():
-    """``/api/health`` reports an empty backend before any pickle is loaded."""
-    app = create_app(_constant_color_renderer)
+    """``/api/health`` reports an empty backend at boot."""
+    app = create_app()
     client = app.test_client()
     resp = client.get("/api/health")
     assert resp.status_code == 200
@@ -87,30 +95,22 @@ def test_health_endpoint():
     assert payload["status"] == "healthy"
     assert payload["graph_loaded"] is False
     assert payload["num_states"] == 0
-    assert payload["renderer_set"] is True
-
-
-def test_health_reports_no_renderer_when_none_installed():
-    """Booting with ``render_state_fn=None`` leaves the renderer unset."""
-    app = create_app(None)
-    client = app.test_client()
-    payload = client.get("/api/health").get_json()
-    assert payload["renderer_set"] is False
+    assert payload["renderer_ready"] is False
 
 
 def test_graph_endpoint_requires_load():
     """``/api/graph`` returns 400 until a bundle has been loaded."""
-    app = create_app(_constant_color_renderer)
+    app = create_app()
     client = app.test_client()
     resp = client.get("/api/graph")
     assert resp.status_code == 400
 
 
-def test_load_graph_and_visualize_roundtrip(tmp_path: Path):
-    """Uploading a bundle exposes both the topology and per-node rendering."""
+def test_load_graph_apply_renderer_and_visualize_roundtrip(tmp_path: Path):
+    """Upload a bundle, apply a renderer, and render a node end-to-end."""
     bundle_bytes, node_ids = _build_demo_bundle_bytes(tmp_path)
 
-    app = create_app(_constant_color_renderer)
+    app = create_app()
     client = app.test_client()
 
     resp = _upload_bundle(client, bundle_bytes)
@@ -120,14 +120,23 @@ def test_load_graph_and_visualize_roundtrip(tmp_path: Path):
     assert payload["num_states"] == len(node_ids)
     assert payload["filename"] == "demo.pkl"
 
-    # After load, /api/graph serves the topology.
+    # /api/graph serves the topology after load.
     resp = client.get("/api/graph")
     assert resp.status_code == 200
     graph = resp.get_json()
     assert set(graph.keys()) >= {"nodes", "edges", "plan", "config"}
 
-    # Visualize one of the nodes and confirm the PNG decodes correctly.
+    # Visualization fails until a renderer is applied.
     target = node_ids[0]
+    resp = client.post("/api/visualize_state", json={"node_id": target})
+    assert resp.status_code == 400
+
+    # Apply a renderer; health flips renderer_ready.
+    resp = _apply_renderer(client)
+    assert resp.status_code == 200, resp.get_json()
+    assert client.get("/api/health").get_json()["renderer_ready"] is True
+
+    # Visualization now succeeds and the PNG decodes.
     resp = client.post("/api/visualize_state", json={"node_id": target})
     assert resp.status_code == 200, resp.get_json()
     payload = resp.get_json()
@@ -145,9 +154,10 @@ def test_visualize_unknown_node_returns_404(tmp_path: Path):
     """Asking for a node id that isn't in the loaded bundle returns 404."""
     bundle_bytes, _ = _build_demo_bundle_bytes(tmp_path)
 
-    app = create_app(_constant_color_renderer)
+    app = create_app()
     client = app.test_client()
     _upload_bundle(client, bundle_bytes)
+    _apply_renderer(client)
 
     resp = client.post("/api/visualize_state", json={"node_id": "x:doesnotexist"})
     assert resp.status_code == 404
@@ -157,7 +167,7 @@ def test_load_pickle_rejects_wrong_shape():
     """A pickle that isn't a ``{'graph':..., 'states':...}`` bundle is rejected."""
     bad_bytes = pickle.dumps({"only_states": {}})
 
-    app = create_app(_constant_color_renderer)
+    app = create_app()
     client = app.test_client()
     resp = _upload_bundle(client, bad_bytes, filename="bad.pkl")
     assert resp.status_code == 400
@@ -165,47 +175,15 @@ def test_load_pickle_rejects_wrong_shape():
 
 def test_load_pickle_rejects_missing_file_field():
     """A POST without a 'file' multipart field is rejected with 400."""
-    app = create_app(_constant_color_renderer)
+    app = create_app()
     client = app.test_client()
     resp = client.post("/api/load_pickle", data={}, content_type="multipart/form-data")
     assert resp.status_code == 400
 
 
-def test_set_renderer_installs_callable_from_source(tmp_path: Path):
-    """Posting Python source to ``/api/set_renderer`` makes visualization work."""
-    bundle_bytes, node_ids = _build_demo_bundle_bytes(tmp_path)
-
-    # Boot with no renderer.
-    app = create_app(None)
-    client = app.test_client()
-    _upload_bundle(client, bundle_bytes)
-
-    # Without a renderer, visualization is 400.
-    resp = client.post("/api/visualize_state", json={"node_id": node_ids[0]})
-    assert resp.status_code == 400
-
-    # Install a renderer via source.
-    source = (
-        "import numpy as np\n"
-        "def render_state(state):\n"
-        "    return np.zeros((4, 4, 3), dtype=np.uint8)\n"
-    )
-    resp = client.post("/api/set_renderer", json={"source": source})
-    assert resp.status_code == 200, resp.get_json()
-    assert resp.get_json()["success"] is True
-
-    # Health now reports the renderer is set.
-    assert client.get("/api/health").get_json()["renderer_set"] is True
-
-    # Visualization now works.
-    resp = client.post("/api/visualize_state", json={"node_id": node_ids[0]})
-    assert resp.status_code == 200
-    assert resp.get_json()["image"].startswith("data:image/png;base64,")
-
-
 def test_set_renderer_rejects_source_without_entrypoint():
     """Source that doesn't define ``render_state`` is rejected with 400."""
-    app = create_app(None)
+    app = create_app()
     client = app.test_client()
     resp = client.post("/api/set_renderer", json={"source": "x = 1\n"})
     assert resp.status_code == 400
@@ -214,7 +192,7 @@ def test_set_renderer_rejects_source_without_entrypoint():
 
 def test_set_renderer_rejects_broken_source():
     """Source that raises during ``exec`` is rejected with 400 plus traceback."""
-    app = create_app(None)
+    app = create_app()
     client = app.test_client()
     resp = client.post(
         "/api/set_renderer", json={"source": "raise RuntimeError('nope')\n"}

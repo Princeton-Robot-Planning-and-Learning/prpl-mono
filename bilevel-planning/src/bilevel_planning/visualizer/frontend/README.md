@@ -17,8 +17,8 @@ npm run build
 ```
 
 This produces `dist/`, which the Python backend serves as static files.
-After this, users only ever run `python -m bilevel_planning.visualizer`
-(or `run_webapp` from a script). No npm process is needed at runtime.
+After this, users only ever run `python -m bilevel_planning.visualizer`.
+No npm process is needed at runtime.
 
 ## Frontend development mode
 
@@ -33,18 +33,16 @@ Vite serves on `http://localhost:3000` and proxies `/api/*` to the
 Python backend on `http://localhost:5001`. Run the backend separately
 in another terminal while you're iterating.
 
-## Installing a renderer
+## Supplying the renderer
 
-The visualizer won't display state images until the backend has a
-`render_state` callable. Two ways to supply one:
+The visualizer won't display state images until you give the backend a
+`render_state` callable. The header has a **Python renderer** pane
+(expanded by default) with a textarea — edit the source so
+`render_state(state)` returns an HxWx3 uint8 RGB array, then click
+**Apply renderer**. The source is POSTed to `/api/set_renderer` and
+`exec`'d in the backend process, so any package installed in the
+backend's Python environment is importable.
 
-- **Browser**: expand the "Python renderer" pane in the header, edit the
-  source, and click "Apply renderer". The source is POSTed to
-  `/api/set_renderer` and `exec`'d in the backend process, so any package
-  installed in the backend's Python environment is importable. Runs
-  arbitrary Python locally — don't expose the backend to untrusted
-  networks.
-- **Launcher script**: call `bilevel_planning.visualizer.app.run_webapp`
-  from your own Python with `render_state_fn=<your callable>`. Useful
-  when the environment is expensive to construct and you want it ready
-  before the server boots.
+The arbitrary-`exec` surface is the reason the backend binds to
+`127.0.0.1`. Don't put it behind a reverse proxy exposing it to untrusted
+networks.
