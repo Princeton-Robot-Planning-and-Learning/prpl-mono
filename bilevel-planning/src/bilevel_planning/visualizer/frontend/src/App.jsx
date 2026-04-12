@@ -15,7 +15,7 @@ function App() {
   const [error, setError] = useState(null);
   const [backendStatus, setBackendStatus] = useState('unknown');
   const [pickleLoaded, setPickleLoaded] = useState(false);
-  const [picklePath, setPicklePath] = useState('');
+  const [pickleFilename, setPickleFilename] = useState(null);
   const [rendererSource, setRendererSource] = useState(DEFAULT_RENDERER_SOURCE);
   const [rendererSet, setRendererSet] = useState(false);
   const [rendererStatus, setRendererStatus] = useState(null);
@@ -23,14 +23,13 @@ function App() {
   // Check backend health on mount and periodically
   React.useEffect(() => {
     checkBackendHealth();
-    // Poll backend health every 30 seconds
     const interval = setInterval(checkBackendHealth, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const checkBackendHealth = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/health');
+      const response = await fetch('/api/health');
       if (response.ok) {
         const data = await response.json();
         setBackendStatus('connected');
@@ -51,7 +50,7 @@ function App() {
   const handleApplyRenderer = async () => {
     setRendererStatus(null);
     try {
-      const response = await fetch('http://localhost:5001/api/set_renderer', {
+      const response = await fetch('/api/set_renderer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: rendererSource }),
@@ -70,45 +69,34 @@ function App() {
     }
   };
 
-  const handleLoadPickleByPath = async () => {
-    if (!picklePath.trim()) {
-      setError('Please enter a pickle file path');
-      return;
-    }
-    await loadPickleByPath(picklePath);
-  };
-
-  const loadPickleByPath = async (path) => {
+  const handlePickleFileChange = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    setError(null);
     try {
-      const response = await fetch('http://localhost:5001/api/load_pickle', {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/load_pickle', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pickle_path: path })
+        body: formData,
       });
-
       const data = await response.json();
-
       if (!response.ok) {
-        console.error('Error loading pickle:', data.error);
-        let errorMsg = `Failed to load pickle: ${data.error}`;
-        if (data.attempted_paths) {
-          errorMsg += `\nAttempted paths:\n${data.attempted_paths.join('\n')}`;
-        }
-        setError(errorMsg);
+        setError(`Failed to load pickle: ${data.error}`);
         setGraphData(null);
         setPickleLoaded(false);
+        setPickleFilename(null);
         return;
       }
 
       // Backend loaded the bundle; fetch the topology for the viewer.
-      const graphResp = await fetch('http://localhost:5001/api/graph');
+      const graphResp = await fetch('/api/graph');
       if (!graphResp.ok) {
         const graphErr = await graphResp.json();
         setError(`Failed to fetch graph: ${graphErr.error}`);
         setGraphData(null);
         setPickleLoaded(false);
+        setPickleFilename(null);
         return;
       }
       const graphJson = await graphResp.json();
@@ -117,6 +105,7 @@ function App() {
         setError('Backend returned a graph with an unexpected shape');
         setGraphData(null);
         setPickleLoaded(false);
+        setPickleFilename(null);
         return;
       }
 
@@ -125,7 +114,7 @@ function App() {
       );
       setGraphData(graphJson);
       setPickleLoaded(true);
-      setError(null);
+      setPickleFilename(file.name);
       await checkBackendHealth();
     } catch (err) {
       console.error('Error loading pickle:', err);
@@ -139,29 +128,19 @@ function App() {
       <header style={styles.header}>
         <h1 style={styles.title}>Bilevel Planning Graph Viewer</h1>
         <div style={styles.controls}>
-          <div style={styles.pathInputContainer}>
+          <label style={styles.fileLabel}>
+            Load pickle bundle
             <input
-              type="text"
-              value={picklePath}
-              onChange={(e) => setPicklePath(e.target.value)}
-              placeholder="Enter pickle path (e.g., test_o4o4_state_data_0.pkl)"
-              style={{
-                ...styles.pathInput,
-                opacity: backendStatus === 'connected' ? 1 : 0.5,
-                cursor: backendStatus === 'connected' ? 'text' : 'not-allowed',
-              }}
+              type="file"
+              accept=".pkl,.pickle"
+              onChange={handlePickleFileChange}
+              style={styles.fileInput}
               disabled={backendStatus !== 'connected'}
-              title="Tip: Right-click file in Finder, Copy as Pathname, then paste here"
             />
-            <button
-              onClick={handleLoadPickleByPath}
-              style={{...styles.button, backgroundColor: '#9C27B0'}}
-              disabled={backendStatus !== 'connected'}
-              title="Load pickle file from path"
-            >
-              Load Pickle (Backend)
-            </button>
-          </div>
+          </label>
+          {pickleFilename && (
+            <span style={styles.pickleStatus}>Loaded: {pickleFilename}</span>
+          )}
         </div>
         <details style={styles.rendererDetails}>
           <summary style={styles.rendererSummary}>
@@ -223,7 +202,7 @@ const styles = {
   },
   header: {
     position: 'relative',
-    zIndex: 3000, 
+    zIndex: 3000,
     padding: '15px 20px',
     backgroundColor: '#282c34',
     color: 'white',
@@ -234,30 +213,29 @@ const styles = {
     fontSize: '24px',
     fontWeight: '600',
   },
-  statusBar: {
-    marginBottom: '10px',
-    fontSize: '14px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-  },
-  statusBadge: {
-    padding: '2px 8px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    fontWeight: '500',
-    marginLeft: '5px',
-  },
-  pickleStatus: {
-    color: '#4CAF50',
-    fontSize: '12px',
-    marginLeft: '10px',
-  },
   controls: {
     display: 'flex',
     gap: '15px',
     alignItems: 'center',
     flexWrap: 'wrap',
+  },
+  fileLabel: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 12px',
+    backgroundColor: '#9C27B0',
+    borderRadius: '4px',
+    fontSize: '14px',
+    cursor: 'pointer',
+  },
+  fileInput: {
+    fontSize: '13px',
+    color: 'white',
+  },
+  pickleStatus: {
+    color: '#4CAF50',
+    fontSize: '13px',
   },
   button: {
     padding: '8px 16px',
@@ -268,28 +246,6 @@ const styles = {
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '500',
-  },
-  pathInputContainer: {
-    display: 'flex',
-    gap: '10px',
-    alignItems: 'center',
-    flex: 1,
-    minWidth: '300px',
-  },
-  pathInput: {
-    flex: 1,
-    padding: '8px 12px',
-    fontSize: '14px',
-    borderRadius: '4px',
-    border: '1px solid #444',
-    backgroundColor: '#1a1d24',
-    color: 'white',
-  },
-  helpText: {
-    fontSize: '12px',
-    color: '#aaa',
-    fontStyle: 'italic',
-    marginTop: '5px',
   },
   error: {
     marginTop: '10px',

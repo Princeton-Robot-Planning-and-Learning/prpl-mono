@@ -15,6 +15,11 @@ supply it:
    to land in the namespace, and caches it for subsequent
    ``/api/visualize_state`` requests.
 
+The same Flask process also serves the built React frontend at ``/``, so
+users only need one terminal: launch the backend, open the browser. The
+frontend bundle lives at ``visualizer/frontend/dist/`` and must be built
+once with ``npm ci && npm run build`` from the ``frontend/`` directory.
+
 Security: ``/api/set_renderer`` runs arbitrary Python in the backend
 process. The server binds to ``127.0.0.1`` so only local clients can reach
 it. Do not put this behind a reverse proxy exposing it to untrusted
@@ -31,7 +36,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS  # type: ignore[import-untyped]
 from PIL import Image  # type: ignore[import-untyped]
 
@@ -40,8 +45,8 @@ RenderStateFn = Callable[[Any], np.ndarray]
 # Backend state. ``GRAPH_DATA`` is the frontend-facing topology dict served
 # by ``/api/graph``; ``STATE_DATA`` maps node ids to the original state
 # objects, indexed into by ``/api/visualize_state``. Both come from the
-# same pickle produced by ``BilevelPlanningGraph.export``. ``RENDER_FN`` is
-# the current render callable, either injected at construction time or
+# same pickle uploaded via ``/api/load_pickle``. ``RENDER_FN`` is the
+# current render callable, either injected at construction time or
 # installed later via ``/api/set_renderer``.
 GRAPH_DATA: dict = {}
 STATE_DATA: dict = {}
@@ -52,26 +57,12 @@ RENDER_FN: RenderStateFn | None = None
 # agree without hardcoding duplicate strings.
 RENDERER_ENTRYPOINT = "render_state"
 
-
-def _resolve_pickle_path(
-    pickle_path_str: str, data_dir: Path
-) -> tuple[Path | None, list[str]]:
-    attempted: list[str] = []
-    for candidate in (
-        Path(pickle_path_str),
-        data_dir / pickle_path_str,
-        data_dir / Path(pickle_path_str).name,
-    ):
-        attempted.append(str(candidate))
-        if candidate.exists():
-            return candidate, attempted
-    return None, attempted
+# Location of the built React frontend bundle, served as static files at
+# ``/`` so the visualizer is one process instead of two.
+FRONTEND_DIST_DIR = Path(__file__).parent / "frontend" / "dist"
 
 
-def create_app(
-    render_state_fn: RenderStateFn | None,
-    data_dir: Path,
-) -> Flask:
+def create_app(render_state_fn: RenderStateFn | None) -> Flask:
     """Build the Flask app.
 
     If ``render_state_fn`` is None, the app boots without a renderer and
@@ -88,24 +79,32 @@ def create_app(
     def load_pickle():
         global GRAPH_DATA, STATE_DATA
         try:
-            data = request.get_json()
-            pickle_path_str = data["pickle_path"]
-            pickle_path, attempted_paths = _resolve_pickle_path(
-                pickle_path_str, data_dir
-            )
-            if pickle_path is None:
+            upload = request.files.get("file")
+            if upload is None:
                 return (
                     jsonify(
                         {
-                            "error": f"Pickle file not found: {pickle_path_str}",
-                            "attempted_paths": attempted_paths,
+                            "error": (
+                                "Request must include a 'file' multipart "
+                                "field with the visualizer pickle bundle."
+                            ),
                         }
                     ),
-                    404,
+                    400,
                 )
 
-            with open(pickle_path, "rb") as f:
-                bundle = pickle.load(f)
+            try:
+                bundle = pickle.load(upload.stream)
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                return (
+                    jsonify(
+                        {
+                            "error": f"Could not unpickle uploaded file: {exc}",
+                            "traceback": traceback.format_exc(),
+                        }
+                    ),
+                    400,
+                )
 
             if not (
                 isinstance(bundle, dict) and "graph" in bundle and "states" in bundle
@@ -132,13 +131,11 @@ def create_app(
                 {
                     "success": True,
                     "num_states": num_states,
-                    "message": f"Loaded {num_states} states from {pickle_path.name}",
-                    "full_path": str(pickle_path),
+                    "filename": upload.filename,
+                    "message": f"Loaded {num_states} states from {upload.filename}",
                 }
             )
 
-        except KeyError:
-            return jsonify({"error": "pickle_path is required in request body"}), 400
         except Exception as e:  # pylint: disable=broad-exception-caught
             return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
@@ -280,32 +277,64 @@ def create_app(
             }
         )
 
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve_frontend(path: str):
+        """Serve the built React frontend.
+
+        ``/`` returns the index, anything else falls back to a file in
+        ``frontend/dist/`` if it exists, otherwise the index. The fallback
+        is what makes client-side routing work for any future routes the
+        frontend adds.
+        """
+        if not FRONTEND_DIST_DIR.exists():
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            "Frontend bundle not found. Build it once with "
+                            "'npm ci && npm run build' from "
+                            "bilevel_planning/visualizer/frontend/."
+                        ),
+                        "expected_path": str(FRONTEND_DIST_DIR),
+                    }
+                ),
+                500,
+            )
+        target = FRONTEND_DIST_DIR / path
+        if path and target.exists() and target.is_file():
+            return send_from_directory(FRONTEND_DIST_DIR, path)
+        return send_from_directory(FRONTEND_DIST_DIR, "index.html")
+
     return app
 
 
 def run_webapp(
     render_state_fn: RenderStateFn | None = None,
-    data_dir: Path | str | None = None,
     port: int = 5001,
     debug: bool = True,
 ) -> None:
     """Run the visualization Flask server on localhost.
 
-    If ``render_state_fn`` is None, the server boots without a renderer and
-    the user must install one via ``POST /api/set_renderer`` before any
+    If ``render_state_fn`` is None, the server boots without a renderer
+    and the user must install one via ``POST /api/set_renderer`` (the
+    browser's "Python renderer" pane does this for them) before any
     ``/api/visualize_state`` request will succeed.
 
-    ``data_dir`` is the directory searched when the frontend requests a
-    pickle by bare filename. Defaults to ``./webapp/data`` under the
-    current working directory.
+    The same process serves the React frontend at ``/`` from
+    ``visualizer/frontend/dist/``, so a single ``python -m
+    bilevel_planning.visualizer`` invocation is enough — no second npm
+    process required.
 
     Binds to ``127.0.0.1`` — the ``/api/set_renderer`` endpoint runs
     arbitrary Python and must not be reachable from outside the host.
     """
-    resolved_data_dir = (
-        Path(data_dir) if data_dir is not None else Path.cwd() / "webapp" / "data"
-    )
-    app = create_app(render_state_fn, resolved_data_dir)
-    print(f"Starting Flask backend on http://127.0.0.1:{port}")
-    print(f"Pickle data directory: {resolved_data_dir}")
+    app = create_app(render_state_fn)
+    print(f"Starting visualizer on http://127.0.0.1:{port}")
+    if not FRONTEND_DIST_DIR.exists():
+        print(
+            "WARNING: frontend bundle not found at "
+            f"{FRONTEND_DIST_DIR}. Run 'npm ci && npm run build' from "
+            "bilevel_planning/visualizer/frontend/ to build it."
+        )
     app.run(debug=debug, port=port, host="127.0.0.1")
