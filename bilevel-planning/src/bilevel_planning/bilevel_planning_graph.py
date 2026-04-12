@@ -1,6 +1,5 @@
 """Bilevel planning graphs: primarily for visualization, analysis, debugging."""
 
-import json
 import pickle
 from pathlib import Path
 from typing import Callable, Generic, Hashable, TypeVar
@@ -326,7 +325,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         Planned follow-ups (tracked on this helper because this is the only
         call site; see also the comments at each individual concern):
-          * Fold this method into ``export_graph_for_web``. The split exists
+          * Fold this method into ``_build_graph_payload``. The split exists
             for no reason — nothing else calls ``_build_graph_structure``.
           * Drop the styling parameters. Colors and sizes are presentation
             concerns that belong in the frontend, not in the export.
@@ -621,7 +620,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         return G, pos, metadata
 
-    def export_graph_for_web(
+    def _build_graph_payload(
         self,
         final_state: _X | None = None,
         abstract_state_color: str = "tab:purple",
@@ -634,9 +633,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         node_alpha: float = 0.7,
         edge_alpha: float = 0.7,
     ) -> dict:
-        """Export graph structure as JSON-serializable dictionary for web frontend.
-
-        Returns a dictionary with nodes, edges, plan info, and configuration.
+        """Build the frontend-facing topology dict (nodes, edges, plan, config).
 
         Planned follow-ups:
           * All of the color/size/alpha parameters should move to the
@@ -646,10 +643,6 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             exist — once the frontend owns styling, the map disappears.
           * Fold ``_build_graph_structure`` into this method; it has no
             other caller.
-          * Consolidate this method and ``export_state_data_pickle`` into a
-            single pickle artifact (see ``export_graph_with_pickle`` for the
-            combined note). The frontend currently has to load a JSON file
-            *and* a pickle path separately, which is awkward.
         """
         # Build the graph structure
         G, pos, metadata = self._build_graph_structure(
@@ -802,54 +795,33 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         return graph_data
 
-    def export_state_data_pickle(self, pickle_path: Path) -> None:
-        """Export pickled state data dictionary for backend use.
-
-        This saves a dictionary mapping node IDs to actual state objects (not strings).
-        The backend can load this pickle to access the original state representations.
-
-        Planned follow-up: merge this into a single pickle artifact that also
-        contains the graph topology dict. Today the frontend uploads a JSON
-        file and separately tells the backend a pickle path — users have to
-        manage two files for one "visualization." One pickle, served through
-        a ``/api/graph`` endpoint after load, is the target.
-        """
-        # Build state data dictionary with actual state objects
-        state_data_pickle = {}
-        for state in self.states:
-            state_id = self._state_to_id(state)
-            node_id = f"x:{state_id}"
-            # Store the actual state object, not string representation
-            state_data_pickle[node_id] = state
-
-        # Save as pickle
-        with open(pickle_path, "wb") as f:
-            pickle.dump(state_data_pickle, f)
-
-    def export_graph_with_pickle(
+    def export(
         self,
-        json_path: Path,
-        pickle_path: Path,
+        path: Path,
         final_state: _X | None = None,
         **kwargs,
-    ) -> dict:
-        """Export graph to JSON and pickle state data.
+    ) -> None:
+        """Write a single pickle bundling graph topology and state objects.
 
-        Planned follow-up: collapse to a single ``export(path)`` method that
-        writes one pickle containing both the graph topology and the state
-        dict. The JSON/pickle split here is a historical accident — JSON
-        can't hold arbitrary Python state objects, so the junior version
-        split the topology (JSON) from the states (pickle). Since the
-        frontend gets the topology from the backend over HTTP anyway, the
-        whole thing can just be one pickle the user loads once.
+        The resulting pickle is a dict with two keys:
+
+          * ``"graph"``: the frontend-facing topology dict (nodes, edges,
+            plan info, config) produced by ``_build_graph_payload``. The
+            backend serves this through ``GET /api/graph``.
+          * ``"states"``: ``{node_id: state}``, mapping node ids of the form
+            ``"x:<state_id>"`` to the original state objects. The backend
+            indexes into this when rendering a specific node.
+
+        The topology half has string reprs of states under ``state_data`` for
+        display; the real objects live in ``"states"`` so that rendering can
+        reconstruct them without needing to unpickle topology data.
         """
-        # Export JSON graph data
-        graph_data = self.export_graph_for_web(final_state=final_state, **kwargs)
+        graph_payload = self._build_graph_payload(final_state=final_state, **kwargs)
+        states_payload: dict[str, _X] = {}
+        for state in self.states:
+            state_id = self._state_to_id(state)
+            states_payload[f"x:{state_id}"] = state
 
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(graph_data, f, indent=2)
-
-        # Export pickled state data
-        self.export_state_data_pickle(pickle_path)
-
-        return graph_data
+        bundle = {"graph": graph_payload, "states": states_payload}
+        with open(path, "wb") as f:
+            pickle.dump(bundle, f)
