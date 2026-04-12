@@ -32,6 +32,7 @@ develop = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+exclude = ["bilevel_planning.visualizer.frontend*"]
 
 [tool.setuptools.package-data]
 bilevel_planning = ["py.typed"]
@@ -44,7 +45,7 @@ target-version = ["py310"]
 py_version = 310
 profile = "black"
 multi_line_output = 2
-skip_glob = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "__pycache__/"]
+skip_glob = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "__pycache__/", "src/bilevel_planning/visualizer/frontend/*"]
 split_on_trailing_comma = true
 
 [tool.docformatter]
@@ -56,7 +57,7 @@ wrap-descriptions = 88
 strict_equality = true
 disallow_untyped_calls = true
 warn_unreachable = true
-exclude = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "__pycache__/"]
+exclude = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "__pycache__/", "src/bilevel_planning/visualizer/frontend/"]
 
 [[tool.mypy.overrides]]
 module = [

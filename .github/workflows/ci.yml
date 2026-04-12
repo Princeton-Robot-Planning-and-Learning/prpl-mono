@@ -52,6 +52,23 @@ jobs:
         run: |
           uv run ./run_in_affected_packages.sh "mypy . --no-incremental"
 
+  visualizer-frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bilevel-planning/src/bilevel_planning/visualizer/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: bilevel-planning/src/bilevel_planning/visualizer/frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+
   unit-tests:
     runs-on: ubuntu-latest
     steps:
