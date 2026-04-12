@@ -22,15 +22,18 @@ from bilevel_planning.visualizer.app import create_app
 def _reset_module_state():
     """Clear the module-level caches before each test.
 
-    ``app.py`` stores the loaded bundle in two module globals so the Flask
-    routes can see them across requests. That's fine for a running backend
-    but leaks between tests; reset both so each test starts fresh.
+    ``app.py`` stores the loaded bundle and the current renderer in module
+    globals so the Flask routes can see them across requests. That's fine
+    for a running backend but leaks between tests; reset all three so each
+    test starts fresh.
     """
     visualizer_app.GRAPH_DATA = {}
     visualizer_app.STATE_DATA = {}
+    visualizer_app.RENDER_FN = None
     yield
     visualizer_app.GRAPH_DATA = {}
     visualizer_app.STATE_DATA = {}
+    visualizer_app.RENDER_FN = None
 
 
 def _constant_color_renderer(state: np.ndarray) -> np.ndarray:
@@ -79,6 +82,15 @@ def test_health_endpoint(tmp_path: Path):
     assert payload["status"] == "healthy"
     assert payload["graph_loaded"] is False
     assert payload["num_states"] == 0
+    assert payload["renderer_set"] is True
+
+
+def test_health_reports_no_renderer_when_none_installed(tmp_path: Path):
+    """Booting with ``render_state_fn=None`` leaves the renderer unset."""
+    app = create_app(None, data_dir=tmp_path)
+    client = app.test_client()
+    payload = client.get("/api/health").get_json()
+    assert payload["renderer_set"] is False
 
 
 def test_graph_endpoint_requires_load(tmp_path: Path):
@@ -145,3 +157,57 @@ def test_load_pickle_rejects_wrong_shape(tmp_path: Path):
     client = app.test_client()
     resp = client.post("/api/load_pickle", json={"pickle_path": bad_path.name})
     assert resp.status_code == 400
+
+
+def test_set_renderer_installs_callable_from_source(tmp_path: Path):
+    """Posting Python source to ``/api/set_renderer`` makes visualization work."""
+    bundle_path, node_ids = _write_demo_bundle(tmp_path)
+
+    # Boot with no renderer.
+    app = create_app(None, data_dir=tmp_path)
+    client = app.test_client()
+    client.post("/api/load_pickle", json={"pickle_path": bundle_path.name})
+
+    # Without a renderer, visualization is 400.
+    resp = client.post("/api/visualize_state", json={"node_id": node_ids[0]})
+    assert resp.status_code == 400
+
+    # Install a renderer via source.
+    source = (
+        "import numpy as np\n"
+        "def render_state(state):\n"
+        "    return np.zeros((4, 4, 3), dtype=np.uint8)\n"
+    )
+    resp = client.post("/api/set_renderer", json={"source": source})
+    assert resp.status_code == 200, resp.get_json()
+    assert resp.get_json()["success"] is True
+
+    # Health now reports the renderer is set.
+    assert client.get("/api/health").get_json()["renderer_set"] is True
+
+    # Visualization now works.
+    resp = client.post("/api/visualize_state", json={"node_id": node_ids[0]})
+    assert resp.status_code == 200
+    assert resp.get_json()["image"].startswith("data:image/png;base64,")
+
+
+def test_set_renderer_rejects_source_without_entrypoint(tmp_path: Path):
+    """Source that doesn't define ``render_state`` is rejected with 400."""
+    app = create_app(None, data_dir=tmp_path)
+    client = app.test_client()
+    resp = client.post("/api/set_renderer", json={"source": "x = 1\n"})
+    assert resp.status_code == 400
+    assert "render_state" in resp.get_json()["error"]
+
+
+def test_set_renderer_rejects_broken_source(tmp_path: Path):
+    """Source that raises during ``exec`` is rejected with 400 plus traceback."""
+    app = create_app(None, data_dir=tmp_path)
+    client = app.test_client()
+    resp = client.post(
+        "/api/set_renderer", json={"source": "raise RuntimeError('nope')\n"}
+    )
+    assert resp.status_code == 400
+    payload = resp.get_json()
+    assert "nope" in payload["error"]
+    assert "traceback" in payload

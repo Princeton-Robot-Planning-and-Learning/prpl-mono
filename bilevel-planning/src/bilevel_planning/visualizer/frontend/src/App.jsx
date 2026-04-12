@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
 import { GraphViewer3D } from './components/GraphViewer3D';
 
+const DEFAULT_RENDERER_SOURCE = `# Define a callable named render_state(state) that returns an
+# HxWx3 uint8 numpy array. Any package in the backend's Python
+# environment can be imported.
+import numpy as np
+
+def render_state(state):
+    return np.full((256, 256, 3), 128, dtype=np.uint8)
+`;
+
 function App() {
   const [graphData, setGraphData] = useState(null);
   const [error, setError] = useState(null);
   const [backendStatus, setBackendStatus] = useState('unknown');
   const [pickleLoaded, setPickleLoaded] = useState(false);
   const [picklePath, setPicklePath] = useState('');
+  const [rendererSource, setRendererSource] = useState(DEFAULT_RENDERER_SOURCE);
+  const [rendererSet, setRendererSet] = useState(false);
+  const [rendererStatus, setRendererStatus] = useState(null);
 
   // Check backend health on mount and periodically
   React.useEffect(() => {
@@ -23,13 +35,38 @@ function App() {
         const data = await response.json();
         setBackendStatus('connected');
         setPickleLoaded(data.graph_loaded);
+        setRendererSet(data.renderer_set);
       } else {
         setBackendStatus('error');
         setPickleLoaded(false);
+        setRendererSet(false);
       }
     } catch (err) {
       setBackendStatus('disconnected');
       setPickleLoaded(false);
+      setRendererSet(false);
+    }
+  };
+
+  const handleApplyRenderer = async () => {
+    setRendererStatus(null);
+    try {
+      const response = await fetch('http://localhost:5001/api/set_renderer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: rendererSource }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setRendererStatus({ ok: false, message: data.error || 'Failed to install renderer' });
+        setRendererSet(false);
+        return;
+      }
+      setRendererStatus({ ok: true, message: 'Renderer installed.' });
+      setRendererSet(true);
+    } catch (err) {
+      setRendererStatus({ ok: false, message: `Error: ${err.message}` });
+      setRendererSet(false);
     }
   };
 
@@ -116,8 +153,8 @@ function App() {
               disabled={backendStatus !== 'connected'}
               title="Tip: Right-click file in Finder, Copy as Pathname, then paste here"
             />
-            <button 
-              onClick={handleLoadPickleByPath} 
+            <button
+              onClick={handleLoadPickleByPath}
               style={{...styles.button, backgroundColor: '#9C27B0'}}
               disabled={backendStatus !== 'connected'}
               title="Load pickle file from path"
@@ -126,15 +163,51 @@ function App() {
             </button>
           </div>
         </div>
+        <details style={styles.rendererDetails}>
+          <summary style={styles.rendererSummary}>
+            Python renderer {rendererSet ? '(installed)' : '(not installed)'}
+          </summary>
+          <div style={styles.rendererPane}>
+            <textarea
+              value={rendererSource}
+              onChange={(e) => setRendererSource(e.target.value)}
+              style={styles.rendererTextarea}
+              spellCheck={false}
+              disabled={backendStatus !== 'connected'}
+            />
+            <div style={styles.rendererControls}>
+              <button
+                onClick={handleApplyRenderer}
+                style={{...styles.button, backgroundColor: '#4CAF50'}}
+                disabled={backendStatus !== 'connected'}
+              >
+                Apply renderer
+              </button>
+              {rendererStatus && (
+                <span
+                  style={{
+                    ...styles.rendererStatus,
+                    color: rendererStatus.ok ? '#4CAF50' : '#f44336',
+                  }}
+                >
+                  {rendererStatus.message}
+                </span>
+              )}
+            </div>
+          </div>
+        </details>
         {error && (
           <div style={styles.error}>
             {error}
           </div>
         )}
       </header>
-      
+
       <main style={styles.main}>
-        <GraphViewer3D graphData={graphData} pickleLoaded={pickleLoaded} />
+        <GraphViewer3D
+          graphData={graphData}
+          pickleLoaded={pickleLoaded && rendererSet}
+        />
       </main>
     </div>
   );
@@ -225,6 +298,41 @@ const styles = {
     color: 'white',
     borderRadius: '4px',
     fontSize: '14px',
+  },
+  rendererDetails: {
+    marginTop: '10px',
+    fontSize: '13px',
+  },
+  rendererSummary: {
+    cursor: 'pointer',
+    padding: '4px 0',
+    userSelect: 'none',
+  },
+  rendererPane: {
+    marginTop: '8px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  rendererTextarea: {
+    width: '100%',
+    minHeight: '140px',
+    padding: '10px',
+    fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+    fontSize: '13px',
+    color: 'white',
+    backgroundColor: '#1a1d24',
+    border: '1px solid #444',
+    borderRadius: '4px',
+    resize: 'vertical',
+  },
+  rendererControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  rendererStatus: {
+    fontSize: '13px',
   },
   main: {
     flex: 1,
