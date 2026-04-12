@@ -240,6 +240,10 @@ class SesameModels(Generic[_O, _X, _U]):
     state_abstractor: Callable[[_X], RelationalAbstractState]
     goal_deriver: Callable[[_X], RelationalAbstractGoal]
     skills: set[LiftedSkill]
+    # Optional pre-computed ground operators. Some environments may want to
+    # specify a subset of ground operators or compute them in a custom way,
+    # bypassing the default grounding of lifted operators.
+    ground_operators: set[GroundOperator] | None = None
 
     @property
     def operators(self) -> set[LiftedOperator]:

@@ -1,3 +1,9 @@
+> # ⚠️ Kinder has moved!
+>
+> **Kinder** is now at **<https://github.com/Princeton-Robot-Planning-and-Learning/kindergarden>**
+>
+> **Baselines** are now at **<https://github.com/Princeton-Robot-Planning-and-Learning/kinder-baselines>**
+
 # Princeton Robot Planning and Learning Monorepo
 
 This repository contains code under active development by the Princeton Robot Planning and Learning group.
@@ -15,10 +21,6 @@ prpl-mono/
   prpl-llm-utils/
     pyproject.toml
     src/prpl-llm-utils
-    tests/
-  kinder/
-    pyproject.toml
-    src/kinder
     tests/
   ...
 ```
@@ -43,25 +45,35 @@ uv pip install "prpl_utils@git+https://github.com/Princeton-Robot-Planning-and-L
 ```
 But beware that things are changing. Pinning commits is a good idea if you need stable code.
 
+## Publishing Packages to PyPI
+
+Some packages in this monorepo are published to PyPI. To publish a new version:
+
+1. Update the `version` in the package's `pyproject.toml`.
+2. From the package directory, build and publish:
+```bash
+cd <package-dir>
+rm -rf dist/ build/ src/*.egg-info/
+uv build
+uv publish dist/*
+```
+
+`uv publish` requires a PyPI token. Set it via:
+```bash
+export UV_PUBLISH_TOKEN=pypi-YOUR_TOKEN_HERE
+```
+
+### Packages currently on PyPI
+
+| Package | PyPI name | Directory |
+|---------|-----------|-----------|
+| prpl_utils | `prpl_utils` | `prpl-utils/` |
+| relational_structs | `relational_structs` | `relational-structs/` |
+| tomsgeoms2d | `tomsgeoms2d` | `toms-geoms-2d/` |
+| pybullet_helpers | `pybullet_helpers` | `pybullet-helpers/` |
+| bilevel_planning | `bilevel_planning` | `bilevel-planning/` |
+
 ## Troubleshooting
-
-We are doing our best to make installation easy across platforms, but here are some known issues and workarounds.
-
-### Installing PyBullet on Recent MacOS
-
-If you encounter issues installing PyBullet on recent versions of MacOS, try this workaround (adapted from [here](github.com/phospho-app/phosphobot/issues/174)):
-1. Make sure you are in the virtual environment where you are installing the mono repo.
-2. Clone PyBullet: `git clone https://github.com/bulletphysics/bullet3`
-3. In `bullet3`, open `examples/ThirdPartyLibs/zlib/zutil.h` and comment out this line by adding `//` at the beginning:
-```
-#define fdopen(fd, mode) NULL
-```
-4. Install from source:
-```
-uv pip install setuptools
-python setup.py build
-python setup.py install
-```
 
 ### Installing `gymnasium[box2d]` on MacOS
 

@@ -160,12 +160,17 @@ class RelationalHeuristicSearchAbstractPlanGenerator(
         operators: set[LiftedOperator],
         heuristic_name: str,
         seed: int,
+        precomputed_ground_operators: set[GroundOperator] | None = None,
     ) -> None:
         # Cannot create the problem yet because we may want to reuse this heuristic
         # in problems that have different initial states, objects, and goals.
         self._pddl_domain = PDDLDomain("custom-domain", operators, predicates, types)
         self._heuristic_name = heuristic_name
-        successor_fn = RelationalAbstractSuccessorGenerator(operators)
+        self._precomputed_ground_operators = precomputed_ground_operators
+        successor_fn = RelationalAbstractSuccessorGenerator(
+            operators,
+            precomputed_ground_operators=precomputed_ground_operators,
+        )
         super().__init__(self._relational_heuristic_factory, successor_fn, seed)
 
     def _relational_heuristic_factory(
@@ -183,9 +188,12 @@ class RelationalHeuristicSearchAbstractPlanGenerator(
             init_abstract_state.atoms,
             goal.atoms,
         )
-        ground_operators = cached_all_ground_operators(
-            self._pddl_domain.operators, init_abstract_state.objects
-        )
+        if self._precomputed_ground_operators is not None:
+            ground_operators = self._precomputed_ground_operators
+        else:
+            ground_operators = cached_all_ground_operators(
+                self._pddl_domain.operators, init_abstract_state.objects
+            )
         pyperplan_heuristic = create_pyperplan_heuristic(
             "hff", self._pddl_domain, pddl_problem, ground_operators
         )

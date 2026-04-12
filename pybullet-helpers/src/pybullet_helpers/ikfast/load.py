@@ -5,7 +5,7 @@ import glob
 import importlib
 import importlib.util
 import logging
-import os
+import subprocess
 import sys
 from importlib.abc import Loader
 from pathlib import Path
@@ -21,19 +21,12 @@ def install_ikfast_module(ikfast_dir: Path) -> None:
     Assumes there is a subdirectory in envs/assets/ikfast with a setup.py file for the
     robot. See the panda_arm subdirectory for an example.
     """
-    cmds = [
-        # Go to the subdirectory with the setup.py file.
-        f"cd {ikfast_dir}",
-        # Run the setup.py file.
-        "python setup.py",
-    ]
-    # Execute the command.
-    cmd = "; ".join(cmds)
-    logging.debug(f"Executing command: {cmd}")
-    exit_value = os.system(cmd)
-    if exit_value != 0:
+    cmd = [sys.executable, "setup.py"]
+    logging.debug(f"Executing command: {cmd} in {ikfast_dir}")
+    result = subprocess.run(cmd, cwd=ikfast_dir, check=False)
+    if result.returncode != 0:
         raise RuntimeError(
-            f"IKFast install failed with exit code {exit_value}. "
+            f"IKFast install failed with exit code {result.returncode}. "
             "If there is a compilation error on linux, look at the environment "
             "variables in compile.py. You may need to export LAPACK_DIR, "
             "LIBGFORTRAN_DIR, or BLAS_DIR if the defaults are wrong."

@@ -4,16 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pybullet_helpers"
-version = "0.1.0"
+version = "0.1.1"
 description = "Some utility functions for PyBullet."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
    "numpy>=1.23.5,<2.0",
-   "pybullet>=3.2.5",
+   "pybullet-arm64>=3.2.8",
    "gymnasium>=0.29.1",
    "scipy==1.14.0",
    "hello-robot-stretch-urdf",
+   "prpl_utils>=0.0.1",
 ]
 
 [project.optional-dependencies]
