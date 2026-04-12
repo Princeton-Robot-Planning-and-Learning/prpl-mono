@@ -1,5 +1,9 @@
 """Tests for bilevel_planning_graph.py."""
 
+import json
+import pickle
+from pathlib import Path
+
 import numpy as np
 
 from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
@@ -60,3 +64,63 @@ def test_bilevel_planning_graph():
 
     # Uncomment to make GIF.
     # bpg.render_gif(save_path="debug.gif")
+
+
+def _make_small_bpg() -> BilevelPlanningGraph:
+    bpg: BilevelPlanningGraph = BilevelPlanningGraph()
+    states = [np.array([i], dtype=np.int64) for i in range(4)]
+    for s in states:
+        bpg.add_state_node(s)
+    bpg.add_abstract_state_node("start")
+    bpg.add_abstract_state_node("end")
+    bpg.add_state_abstractor_edge(states[0], "start")
+    bpg.add_state_abstractor_edge(states[3], "end")
+    bpg.add_abstract_action_edge("start", "go", "end")
+    for a, b in zip(states[:-1], states[1:]):
+        bpg.add_action_edge(a, "step", b)
+    return bpg
+
+
+def test_export_graph_for_web():
+    """export_graph_for_web returns a JSON-serializable dict with expected keys."""
+    bpg = _make_small_bpg()
+    final_state = bpg.states[-1]
+    graph_data = bpg.export_graph_for_web(final_state=final_state)
+
+    assert set(graph_data.keys()) >= {"nodes", "edges", "plan", "config", "state_data"}
+    # The exporter prunes degree-1 chain nodes; at minimum the start and goal
+    # (both of which have abstract-state mappings) should survive.
+    concrete = [n for n in graph_data["nodes"] if n["type"] == "concrete"]
+    assert len(concrete) >= 2
+    # Round-trip through json to confirm serializability.
+    json.loads(json.dumps(graph_data))
+
+    plan_nodes = graph_data["plan"]["nodes"]
+    assert plan_nodes, "plan should be non-empty when final_state is provided"
+    assert graph_data["plan"]["start"] == plan_nodes[0]
+    assert graph_data["plan"]["goal"] == plan_nodes[-1]
+
+
+def test_export_graph_with_pickle(tmp_path: Path):
+    """export_graph_with_pickle writes a JSON + pickle pair with consistent IDs."""
+    bpg = _make_small_bpg()
+    json_path = tmp_path / "graph.json"
+    pickle_path = tmp_path / "states.pkl"
+    bpg.export_graph_with_pickle(
+        json_path=json_path,
+        pickle_path=pickle_path,
+        final_state=bpg.states[-1],
+    )
+
+    with open(json_path, encoding="utf-8") as f:
+        graph_data = json.load(f)
+    with open(pickle_path, "rb") as f:
+        state_data = pickle.load(f)
+
+    # Every concrete node in the JSON should have a matching state object in
+    # the pickle, and the state objects should be the originals (not strings).
+    concrete_ids = {n["id"] for n in graph_data["nodes"] if n["type"] == "concrete"}
+    assert concrete_ids
+    assert concrete_ids.issubset(set(state_data.keys()))
+    for state in state_data.values():
+        assert isinstance(state, np.ndarray)
