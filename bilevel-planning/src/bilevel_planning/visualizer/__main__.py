@@ -1,13 +1,14 @@
-"""Universal entry point for the bilevel planning visualizer backend.
+"""Universal entry point for the bilevel planning visualizer.
 
 Usage:
 
-    python -m bilevel_planning.visualizer [--data-dir PATH] [--port N] [--no-debug]
+    python -m bilevel_planning.visualizer [--port N] [--no-debug]
 
-Boots the Flask backend with no renderer installed. Use the browser UI
-(or a direct ``POST /api/set_renderer``) to supply the Python source for
-``render_state`` once the server is up. See ``bilevel_planning.visualizer.app``
-for details on the security model.
+Boots the Flask backend with no renderer installed and serves the built
+React frontend at the same port. Open the printed URL in a browser, click
+**Load Pickle**, then expand the **Python renderer** pane and apply your
+``render_state`` source. See ``bilevel_planning.visualizer.app`` for the
+security model.
 """
 
 import argparse
@@ -16,21 +17,13 @@ from bilevel_planning.visualizer.app import run_webapp
 
 
 def main() -> None:
-    """Parse CLI args and launch the visualizer backend."""
+    """Parse CLI args and launch the visualizer."""
     parser = argparse.ArgumentParser(
         prog="python -m bilevel_planning.visualizer",
         description=(
-            "Run the bilevel planning visualizer backend. The renderer is "
-            "installed at runtime via POST /api/set_renderer from the browser."
-        ),
-    )
-    parser.add_argument(
-        "--data-dir",
-        default=None,
-        help=(
-            "Directory searched when the frontend requests a pickle by bare "
-            "filename. Defaults to ./webapp/data under the current working "
-            "directory."
+            "Run the bilevel planning visualizer. The renderer is installed "
+            "at runtime via the browser's 'Python renderer' pane (or via a "
+            "direct POST to /api/set_renderer)."
         ),
     )
     parser.add_argument(
@@ -48,7 +41,6 @@ def main() -> None:
 
     run_webapp(
         render_state_fn=None,
-        data_dir=args.data_dir,
         port=args.port,
         debug=not args.no_debug,
     )

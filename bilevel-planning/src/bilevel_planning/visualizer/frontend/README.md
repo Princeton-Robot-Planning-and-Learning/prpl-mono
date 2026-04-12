@@ -1,31 +1,37 @@
 # Bilevel Planning Visualizer — Frontend
 
-React + Vite frontend for the bilevel planning graph visualizer. Pairs with
-the Flask backend at `bilevel_planning.visualizer.app`.
+React + Vite frontend for the bilevel planning graph visualizer. Built
+once with `npm run build`, then served at `/` by the Flask backend at
+`bilevel_planning.visualizer.app`. There's only one process at runtime —
+this directory only matters during installation and frontend development.
 
 ## Prerequisites
 
 - Node.js 18+
-- The Python backend running on `http://localhost:5001` (see the module
-  docstring on `bilevel_planning.visualizer.app.run_webapp`).
 
-## Development
+## One-time build
 
 ```bash
-npm install
-npm run dev
-```
-
-Vite serves the app on `http://localhost:3000` and proxies `/api/*`
-requests to the backend on port 5001.
-
-## Production build
-
-```bash
+npm ci
 npm run build
 ```
 
-Outputs a static bundle to `dist/`.
+This produces `dist/`, which the Python backend serves as static files.
+After this, users only ever run `python -m bilevel_planning.visualizer`
+(or `run_webapp` from a script). No npm process is needed at runtime.
+
+## Frontend development mode
+
+If you're editing the React code, Vite's dev server gives you hot
+reload:
+
+```bash
+npm run dev
+```
+
+Vite serves on `http://localhost:3000` and proxies `/api/*` to the
+Python backend on `http://localhost:5001`. Run the backend separately
+in another terminal while you're iterating.
 
 ## Installing a renderer
 

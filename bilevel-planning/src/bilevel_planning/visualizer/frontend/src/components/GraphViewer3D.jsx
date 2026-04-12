@@ -103,7 +103,7 @@ export function GraphViewer3D({ graphData, pickleLoaded = false }) {
           setLoadingImage(true);
           try {
             console.log('Requesting visualization for node:', nodeId);
-            const response = await fetch('http://localhost:5001/api/visualize_state', {
+            const response = await fetch('/api/visualize_state', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ export function GraphViewer3D({ graphData, pickleLoaded = false }) {
             }
           } catch (error) {
             console.error('Error fetching visualization:', error);
-            const errorMsg = `Error: ${error.message}. Make sure backend is running on http://localhost:5001`;
+            const errorMsg = `Error: ${error.message}. Is the visualizer backend running?`;
             setRenderError(errorMsg);
             setStateImage(null);
           } finally {
