@@ -29,8 +29,6 @@ Outputs a static bundle to `dist/`.
 
 ## Planned follow-ups
 
-- Move topology loading to the backend so users upload only one artifact
-  (a single pickle) instead of a JSON + pickle pair.
 - Add an in-browser Python editor pane that defines `render_state_fn`
   and posts it to `/api/set_renderer`, removing the need for a bespoke
   launcher script per environment.

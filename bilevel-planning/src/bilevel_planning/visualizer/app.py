@@ -23,6 +23,11 @@ from PIL import Image  # type: ignore[import-untyped]
 
 RenderStateFn = Callable[[Any], np.ndarray]
 
+# Backend state. ``GRAPH_DATA`` is the frontend-facing topology dict served
+# by ``/api/graph``; ``STATE_DATA`` maps node ids to the original state
+# objects, indexed into by ``/api/visualize_state``. Both halves come from
+# the same pickle produced by ``BilevelPlanningGraph.export``.
+GRAPH_DATA: dict = {}
 STATE_DATA: dict = {}
 
 
@@ -48,7 +53,7 @@ def create_app(render_state_fn: RenderStateFn, data_dir: Path) -> Flask:
 
     @app.route("/api/load_pickle", methods=["POST"])
     def load_pickle():
-        global STATE_DATA
+        global GRAPH_DATA, STATE_DATA
         try:
             data = request.get_json()
             pickle_path_str = data["pickle_path"]
@@ -67,15 +72,33 @@ def create_app(render_state_fn: RenderStateFn, data_dir: Path) -> Flask:
                 )
 
             with open(pickle_path, "rb") as f:
-                STATE_DATA = pickle.load(f)
+                bundle = pickle.load(f)
+
+            if not (
+                isinstance(bundle, dict) and "graph" in bundle and "states" in bundle
+            ):
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                "Pickle is not a bilevel-planning visualizer "
+                                "bundle; expected a dict with 'graph' and "
+                                "'states' keys. Regenerate with "
+                                "BilevelPlanningGraph.export()."
+                            ),
+                        }
+                    ),
+                    400,
+                )
+
+            GRAPH_DATA = bundle["graph"]
+            STATE_DATA = bundle["states"]
 
             num_states = len(STATE_DATA)
-            node_ids = list(STATE_DATA.keys())[:5]
             return jsonify(
                 {
                     "success": True,
                     "num_states": num_states,
-                    "sample_node_ids": node_ids,
                     "message": f"Loaded {num_states} states from {pickle_path.name}",
                     "full_path": str(pickle_path),
                 }
@@ -85,6 +108,15 @@ def create_app(render_state_fn: RenderStateFn, data_dir: Path) -> Flask:
             return jsonify({"error": "pickle_path is required in request body"}), 400
         except Exception as e:  # pylint: disable=broad-exception-caught
             return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+    @app.route("/api/graph", methods=["GET"])
+    def graph():
+        if not GRAPH_DATA:
+            return (
+                jsonify({"error": "No graph loaded. Call /api/load_pickle first."}),
+                400,
+            )
+        return jsonify(GRAPH_DATA)
 
     @app.route("/api/visualize_state", methods=["POST"])
     def visualize_state():
@@ -140,7 +172,7 @@ def create_app(render_state_fn: RenderStateFn, data_dir: Path) -> Flask:
         return jsonify(
             {
                 "status": "healthy",
-                "state_data_loaded": len(STATE_DATA) > 0,
+                "graph_loaded": bool(GRAPH_DATA),
                 "num_states": len(STATE_DATA),
             }
         )
@@ -164,17 +196,11 @@ def run_webapp(
     by bare filename. Defaults to ``./webapp/data`` under the current working
     directory.
 
-    Planned follow-ups (tracked here and in related visualizer files):
-      * Replace the JSON + pickle pair with a single pickle artifact and add
-        a ``/api/graph`` endpoint so the frontend fetches the topology from
-        the backend instead of uploading JSON itself.
-      * Add a ``/api/set_renderer`` endpoint that accepts Python source for
-        ``render_state_fn``, ``exec``s it, and caches the resulting callable.
-        Lets users launch the webapp with no bespoke script and write their
-        render function in a browser editor pane. Localhost-only — not for
-        hosted deployment.
-      * Move the React frontend under ``src/bilevel_planning/visualizer/
-        frontend/`` so all visualizer code lives under one name.
+    Planned follow-up: add a ``/api/set_renderer`` endpoint that accepts
+    Python source for ``render_state_fn``, ``exec``s it, and caches the
+    resulting callable. Lets users launch the webapp with no bespoke script
+    and write their render function in a browser editor pane.
+    Localhost-only — not for hosted deployment.
     """
     resolved_data_dir = (
         Path(data_dir) if data_dir is not None else Path.cwd() / "webapp" / "data"

@@ -22,8 +22,7 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         setBackendStatus('connected');
-        // Update pickle loaded status from backend
-        setPickleLoaded(data.state_data_loaded);
+        setPickleLoaded(data.graph_loaded);
       } else {
         setBackendStatus('error');
         setPickleLoaded(false);
@@ -51,64 +50,50 @@ function App() {
         },
         body: JSON.stringify({ pickle_path: path })
       });
-      
+
       const data = await response.json();
-      
-      if (response.ok) {
-        console.log('Pickle loaded successfully:', data);
-        setPickleLoaded(true);
-        setError(null);
-        alert(`Successfully loaded ${data.num_states} states from ${data.full_path || path}`);
-      } else {
+
+      if (!response.ok) {
         console.error('Error loading pickle:', data.error);
         let errorMsg = `Failed to load pickle: ${data.error}`;
         if (data.attempted_paths) {
           errorMsg += `\nAttempted paths:\n${data.attempted_paths.join('\n')}`;
         }
         setError(errorMsg);
+        setGraphData(null);
+        setPickleLoaded(false);
+        return;
       }
-      
-      // Refresh backend status
+
+      // Backend loaded the bundle; fetch the topology for the viewer.
+      const graphResp = await fetch('http://localhost:5001/api/graph');
+      if (!graphResp.ok) {
+        const graphErr = await graphResp.json();
+        setError(`Failed to fetch graph: ${graphErr.error}`);
+        setGraphData(null);
+        setPickleLoaded(false);
+        return;
+      }
+      const graphJson = await graphResp.json();
+
+      if (!graphJson.nodes || !graphJson.edges || !graphJson.config) {
+        setError('Backend returned a graph with an unexpected shape');
+        setGraphData(null);
+        setPickleLoaded(false);
+        return;
+      }
+
+      console.log(
+        `Loaded ${data.num_states} states; graph has ${graphJson.nodes.length} nodes, ${graphJson.edges.length} edges`
+      );
+      setGraphData(graphJson);
+      setPickleLoaded(true);
+      setError(null);
       await checkBackendHealth();
     } catch (err) {
       console.error('Error loading pickle:', err);
       setError(`Error: ${err.message}`);
     }
-  };
-
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    console.log('Loading file:', file.name);
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      try {
-        const json = JSON.parse(e.target.result);
-        console.log('Parsed JSON:', json);
-        
-        // Validate the JSON structure
-        if (!json.nodes || !json.edges || !json.config) {
-          throw new Error('Invalid graph data structure');
-        }
-        
-        console.log(`Graph loaded: ${json.nodes.length} nodes, ${json.edges.length} edges`);
-        setGraphData(json);
-        setError(null);
-      } catch (err) {
-        console.error('Error parsing JSON:', err);
-        setError(`Error parsing JSON: ${err.message}`);
-        setGraphData(null);
-      }
-    };
-    
-    reader.onerror = () => {
-      console.error('Error reading file');
-      setError('Error reading file');
-    };
-    
-    reader.readAsText(file);
   };
 
 
@@ -117,15 +102,6 @@ function App() {
       <header style={styles.header}>
         <h1 style={styles.title}>Bilevel Planning Graph Viewer</h1>
         <div style={styles.controls}>
-          <label style={styles.fileLabel}>
-            Load Graph JSON:
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleFileUpload}
-              style={styles.fileInput}
-            />
-          </label>
           <div style={styles.pathInputContainer}>
             <input
               type="text"
@@ -209,20 +185,6 @@ const styles = {
     gap: '15px',
     alignItems: 'center',
     flexWrap: 'wrap',
-  },
-  fileLabel: {
-    cursor: 'pointer',
-    padding: '8px 12px',
-    backgroundColor: '#4CAF50',
-    borderRadius: '4px',
-    fontSize: '14px',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  fileInput: {
-    marginLeft: '8px',
-    fontSize: '14px',
   },
   button: {
     padding: '8px 16px',
