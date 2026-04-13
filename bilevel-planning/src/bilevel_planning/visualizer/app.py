@@ -18,7 +18,17 @@ it. Do not put this behind a reverse proxy exposing it to untrusted
 networks.
 """
 
-# pylint: disable=global-statement
+# pylint: disable=global-statement,wrong-import-position,wrong-import-order
+
+# Force matplotlib onto a non-interactive backend before any code path
+# (including the user's exec'd renderer source) can import pyplot. Flask
+# handles requests on worker threads, and on macOS the default 'MacOSX'
+# backend refuses to create figures off the main thread. Has to happen
+# before the rest of the imports in case any of them transitively import
+# matplotlib.
+import matplotlib
+
+matplotlib.use("Agg")
 
 import base64
 import io
