@@ -133,3 +133,14 @@ def test_export_roundtrip(tmp_path: Path):
     plan_ys = [id_to_y[nid] for nid in plan_nodes]
     assert plan_ys == sorted(plan_ys, reverse=True)
     assert plan_ys[0] != plan_ys[-1]
+
+    # Short node ids: every concrete node id should parse to an integer
+    # within [0, len(self.states)), not the full 80-digit content hash.
+    n_states = len(states)
+    for n in graph["nodes"]:
+        if n["type"] == "concrete":
+            idx = int(n["id"].split(":")[1])
+            assert 0 <= idx < n_states
+    # The states-dict keys must match the node ids used elsewhere so
+    # the backend can look each rendered concrete node up at render time.
+    assert concrete_ids.issubset(set(states.keys()))

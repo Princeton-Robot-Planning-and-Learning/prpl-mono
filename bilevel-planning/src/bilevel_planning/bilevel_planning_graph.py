@@ -370,6 +370,11 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         from ``node.type`` (``"concrete"`` / ``"abstract"``),
         ``node.in_plan``, and ``edge.type`` (``"action"`` / ``"abstractor"``
         / ``"abstract_action"``).
+
+        Concrete node ids in the emitted payload are short insertion-order
+        integers (``x:0``, ``x:1``, ...) rather than the content-hash ints
+        used for internal deduplication. Abstract node ids use the same
+        insertion-order index space (``s:0``, ``s:1``, ...).
         """
         # ------------------------------------------------------------------
         # Phase 1: analyze topology and pick which concrete nodes to render.
@@ -403,12 +408,22 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             if is_critical:
                 kept_state_ids.add(sid)
 
+        # Short display ids for concrete nodes. Content hashes are
+        # internally unambiguous but 80-digit integers are useless in a
+        # UI; remap to insertion-order indices for every payload string.
+        display_id_of: dict[int, int] = {
+            self._state_to_id(state): idx for idx, state in enumerate(self.states)
+        }
+
+        def concrete_nid(content_hash: int) -> str:
+            return f"x:{display_id_of[content_hash]}"
+
         # ------------------------------------------------------------------
         # Phase 2: stitch edges between kept nodes, skipping pruned chains.
         # ------------------------------------------------------------------
         G_layout: nx.DiGraph = nx.DiGraph()
         for sid in kept_state_ids:
-            G_layout.add_node(f"x:{sid}")
+            G_layout.add_node(concrete_nid(sid))
         for sid in kept_state_ids:
             for child_id in adj.get(sid, set()):
                 curr = child_id
@@ -422,7 +437,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
                         break
                     curr = next(iter(next_nodes))
                 if curr in kept_state_ids:
-                    G_layout.add_edge(f"x:{sid}", f"x:{curr}")
+                    G_layout.add_edge(concrete_nid(sid), concrete_nid(curr))
 
         # ------------------------------------------------------------------
         # Phase 3: lay out the kept concrete nodes, scale into [-10, 10].
@@ -463,7 +478,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         # Kept concrete nodes on the z_bottom plane.
         for sid in kept_state_ids:
-            nid = f"x:{sid}"
+            nid = concrete_nid(sid)
             if nid in layout_pos:
                 pos[nid] = (layout_pos[nid][0], layout_pos[nid][1], z_bottom)
                 G.add_node(nid, type="concrete")
@@ -477,7 +492,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         abstract_members: dict[int, list[str]] = {}
         for cid, aid in state_to_abstract.items():
             if cid in kept_state_ids:
-                abstract_members.setdefault(aid, []).append(f"x:{cid}")
+                abstract_members.setdefault(aid, []).append(concrete_nid(cid))
         for abstract_idx in range(len(self.abstract_states)):
             abs_nid = f"s:{abstract_idx}"
             members = abstract_members.get(abstract_idx, [])
@@ -493,11 +508,17 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         # and abstract-action edges (abstract -> abstract on z_top).
         for cid, aid in state_to_abstract.items():
             if cid in kept_state_ids:
-                G.add_edge(f"x:{cid}", f"s:{aid}", type="abstractor")
+                G.add_edge(concrete_nid(cid), f"s:{aid}", type="abstractor")
         for src_abs, _action, dst_abs in self.abstract_action_edges:
             src_idx = self._abstract_state_to_id(src_abs)
             dst_idx = self._abstract_state_to_id(dst_abs)
             G.add_edge(f"s:{src_idx}", f"s:{dst_idx}", type="abstract_action")
+
+        # Display-id keyed mirror of state_to_abstract so the final node
+        # loop can look up an abstract id by concrete node id cheaply.
+        display_to_abstract: dict[int, int] = {
+            display_id_of[cid]: aid for cid, aid in state_to_abstract.items()
+        }
 
         # ------------------------------------------------------------------
         # Phase 5: plan membership + time index.
@@ -510,15 +531,15 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             for s in self.extract_plan(final_state).states:
                 sid = self._state_to_id(s)
                 if sid in kept_state_ids:
-                    plan_node_ids.append(f"x:{sid}")
+                    plan_node_ids.append(concrete_nid(sid))
             if plan_node_ids:
                 start_node = plan_node_ids[0]
                 goal_node = plan_node_ids[-1]
             seen_abstract: set[str] = set()
             for x_node in plan_node_ids:
-                x_id = int(x_node.split(":")[1])
-                if x_id in state_to_abstract:
-                    s_node = f"s:{state_to_abstract[x_id]}"
+                display_id = int(x_node.split(":")[1])
+                if display_id in display_to_abstract:
+                    s_node = f"s:{display_to_abstract[display_id]}"
                     if s_node not in seen_abstract:
                         seen_abstract.add(s_node)
                         abstract_plan_node_ids.append(s_node)
@@ -527,12 +548,12 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         # Time indices: one per rendered concrete node, in graph insertion order.
         rendered_concrete_ids: set[str] = {
-            f"x:{sid}" for sid in kept_state_ids if f"x:{sid}" in pos
+            concrete_nid(sid) for sid in kept_state_ids if concrete_nid(sid) in pos
         }
         node_time_index: dict[str, int] = {}
         current_index = 1
         for state in self.states:
-            nid = f"x:{self._state_to_id(state)}"
+            nid = concrete_nid(self._state_to_id(state))
             if nid in rendered_concrete_ids:
                 node_time_index[nid] = current_index
                 current_index += 1
@@ -553,9 +574,9 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             if not is_abstract:
                 if node_id in node_time_index:
                     node_dict["time_index"] = node_time_index[node_id]
-                state_id = int(node_id.split(":")[1])
-                if state_id in state_to_abstract:
-                    node_dict["abstract_state_id"] = state_to_abstract[state_id]
+                display_id = int(node_id.split(":")[1])
+                if display_id in display_to_abstract:
+                    node_dict["abstract_state_id"] = display_to_abstract[display_id]
             nodes.append(node_dict)
 
         edges: list[dict] = [
@@ -574,7 +595,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             config["min_time"] = 1
             config["max_time"] = current_index - 1
 
-        state_data = {f"x:{self._state_to_id(s)}": str(s) for s in self.states}
+        state_data = {f"x:{idx}": str(state) for idx, state in enumerate(self.states)}
 
         return {
             "nodes": nodes,
@@ -598,18 +619,14 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             plan info, config) produced by ``_build_graph_payload``. The
             backend serves this through ``GET /api/graph``.
           * ``"states"``: ``{node_id: state}``, mapping node ids of the form
-            ``"x:<state_id>"`` to the original state objects. The backend
-            indexes into this when rendering a specific node.
-
-        The topology half has string reprs of states under ``state_data`` for
-        display; the real objects live in ``"states"`` so that rendering can
-        reconstruct them without needing to unpickle topology data.
+            ``"x:<display_id>"`` to the original state objects. Display
+            ids are insertion-order indices into ``self.states``. The
+            backend indexes into this dict when rendering a specific node.
         """
         graph_payload = self._build_graph_payload(final_state=final_state, **kwargs)
-        states_payload: dict[str, _X] = {}
-        for state in self.states:
-            state_id = self._state_to_id(state)
-            states_payload[f"x:{state_id}"] = state
+        states_payload: dict[str, _X] = {
+            f"x:{idx}": state for idx, state in enumerate(self.states)
+        }
 
         bundle = {"graph": graph_payload, "states": states_payload}
         with open(path, "wb") as f:
