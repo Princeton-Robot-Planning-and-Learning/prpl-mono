@@ -125,3 +125,11 @@ def test_export_roundtrip(tmp_path: Path):
     assert "action" in edge_types
     assert "abstractor" in edge_types
     assert "abstract_action" in edge_types
+
+    # Hierarchical layout: the plan walks a single linear chain of
+    # concrete nodes, so we should see strictly-decreasing y as we step
+    # through the plan (roots at top, descendants below).
+    id_to_y = {n["id"]: n["position"][1] for n in graph["nodes"]}
+    plan_ys = [id_to_y[nid] for nid in plan_nodes]
+    assert plan_ys == sorted(plan_ys, reverse=True)
+    assert plan_ys[0] != plan_ys[-1]

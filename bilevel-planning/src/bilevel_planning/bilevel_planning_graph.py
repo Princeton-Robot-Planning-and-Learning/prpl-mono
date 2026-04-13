@@ -1,6 +1,7 @@
 """Bilevel planning graphs: primarily for visualization, analysis, debugging."""
 
 import pickle
+from collections import deque
 from pathlib import Path
 from typing import Callable, Generic, Hashable, TypeVar
 
@@ -18,6 +19,64 @@ _X = TypeVar("_X")  # state
 _U = TypeVar("_U")  # action
 _S = TypeVar("_S", bound=Hashable)  # abstract state
 _A = TypeVar("_A", bound=Hashable)  # abstract action
+
+
+def _hierarchical_layout(graph: nx.DiGraph) -> dict[str, tuple[float, float]]:
+    """Assign each node an (x, y) in a top-down layered arrangement.
+
+    Each node's layer is its longest-path distance from any root (node with in_degree 0)
+    when the graph is a DAG, or its shortest-path distance via BFS otherwise. Nodes
+    within a layer are spread evenly along x. Roots sit at y=0 and descendants descend
+    (y decreases).
+
+    Coordinates are unscaled; the caller is expected to center and rescale them to its
+    preferred display box.
+    """
+    if not graph.nodes:
+        return {}
+
+    roots = [n for n in graph.nodes if graph.in_degree(n) == 0]
+    if not roots:
+        # Pure cycle (or no identifiable root): pick any node to start.
+        roots = [next(iter(graph.nodes))]
+
+    layer_of: dict[str, int] = {}
+    if nx.is_directed_acyclic_graph(graph):
+        # Longest-path layering: each node sits one layer below its
+        # deepest predecessor. Produces the cleanest top-down read.
+        for node in nx.topological_sort(graph):
+            preds = list(graph.predecessors(node))
+            layer_of[node] = max((layer_of[p] for p in preds), default=-1) + 1
+    else:
+        # Cycle fallback: BFS shortest-path from the roots.
+        for root in roots:
+            layer_of.setdefault(root, 0)
+        queue: deque[str] = deque(roots)
+        while queue:
+            u = queue.popleft()
+            for v in graph.successors(u):
+                if v not in layer_of:
+                    layer_of[v] = layer_of[u] + 1
+                    queue.append(v)
+        # Nodes unreachable from any root (possible inside a cycle
+        # component with no root) fall to layer 0.
+        for node in graph.nodes:
+            layer_of.setdefault(node, 0)
+
+    # Group by layer and spread evenly along x. Sort within a layer for
+    # deterministic output across runs.
+    layers: dict[int, list[str]] = {}
+    for node, layer in layer_of.items():
+        layers.setdefault(layer, []).append(node)
+
+    positions: dict[str, tuple[float, float]] = {}
+    for layer, nodes_in_layer in layers.items():
+        nodes_in_layer.sort()
+        count = len(nodes_in_layer)
+        for i, node in enumerate(nodes_in_layer):
+            x = 0.0 if count == 1 else (i / (count - 1) - 0.5) * 2.0
+            positions[node] = (x, float(-layer))
+    return positions
 
 
 class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
@@ -311,11 +370,6 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         from ``node.type`` (``"concrete"`` / ``"abstract"``),
         ``node.in_plan``, and ``edge.type`` (``"action"`` / ``"abstractor"``
         / ``"abstract_action"``).
-
-        Planned follow-up: replace the force-directed layout below with a
-        hierarchical layer assignment (BFS from roots) for DAG-shaped
-        graphs, and drop the aspect-ratio hack in the post-processing
-        step.
         """
         # ------------------------------------------------------------------
         # Phase 1: analyze topology and pick which concrete nodes to render.
@@ -373,35 +427,30 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         # ------------------------------------------------------------------
         # Phase 3: lay out the kept concrete nodes, scale into [-10, 10].
         # ------------------------------------------------------------------
-        layout_pos: dict[str, tuple[float, float]] = {
-            n: (float(xy[0]), float(xy[1]))
-            for n, xy in nx.spring_layout(G_layout, seed=0).items()
-        }
+        # Hierarchical layer layout: assign each node a layer via
+        # longest-path depth from any root (or shortest-path BFS when the
+        # graph has cycles), then spread nodes evenly within each layer.
+        # Roots sit at top (y=0), descendants descend. Produces a clean
+        # top-down DAG read for BPGs produced by a planner.
+        layout_pos = _hierarchical_layout(G_layout)
+
+        # Uniform scale into a [-10, 10] box, preserving aspect.
         if layout_pos:
             xs = [p[0] for p in layout_pos.values()]
             ys = [p[1] for p in layout_pos.values()]
             min_x, max_x = min(xs), max(xs)
             min_y, max_y = min(ys), max(ys)
-            width = max_x - min_x if max_x != min_x else 1.0
-            height = max_y - min_y if max_y != min_y else 1.0
+            width = max_x - min_x
+            height = max_y - min_y
             center_x = (min_x + max_x) / 2.0
             center_y = (min_y + max_y) / 2.0
-            # Aspect-ratio stretch: a legacy hack calibrated for graphviz
-            # "dot" output. The pending layout-replacement PR will delete
-            # this and use a straight uniform scale.
-            target_aspect = 1.5
-            current_aspect = width / height
-            y_scale = (
-                current_aspect / target_aspect
-                if current_aspect > target_aspect
-                else 1.0
-            )
-            max_dim = max(width, height * y_scale)
-            scale_factor = 20.0 / max_dim if max_dim > 0 else 1.0
+            max_dim = max(width, height, 1.0)
+            scale_factor = 20.0 / max_dim
             for nid, (layout_x, layout_y) in layout_pos.items():
-                new_x = (layout_x - center_x) * scale_factor
-                new_y = (layout_y - center_y) * y_scale * scale_factor
-                layout_pos[nid] = (new_x, new_y)
+                layout_pos[nid] = (
+                    (layout_x - center_x) * scale_factor,
+                    (layout_y - center_y) * scale_factor,
+                )
 
         # ------------------------------------------------------------------
         # Phase 4: build the (G, pos) triple we'll emit.
