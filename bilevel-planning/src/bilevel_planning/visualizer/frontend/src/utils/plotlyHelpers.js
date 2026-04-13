@@ -265,9 +265,13 @@ export function getPlotlyLayout(graphData) {
   return {
     scene: {
       camera: {
-        // Start with a bird's-eye view from above, looking down
-        eye: { x: 0, y: 0, z: 2.5 },
-        up: { x: 0, y: 1, z: 0 }
+        // Isometric-ish view with z as the screen vertical, so the
+        // abstract plane (z=z_top) visibly sits above the concrete
+        // plane (z=z_bottom). The ground plane shows the x/y
+        // hierarchical layout at an angle, with roots toward the
+        // back and leaves toward the viewer.
+        eye: { x: 1.3, y: 1.3, z: 1.5 },
+        up: { x: 0, y: 0, z: 1 },
       },
       xaxis: { 
         visible: true,
