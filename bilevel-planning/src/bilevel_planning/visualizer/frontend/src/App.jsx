@@ -17,7 +17,7 @@ function App() {
   const [pickleLoaded, setPickleLoaded] = useState(false);
   const [pickleFilename, setPickleFilename] = useState(null);
   const [rendererSource, setRendererSource] = useState(DEFAULT_RENDERER_SOURCE);
-  const [rendererSet, setRendererSet] = useState(false);
+  const [rendererReady, setRendererReady] = useState(false);
   const [rendererStatus, setRendererStatus] = useState(null);
 
   // Check backend health on mount and periodically
@@ -34,16 +34,16 @@ function App() {
         const data = await response.json();
         setBackendStatus('connected');
         setPickleLoaded(data.graph_loaded);
-        setRendererSet(data.renderer_set);
+        setRendererReady(data.renderer_ready);
       } else {
         setBackendStatus('error');
         setPickleLoaded(false);
-        setRendererSet(false);
+        setRendererReady(false);
       }
     } catch (err) {
       setBackendStatus('disconnected');
       setPickleLoaded(false);
-      setRendererSet(false);
+      setRendererReady(false);
     }
   };
 
@@ -57,15 +57,15 @@ function App() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setRendererStatus({ ok: false, message: data.error || 'Failed to install renderer' });
-        setRendererSet(false);
+        setRendererStatus({ ok: false, message: data.error || 'Failed to apply renderer' });
+        setRendererReady(false);
         return;
       }
-      setRendererStatus({ ok: true, message: 'Renderer installed.' });
-      setRendererSet(true);
+      setRendererStatus({ ok: true, message: 'Renderer ready.' });
+      setRendererReady(true);
     } catch (err) {
       setRendererStatus({ ok: false, message: `Error: ${err.message}` });
-      setRendererSet(false);
+      setRendererReady(false);
     }
   };
 
@@ -142,11 +142,16 @@ function App() {
             <span style={styles.pickleStatus}>Loaded: {pickleFilename}</span>
           )}
         </div>
-        <details style={styles.rendererDetails}>
+        <details style={styles.rendererDetails} open>
           <summary style={styles.rendererSummary}>
-            Python renderer {rendererSet ? '(installed)' : '(not installed)'}
+            Python renderer {rendererReady ? '(ready)' : '(not set)'}
           </summary>
           <div style={styles.rendererPane}>
+            <p style={styles.rendererHint}>
+              Edit the Python below so <code>render_state(state)</code> turns
+              a state from your pickle into an HxWx3 uint8 RGB array, then
+              click <strong>Apply renderer</strong>.
+            </p>
             <textarea
               value={rendererSource}
               onChange={(e) => setRendererSource(e.target.value)}
@@ -185,7 +190,7 @@ function App() {
       <main style={styles.main}>
         <GraphViewer3D
           graphData={graphData}
-          pickleLoaded={pickleLoaded && rendererSet}
+          pickleLoaded={pickleLoaded && rendererReady}
         />
       </main>
     </div>
@@ -269,6 +274,12 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
+  },
+  rendererHint: {
+    margin: 0,
+    fontSize: '12px',
+    color: '#aaa',
+    lineHeight: 1.4,
   },
   rendererTextarea: {
     width: '100%',

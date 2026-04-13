@@ -4,11 +4,11 @@ Usage:
 
     python -m bilevel_planning.visualizer [--port N] [--no-debug]
 
-Boots the Flask backend with no renderer installed and serves the built
-React frontend at the same port. Open the printed URL in a browser, click
-**Load Pickle**, then expand the **Python renderer** pane and apply your
-``render_state`` source. See ``bilevel_planning.visualizer.app`` for the
-security model.
+Boots the Flask backend and serves the built React frontend at the same
+port. Open the printed URL in a browser, paste your ``render_state``
+source into the **Python renderer** pane and apply it, then upload a
+pickle bundle. See ``bilevel_planning.visualizer.app`` for the security
+model.
 """
 
 import argparse
@@ -21,9 +21,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m bilevel_planning.visualizer",
         description=(
-            "Run the bilevel planning visualizer. The renderer is installed "
-            "at runtime via the browser's 'Python renderer' pane (or via a "
-            "direct POST to /api/set_renderer)."
+            "Run the bilevel planning visualizer. The renderer is supplied "
+            "at runtime from the browser's 'Python renderer' pane."
         ),
     )
     parser.add_argument(
@@ -39,11 +38,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    run_webapp(
-        render_state_fn=None,
-        port=args.port,
-        debug=not args.no_debug,
-    )
+    run_webapp(port=args.port, debug=not args.no_debug)
 
 
 if __name__ == "__main__":

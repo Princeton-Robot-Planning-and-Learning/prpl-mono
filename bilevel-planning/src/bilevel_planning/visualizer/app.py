@@ -1,24 +1,16 @@
 """Flask backend for visualizing concrete states from a bilevel planning graph.
 
-Environment-agnostic: the backend never imports a simulation package. A
-caller-supplied ``render_state_fn`` maps a concrete state (as stored in the
-pickled bilevel planning graph) to an RGB image. There are two ways to
-supply it:
-
-1. Pass one directly when calling ``run_webapp`` from your own Python
-   script. Useful when the environment is expensive to construct and you
-   want to warm it up before the server starts.
-
-2. Launch with no render fn (``python -m bilevel_planning.visualizer``)
-   and POST Python source to ``/api/set_renderer`` from the browser. The
-   backend ``exec``s the source, expects a callable named ``render_state``
-   to land in the namespace, and caches it for subsequent
-   ``/api/visualize_state`` requests.
+Environment-agnostic: the backend never imports a simulation package. The
+user POSTs Python source to ``/api/set_renderer`` from the browser; the
+backend ``exec``s the source, expects a callable named ``render_state`` to
+land in the namespace, and caches it for subsequent ``/api/visualize_state``
+requests.
 
 The same Flask process also serves the built React frontend at ``/``, so
-users only need one terminal: launch the backend, open the browser. The
-frontend bundle lives at ``visualizer/frontend/dist/`` and must be built
-once with ``npm ci && npm run build`` from the ``frontend/`` directory.
+the visualizer runs as a single ``python -m bilevel_planning.visualizer``
+invocation. The frontend bundle lives at ``visualizer/frontend/dist/`` and
+must be built once with ``npm ci && npm run build`` from the
+``frontend/`` directory.
 
 Security: ``/api/set_renderer`` runs arbitrary Python in the backend
 process. The server binds to ``127.0.0.1`` so only local clients can reach
@@ -26,7 +18,17 @@ it. Do not put this behind a reverse proxy exposing it to untrusted
 networks.
 """
 
-# pylint: disable=global-statement
+# pylint: disable=global-statement,wrong-import-position,wrong-import-order
+
+# Force matplotlib onto a non-interactive backend before any code path
+# (including the user's exec'd renderer source) can import pyplot. Flask
+# handles requests on worker threads, and on macOS the default 'MacOSX'
+# backend refuses to create figures off the main thread. Has to happen
+# before the rest of the imports in case any of them transitively import
+# matplotlib.
+import matplotlib
+
+matplotlib.use("Agg")
 
 import base64
 import io
@@ -46,8 +48,7 @@ RenderStateFn = Callable[[Any], np.ndarray]
 # by ``/api/graph``; ``STATE_DATA`` maps node ids to the original state
 # objects, indexed into by ``/api/visualize_state``. Both come from the
 # same pickle uploaded via ``/api/load_pickle``. ``RENDER_FN`` is the
-# current render callable, either injected at construction time or
-# installed later via ``/api/set_renderer``.
+# render callable supplied at runtime via ``/api/set_renderer``.
 GRAPH_DATA: dict = {}
 STATE_DATA: dict = {}
 RENDER_FN: RenderStateFn | None = None
@@ -62,15 +63,14 @@ RENDERER_ENTRYPOINT = "render_state"
 FRONTEND_DIST_DIR = Path(__file__).parent / "frontend" / "dist"
 
 
-def create_app(render_state_fn: RenderStateFn | None) -> Flask:
+def create_app() -> Flask:
     """Build the Flask app.
 
-    If ``render_state_fn`` is None, the app boots without a renderer and
-    ``/api/visualize_state`` returns 400 until one is installed via
-    ``/api/set_renderer``.
+    The app boots with no renderer; ``/api/visualize_state`` returns 400
+    until the user supplies one via ``/api/set_renderer``.
     """
     global RENDER_FN
-    RENDER_FN = render_state_fn
+    RENDER_FN = None
 
     app = Flask(__name__)
     CORS(app)
@@ -227,9 +227,9 @@ def create_app(render_state_fn: RenderStateFn | None) -> Flask:
                     jsonify(
                         {
                             "error": (
-                                "No renderer installed. POST Python source "
-                                "to /api/set_renderer or pass render_state_fn "
-                                "to run_webapp()."
+                                "No renderer is ready. Apply a render_state "
+                                "function from the browser's Python renderer "
+                                "pane first."
                             ),
                         }
                     ),
@@ -273,7 +273,7 @@ def create_app(render_state_fn: RenderStateFn | None) -> Flask:
                 "status": "healthy",
                 "graph_loaded": bool(GRAPH_DATA),
                 "num_states": len(STATE_DATA),
-                "renderer_set": RENDER_FN is not None,
+                "renderer_ready": RENDER_FN is not None,
             }
         )
 
@@ -309,17 +309,13 @@ def create_app(render_state_fn: RenderStateFn | None) -> Flask:
     return app
 
 
-def run_webapp(
-    render_state_fn: RenderStateFn | None = None,
-    port: int = 5001,
-    debug: bool = True,
-) -> None:
+def run_webapp(port: int = 5001, debug: bool = True) -> None:
     """Run the visualization Flask server on localhost.
 
-    If ``render_state_fn`` is None, the server boots without a renderer
-    and the user must install one via ``POST /api/set_renderer`` (the
-    browser's "Python renderer" pane does this for them) before any
-    ``/api/visualize_state`` request will succeed.
+    The server boots with no renderer; the user supplies one through the
+    browser's "Python renderer" pane (which posts source to
+    ``/api/set_renderer``) before any ``/api/visualize_state`` request can
+    succeed.
 
     The same process serves the React frontend at ``/`` from
     ``visualizer/frontend/dist/``, so a single ``python -m
@@ -329,7 +325,7 @@ def run_webapp(
     Binds to ``127.0.0.1`` — the ``/api/set_renderer`` endpoint runs
     arbitrary Python and must not be reachable from outside the host.
     """
-    app = create_app(render_state_fn)
+    app = create_app()
     print(f"Starting visualizer on http://127.0.0.1:{port}")
     if not FRONTEND_DIST_DIR.exists():
         print(
