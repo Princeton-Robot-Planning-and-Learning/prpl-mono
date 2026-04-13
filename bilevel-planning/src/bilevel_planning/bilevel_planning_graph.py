@@ -305,15 +305,6 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
     def _build_graph_structure(
         self,
         final_state: _X | None = None,
-        abstract_state_color: str = "tab:purple",
-        state_color: str = "tab:blue",
-        plan_color: str = "tab:green",
-        node_size: int = 50,
-        state_abstractor_edge_color: str = "gray",
-        action_edge_color: str = "black",
-        abstract_action_edge_color: str = "black",
-        node_alpha: float = 0.7,
-        edge_alpha: float = 0.7,
         n_intermediate_per_side: int = 0,
     ) -> tuple[nx.DiGraph, dict[str, tuple[float, float, float]], dict]:
         """Build the graph structure for visualization.
@@ -327,8 +318,6 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         call site; see also the comments at each individual concern):
           * Fold this method into ``_build_graph_payload``. The split exists
             for no reason — nothing else calls ``_build_graph_structure``.
-          * Drop the styling parameters. Colors and sizes are presentation
-            concerns that belong in the frontend, not in the export.
           * Remove the ``n_intermediate_per_side`` knob. It defaults to 0, so
             the interpolation branch below is dead code today, and deciding
             how many intermediate nodes to show should happen in the viewer.
@@ -581,19 +570,6 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         metadata["min_time"] = min_time
         metadata["max_time"] = max_time
 
-        # Pass through colors/sizes for export
-        metadata["node_size"] = node_size
-        metadata["edge_alpha"] = edge_alpha
-
-        # coloring/visualization data
-        metadata["plan_color"] = plan_color
-        metadata["state_color"] = state_color
-        metadata["abstract_state_color"] = abstract_state_color
-        metadata["state_abstractor_edge_color"] = state_abstractor_edge_color
-        metadata["action_edge_color"] = action_edge_color
-        metadata["abstract_action_edge_color"] = abstract_action_edge_color
-        metadata["node_alpha"] = node_alpha
-
         if final_state is not None:
             # Only include plan nodes that were kept
             plan_nodes = []
@@ -620,83 +596,42 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         return G, pos, metadata
 
-    def _build_graph_payload(
-        self,
-        final_state: _X | None = None,
-        abstract_state_color: str = "tab:purple",
-        state_color: str = "tab:blue",
-        plan_color: str = "tab:green",
-        node_size: int = 50,
-        state_abstractor_edge_color: str = "gray",
-        action_edge_color: str = "black",
-        abstract_action_edge_color: str = "black",
-        node_alpha: float = 0.7,
-        edge_alpha: float = 0.7,
-    ) -> dict:
+    def _build_graph_payload(self, final_state: _X | None = None) -> dict:
         """Build the frontend-facing topology dict (nodes, edges, plan, config).
 
-        Planned follow-ups:
-          * All of the color/size/alpha parameters should move to the
-            frontend. Styling is a presentation concern and the exporter
-            shouldn't bake it into the payload. The hardcoded matplotlib ->
-            RGB ``color_map`` below is the main reason these parameters
-            exist — once the frontend owns styling, the map disappears.
-          * Fold ``_build_graph_structure`` into this method; it has no
-            other caller.
+        The payload carries graph topology and plan membership only. The
+        frontend chooses colors, sizes, and alphas from ``node.type`` (the
+        ``"concrete"`` / ``"abstract"`` distinction), ``node.in_plan``, and
+        ``edge.type`` (``"action"`` / ``"abstractor"`` / ``"abstract_action"``).
+
+        Planned follow-up: fold ``_build_graph_structure`` into this method;
+        it has no other caller.
         """
-        # Build the graph structure
-        G, pos, metadata = self._build_graph_structure(
-            final_state=final_state,
-            abstract_state_color=abstract_state_color,
-            state_color=state_color,
-            plan_color=plan_color,
-            node_size=node_size,
-            state_abstractor_edge_color=state_abstractor_edge_color,
-            action_edge_color=action_edge_color,
-            abstract_action_edge_color=abstract_action_edge_color,
-            node_alpha=node_alpha,
-            edge_alpha=edge_alpha,
-        )
+        G, pos, metadata = self._build_graph_structure(final_state=final_state)
 
-        # Hardcoded mapping from the five matplotlib color names the caller
-        # is allowed to pass to their CSS ``rgb(...)`` equivalents. Planned
-        # for removal once styling moves to the frontend (see docstring).
-        color_map = {
-            "tab:purple": "rgb(148, 103, 189)",
-            "tab:blue": "rgb(31, 119, 180)",
-            "tab:green": "rgb(44, 160, 44)",
-            "gray": "rgb(128, 128, 128)",
-            "black": "rgb(0, 0, 0)",
-        }
-
-        def convert_color(mpl_color: str) -> str:
-            return color_map.get(mpl_color, mpl_color)
-
-        # Build nodes list
-        nodes = []
         plan_nodes_set = set(metadata["plan_nodes"])
         abstract_plan_nodes_set = set(metadata["abstract_plan_nodes"])
         node_time_index: dict[str, int] = metadata.get("node_time_index", {})
 
+        nodes = []
         for node_id, (x, y, z) in pos.items():
             is_abstract = node_id.startswith("s:")
-            in_plan = node_id in plan_nodes_set
-            in_abstract_plan = node_id in abstract_plan_nodes_set
+            in_plan = node_id in plan_nodes_set or node_id in abstract_plan_nodes_set
 
-            # Create node dict first to check for abstract association
-            node_dict = {
+            node_dict: dict = {
                 "id": node_id,
                 "type": "abstract" if is_abstract else "concrete",
                 "position": [x, y, z],
-                "size": metadata["node_size"],
-                "in_plan": in_plan or in_abstract_plan,
+                "in_plan": in_plan,
             }
 
-            # Attach time index for rendered concrete nodes
+            # Attach time index for rendered concrete nodes.
             if not is_abstract and node_id in node_time_index:
                 node_dict["time_index"] = node_time_index[node_id]
 
-            # Add abstract state ID for concrete nodes (if associated)
+            # Attach the owning abstract state id for concrete nodes that
+            # have a state-abstractor edge, so the frontend can highlight
+            # abstract groupings.
             if not is_abstract and node_id.startswith("x:"):
                 state_id = int(node_id.split(":")[1])
                 if state_id in metadata["state_to_abstract_id"]:
@@ -704,56 +639,21 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
                         state_id
                     ]
 
-            # Color based on node type, plan membership, and abstract association
-            if in_plan:
-                # Plan coloring
-                color = (
-                    "rgb(255, 165, 0)"
-                    if "abstract_state_id" in node_dict
-                    else convert_color(metadata["plan_color"])
-                )
-                alpha = 1.0
-            else:
-                # Non-plan coloring...
-                if node_dict["type"] == "concrete":
-                    color = (
-                        convert_color(metadata["abstract_state_color"])
-                        if "abstract_state_id" in node_dict
-                        else convert_color(metadata["state_color"])
-                    )
-                else:
-                    color = convert_color(metadata["abstract_state_color"])
-                alpha = metadata["node_alpha"]
-
-            node_dict["color"] = color
-            node_dict["alpha"] = alpha
-
             nodes.append(node_dict)
 
-        # Build edges list
+        # Build edges list. The type lets the frontend pick styling.
         edges = []
         for source, target in G.edges():
             source_pos = pos[source]
             target_pos = pos[target]
             if source_pos[2] != target_pos[2]:
                 edge_type = "abstractor"
-                color = convert_color(metadata["state_abstractor_edge_color"])
             elif source_pos[2] == metadata["z_bottom"]:
                 edge_type = "action"
-                color = convert_color(metadata["action_edge_color"])
             else:
                 edge_type = "abstract_action"
-                color = convert_color(metadata["abstract_action_edge_color"])
 
-            edges.append(
-                {
-                    "source": source,
-                    "target": target,
-                    "type": edge_type,
-                    "color": color,
-                    "alpha": metadata["edge_alpha"],
-                }
-            )
+            edges.append({"source": source, "target": target, "type": edge_type})
 
         # Build plan info
         plan_info = {

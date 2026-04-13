@@ -1,7 +1,82 @@
+// Default node/edge styling. The backend exports only topology and plan
+// membership; the frontend owns presentation.
+const NODE_COLORS = {
+  planAbstractAssoc: 'rgb(255, 165, 0)', // orange: plan + in an abstract group
+  planSimple:        'rgb(44, 160, 44)', // green:  plan + no abstract group
+  abstractAssoc:     'rgb(148, 103, 189)', // purple: concrete + in abstract group
+  concreteSimple:    'rgb(31, 119, 180)', // blue:   concrete + no abstract group
+  abstract:          'rgb(148, 103, 189)', // purple: abstract state nodes
+};
+
+const NODE_SIZE_PLAN = 12;
+const NODE_SIZE_DEFAULT = 10;
+const NODE_ALPHA_PLAN = 1.0;
+const NODE_ALPHA_DEFAULT = 0.7;
+
+const EDGE_COLORS = {
+  action:          'rgb(0, 0, 0)',
+  abstractor:      'rgb(128, 128, 128)',
+  abstract_action: 'rgb(0, 0, 0)',
+};
+const EDGE_ALPHA = 0.7;
+
+function defaultNodeStyle(node) {
+  const inPlan = Boolean(node.in_plan);
+  const hasAbstractAssoc = node.abstract_state_id !== undefined;
+  let color;
+  if (node.type === 'abstract') {
+    color = NODE_COLORS.abstract;
+  } else if (inPlan && hasAbstractAssoc) {
+    color = NODE_COLORS.planAbstractAssoc;
+  } else if (inPlan) {
+    color = NODE_COLORS.planSimple;
+  } else if (hasAbstractAssoc) {
+    color = NODE_COLORS.abstractAssoc;
+  } else {
+    color = NODE_COLORS.concreteSimple;
+  }
+  return {
+    color,
+    size: inPlan ? NODE_SIZE_PLAN : NODE_SIZE_DEFAULT,
+    alpha: inPlan ? NODE_ALPHA_PLAN : NODE_ALPHA_DEFAULT,
+  };
+}
+
+function defaultEdgeStyle(edge) {
+  return {
+    color: EDGE_COLORS[edge.type] || 'rgb(0, 0, 0)',
+    alpha: EDGE_ALPHA,
+  };
+}
+
+/**
+ * Attach default color/size/alpha to every node and edge of ``graphData``.
+ *
+ * Returns a shallow copy. The backend payload only carries topology
+ * and plan membership; all styling decisions live here so they can be
+ * changed without a backend release.
+ *
+ * @param {Object} graphData - topology from the visualizer backend.
+ * @returns {Object} a styled copy safe to mutate further (e.g. time overlay).
+ */
+export function applyDefaultStyles(graphData) {
+  const styledNodes = graphData.nodes.map(node => ({
+    ...node,
+    ...defaultNodeStyle(node),
+  }));
+  const styledEdges = graphData.edges.map(edge => ({
+    ...edge,
+    ...defaultEdgeStyle(edge),
+  }));
+  return { ...graphData, nodes: styledNodes, edges: styledEdges };
+}
+
 /**
  * Convert graph JSON data to Plotly traces for 3D visualization.
- * 
- * @param {Object} graphData - The graph data from export_graph_for_web()
+ *
+ * Expects ``graphData`` to have been styled by ``applyDefaultStyles``.
+ *
+ * @param {Object} graphData - styled graph data.
  * @returns {Array} Array of Plotly trace objects
  */
 export function jsonToPlotlyTraces(graphData) {
@@ -30,7 +105,7 @@ export function jsonToPlotlyTraces(graphData) {
       y: planAssocNodes.map(n => n.position[1]),
       z: planAssocNodes.map(n => n.position[2]),
       marker: {
-        size: planAssocNodes.map(n => n.size / 4),
+        size: planAssocNodes.map(n => n.size),
         color: planAssocNodes.map(n => n.color),
         opacity: 1.0,
         line: { width: 2, color: 'white' },
@@ -51,7 +126,7 @@ export function jsonToPlotlyTraces(graphData) {
       y: planSimpleNodes.map(n => n.position[1]),
       z: planSimpleNodes.map(n => n.position[2]),
       marker: {
-        size: planSimpleNodes.map(n => n.size / 4),
+        size: planSimpleNodes.map(n => n.size),
         color: planSimpleNodes.map(n => n.color),
         opacity: 1.0,
         line: { width: 2, color: 'white' },
@@ -71,7 +146,7 @@ export function jsonToPlotlyTraces(graphData) {
       y: concreteAssocNodes.map(n => n.position[1]),
       z: concreteAssocNodes.map(n => n.position[2]),
       marker: {
-        size: concreteAssocNodes.map(n => n.size / 5),
+        size: concreteAssocNodes.map(n => n.size),
         color: concreteAssocNodes.map(n => n.color),
         opacity: concreteAssocNodes.map(n => n.alpha),
       },
@@ -91,7 +166,7 @@ export function jsonToPlotlyTraces(graphData) {
       y: concreteSimpleNodes.map(n => n.position[1]),
       z: concreteSimpleNodes.map(n => n.position[2]),
       marker: {
-        size: concreteSimpleNodes.map(n => n.size / 5),
+        size: concreteSimpleNodes.map(n => n.size),
         color: concreteSimpleNodes.map(n => n.color),
         opacity: concreteSimpleNodes.map(n => n.alpha),
       },
