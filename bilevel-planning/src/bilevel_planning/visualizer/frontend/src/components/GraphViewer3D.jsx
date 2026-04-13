@@ -264,13 +264,17 @@ export function GraphViewer3D({ graphData, pickleLoaded = false, rendererReady =
     }
   }, [graphData, cameraState, currentTime]);
   
-  // Force complete remount when graph changes by using revision in layout
+  // Plotly's datarevision hint tells the library to re-examine its
+  // data arrays. Bump it whenever the trace inputs change (a new graph
+  // loads, or the timeline slider moves and recolors concrete nodes);
+  // otherwise Plotly skips the update even though a fresh trace array
+  // is passed, and the time overlay appears frozen.
   const [revision, setRevision] = useState(0);
   React.useEffect(() => {
     if (graphData) {
       setRevision(prev => prev + 1);
     }
-  }, [graphData]); // Only increment when graphData changes, not on every click
+  }, [graphData, currentTime]);
   
   // Now we can do early returns after all hooks are called
   if (!graphData) {
