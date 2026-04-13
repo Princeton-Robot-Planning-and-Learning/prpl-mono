@@ -111,3 +111,17 @@ def test_export_roundtrip(tmp_path: Path):
     assert plan_nodes, "plan should be non-empty when final_state is provided"
     assert graph["plan"]["start"] == plan_nodes[0]
     assert graph["plan"]["goal"] == plan_nodes[-1]
+
+    # Abstract states are emitted as nodes on the z_top plane, with a
+    # state-abstractor edge from each kept concrete node to its abstract
+    # state and an abstract_action edge between the two abstract states.
+    abstract_nodes = [n for n in graph["nodes"] if n["type"] == "abstract"]
+    assert len(abstract_nodes) == 2
+    z_top = graph["config"]["z_top"]
+    for n in abstract_nodes:
+        assert n["position"][2] == z_top
+
+    edge_types = {e["type"] for e in graph["edges"]}
+    assert "action" in edge_types
+    assert "abstractor" in edge_types
+    assert "abstract_action" in edge_types

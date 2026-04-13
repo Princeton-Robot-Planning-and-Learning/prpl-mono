@@ -520,6 +520,40 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             for a, b in zip(seq[:-1], seq[1:]):
                 G.add_edge(f"x:{a}", f"x:{b}", type="action")
 
+        # Add abstract state nodes on the z_top plane. Each abstract node
+        # is placed at the xy centroid of the kept concrete nodes that
+        # group under it; abstract states with no kept concrete members
+        # fall back to the origin.
+        z_top_value = 1.0
+        abstract_members: dict[int, list[str]] = {}
+        for cid, aid in state_to_abstract.items():
+            if cid in kept_state_ids:
+                abstract_members.setdefault(aid, []).append(f"x:{cid}")
+
+        for abstract_idx in range(len(self.abstract_states)):
+            abs_nid = f"s:{abstract_idx}"
+            members = abstract_members.get(abstract_idx, [])
+            if members:
+                xs = [pos[m][0] for m in members]
+                ys = [pos[m][1] for m in members]
+                cx = sum(xs) / len(xs)
+                cy = sum(ys) / len(ys)
+            else:
+                cx, cy = 0.0, 0.0
+            pos[abs_nid] = (cx, cy, z_top_value)
+            G.add_node(abs_nid, type="abstract")
+
+        # State-abstractor edges: concrete -> abstract, crossing the z planes.
+        for cid, aid in state_to_abstract.items():
+            if cid in kept_state_ids:
+                G.add_edge(f"x:{cid}", f"s:{aid}", type="abstractor")
+
+        # Abstract action edges: abstract -> abstract on the z_top plane.
+        for src_abs, _action, dst_abs in self.abstract_action_edges:
+            src_idx = self._abstract_state_to_id(src_abs)
+            dst_idx = self._abstract_state_to_id(dst_abs)
+            G.add_edge(f"s:{src_idx}", f"s:{dst_idx}", type="abstract_action")
+
         # Compute time indices for rendered nodes only
         # Map underlying state_id -> rendered node id ("x:{state_id}")
         rendered_state_to_node: dict[int, str] = {}
@@ -551,10 +585,9 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         # Metadata
 
-        # z_top, z_bottom previously used to visualize abstract nodes on a
-        # separate plane. They are currently only used for plotly z-axis range,
-        # and kept in case abstract nodes are added back to rendering.
-        metadata["z_top"] = 1.0
+        # z_top holds the abstract-state plane; z_bottom the concrete plane.
+        # The frontend's plotly layout reads these for the zaxis range.
+        metadata["z_top"] = z_top_value
         metadata["z_bottom"] = 0.0
 
         # node information
