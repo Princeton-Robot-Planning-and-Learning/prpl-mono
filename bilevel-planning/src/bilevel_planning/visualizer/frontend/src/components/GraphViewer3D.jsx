@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { applyDefaultStyles, jsonToPlotlyTraces, getPlotlyLayout, getPlotlyConfig } from '../utils/plotlyHelpers';
 
-export function GraphViewer3D({ graphData, pickleLoaded = false }) {
+export function GraphViewer3D({ graphData, pickleLoaded = false, rendererReady = false }) {
   const [selectedNode, setSelectedNode] = useState(null);
   const [renderError, setRenderError] = useState(null);
   const [stateImage, setStateImage] = useState(null);
@@ -38,13 +38,14 @@ export function GraphViewer3D({ graphData, pickleLoaded = false }) {
   
   // Log prop changes
   React.useEffect(() => {
-    console.log('GraphViewer3D props updated:', { 
-      hasGraphData: !!graphData, 
+    console.log('GraphViewer3D props updated:', {
+      hasGraphData: !!graphData,
       pickleLoaded,
+      rendererReady,
       nodeCount: graphData?.nodes?.length,
-      edgeCount: graphData?.edges?.length
+      edgeCount: graphData?.edges?.length,
     });
-  }, [graphData, pickleLoaded]);
+  }, [graphData, pickleLoaded, rendererReady]);
   
   // Reset state when graphData changes (e.g., loading a new graph)
   React.useEffect(() => {
@@ -65,7 +66,7 @@ export function GraphViewer3D({ graphData, pickleLoaded = false }) {
   // Hooks must be called unconditionally, before any early returns
   const handleClick = useCallback(async (event) => {
     console.log('handleClick triggered');
-    console.log('pickleLoaded:', pickleLoaded);
+    console.log('pickleLoaded:', pickleLoaded, 'rendererReady:', rendererReady);
     
     if (event.points && event.points.length > 0) {
       const point = event.points[0];
@@ -84,12 +85,21 @@ export function GraphViewer3D({ graphData, pickleLoaded = false }) {
           // Always set selected node for concrete nodes
           setSelectedNode({ id: nodeId, stateData });
           
-          // Check if pickle is loaded before requesting visualization
+          // Short-circuit visualization if we're not yet set up. The
+          // checks are ordered so the user sees the next step they need
+          // to take, not a generic error.
           if (!pickleLoaded) {
-            console.warn('Pickle not loaded - showing error message');
-            const msg = 'Please load a pickle file first to visualize states.\n\nUse "Load Pickle (Backend)" button above.';
+            const msg = 'Load a pickle bundle first using the "Load pickle bundle" button in the header.';
+            console.warn(msg);
             setRenderError(msg);
-            alert(msg); // Force alert to ensure user sees it
+            setStateImage(null);
+            setLoadingImage(false);
+            return;
+          }
+          if (!rendererReady) {
+            const msg = 'Apply a Python renderer first: expand the "Python renderer" pane in the header and click "Apply renderer".';
+            console.warn(msg);
+            setRenderError(msg);
             setStateImage(null);
             setLoadingImage(false);
             return;
@@ -164,8 +174,8 @@ export function GraphViewer3D({ graphData, pickleLoaded = false }) {
         console.warn('Clicked point has no customdata:', point);
       }
     }
-  }, [graphData, pickleLoaded]);
-  
+  }, [graphData, pickleLoaded, rendererReady]);
+
   /**
    * Memoize traces and layouts
    * This prevents expensive re-calculates on every component re-render.
@@ -373,6 +383,7 @@ export function GraphViewer3D({ graphData, pickleLoaded = false }) {
         </div>
 
         <div>Pickle: {pickleLoaded ? 'Loaded' : 'Not loaded'}</div>
+        <div>Renderer: {rendererReady ? 'Ready' : 'Not set'}</div>
         <div>Nodes: {graphData?.nodes?.length || 0}</div>
       </div>
       

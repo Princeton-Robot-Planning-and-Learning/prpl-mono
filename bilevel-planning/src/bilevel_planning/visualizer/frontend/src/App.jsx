@@ -190,7 +190,8 @@ function App() {
       <main style={styles.main}>
         <GraphViewer3D
           graphData={graphData}
-          pickleLoaded={pickleLoaded && rendererReady}
+          pickleLoaded={pickleLoaded}
+          rendererReady={rendererReady}
         />
       </main>
     </div>
