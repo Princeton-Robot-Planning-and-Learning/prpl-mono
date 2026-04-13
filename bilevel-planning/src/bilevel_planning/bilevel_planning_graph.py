@@ -302,431 +302,238 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         )
         anim.save(save_path, writer="pillow")
 
-    def _build_graph_structure(
-        self,
-        final_state: _X | None = None,
-        n_intermediate_per_side: int = 0,
-    ) -> tuple[nx.DiGraph, dict[str, tuple[float, float, float]], dict]:
-        """Build the graph structure for visualization.
+    def _build_graph_payload(self, final_state: _X | None = None) -> dict:
+        """Build the frontend-facing topology dict for the visualizer.
 
-        Returns:
-            G: NetworkX DiGraph with nodes and edges
-            pos: Dictionary mapping node IDs to (x, y, z) positions
-            metadata: Dictionary with plan_nodes, start_node, goal_node, z_top, z_bottom
+        Returns a dict with ``nodes``, ``edges``, ``plan``, ``config``, and
+        ``state_data``. The payload carries graph topology and plan
+        membership only — the frontend chooses colors, sizes, and alphas
+        from ``node.type`` (``"concrete"`` / ``"abstract"``),
+        ``node.in_plan``, and ``edge.type`` (``"action"`` / ``"abstractor"``
+        / ``"abstract_action"``).
 
-        Planned follow-ups (tracked on this helper because this is the only
-        call site; see also the comments at each individual concern):
-          * Fold this method into ``_build_graph_payload``. The split exists
-            for no reason — nothing else calls ``_build_graph_structure``.
-          * Remove the ``n_intermediate_per_side`` knob. It defaults to 0, so
-            the interpolation branch below is dead code today, and deciding
-            how many intermediate nodes to show should happen in the viewer.
-          * Replace the force-directed layout with a hierarchical layer
-            assignment (BFS from roots) for DAG-shaped graphs.
+        Planned follow-up: replace the force-directed layout below with a
+        hierarchical layer assignment (BFS from roots) for DAG-shaped
+        graphs, and drop the aspect-ratio hack in the post-processing
+        step.
         """
-
-        G: nx.DiGraph = nx.DiGraph()
-        pos: dict[str, tuple[float, float, float]] = {}
-        metadata: dict = {}
-
-        # Analyze graph topology to identify critical nodes to keep
-        # for visualization purposes
-        adj: dict[int, set[int]] = {}  # state_id -> list of next state_ids
-        rev_adj: dict[int, set[int]] = {}  # state_id -> list of prev state_ids
-
+        # ------------------------------------------------------------------
+        # Phase 1: analyze topology and pick which concrete nodes to render.
+        # ------------------------------------------------------------------
+        adj: dict[int, set[int]] = {}  # state_id -> next state_ids
+        rev_adj: dict[int, set[int]] = {}  # state_id -> previous state_ids
         for source_state, _, target_state in self.action_edges:
             uid = self._state_to_id(source_state)
             vid = self._state_to_id(target_state)
-
             adj.setdefault(uid, set()).add(vid)
             rev_adj.setdefault(vid, set()).add(uid)
 
-        # Identify Plan Nodes
-        plan_state_ids = set()
-        if final_state is not None:
-            plan = self.extract_plan(final_state)
-            for state in plan.states:
-                plan_state_ids.add(self._state_to_id(state))
-
-        # Track which concrete nodes have mapping to abstract nodes
-        state_to_abstract = {}
+        state_to_abstract: dict[int, int] = {}
         for x, s in self.state_abstractor_edges:
             state_to_abstract[self._state_to_id(x)] = self._abstract_state_to_id(s)
 
-        # Determine Kept Nodes
-        kept_state_ids = set()
-
+        # Keep nodes that are not part of a degree-1 chain (roots, leaves,
+        # branches, merges, or any node with an abstract mapping).
+        kept_state_ids: set[int] = set()
         for state in self.states:
             sid = self._state_to_id(state)
             in_d = len(rev_adj.get(sid, set()))
             out_d = len(adj.get(sid, set()))
-
-            # Non-critical nodes: indegree = 1 AND outdegree = 1
-            # i.e., intermediate nodes that represent motion planning steps
             is_critical = (
-                in_d == 0  # Root
-                or out_d == 0  # Leaf
-                or out_d > 1  # Branch
-                or in_d > 1  # Merge
-                or sid in state_to_abstract  # Has abstract mapping
+                in_d == 0
+                or out_d == 0
+                or out_d > 1
+                or in_d > 1
+                or sid in state_to_abstract
             )
-
             if is_critical:
                 kept_state_ids.add(sid)
 
-        # Build layout graph with only critical nodes
-        # Then we'll add back some pruned nodes later by interpolating along edges
+        # ------------------------------------------------------------------
+        # Phase 2: stitch edges between kept nodes, skipping pruned chains.
+        # ------------------------------------------------------------------
         G_layout: nx.DiGraph = nx.DiGraph()
-
-        # Record pruned segments for interpolation later
-        # Ex: if critical nodes A, D pass through intermediate pruned nodes B, C
-        # then forward_segments[(A, D)] = [B, C]
-        forward_segments: dict[tuple[int, int], list[int]] = {}
-
         for sid in kept_state_ids:
             G_layout.add_node(f"x:{sid}")
-
-        # Stitch edges of the kept nodes together, and record the
-        # intermediate pruned nodes along the way for later interpolation
         for sid in kept_state_ids:
-            children: set[int] = adj.get(sid, set())
-            for child_id in children:
+            for child_id in adj.get(sid, set()):
                 curr = child_id
-                path: list[int] = []
                 visited: set[int] = set()
-                # Traverse down pruned nodes (degree-1 chains)
                 while (
                     curr not in kept_state_ids and curr in adj and curr not in visited
                 ):
                     visited.add(curr)
-                    path.append(curr)
                     next_nodes = adj[curr]
                     if not next_nodes:
                         break
-                    # curr = next_nodes[0]
-                    curr = next(iter(next_nodes))  # Move to the next node
-
+                    curr = next(iter(next_nodes))
                 if curr in kept_state_ids:
                     G_layout.add_edge(f"x:{sid}", f"x:{curr}")
-                    forward_segments[(sid, curr)] = path
 
-        # Run layout on concrete nodes. spring_layout is a force-directed
-        # placement: good enough to draw the graph without pulling in the
-        # graphviz C library, but less readable than a hierarchical top-down
-        # DAG layout. A follow-up can replace this with a BFS-based layer
-        # assignment for DAG-shaped graphs.
+        # ------------------------------------------------------------------
+        # Phase 3: lay out the kept concrete nodes, scale into [-10, 10].
+        # ------------------------------------------------------------------
         layout_pos: dict[str, tuple[float, float]] = {
             n: (float(xy[0]), float(xy[1]))
             for n, xy in nx.spring_layout(G_layout, seed=0).items()
         }
-
-        # Post-process layout: center and scale into a [-10, 10] box.
-        #
-        # Planned follow-up: the aspect-ratio stretching below is a hack
-        # calibrated against graphviz "dot" output and is only loosely
-        # meaningful for a force-directed layout. When we switch to a
-        # hierarchical layer layout, this whole block should be replaced
-        # with a single uniform scale-to-box, and the frontend should own
-        # any display-time aspect handling.
         if layout_pos:
             xs = [p[0] for p in layout_pos.values()]
             ys = [p[1] for p in layout_pos.values()]
-
             min_x, max_x = min(xs), max(xs)
             min_y, max_y = min(ys), max(ys)
-
             width = max_x - min_x if max_x != min_x else 1.0
             height = max_y - min_y if max_y != min_y else 1.0
-
             center_x = (min_x + max_x) / 2.0
             center_y = (min_y + max_y) / 2.0
-
+            # Aspect-ratio stretch: a legacy hack calibrated for graphviz
+            # "dot" output. The pending layout-replacement PR will delete
+            # this and use a straight uniform scale.
             target_aspect = 1.5
             current_aspect = width / height
-
-            y_scale = 1.0
-            if current_aspect > target_aspect:
-                y_scale = current_aspect / target_aspect
-
+            y_scale = (
+                current_aspect / target_aspect
+                if current_aspect > target_aspect
+                else 1.0
+            )
             max_dim = max(width, height * y_scale)
             scale_factor = 20.0 / max_dim if max_dim > 0 else 1.0
-
             for nid, (layout_x, layout_y) in layout_pos.items():
                 new_x = (layout_x - center_x) * scale_factor
                 new_y = (layout_y - center_y) * y_scale * scale_factor
                 layout_pos[nid] = (new_x, new_y)
 
-        # Construct Final G and pos
-        # First, add all critical (kept) concrete nodes with their layout positions
+        # ------------------------------------------------------------------
+        # Phase 4: build the (G, pos) triple we'll emit.
+        # ------------------------------------------------------------------
+        G: nx.DiGraph = nx.DiGraph()
+        pos: dict[str, tuple[float, float, float]] = {}
+
+        z_bottom = 0.0
+        z_top = 1.0
+
+        # Kept concrete nodes on the z_bottom plane.
         for sid in kept_state_ids:
             nid = f"x:{sid}"
             if nid in layout_pos:
-                pos[nid] = (layout_pos[nid][0], layout_pos[nid][1], 0.0)
+                pos[nid] = (layout_pos[nid][0], layout_pos[nid][1], z_bottom)
                 G.add_node(nid, type="concrete")
 
-        # For each stitched edge between critical nodes, optionally add
-        # a bounded number of intermediate nodes that are evenly spread along
-        # the original chain between the endpoints, and interpolate positions
-        # along the segment.
-        #
-        # Planned follow-up: this loop is gated on ``n_intermediate_per_side``
-        # which defaults to 0, so in practice the interpolation branch never
-        # runs. Either wire the knob through as an actual feature or delete
-        # it. The viewer is a better place to decide how much of the pruned
-        # chain to surface, since the user can pan/zoom.
+        # Action edges between kept concrete nodes.
         for u, v in G_layout.edges():
-            u_sid = int(u.split(":")[1])
-            v_sid = int(v.split(":")[1])
+            G.add_edge(u, v, type="action")
 
-            full_path = forward_segments.get((u_sid, v_sid), [])
-
-            # Select up to n_intermediate_per_side nodes, evenly distributed
-            # along the chain from u_sid to v_sid.
-            selected: list[int] = []
-            if full_path:
-                k = min(n_intermediate_per_side, len(full_path))
-                if k == len(full_path):
-                    selected = full_path[:]
-                else:
-                    step = len(full_path) / (k + 1)
-                    used: set[int] = set()
-                    for i in range(1, k + 1):
-                        idx = int(round(i * step)) - 1
-                        idx = max(0, min(idx, len(full_path) - 1))
-                        mid_sid = full_path[idx]
-                        if mid_sid not in used:
-                            used.add(mid_sid)
-                            selected.append(mid_sid)
-
-            # Build the visualization sequence: [u, selected..., v]
-            seq: list[int] = [u_sid] + selected + [v_sid]
-
-            # Interpolate positions along the line from u to v
-            ux, uy = layout_pos[u]
-            vx, vy = layout_pos[v]
-            z = 0.0
-            segments = max(len(seq) - 1, 1)
-
-            for i, sid in enumerate(seq):
-                nid = f"x:{sid}"
-                if nid not in pos:
-                    t = i / segments
-                    interp_x = ux + t * (vx - ux)
-                    interp_y = uy + t * (vy - uy)
-                    pos[nid] = (interp_x, interp_y, z)
-                    G.add_node(nid, type="concrete")
-
-            # Add edges along the expanded sequence
-            for a, b in zip(seq[:-1], seq[1:]):
-                G.add_edge(f"x:{a}", f"x:{b}", type="action")
-
-        # Add abstract state nodes on the z_top plane. Each abstract node
-        # is placed at the xy centroid of the kept concrete nodes that
-        # group under it; abstract states with no kept concrete members
-        # fall back to the origin.
-        z_top_value = 1.0
+        # Abstract state nodes on the z_top plane, positioned at the xy
+        # centroid of their kept concrete members.
         abstract_members: dict[int, list[str]] = {}
         for cid, aid in state_to_abstract.items():
             if cid in kept_state_ids:
                 abstract_members.setdefault(aid, []).append(f"x:{cid}")
-
         for abstract_idx in range(len(self.abstract_states)):
             abs_nid = f"s:{abstract_idx}"
             members = abstract_members.get(abstract_idx, [])
             if members:
-                xs = [pos[m][0] for m in members]
-                ys = [pos[m][1] for m in members]
-                cx = sum(xs) / len(xs)
-                cy = sum(ys) / len(ys)
+                cx = sum(pos[m][0] for m in members) / len(members)
+                cy = sum(pos[m][1] for m in members) / len(members)
             else:
                 cx, cy = 0.0, 0.0
-            pos[abs_nid] = (cx, cy, z_top_value)
+            pos[abs_nid] = (cx, cy, z_top)
             G.add_node(abs_nid, type="abstract")
 
-        # State-abstractor edges: concrete -> abstract, crossing the z planes.
+        # State-abstractor edges (concrete -> abstract, cross the z planes)
+        # and abstract-action edges (abstract -> abstract on z_top).
         for cid, aid in state_to_abstract.items():
             if cid in kept_state_ids:
                 G.add_edge(f"x:{cid}", f"s:{aid}", type="abstractor")
-
-        # Abstract action edges: abstract -> abstract on the z_top plane.
         for src_abs, _action, dst_abs in self.abstract_action_edges:
             src_idx = self._abstract_state_to_id(src_abs)
             dst_idx = self._abstract_state_to_id(dst_abs)
             G.add_edge(f"s:{src_idx}", f"s:{dst_idx}", type="abstract_action")
 
-        # Compute time indices for rendered nodes only
-        # Map underlying state_id -> rendered node id ("x:{state_id}")
-        rendered_state_to_node: dict[int, str] = {}
-        for nid in G.nodes:
-            if isinstance(nid, str) and nid.startswith("x:"):
-                try:
-                    sid = int(nid.split(":")[1])
-                except (IndexError, ValueError):
-                    continue
-                rendered_state_to_node[sid] = nid
-
-        node_time_index: dict[str, int] = {}
-        current_index = 1
-        # Iterate over states in insertion order; assign indices only to rendered ones
-        for state in self.states:
-            sid = self._state_to_id(state)
-            rendered_nid = rendered_state_to_node.get(sid)
-            if rendered_nid is None:
-                continue
-            node_time_index[rendered_nid] = current_index
-            current_index += 1
-
-        if node_time_index:
-            min_time = 1
-            max_time = current_index - 1
-        else:
-            min_time = None
-            max_time = None
-
-        # Metadata
-
-        # z_top holds the abstract-state plane; z_bottom the concrete plane.
-        # The frontend's plotly layout reads these for the zaxis range.
-        metadata["z_top"] = z_top_value
-        metadata["z_bottom"] = 0.0
-
-        # node information
-        metadata["plan_nodes"] = []
-        metadata["abstract_plan_nodes"] = []
-        metadata["start_node"] = None
-        metadata["goal_node"] = None
-        metadata["state_to_abstract_id"] = state_to_abstract
-        # order in which filtered nodes were added to bpg
-        metadata["node_time_index"] = node_time_index
-
-        # timeline index range (used for slider range in plotly)
-        metadata["min_time"] = min_time
-        metadata["max_time"] = max_time
-
+        # ------------------------------------------------------------------
+        # Phase 5: plan membership + time index.
+        # ------------------------------------------------------------------
+        plan_node_ids: list[str] = []
+        abstract_plan_node_ids: list[str] = []
+        start_node: str | None = None
+        goal_node: str | None = None
         if final_state is not None:
-            # Only include plan nodes that were kept
-            plan_nodes = []
             for s in self.extract_plan(final_state).states:
                 sid = self._state_to_id(s)
                 if sid in kept_state_ids:
-                    plan_nodes.append(f"x:{sid}")
-
-            metadata["plan_nodes"] = plan_nodes
-            if plan_nodes:
-                metadata["start_node"] = plan_nodes[0]
-                metadata["goal_node"] = plan_nodes[-1]
-
-            # Identify abstract plan nodes
-            abstract_plan_nodes = []
-            for x_node in plan_nodes:
+                    plan_node_ids.append(f"x:{sid}")
+            if plan_node_ids:
+                start_node = plan_node_ids[0]
+                goal_node = plan_node_ids[-1]
+            seen_abstract: set[str] = set()
+            for x_node in plan_node_ids:
                 x_id = int(x_node.split(":")[1])
                 if x_id in state_to_abstract:
-                    s_id = state_to_abstract[x_id]
-                    s_node = f"s:{s_id}"
-                    if s_node not in abstract_plan_nodes:
-                        abstract_plan_nodes.append(s_node)
-            metadata["abstract_plan_nodes"] = abstract_plan_nodes
+                    s_node = f"s:{state_to_abstract[x_id]}"
+                    if s_node not in seen_abstract:
+                        seen_abstract.add(s_node)
+                        abstract_plan_node_ids.append(s_node)
+        plan_nodes_set = set(plan_node_ids)
+        abstract_plan_nodes_set = set(abstract_plan_node_ids)
 
-        return G, pos, metadata
+        # Time indices: one per rendered concrete node, in graph insertion order.
+        rendered_concrete_ids: set[str] = {
+            f"x:{sid}" for sid in kept_state_ids if f"x:{sid}" in pos
+        }
+        node_time_index: dict[str, int] = {}
+        current_index = 1
+        for state in self.states:
+            nid = f"x:{self._state_to_id(state)}"
+            if nid in rendered_concrete_ids:
+                node_time_index[nid] = current_index
+                current_index += 1
 
-    def _build_graph_payload(self, final_state: _X | None = None) -> dict:
-        """Build the frontend-facing topology dict (nodes, edges, plan, config).
-
-        The payload carries graph topology and plan membership only. The
-        frontend chooses colors, sizes, and alphas from ``node.type`` (the
-        ``"concrete"`` / ``"abstract"`` distinction), ``node.in_plan``, and
-        ``edge.type`` (``"action"`` / ``"abstractor"`` / ``"abstract_action"``).
-
-        Planned follow-up: fold ``_build_graph_structure`` into this method;
-        it has no other caller.
-        """
-        G, pos, metadata = self._build_graph_structure(final_state=final_state)
-
-        plan_nodes_set = set(metadata["plan_nodes"])
-        abstract_plan_nodes_set = set(metadata["abstract_plan_nodes"])
-        node_time_index: dict[str, int] = metadata.get("node_time_index", {})
-
-        nodes = []
-        for node_id, (x, y, z) in pos.items():
+        # ------------------------------------------------------------------
+        # Phase 6: emit the payload.
+        # ------------------------------------------------------------------
+        nodes: list[dict] = []
+        for node_id, (px, py, pz) in pos.items():
             is_abstract = node_id.startswith("s:")
             in_plan = node_id in plan_nodes_set or node_id in abstract_plan_nodes_set
-
             node_dict: dict = {
                 "id": node_id,
                 "type": "abstract" if is_abstract else "concrete",
-                "position": [x, y, z],
+                "position": [px, py, pz],
                 "in_plan": in_plan,
             }
-
-            # Attach time index for rendered concrete nodes.
-            if not is_abstract and node_id in node_time_index:
-                node_dict["time_index"] = node_time_index[node_id]
-
-            # Attach the owning abstract state id for concrete nodes that
-            # have a state-abstractor edge, so the frontend can highlight
-            # abstract groupings.
-            if not is_abstract and node_id.startswith("x:"):
+            if not is_abstract:
+                if node_id in node_time_index:
+                    node_dict["time_index"] = node_time_index[node_id]
                 state_id = int(node_id.split(":")[1])
-                if state_id in metadata["state_to_abstract_id"]:
-                    node_dict["abstract_state_id"] = metadata["state_to_abstract_id"][
-                        state_id
-                    ]
-
+                if state_id in state_to_abstract:
+                    node_dict["abstract_state_id"] = state_to_abstract[state_id]
             nodes.append(node_dict)
 
-        # Build edges list. The type lets the frontend pick styling.
-        edges = []
-        for source, target in G.edges():
-            source_pos = pos[source]
-            target_pos = pos[target]
-            if source_pos[2] != target_pos[2]:
-                edge_type = "abstractor"
-            elif source_pos[2] == metadata["z_bottom"]:
-                edge_type = "action"
-            else:
-                edge_type = "abstract_action"
+        edges: list[dict] = [
+            {"source": u, "target": v, "type": G.edges[u, v]["type"]}
+            for u, v in G.edges()
+        ]
 
-            edges.append({"source": source, "target": target, "type": edge_type})
-
-        # Build plan info
         plan_info = {
-            "nodes": metadata["plan_nodes"],
-            "start": metadata["start_node"],
-            "goal": metadata["goal_node"],
+            "nodes": plan_node_ids,
+            "start": start_node,
+            "goal": goal_node,
         }
 
-        # Build config
-        config = {
-            "z_top": metadata["z_top"],
-            "z_bottom": metadata["z_bottom"],
-        }
+        config: dict = {"z_top": z_top, "z_bottom": z_bottom}
+        if node_time_index:
+            config["min_time"] = 1
+            config["max_time"] = current_index - 1
 
-        # Include time index range in config if available
-        if (
-            metadata.get("min_time") is not None
-            and metadata.get("max_time") is not None
-        ):
-            config["min_time"] = metadata["min_time"]
-            config["max_time"] = metadata["max_time"]
+        state_data = {f"x:{self._state_to_id(s)}": str(s) for s in self.states}
 
-        # Build state data dictionary (id -> state repr)
-        # Convert state objects to their string representation for JSON serialization
-        state_data = {}
-        for state in self.states:
-            state_id = self._state_to_id(state)
-            node_id = f"x:{state_id}"
-            # Convert state to string representation for JSON
-            state_data[node_id] = str(state)
-
-        graph_data = {
+        return {
             "nodes": nodes,
             "edges": edges,
             "plan": plan_info,
             "config": config,
             "state_data": state_data,
         }
-
-        return graph_data
 
     def export(
         self,
