@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import Plot from 'react-plotly.js';
-import { jsonToPlotlyTraces, getPlotlyLayout, getPlotlyConfig } from '../utils/plotlyHelpers';
+import { applyDefaultStyles, jsonToPlotlyTraces, getPlotlyLayout, getPlotlyConfig } from '../utils/plotlyHelpers';
 
 export function GraphViewer3D({ graphData, pickleLoaded = false }) {
   const [selectedNode, setSelectedNode] = useState(null);
@@ -179,8 +179,10 @@ export function GraphViewer3D({ graphData, pickleLoaded = false }) {
     try {
       console.log('Rendering graph with data:', graphData);
       
-      // Create working copy to apply overlays wo modifying original data
-      let graphDataCopy = graphData;
+      // The backend payload only carries topology and plan membership;
+      // assign default colors/sizes/alphas here so overlays below can
+      // mutate them without the backend caring.
+      let graphDataCopy = applyDefaultStyles(graphData);
       
       // Apply time-based coloring overlay (if timeline info available)
       if (currentTime !== null) {
