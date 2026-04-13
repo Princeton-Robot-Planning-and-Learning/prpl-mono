@@ -83,17 +83,19 @@ export function jsonToPlotlyTraces(graphData) {
   console.log('Converting graph to Plotly traces...');
   const traces = [];
   
-  // Concrete nodes categorization
-  const planAssocNodes = graphData.nodes.filter(n => n.in_plan && n.abstract_state_id !== undefined);
-  const planSimpleNodes = graphData.nodes.filter(n => n.in_plan && n.abstract_state_id === undefined);
-  const concreteAssocNodes = graphData.nodes.filter(n => !n.in_plan && n.type === 'concrete' && n.abstract_state_id !== undefined);
-  const concreteSimpleNodes = graphData.nodes.filter(n => !n.in_plan && n.type === 'concrete' && n.abstract_state_id === undefined);
-  
-  console.log(`Node counts: 
+  // Categorize concrete and abstract nodes for separate Plotly traces.
+  const planAssocNodes = graphData.nodes.filter(n => n.type === 'concrete' && n.in_plan && n.abstract_state_id !== undefined);
+  const planSimpleNodes = graphData.nodes.filter(n => n.type === 'concrete' && n.in_plan && n.abstract_state_id === undefined);
+  const concreteAssocNodes = graphData.nodes.filter(n => n.type === 'concrete' && !n.in_plan && n.abstract_state_id !== undefined);
+  const concreteSimpleNodes = graphData.nodes.filter(n => n.type === 'concrete' && !n.in_plan && n.abstract_state_id === undefined);
+  const abstractNodes = graphData.nodes.filter(n => n.type === 'abstract');
+
+  console.log(`Node counts:
     Plan (Assoc): ${planAssocNodes.length}
     Plan (Simple): ${planSimpleNodes.length}
     Concrete (Assoc): ${concreteAssocNodes.length}
     Concrete (Simple): ${concreteSimpleNodes.length}
+    Abstract: ${abstractNodes.length}
   `);
   
   // Plan Nodes (Abstract Associated) - Orange
@@ -175,14 +177,34 @@ export function jsonToPlotlyTraces(graphData) {
       hovertemplate: '<b>%{customdata}</b><br>Type: Concrete',
     });
   }
+
+  // Abstract state nodes on the z_top plane.
+  if (abstractNodes.length > 0) {
+    traces.push({
+      type: 'scatter3d',
+      mode: 'markers',
+      x: abstractNodes.map(n => n.position[0]),
+      y: abstractNodes.map(n => n.position[1]),
+      z: abstractNodes.map(n => n.position[2]),
+      marker: {
+        size: abstractNodes.map(n => n.size),
+        color: abstractNodes.map(n => n.color),
+        opacity: abstractNodes.map(n => n.alpha),
+        symbol: 'diamond',
+      },
+      customdata: abstractNodes.map(n => n.id),
+      name: 'Abstract States',
+      hovertemplate: '<b>%{customdata}</b><br>Type: Abstract',
+    });
+  }
   
   // Group edges by type
   const edgesByType = {
-    'action': [],
-    // 'abstract_action': [],
-    // 'abstractor': []
+    action: [],
+    abstractor: [],
+    abstract_action: [],
   };
-  
+
   graphData.edges.forEach(edge => {
     if (edgesByType[edge.type]) {
       edgesByType[edge.type].push(edge);
@@ -224,6 +246,10 @@ export function jsonToPlotlyTraces(graphData) {
   // Add edge traces
   const actionTrace = createEdgeTrace(edgesByType.action, 'Actions');
   if (actionTrace) traces.push(actionTrace);
+  const abstractorTrace = createEdgeTrace(edgesByType.abstractor, 'Abstractor');
+  if (abstractorTrace) traces.push(abstractorTrace);
+  const abstractActionTrace = createEdgeTrace(edgesByType.abstract_action, 'Abstract actions');
+  if (abstractActionTrace) traces.push(abstractActionTrace);
 
   console.log(`Total traces created: ${traces.length}`);
   return traces;
@@ -259,7 +285,11 @@ export function getPlotlyLayout(graphData) {
         zeroline: false,
         range: [graphData.config.z_bottom, graphData.config.z_top]
       },
-      aspectmode: 'data',
+      // 'cube' gives each axis equal visual length regardless of data
+      // extent, so the abstract plane (z=z_top) is visibly separated from
+      // the concrete plane (z=z_bottom) even though the xy range is much
+      // wider than [z_bottom, z_top].
+      aspectmode: 'cube',
       bgcolor: 'white',
     },
     clickmode: 'event+select', // Enable click events and selection
