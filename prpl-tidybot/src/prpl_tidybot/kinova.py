@@ -15,29 +15,20 @@ import threading
 import time
 import numpy as np
 import pinocchio as pin
+from kortex_api.autogen.client_stubs.ActuatorConfigClientRpc import ActuatorConfigClient
+from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
+from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
+from kortex_api.autogen.client_stubs.ControlConfigClientRpc import ControlConfigClient
+from kortex_api.autogen.client_stubs.DeviceManagerClientRpc import DeviceManagerClient
+from kortex_api.autogen.messages import ActuatorCyclic_pb2, ActuatorConfig_pb2, Base_pb2, BaseCyclic_pb2, Common_pb2, ControlConfig_pb2, Session_pb2
+from kortex_api.RouterClient import RouterClient, RouterClientSendOptions
+from kortex_api.SessionManager import SessionManager
+from kortex_api.TCPTransport import TCPTransport
+from kortex_api.UDPTransport import UDPTransport
 from prpl_tidybot.utils import create_pid_file
-
-def _import_kortex():
-    """Lazily import kortex_api so that prpl_tidybot can be installed and imported
-    without the kortex-api package (which requires a bundled wheel)."""
-    global ActuatorConfigClient, BaseClient, BaseCyclicClient, ControlConfigClient, DeviceManagerClient
-    global ActuatorCyclic_pb2, ActuatorConfig_pb2, Base_pb2, BaseCyclic_pb2, Common_pb2, ControlConfig_pb2, Session_pb2
-    global RouterClient, RouterClientSendOptions, SessionManager, TCPTransport, UDPTransport
-    from kortex_api.autogen.client_stubs.ActuatorConfigClientRpc import ActuatorConfigClient
-    from kortex_api.autogen.client_stubs.BaseClientRpc import BaseClient
-    from kortex_api.autogen.client_stubs.BaseCyclicClientRpc import BaseCyclicClient
-    from kortex_api.autogen.client_stubs.ControlConfigClientRpc import ControlConfigClient
-    from kortex_api.autogen.client_stubs.DeviceManagerClientRpc import DeviceManagerClient
-    from kortex_api.autogen.messages import ActuatorCyclic_pb2, ActuatorConfig_pb2, Base_pb2, BaseCyclic_pb2, Common_pb2, ControlConfig_pb2, Session_pb2
-    from kortex_api.RouterClient import RouterClient, RouterClientSendOptions
-    from kortex_api.SessionManager import SessionManager
-    from kortex_api.TCPTransport import TCPTransport
-    from kortex_api.UDPTransport import UDPTransport
 
 class TorqueControlledArm:
     def __init__(self):
-        _import_kortex()
-
         # Check whether arm is connected
         try:
             subprocess.run(['ping', '-c', '1',  '192.168.1.10'], check=True, timeout=1, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

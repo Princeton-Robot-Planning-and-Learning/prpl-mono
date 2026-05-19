@@ -23,7 +23,7 @@ kinder.register_all_environments()
 def test_run_base_motion_planning() -> None:
     """Tests for real world base motion planning."""
 
-    env = kinder.make("kinder/TidyBot3D-ground-o3-v0", render_mode="rgb_array")
+    env = kinder.make("kinder/Shelf3D-o1-v0", render_mode="rgb_array")
     assert isinstance(env.observation_space, ObjectCentricBoxSpace)
     obs, _ = env.reset(seed=123)
     state = env.observation_space.devectorize(obs)
