@@ -42,8 +42,14 @@ POLICY_IMAGE_HEIGHT = 84
 ################################################################################
 # perception PC
 
-SERVER_HOSTNAME = '192.168.0.11'
-ROBOT_HOSTNAME_PREFIX = '192.168.0.60'
+# robotics lab
+# SERVER_HOSTNAME = '192.168.0.11'
+# ROBOT_HOSTNAME_PREFIX = '192.168.0.60'
+
+# PRPL lab 
+
+SERVER_HOSTNAME = '192.168.0.247'
+ROBOT_HOSTNAME_PREFIX = '192.168.0.76'
 CONN_AUTHKEY = b'secret password' # shared authentication key
 
 ################################################################################
