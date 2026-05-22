@@ -4,6 +4,7 @@ import base64
 import io
 import json
 import logging
+import re
 import tempfile
 from pathlib import Path
 from string import Template
@@ -67,7 +68,6 @@ def check_detection(query: Query, response: Response) -> Query | None:
       - "confidence" in [0, 1]
     Returns None if valid, otherwise a reprompt message.
     """
-
     try:
         data = json.loads(_parse_json(response.text))
     except (json.JSONDecodeError, TypeError, ValueError) as e:
@@ -128,6 +128,37 @@ def _parse_json(json_output: str) -> str:
             json_output = json_output.split("```", maxsplit=1)[0]
             break
     return json_output
+
+
+def _decode_mask(
+    mask_str: str, width: int, height: int, min_mask_value: int
+) -> np.ndarray | None:
+    """Decode a Gemini mask string into a boolean numpy array of shape (height, width).
+
+    Handles two formats:
+    - Old (Gemini 1.5): "data:image/png;base64,..." — base64-encoded PNG.
+    - New (Gemini 2.0+): "<start_of_mask><seg_N>..." — each <seg_N> is a byte value;
+      bytes are unpacked into a 64x64 binary bitmap and resized to the target size.
+    """
+    if mask_str.startswith("data:image/png;base64,"):
+        png_data = base64.b64decode(mask_str.removeprefix("data:image/png;base64,"))
+        mask_img: Image.Image = Image.open(io.BytesIO(png_data))
+        mask_img = mask_img.resize((width, height), Image.Resampling.BILINEAR)
+        return np.array(mask_img) > min_mask_value
+
+    if "<seg_" in mask_str:
+        tokens = re.findall(r"<seg_(\d+)>", mask_str)
+        if not tokens:
+            return None
+        byte_values = bytes([int(t) for t in tokens])
+        bits = np.unpackbits(np.frombuffer(byte_values, dtype=np.uint8))
+        flat = np.zeros(64 * 64, dtype=np.uint8)
+        flat[: len(bits)] = bits
+        mask_img = Image.fromarray((flat.reshape(64, 64) * 255).astype(np.uint8))
+        mask_img = mask_img.resize((width, height), Image.Resampling.BILINEAR)
+        return np.array(mask_img) > min_mask_value
+
+    return None
 
 
 class GeminiObjectDetector2D(ObjectDetector2D):
@@ -219,22 +250,14 @@ class GeminiObjectDetector2D(ObjectDetector2D):
                 bounding_box = BoundingBox(x1, y1, x2, y2)
 
                 # Process mask.
-                png_str = item["mask"]
-                if not png_str.startswith("data:image/png;base64,"):
-                    continue
-
-                # Remove prefix.
-                png_str = png_str.removeprefix("data:image/png;base64,")
-                mask_data = base64.b64decode(png_str)
-                mask: Image.Image = Image.open(io.BytesIO(mask_data))
-
-                # Resize mask to match bounding box.
-                mask = mask.resize(
-                    (bounding_box.width, bounding_box.height), Image.Resampling.BILINEAR
+                mask_array = _decode_mask(
+                    item["mask"],
+                    bounding_box.width,
+                    bounding_box.height,
+                    self._min_mask_value,
                 )
-
-                # Convert mask to numpy array.
-                mask_array = np.array(mask) > self._min_mask_value
+                if mask_array is None:
+                    continue
 
                 # Extract the confidence
                 confidence_score = item["confidence"]
