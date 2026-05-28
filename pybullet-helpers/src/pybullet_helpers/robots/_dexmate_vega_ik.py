@@ -1,20 +1,29 @@
-"""EAIK-based inverse kinematics for the Dexmate Vega left arm.
+"""EAIK-based inverse kinematics for the Dexmate Vega arms.
 
-Vega's wrist joints (L_arm_j5, L_arm_j6, L_arm_j7) are not spherical (their axes are
-several cm apart), so traditional closed-form 6R IK does not apply. With two joints (the
-elbow L_arm_j4 and the wrist roll L_arm_j7) locked, the residual 5R chain matches EAIK's
-catalog of analytically-solvable kinematic classes. To recover the full 7-DOF reach, we
-wrap a 2-D refinement search over the locked values around EAIK's 5R closed-form solver:
-starting from a coarse grid, we use Nelder-Mead to drive EAIK's least-squares pose
-residual to zero, landing on the 1-D solvability manifold.
+Vega's wrist joints (j5, j6, j7) are not spherical (their axes are several cm apart), so
+traditional closed-form 6R IK does not apply. With two joints (the elbow j4 and the wrist
+roll j7) locked, the residual 5R chain matches EAIK's catalog of analytically-solvable
+kinematic classes. To recover the full 7-DOF reach, we wrap a 2-D refinement search over
+the locked values around EAIK's 5R closed-form solver: starting from a coarse grid, we use
+Nelder-Mead to drive EAIK's least-squares pose residual to zero, landing on the 1-D
+solvability manifold.
 
-EAIK is an optional dependency; if it isn't importable, EAIK_AVAILABLE is False and
-callers should fall back to a different IK method.
+The two arms share this structure but have different (mirrored) geometry, so each arm has
+its own ``ArmIKParams``. Parameters are extracted directly from the vega_1u URDF -- a single
+source of truth that avoids hand-transcribing the mirrored right-arm values.
+
+EAIK is an optional dependency; if it isn't importable, EAIK_AVAILABLE is False and callers
+should fall back to a different IK method.
 """
 
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
+from functools import lru_cache
+
 import numpy as np
+from dexmate_urdf import get_robot_path
 from scipy.optimize import minimize
 
 try:
@@ -25,63 +34,101 @@ except ImportError:
     EAIK_AVAILABLE = False
 
 
-# Joint axes for the 7 left-arm joints, taken directly from the vega_1u URDF's
-# <axis xyz="..."> entries (all parent rpy values are zero, so URDF axes are
-# already expressed in EAIK's convention). Column i is the axis of joint i+1.
-_H = np.array(
-    [
-        [0, 1, 0],  # L_arm_j1
-        [0, 0, 1],  # L_arm_j2
-        [1, 0, 0],  # L_arm_j3
-        [0, 1, 0],  # L_arm_j4
-        [1, 0, 0],  # L_arm_j5
-        [0, 1, 0],  # L_arm_j6
-        [0, 0, 1],  # L_arm_j7
-    ],
-    dtype=np.float64,
-).T
-
-# Joint position offsets (column i is the translation from joint i's frame to
-# joint i+1's frame). Last column is the offset from joint 7 to the IK
-# end-effector frame, which we take to be L_arm_l7 itself (zero offset). Values
-# match the vega_1u URDF's <origin xyz="..."> entries on the left arm.
-_P = np.array(
-    [
-        [0.0, 0.16946, 0.0],  # arm_center -> L_arm_l1
-        [0.04, 0.06, 0.0454],
-        [0.1644, 0.0, -0.043],
-        [0.113, 0.0433, 0.06],
-        [0.1938, -0.0434, -0.04],
-        [0.0762, 0.0319, 0.0],
-        [0.065, -0.032, 0.0319],  # L_arm_l6 -> L_arm_l7
-        [0.0, 0.0, 0.0],  # L_arm_l7 -> EE (identity)
-    ],
-    dtype=np.float64,
-).T
-
-_R6T = np.eye(3)
-
 # Indices into the 7-vector q for the two joints we lock during the EAIK call.
-# L_arm_j4 is the elbow; L_arm_j7 is the final wrist roll. Locking both yields
-# a 5R chain whose structure EAIK identifies as
-# "5R-FOURTH_FITH_INTERSECTING_SECOND_THIRD_INTERSECTING", which is in its
-# catalog of closed-form-solvable classes.
+# Joint 4 is the elbow; joint 7 is the final wrist roll. Locking both yields a 5R
+# chain whose structure EAIK identifies as
+# "5R-FOURTH_FITH_INTERSECTING_SECOND_THIRD_INTERSECTING", which is in its catalog
+# of closed-form-solvable classes.
 _LOCK_A = 3
 _LOCK_B = 6
 
-# Joint limits from the URDF, used to clamp the grid and to reject IK
-# candidates that leave the legal range.
-_LOWER = np.array([-3.071, -0.453, -3.071, -3.071, -3.071, -1.396, -1.378])
-_UPPER = np.array([3.071, 1.553, 3.071, 0.244, 3.071, 1.396, 1.117])
+
+@dataclass(frozen=True)
+class ArmIKParams:
+    """Kinematic parameters for one Vega arm in EAIK's product-of-exponentials form.
+
+    H: 3x7, column i is the rotation axis of joint i+1 (in arm_center's frame).
+    P: 3x8, column i is the translation from joint i's frame to joint i+1's frame;
+        the last column is the offset from joint 7 to the IK end-effector frame
+        (taken to be the arm's l7 link, i.e. zero offset).
+    R6T: 3x3 end-effector orientation offset (identity here).
+    lower/upper: length-7 joint limits, used to clamp the search grid and reject
+        out-of-range IK candidates.
+    """
+
+    H: np.ndarray
+    P: np.ndarray
+    R6T: np.ndarray
+    lower: np.ndarray
+    upper: np.ndarray
+    lock_a: int = _LOCK_A
+    lock_b: int = _LOCK_B
+
+
+def _joint_block(urdf_str: str, joint_name: str) -> str:
+    match = re.search(
+        r'<joint name="' + re.escape(joint_name) + r'".*?</joint>', urdf_str, re.S
+    )
+    assert match is not None, f"joint {joint_name} not found in URDF"
+    return match.group(0)
+
+
+@lru_cache(maxsize=2)
+def get_arm_ik_params(prefix: str) -> ArmIKParams:
+    """Extract EAIK kinematic parameters for the given arm ("L" or "R") from the URDF.
+
+    EAIK expects all joint axes expressed in a common frame. The Vega arm joints all
+    have zero rpy on their <origin>, so the URDF <axis> entries are already in that
+    convention; we assert this to guard against silent breakage if the URDF changes.
+    """
+    assert prefix in ("L", "R"), f"Unknown arm prefix {prefix}"
+    robot_dir = get_robot_path("humanoid", "vega_1u")
+    urdf_str = (robot_dir / "vega_1u.urdf").read_text(encoding="utf-8")
+
+    axes: list[list[float]] = []
+    offsets: list[list[float]] = []
+    lower: list[float] = []
+    upper: list[float] = []
+    for i in range(1, 8):
+        block = _joint_block(urdf_str, f"{prefix}_arm_j{i}")
+        axis = [
+            float(v) for v in re.search(r'<axis xyz="([^"]+)"', block).group(1).split()
+        ]
+        origin = re.search(r'<origin xyz="([^"]+)"[^>]*?(?:rpy="([^"]+)")?', block)
+        xyz = [float(v) for v in origin.group(1).split()]
+        rpy = origin.group(2)
+        if rpy is not None:
+            assert np.allclose(
+                [float(v) for v in rpy.split()], 0.0
+            ), f"{prefix}_arm_j{i} has nonzero rpy; EAIK axis convention assumption broken"
+        limits = re.search(r'lower="([^"]+)" upper="([^"]+)"', block).groups()
+        axes.append(axis)
+        offsets.append(xyz)
+        lower.append(float(limits[0]))
+        upper.append(float(limits[1]))
+    # Final column: joint 7 -> end-effector frame (l7 itself), zero offset.
+    offsets.append([0.0, 0.0, 0.0])
+
+    return ArmIKParams(
+        H=np.array(axes, dtype=np.float64).T,
+        P=np.array(offsets, dtype=np.float64).T,
+        R6T=np.eye(3),
+        lower=np.array(lower, dtype=np.float64),
+        upper=np.array(upper, dtype=np.float64),
+    )
 
 
 def _best_for_lock(
-    qa: float, qb: float, target_pose: np.ndarray
+    qa: float, qb: float, target_pose: np.ndarray, params: ArmIKParams
 ) -> tuple[np.ndarray | None, float]:
-    """Run EAIK with (L_arm_j4=qa, L_arm_j7=qb) locked and return the best solution's
-    joint vector and its pose residual to the target."""
+    """Run EAIK with the two lock joints fixed at (qa, qb) and return the best
+    solution's joint vector and its pose residual to the target."""
     robot = _EAIK.Robot(
-        _H, _P, _R6T, [(_LOCK_A, float(qa)), (_LOCK_B, float(qb))], True
+        params.H,
+        params.P,
+        params.R6T,
+        [(params.lock_a, float(qa)), (params.lock_b, float(qb))],
+        True,
     )
     sol = robot.calculate_IK(target_pose)
     candidates = np.asarray(sol.Q)
@@ -91,15 +138,15 @@ def _best_for_lock(
         candidates = candidates[None, :]
 
     unlock_mask = np.ones(7, dtype=bool)
-    unlock_mask[_LOCK_A] = False
-    unlock_mask[_LOCK_B] = False
+    unlock_mask[params.lock_a] = False
+    unlock_mask[params.lock_b] = False
 
     best_q: np.ndarray | None = None
     best_res = np.inf
     for q in candidates:
-        if np.any(q[unlock_mask] < _LOWER[unlock_mask] - 1e-6):
+        if np.any(q[unlock_mask] < params.lower[unlock_mask] - 1e-6):
             continue
-        if np.any(q[unlock_mask] > _UPPER[unlock_mask] + 1e-6):
+        if np.any(q[unlock_mask] > params.upper[unlock_mask] + 1e-6):
             continue
         pose = robot.fwdkin(q)
         pos_err = float(np.linalg.norm(pose[:3, 3] - target_pose[:3, 3]))
@@ -112,30 +159,35 @@ def _best_for_lock(
     return best_q, best_res
 
 
-def solve_left_arm_ik(
+def solve_arm_ik(
     target_pose: np.ndarray,
+    params: ArmIKParams,
     *,
     n_grid: int = 20,
     n_refine_seeds: int = 5,
     tol: float = 1e-4,
 ) -> np.ndarray | None:
-    """Return joint angles (length 7) reaching target_pose, or None if not found.
+    """Return joint angles (length 7) reaching target_pose for the given arm, or None.
 
-    target_pose: 4x4 homogeneous transform of L_arm_l7 in arm_center frame.
+    target_pose: 4x4 homogeneous transform of the arm's l7 link in arm_center frame.
     """
     if not EAIK_AVAILABLE:
         return None
 
     target_pose = np.asarray(target_pose, dtype=float)
 
-    # Coarse sweep over (q_elbow, q_wrist_roll). Stay just inside the limits so
-    # we don't waste samples on infeasible boundaries.
-    a_grid = np.linspace(_LOWER[_LOCK_A] + 0.05, _UPPER[_LOCK_A] - 0.05, n_grid)
-    b_grid = np.linspace(_LOWER[_LOCK_B] + 0.05, _UPPER[_LOCK_B] - 0.05, n_grid)
+    # Coarse sweep over (q_elbow, q_wrist_roll). Stay just inside the limits so we
+    # don't waste samples on infeasible boundaries.
+    a_grid = np.linspace(
+        params.lower[params.lock_a] + 0.05, params.upper[params.lock_a] - 0.05, n_grid
+    )
+    b_grid = np.linspace(
+        params.lower[params.lock_b] + 0.05, params.upper[params.lock_b] - 0.05, n_grid
+    )
     grid_results: list[tuple[float, float, float, np.ndarray | None]] = []
     for qa in a_grid:
         for qb in b_grid:
-            q, res = _best_for_lock(qa, qb, target_pose)
+            q, res = _best_for_lock(qa, qb, target_pose, params)
             grid_results.append((res, float(qa), float(qb), q))
     grid_results.sort(key=lambda item: item[0])
 
@@ -143,14 +195,16 @@ def solve_left_arm_ik(
     if best_res < tol:
         return best_q
 
-    # Local refinement on EAIK's LS residual. The residual is smooth in
-    # (qa, qb) and zero on the 1-D solvability manifold; multi-starting from
-    # the best grid seeds raises the success rate substantially over a single
-    # start.
-    bounds = [(_LOWER[_LOCK_A], _UPPER[_LOCK_A]), (_LOWER[_LOCK_B], _UPPER[_LOCK_B])]
+    # Local refinement on EAIK's LS residual. The residual is smooth in (qa, qb) and
+    # zero on the 1-D solvability manifold; multi-starting from the best grid seeds
+    # raises the success rate substantially over a single start.
+    bounds = [
+        (params.lower[params.lock_a], params.upper[params.lock_a]),
+        (params.lower[params.lock_b], params.upper[params.lock_b]),
+    ]
 
     def objective(x: np.ndarray) -> float:
-        _, residual = _best_for_lock(x[0], x[1], target_pose)
+        _, residual = _best_for_lock(x[0], x[1], target_pose, params)
         return residual
 
     for _, qa_seed, qb_seed, _ in grid_results[:n_refine_seeds]:
@@ -161,7 +215,9 @@ def solve_left_arm_ik(
             bounds=bounds,
             options={"xatol": 1e-5, "fatol": 1e-6, "maxiter": 200},
         )
-        candidate_q, candidate_res = _best_for_lock(opt.x[0], opt.x[1], target_pose)
+        candidate_q, candidate_res = _best_for_lock(
+            opt.x[0], opt.x[1], target_pose, params
+        )
         if candidate_res < best_res:
             best_res = candidate_res
             best_q = candidate_q
