@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import numpy as np
+import pybullet as p
 import pytest
 
 from pybullet_helpers.geometry import Pose
@@ -131,3 +132,36 @@ def test_panda_pybullet_robot_inverse_kinematics(panda):
     joint_positions = inverse_kinematics(panda, end_effector_pose=pose, validate=True)
     recovered_pose = panda.forward_kinematics(joint_positions)
     assert np.allclose(recovered_pose.position, pose.position)
+
+
+def test_single_arm_robot_bind_to_existing_body(physics_client_id):
+    """A SingleArmPyBulletRobot can bind to an already-loaded body via robot_id instead
+    of loading its own URDF.
+
+    This is the mechanism that lets a multi-arm robot expose each arm as a
+    SingleArmPyBulletRobot over a single shared PyBullet body.
+    """
+    panda = PandaPyBulletRobot(physics_client_id, control_mode="reset")
+    num_bodies_before = p.getNumBodies(physics_client_id)
+
+    # Put the shared body into a non-home configuration so we can confirm the
+    # bound instance does not reset it during construction.
+    config = list(panda.home_joint_positions)
+    config[0] += 0.3
+    panda.set_joints(config)
+
+    bound = PandaPyBulletRobot(
+        physics_client_id, control_mode="reset", robot_id=panda.robot_id
+    )
+
+    # Binding must not load a new body.
+    assert p.getNumBodies(physics_client_id) == num_bodies_before
+    assert bound.robot_id == panda.robot_id
+    assert bound.arm_joints == panda.arm_joints
+    # The bound instance left the (non-home) configuration untouched.
+    assert np.allclose(bound.get_joint_positions(), config)
+    # Forward kinematics through the bound instance matches the original.
+    assert np.allclose(
+        bound.get_end_effector_pose().position,
+        panda.get_end_effector_pose().position,
+    )
