@@ -117,29 +117,17 @@ def test_dexmate_vega_solve_arm_ik_roundtrip(prefix):
     """solve_arm_ik recovers joints for both arms: random q -> EAIK FK -> solve -> FK
     matches. Exercises the mirrored right-arm geometry, which is not used by the
     single-arm robot but will be by the bimanual robot."""
-    import eaik.pybindings.EAIK as EAIK  # pylint: disable=import-outside-toplevel
-
     params = _vega_ik.get_arm_ik_params(prefix)
     rng = np.random.default_rng(0)
     n_trials = 5
     n_success = 0
     for _ in range(n_trials):
         q_true = params.lower + (params.upper - params.lower) * rng.random(7)
-        robot = EAIK.Robot(
-            params.H,
-            params.P,
-            params.R6T,
-            [
-                (params.lock_a, float(q_true[params.lock_a])),
-                (params.lock_b, float(q_true[params.lock_b])),
-            ],
-            True,
-        )
-        target = robot.fwdkin(q_true)
+        target = _vega_ik.forward_kinematics(q_true, params)
         q_sol = _vega_ik.solve_arm_ik(target, params)
         if q_sol is None:
             continue
-        pose = robot.fwdkin(q_sol)
+        pose = _vega_ik.forward_kinematics(q_sol, params)
         if np.linalg.norm(pose[:3, 3] - target[:3, 3]) < 1e-3:
             n_success += 1
     # Allow one failure to absorb the rare Nelder-Mead local-min case.

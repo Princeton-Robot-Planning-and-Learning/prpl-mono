@@ -4,16 +4,16 @@ Vega's wrist joints (j5, j6, j7) are not spherical (their axes are several cm ap
 traditional closed-form 6R IK does not apply. With two joints (the elbow j4 and the wrist
 roll j7) locked, the residual 5R chain matches EAIK's catalog of analytically-solvable
 kinematic classes. To recover the full 7-DOF reach, we wrap a 2-D refinement search over
-the locked values around EAIK's 5R closed-form solver: starting from a coarse grid, we use
-Nelder-Mead to drive EAIK's least-squares pose residual to zero, landing on the 1-D
+the locked values around EAIK's 5R closed-form solver: starting from a coarse grid, we
+use Nelder-Mead to drive EAIK's least-squares pose residual to zero, landing on the 1-D
 solvability manifold.
 
 The two arms share this structure but have different (mirrored) geometry, so each arm has
-its own ``ArmIKParams``. Parameters are extracted directly from the vega_1u URDF -- a single
-source of truth that avoids hand-transcribing the mirrored right-arm values.
+its own ``ArmIKParams``. Parameters are extracted directly from the vega_1u URDF -- a
+single source of truth that avoids hand-transcribing the mirrored right-arm values.
 
-EAIK is an optional dependency; if it isn't importable, EAIK_AVAILABLE is False and callers
-should fall back to a different IK method.
+EAIK is an optional dependency; if it isn't importable, EAIK_AVAILABLE is False and
+callers should fall back to a different IK method.
 """
 
 from __future__ import annotations
@@ -103,9 +103,10 @@ def get_arm_ik_params(prefix: str) -> ArmIKParams:
         xyz = [float(v) for v in origin.group(1).split()]
         rpy = origin.group(2)
         if rpy is not None:
-            assert np.allclose(
-                [float(v) for v in rpy.split()], 0.0
-            ), f"{prefix}_arm_j{i} has nonzero rpy; EAIK axis convention assumption broken"
+            assert np.allclose([float(v) for v in rpy.split()], 0.0), (
+                f"{prefix}_arm_j{i} has nonzero rpy; "
+                "EAIK axis convention assumption broken"
+            )
         limits = _search(r'lower="([^"]+)" upper="([^"]+)"', block).groups()
         axes.append(axis)
         offsets.append(xyz)
@@ -121,6 +122,24 @@ def get_arm_ik_params(prefix: str) -> ArmIKParams:
         lower=np.array(lower, dtype=np.float64),
         upper=np.array(upper, dtype=np.float64),
     )
+
+
+def forward_kinematics(q: np.ndarray, params: ArmIKParams) -> np.ndarray | None:
+    """EAIK forward kinematics for a length-7 joint vector: returns the 4x4 pose of the
+    arm's l7 link in arm_center frame, or None if EAIK is unavailable.
+
+    EAIK only constructs robots up to 6R, so we build it with the two redundant joints
+    locked at this q's values; fwdkin then evaluates the full 7-vector.
+    """
+    if not EAIK_AVAILABLE:
+        return None
+    q = np.asarray(q, dtype=float)
+    locked = [
+        (params.lock_a, float(q[params.lock_a])),
+        (params.lock_b, float(q[params.lock_b])),
+    ]
+    robot = _EAIK.Robot(params.H, params.P, params.R6T, locked, True)
+    return robot.fwdkin(q)
 
 
 def _best_for_lock(
