@@ -37,6 +37,7 @@ class SingleArmPyBulletRobot(abc.ABC):
         home_joint_positions: JointPositions | None = None,
         fixed_base: bool = True,
         custom_urdf_path: Path | None = None,
+        robot_id: int | None = None,
     ) -> None:
         self.physics_client_id = physics_client_id
 
@@ -57,22 +58,31 @@ class SingleArmPyBulletRobot(abc.ABC):
             home_joint_positions or self.default_home_joint_positions
         )
 
-        # Load the robot and set base position and orientation.
-        flags = p.URDF_USE_INERTIA_FROM_FILE
-        if self.self_collision_link_names:
-            flags |= p.URDF_USE_SELF_COLLISION
-            flags |= p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
-        self.robot_id = p.loadURDF(
-            str(self.urdf_path),
-            basePosition=self._base_pose.position,
-            baseOrientation=self._base_pose.orientation,
-            # Even if the robot has a mobile base, we treat it as static in
-            # pybullet for now and just update the position directly. Otherwise
-            # physics starts to affect the robot base.
-            useFixedBase=True,
-            physicsClientId=self.physics_client_id,
-            flags=flags,
-        )
+        # When robot_id is given, this instance binds to an existing PyBullet
+        # body rather than loading its own URDF. This is used to expose one arm
+        # of a multi-arm robot (e.g. a bimanual robot) as a SingleArmPyBulletRobot
+        # over a shared body. The owner of the body is responsible for loading it
+        # (including any self-collision flags) and for setting the initial pose.
+        self._bound_to_existing_body = robot_id is not None
+        if robot_id is not None:
+            self.robot_id = robot_id
+        else:
+            # Load the robot and set base position and orientation.
+            flags = p.URDF_USE_INERTIA_FROM_FILE
+            if self.self_collision_link_names:
+                flags |= p.URDF_USE_SELF_COLLISION
+                flags |= p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS
+            self.robot_id = p.loadURDF(
+                str(self.urdf_path),
+                basePosition=self._base_pose.position,
+                baseOrientation=self._base_pose.orientation,
+                # Even if the robot has a mobile base, we treat it as static in
+                # pybullet for now and just update the position directly. Otherwise
+                # physics starts to affect the robot base.
+                useFixedBase=True,
+                physicsClientId=self.physics_client_id,
+                flags=flags,
+            )
 
         # Make sure the home joint positions are within limits.
         assert len(self._home_joint_positions) == len(self.joint_lower_limits)
@@ -80,11 +90,17 @@ class SingleArmPyBulletRobot(abc.ABC):
             self._home_joint_positions
         ), "Home joint positions are out of the limit range"
 
-        # Robot initially at home pose.
-        self.set_joints(self.home_joint_positions)
+        # Robot initially at home pose. When bound to an existing body, the owner
+        # controls the initial posture, so we leave the joints as loaded.
+        if not self._bound_to_existing_body:
+            self.set_joints(self.home_joint_positions)
 
         # Give a one-time warning about using IKFast with custom URDFs.
-        if custom_urdf_path is not None and self.ikfast_info() is not None:
+        if (
+            not self._bound_to_existing_body
+            and custom_urdf_path is not None
+            and self.ikfast_info() is not None
+        ):
             print(
                 "WARNING: running IKFast with a custom URDF file may not work "
                 "if the URDF is importantly different from what was used to "
