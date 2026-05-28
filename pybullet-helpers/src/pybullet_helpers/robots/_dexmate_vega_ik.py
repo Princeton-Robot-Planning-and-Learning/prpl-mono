@@ -65,12 +65,17 @@ class ArmIKParams:
     lock_b: int = _LOCK_B
 
 
+def _search(pattern: str, text: str, flags: int = 0) -> re.Match:
+    """re.search that asserts a match was found (so callers can index groups)."""
+    match = re.search(pattern, text, flags)
+    assert match is not None, f"pattern {pattern!r} not found"
+    return match
+
+
 def _joint_block(urdf_str: str, joint_name: str) -> str:
-    match = re.search(
+    return _search(
         r'<joint name="' + re.escape(joint_name) + r'".*?</joint>', urdf_str, re.S
-    )
-    assert match is not None, f"joint {joint_name} not found in URDF"
-    return match.group(0)
+    ).group(0)
 
 
 @lru_cache(maxsize=2)
@@ -92,16 +97,16 @@ def get_arm_ik_params(prefix: str) -> ArmIKParams:
     for i in range(1, 8):
         block = _joint_block(urdf_str, f"{prefix}_arm_j{i}")
         axis = [
-            float(v) for v in re.search(r'<axis xyz="([^"]+)"', block).group(1).split()
+            float(v) for v in _search(r'<axis xyz="([^"]+)"', block).group(1).split()
         ]
-        origin = re.search(r'<origin xyz="([^"]+)"[^>]*?(?:rpy="([^"]+)")?', block)
+        origin = _search(r'<origin xyz="([^"]+)"[^>]*?(?:rpy="([^"]+)")?', block)
         xyz = [float(v) for v in origin.group(1).split()]
         rpy = origin.group(2)
         if rpy is not None:
             assert np.allclose(
                 [float(v) for v in rpy.split()], 0.0
             ), f"{prefix}_arm_j{i} has nonzero rpy; EAIK axis convention assumption broken"
-        limits = re.search(r'lower="([^"]+)" upper="([^"]+)"', block).groups()
+        limits = _search(r'lower="([^"]+)" upper="([^"]+)"', block).groups()
         axes.append(axis)
         offsets.append(xyz)
         lower.append(float(limits[0]))
