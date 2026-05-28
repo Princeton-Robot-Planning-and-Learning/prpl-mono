@@ -1,7 +1,7 @@
 """Dexmate Vega humanoid robots."""
 
-import re
 import warnings
+import xml.etree.ElementTree as ET
 from functools import cached_property
 from pathlib import Path
 
@@ -11,7 +11,7 @@ from pybullet_helpers.geometry import Pose, multiply_poses
 from pybullet_helpers.joint import JointPositions
 from pybullet_helpers.link import get_link_pose, get_relative_link_pose
 from pybullet_helpers.robots import _dexmate_vega_ik as _vega_ik
-from pybullet_helpers.robots.single_arm import SingleArmPyBulletRobot
+from pybullet_helpers.robots.single_arm import FingeredSingleArmPyBulletRobot
 
 _EAIK_FALLBACK_WARNED = False
 
@@ -32,21 +32,78 @@ _LEFT_ARM_JOINT_NAMES = [
     "L_arm_j7",
 ]
 
+# The parallel-jaw gripper has two revolute jaw joints; the URDF mimics j2 off j1,
+# but PyBullet does not enforce <mimic>, so we drive both to the same value.
+_LEFT_GRIPPER_JOINT_NAMES = ["L_gripper_j1", "L_gripper_j2"]
+_GRIPPER_OPEN = 0.0
+_GRIPPER_CLOSED = 0.7854
 
-class DexmateVega1UPyBulletRobot(SingleArmPyBulletRobot):
-    """Dexmate Vega 1U humanoid; the left arm is exposed as the actuated arm.
+_PYBULLET_MATERIAL_NAME = "dexmate_vega_default"
 
-    Only the 7 left-arm joints (L_arm_j1..L_arm_j7) are part of arm_joints —
-    the prismatic Lift and the torso_flip revolute joint are not actuated by
-    this wrapper; they remain at whatever position pybullet's URDF load left
-    them in (zero by default). This matches the standard humanoid pattern of
-    treating the torso as a fixed offset for arm IK.
 
-    When the optional `eaik` package is installed, custom_inverse_kinematics
-    runs a 2D-search-with-refinement on top of EAIK's 5R closed-form solver,
-    locking L_arm_j4 (elbow) and L_arm_j7 (wrist roll) per inner call. See
-    _dexmate_vega_ik.py for details. Otherwise the framework's pybullet IK is
-    used.
+def prepare_pybullet_urdf(
+    robot_dir: Path,
+    urdf_filename: str,
+    mesh_substitutions: dict[str, str] | None = None,
+) -> Path:
+    """Rewrite a dexmate URDF so PyBullet can load it, returning the new path.
+
+    PyBullet cannot read the .glb visual meshes shipped with dexmate-urdf. For each
+    visual/collision mesh that references a .glb, we rewrite it to the sibling collision
+    .obj when one exists on disk, and otherwise drop that visual/collision element (some
+    base/lift/torso/connector links ship only a .glb). A neutral gray material is
+    injected into every remaining visual because the collision OBJs have no MTL and
+    would otherwise render pure black. The output is written next to the original so the
+    relative mesh paths still resolve.
+
+    mesh_substitutions maps substrings to replacements applied to every mesh filename
+    (e.g. swapping one gripper's meshes for another's).
+    """
+    mesh_substitutions = mesh_substitutions or {}
+    original_path = robot_dir / urdf_filename
+    tree = ET.parse(original_path)
+    root = tree.getroot()
+    for link in root.findall("link"):
+        for tag in ("visual", "collision"):
+            for element in list(link.findall(tag)):
+                mesh = element.find("geometry/mesh")
+                if mesh is None:
+                    continue
+                filename = mesh.get("filename", "")
+                for old, new in mesh_substitutions.items():
+                    filename = filename.replace(old, new)
+                if not filename.endswith(".glb"):
+                    mesh.set("filename", filename)
+                    continue
+                obj_rel = filename.replace("/visual/", "/collision/")[:-4] + ".obj"
+                if not (robot_dir / obj_rel).resolve().exists():
+                    link.remove(element)
+                    continue
+                mesh.set("filename", obj_rel)
+                if tag == "visual" and element.find("material") is None:
+                    material = ET.SubElement(element, "material")
+                    material.set("name", _PYBULLET_MATERIAL_NAME)
+                    color = ET.SubElement(material, "color")
+                    color.set("rgba", "0.75 0.75 0.78 1.0")
+    new_path = original_path.parent / (original_path.stem + "-PYBULLET-HELPERS.urdf")
+    tree.write(new_path, encoding="unicode")
+    return new_path
+
+
+class DexmateVega1UPyBulletRobot(FingeredSingleArmPyBulletRobot[float]):
+    """Dexmate Vega 1U humanoid; the left arm with its parallel-jaw gripper is exposed
+    as the actuated arm.
+
+    arm_joints are the 7 left-arm joints (L_arm_j1..L_arm_j7) plus the 2 gripper jaw
+    joints. The prismatic Lift and the torso_flip revolute joint are not actuated by
+    this wrapper; they remain at whatever position pybullet's URDF load left them in
+    (zero by default). This matches the standard humanoid pattern of treating the torso
+    as a fixed offset for arm IK.
+
+    When the optional `eaik` package is installed, custom_inverse_kinematics runs a
+    2D-search-with-refinement on top of EAIK's 5R closed-form solver, locking L_arm_j4
+    (elbow) and L_arm_j7 (wrist roll) per inner call. See _dexmate_vega_ik.py for
+    details. Otherwise the framework's pybullet IK is used.
     """
 
     @classmethod
@@ -55,53 +112,28 @@ class DexmateVega1UPyBulletRobot(SingleArmPyBulletRobot):
 
     @property
     def default_urdf_path(self) -> Path:
-        # PyBullet can't load the .glb meshes shipped with dexmate-urdf, so we
-        # rewrite the URDF to point at the .obj collision meshes from vega_1
-        # (which exist for the head and arm links) and strip the visual/collision
-        # blocks for base/lift/torso_flip (which have no .obj alternative).
-        robot_dir = get_robot_path("humanoid", "vega_1u")
-        original_path = robot_dir / "vega_1u.urdf"
-        urdf_str = original_path.read_text(encoding="utf-8")
-        urdf_str = re.sub(
-            r'\.\./vega_1/meshes/visual/([^"]+)\.glb',
-            r"../vega_1/meshes/collision/\1.obj",
-            urdf_str,
+        # vega_1u_gripper.urdf ships with the DexGripper D (forked fingertips). The
+        # DexGripper S is kinematically identical (same mount, joints, and limits) and
+        # differs only in its meshes, so we swap the mesh paths to use it.
+        return prepare_pybullet_urdf(
+            get_robot_path("humanoid", "vega_1u"),
+            "vega_1u_gripper.urdf",
+            mesh_substitutions={"hands/dexd_gripper/": "hands/dexs_gripper/"},
         )
-        urdf_str = re.sub(
-            r"\s*<(visual|collision)>\s*<origin[^/]*/>\s*<geometry>\s*"
-            r'<mesh filename="meshes/visual/[^"]+\.glb"\s*/>\s*'
-            r"</geometry>\s*</\1>",
-            "",
-            urdf_str,
-        )
-        # The collision OBJs have no MTL, so without a URDF material PyBullet
-        # renders them pure black. Inject a neutral gray into every <visual>.
-        material_xml = (
-            '<material name="dexmate_vega_default">'
-            '<color rgba="0.75 0.75 0.78 1.0"/>'
-            "</material>"
-        )
-        urdf_str = re.sub(
-            r"(</geometry>)(\s*</visual>)",
-            r"\1" + material_xml + r"\2",
-            urdf_str,
-        )
-        # Write next to the original so the relative mesh paths still resolve.
-        new_path = original_path.parent / "vega_1u-PYBULLET-HELPERS.urdf"
-        new_path.write_text(urdf_str, encoding="utf-8")
-        return new_path
 
     @cached_property
     def arm_joints(self) -> list[int]:
-        # Expose only the 7 left-arm joints; Lift and torso_flip are excluded.
-        # This matches the kinematic chain EAIK solves for, and is the standard
-        # humanoid pattern where torso/base motions are planned separately from
-        # arm motions.
-        return [self.joint_from_name(n) for n in _LEFT_ARM_JOINT_NAMES]
+        # The 7 left-arm joints followed by the gripper jaw joints. Lift and torso_flip
+        # are excluded: this matches the kinematic chain EAIK solves for, and the
+        # standard humanoid pattern where torso/base motions are planned separately.
+        arm = [self.joint_from_name(n) for n in _LEFT_ARM_JOINT_NAMES]
+        return arm + self.finger_ids
 
     @property
     def default_home_joint_positions(self) -> JointPositions:
-        return [0.0] * 7
+        return [0.0] * len(_LEFT_ARM_JOINT_NAMES) + self.finger_state_to_joints(
+            self.open_fingers_state
+        )
 
     @property
     def end_effector_name(self) -> str:
@@ -110,6 +142,25 @@ class DexmateVega1UPyBulletRobot(SingleArmPyBulletRobot):
     @property
     def tool_link_name(self) -> str:
         return "L_ee"
+
+    @property
+    def finger_joint_names(self) -> list[str]:
+        return _LEFT_GRIPPER_JOINT_NAMES
+
+    @property
+    def open_fingers_state(self) -> float:
+        return _GRIPPER_OPEN
+
+    @property
+    def closed_fingers_state(self) -> float:
+        return _GRIPPER_CLOSED
+
+    def finger_state_to_joints(self, state: float) -> list[float]:
+        return [state, state]
+
+    def joints_to_finger_state(self, joint_positions: list[float]) -> float:
+        assert len(joint_positions) == 2
+        return joint_positions[0]
 
     @property
     def default_inverse_kinematics_method(self) -> str:
@@ -165,4 +216,6 @@ class DexmateVega1UPyBulletRobot(SingleArmPyBulletRobot):
         )
         if q is None:
             return None
-        return [float(v) for v in q]
+        # The arm solution covers the 7 arm joints; keep the fingers where they are.
+        current_fingers = self.finger_state_to_joints(self.get_finger_state())
+        return [float(v) for v in q] + current_fingers
