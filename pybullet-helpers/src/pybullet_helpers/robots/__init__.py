@@ -3,6 +3,7 @@
 from typing import Type
 
 from pybullet_helpers.robots.assistive_human import AssistiveHumanPyBulletRobot
+from pybullet_helpers.robots.dexmate_vega import DexmateVega1UPyBulletRobot
 from pybullet_helpers.robots.fetch import FetchPyBulletRobot
 from pybullet_helpers.robots.human import (
     LeftArmHumanPyBulletRobot,
@@ -35,6 +36,7 @@ _BUILT_IN_ROBOT_CLASSES: list[Type[SingleArmPyBulletRobot]] = [
     RightLegHumanPyBulletRobot,
     LeftLegHumanPyBulletRobot,
     SpotPyBulletRobot,
+    DexmateVega1UPyBulletRobot,
 ]
 
 _BUILT_IN_MOBILE_ROBOT_CLASSES: list[Type[SingleArmPyBulletMobileManipulator]] = [

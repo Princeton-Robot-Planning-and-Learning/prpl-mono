@@ -14,6 +14,7 @@ dependencies = [
    "gymnasium>=0.29.1",
    "scipy==1.14.0",
    "hello-robot-stretch-urdf",
+   "dexmate-urdf>=0.8.3",
    "prpl_utils>=0.0.1",
 ]
 
@@ -62,5 +63,6 @@ module = [
     "pybullet.*",
     "pybullet_utils.*",
     "scipy.*",
+    "dexmate_urdf",
 ]
 ignore_missing_imports = true
