@@ -5,7 +5,6 @@ import warnings
 from functools import cached_property
 from pathlib import Path
 
-import numpy as np
 from dexmate_urdf import get_robot_path
 
 from pybullet_helpers.geometry import Pose, multiply_poses
@@ -161,10 +160,7 @@ class DexmateVega1UPyBulletRobot(SingleArmPyBulletRobot):
             self._l_ee_in_l_arm_l7.invert(),
         )
 
-        q = _vega_ik.solve_left_arm_ik(
-            target_in_arm_center.to_matrix(),
-            seed=np.asarray(self.get_joint_positions()),
-        )
+        q = _vega_ik.solve_left_arm_ik(target_in_arm_center.to_matrix())
         if q is None:
             return None
         return [float(v) for v in q]

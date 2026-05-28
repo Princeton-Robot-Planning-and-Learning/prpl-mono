@@ -115,7 +115,6 @@ def _best_for_lock(
 def solve_left_arm_ik(
     target_pose: np.ndarray,
     *,
-    seed: np.ndarray | None = None,
     n_grid: int = 20,
     n_refine_seeds: int = 5,
     tol: float = 1e-4,
@@ -123,7 +122,6 @@ def solve_left_arm_ik(
     """Return joint angles (length 7) reaching target_pose, or None if not found.
 
     target_pose: 4x4 homogeneous transform of L_arm_l7 in arm_center frame.
-    seed: ignored for the grid sweep; future versions may bias the grid here.
     """
     if not EAIK_AVAILABLE:
         return None
