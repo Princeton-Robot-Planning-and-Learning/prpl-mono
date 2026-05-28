@@ -160,7 +160,9 @@ class DexmateVega1UPyBulletRobot(SingleArmPyBulletRobot):
             self._l_ee_in_l_arm_l7.invert(),
         )
 
-        q = _vega_ik.solve_left_arm_ik(target_in_arm_center.to_matrix())
+        q = _vega_ik.solve_arm_ik(
+            target_in_arm_center.to_matrix(), _vega_ik.get_arm_ik_params("L")
+        )
         if q is None:
             return None
         return [float(v) for v in q]

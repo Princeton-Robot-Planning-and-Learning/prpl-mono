@@ -29,14 +29,25 @@ jobs:
   linting:
     runs-on: ubuntu-latest
     steps:
-      - name: Install LAPACK BLAS, and OSMESA
+      - name: Install LAPACK BLAS, OSMESA, and Eigen3
+        # Eigen3 is needed by EAIK (analytic IK for the Dexmate Vega arm),
+        # which is a sdist-only PyPI package that compiles from source.
         run: |
           sudo apt-get update
-          sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0
+          sudo apt-get install -y liblapack-dev libblas-dev libosmesa6-dev libgl1 libglx-mesa0 libeigen3-dev
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup
+      - name: Install pybullet-helpers Dexmate Vega extra (EAIK)
+        # Pulls in EAIK so pylint can resolve the Vega IK imports rather than
+        # reporting import-error. Requires the libeigen3-dev install above.
+        run: |
+          if [ -f pybullet-helpers/pyproject.toml ]; then
+            cd pybullet-helpers
+            uv pip install -e ".[dexmate-vega]"
+            cd ..
+          fi
       - name: Lint
         run: |
           uv run ./run_in_affected_packages.sh "pytest . --pylint -m pylint --pylint-rcfile=.pylintrc -p no:cacheprovider"
