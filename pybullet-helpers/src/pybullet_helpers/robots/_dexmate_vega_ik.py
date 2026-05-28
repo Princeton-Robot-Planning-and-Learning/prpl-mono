@@ -124,24 +124,6 @@ def get_arm_ik_params(prefix: str) -> ArmIKParams:
     )
 
 
-def forward_kinematics(q: np.ndarray, params: ArmIKParams) -> np.ndarray | None:
-    """EAIK forward kinematics for a length-7 joint vector: returns the 4x4 pose of the
-    arm's l7 link in arm_center frame, or None if EAIK is unavailable.
-
-    EAIK only constructs robots up to 6R, so we build it with the two redundant joints
-    locked at this q's values; fwdkin then evaluates the full 7-vector.
-    """
-    if not EAIK_AVAILABLE:
-        return None
-    q = np.asarray(q, dtype=float)
-    locked = [
-        (params.lock_a, float(q[params.lock_a])),
-        (params.lock_b, float(q[params.lock_b])),
-    ]
-    robot = _EAIK.Robot(params.H, params.P, params.R6T, locked, True)
-    return robot.fwdkin(q)
-
-
 def _best_for_lock(
     qa: float, qb: float, target_pose: np.ndarray, params: ArmIKParams
 ) -> tuple[np.ndarray | None, float]:
