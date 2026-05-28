@@ -63,5 +63,6 @@ module = [
     "pybullet.*",
     "pybullet_utils.*",
     "scipy.*",
+    "dexmate_urdf",
 ]
 ignore_missing_imports = true
