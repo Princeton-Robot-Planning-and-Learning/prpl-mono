@@ -4,32 +4,21 @@
 frame, positions every body from the tree's forward kinematics. Nothing uses
 PyBullet's articulation, so a grasped object (re-parented in the tree) renders
 correctly with no special handling.
-
-Meshes are fed to PyBullet's file importer. Formats it reads natively
-(``.obj``/``.stl``/``.dae``) are passed straight through; others (e.g. ``.glb``)
-are converted to ``.obj`` once via trimesh and cached on disk.
 """
 
 from __future__ import annotations
 
-import hashlib
-import os
-import tempfile
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any
 
 import imageio.v2 as imageio
 import numpy as np
 import pybullet as p
-import trimesh
 
 from prpl_kinematics.geometry.shapes import BoxShape, CylinderShape, MeshShape, Shape
 from prpl_kinematics.geometry.transforms import pose_to_pybullet
+from prpl_kinematics.meshes import to_pybullet_mesh
 from prpl_kinematics.tree.kinematic_tree import Configuration, KinematicTree
-
-_NATIVE_MESH_FORMATS = frozenset({".obj", ".stl", ".dae"})
-_MESH_CACHE_DIR = os.path.join(tempfile.gettempdir(), "prpl_kinematics_mesh_cache")
 
 
 @dataclass(frozen=True)
@@ -45,27 +34,6 @@ class CameraParams:
     fov: float = 60.0
     near: float = 0.1
     far: float = 100.0
-
-
-def to_pybullet_mesh(filename: str) -> str:
-    """Return a path to a PyBullet-loadable mesh for ``filename``.
-
-    Native formats are returned unchanged; others are converted to ``.obj`` via
-    trimesh and cached on disk by source path and modification time, so the
-    conversion is paid at most once per mesh.
-    """
-    extension = os.path.splitext(filename)[1].lower()
-    if extension in _NATIVE_MESH_FORMATS:
-        return filename
-    os.makedirs(_MESH_CACHE_DIR, exist_ok=True)
-    key = f"{os.path.abspath(filename)}:{os.path.getmtime(filename)}"
-    cached = os.path.join(
-        _MESH_CACHE_DIR, hashlib.md5(key.encode()).hexdigest() + ".obj"
-    )
-    if not os.path.exists(cached):
-        mesh: Any = trimesh.load(filename, force="mesh")
-        mesh.export(cached)
-    return cached
 
 
 def _create_visual_shape(physics_client_id: int, shape: Shape) -> int:
