@@ -1,2 +1,2 @@
 # Other packages in prpl-mono that are required by this one.
-# (None currently.)
+../prpl-utils

@@ -19,6 +19,15 @@ one milestone at a time, and **nothing lands without unit tests**.
 6. **Start minimal, add as we go.** Every class and method must be necessary
    *now* and covered by a unit test. Speculative abstractions live in this doc,
    not in code.
+7. **Configurations are name-keyed; joint groups are explicit.** A
+   `Configuration` is a `Mapping[str, JointValues]`, never a bare positional
+   vector whose length silently implies which joints it covers. "Does this
+   include the gripper?" is answered by which names are keys, not by counting
+   values. Flat vectors exist only *inside* a `JointSpace`, which always carries
+   its ordered name list. The gripper is just another named joint group, never a
+   special `finger_state` scalar — a lesson learned from pybullet-helpers, where
+   an ambiguous "robot joints" vector (7 vs 13) plus a bolted-on finger state
+   caused constant confusion.
 
 ## Decisions (locked)
 
@@ -77,7 +86,7 @@ meshes.py        Prepare meshes for PyBullet's file importer (convert/cache).   
 visualization.py Shape-soup renderer (FK-driven), capture, video (--make-videos). [built]
 collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.         [built]
 ik/              InverseKinematics ABC; NumericalIK (Jacobian-DLS), AnalyticIK.   [planned]
-planning/        ConfigurationSpace ABC + MotionPlanner ABC; BiRRT, OMPL.         [planned]
+planning/        JointSpace + BiRRTPlanner (over a config->bool callable); OMPL.   [built]
 robots/          Assemblies over a tree: SingleArm, Bimanual, MobileBase, MobileManip. [planned]
 manipulation/    Primitive ABC; Pick, Place with injected grasp generators.       [planned]
 ```
@@ -96,10 +105,16 @@ allowed-collision matrix) are discovered with `pairs_in_collision` and supplied
 to `ignore`. There is no `CollisionBackend` ABC yet — a planner takes a plain
 `config -> bool` callable; the ABC arrives with a second backend (e.g. FCL).
 
-The `ConfigurationSpace` abstraction (sample/distance/interpolate/is_valid) is
-what lets one planner work over joint space, an SE(2) base, or a Cartesian EE
-target uniformly. Robots are composition over a tree (named joint groups, an EE
-link, a home config), not an inheritance tower.
+A `JointSpace` is a group of actuated joints in a fixed order, supplying the
+sample/distance/interpolate operations a sampling planner needs plus conversion
+between a flat coordinate vector and a `Configuration`. `BiRRTPlanner` adapts the
+generic `BiRRT` from `prpl_utils` to it, taking a plain `config -> bool`
+collision callable (the checker satisfies this) and holding non-planned joints
+fixed at the start configuration. There is no `MotionPlanner` or
+`ConfigurationSpace` ABC yet; the abstraction (so one planner spans joint space,
+an SE(2) base, or a Cartesian EE target) arrives with the second planner (OMPL).
+Robots are composition over a tree (named joint groups, an EE link, a home
+config), not an inheritance tower.
 
 ## What is built today
 
@@ -119,11 +134,14 @@ The minimal, fully-tested core:
   `save_video`, plus the `--make-videos` test fixture.
 - `collision` — `PyBulletCollisionChecker` (`in_collision`, `pairs_in_collision`,
   `ignore`).
+- `planning` — `JointSpace` (sample/distance/interpolate, vector<->config) and
+  `BiRRTPlanner` (collision-free joint-space paths via `prpl_utils.BiRRT`).
 
 Tests cover conversions, every joint type, FK propagation, grasp re-parenting,
 snapshotting, URDF loading, FK equivalence with PyBullet on Panda, `.glb` mesh
-conversion, shape-soup rendering, and collision checking (primitives, adjacency,
-attached-object-vs-environment, and Panda rest pose).
+conversion, shape-soup rendering, collision checking (primitives, adjacency,
+attached-object-vs-environment, and Panda rest pose), and BiRRT planning (joint-
+space geometry, steering around an obstacle, and a Panda plan around a block).
 
 ## Milestones (each adds code + tests)
 
@@ -134,7 +152,12 @@ attached-object-vs-environment, and Panda rest pose).
    bodies, allowed-pair discovery); a grasped object collides for free.
 4. **IK** — `InverseKinematics` ABC; `NumericalIK` (Jacobian-DLS, folding in the
    ee-follow jitter fix), then `AnalyticIK` (EAIK/IKFast port).
-5. **Planning** — `ConfigurationSpace` + `MotionPlanner` ABC; `BiRRTPlanner`
-   (wrapping `prpl_utils`), then `OMPLPlanner`.
-6. **Robots** — port Panda, Kinova, Dexmate Vega, TidyBot as assemblies.
+5. **Planning** — `JointSpace` + `BiRRTPlanner` (wrapping `prpl_utils`) over a
+   `config -> bool` callable — done. `OMPLPlanner` next, extracting the
+   `MotionPlanner`/`ConfigurationSpace` ABCs once a second implementation exists.
+6. **Robots** — port Panda, Kinova, Dexmate Vega, TidyBot as assemblies. Each
+   exposes *explicitly named* joint groups (e.g. `"arm"`, `"gripper"`) as
+   `JointSpace`s plus an EE link and home config — never a single ambiguous "the
+   robot's joints" vector, and the gripper is a group, not a `finger_state`
+   scalar (principle 7).
 7. **Manipulation** — `Pick`/`Place` on the new stack.
