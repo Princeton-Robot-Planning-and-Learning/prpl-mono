@@ -33,7 +33,13 @@ def _seed_ompl_once(seed: int) -> None:
 
 
 class OMPLPlanner:
-    """Plans with OMPL's RRTConnect over a ConfigurationSpace."""
+    """Plans with OMPL's RRTConnect over a ConfigurationSpace.
+
+    Caveat: OMPL's RNG is process-global, so only the *first* planner's ``rng``
+    seeds it; later instances' seeds are ignored. This makes ``rng`` a partly
+    false affordance for multi-seed experiments -- to be reworked into an
+    explicit one-time ``seed_ompl`` (see the deferred design issue).
+    """
 
     def __init__(
         self,
