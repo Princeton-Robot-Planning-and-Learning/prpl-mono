@@ -10,7 +10,12 @@ from spatialmath import SE3
 from prpl_kinematics.collision import PyBulletCollisionChecker
 from prpl_kinematics.geometry.shapes import BoxShape
 from prpl_kinematics.loading import load_urdf
-from prpl_kinematics.planning import BiRRTPlanner, JointSpace
+from prpl_kinematics.planning import (
+    BiRRTPlanner,
+    ConfigurationSpace,
+    JointSpace,
+    SE2Space,
+)
 from prpl_kinematics.tree.joints import FixedJoint, PrismaticJoint, RevoluteJoint
 from prpl_kinematics.tree.kinematic_tree import Edge, KinematicTree, Node
 from prpl_kinematics.utils import get_assets_path
@@ -113,6 +118,43 @@ def test_finite_revolute_distance_is_euclidean():
     assert space.distance(np.array([3.0]), np.array([-3.0])) == pytest.approx(6.0)
 
 
+def test_joint_and_se2_spaces_conform_to_protocol():
+    """Both space types satisfy the ConfigurationSpace protocol."""
+    assert isinstance(_continuous_space(), ConfigurationSpace)
+    assert isinstance(SE2Space("base", (-1, 1), (-1, 1)), ConfigurationSpace)
+
+
+def test_se2_space_sampling_and_distance():
+    """SE2Space samples within the box and measures yaw the short way around."""
+    space = SE2Space("base", (-2.0, 2.0), (-1.0, 1.0))
+    assert space.dimension == 3
+    rng = np.random.default_rng(0)
+    for _ in range(50):
+        x, y, yaw = space.sample(rng)
+        assert -2.0 <= x <= 2.0 and -1.0 <= y <= 1.0 and -math.pi <= yaw <= math.pi
+    config = {"base": [1.0, 0.5, 0.3]}
+    assert space.to_configuration(space.to_vector(config)) == config
+    # Pure translation is Euclidean; pure yaw wraps the short way.
+    assert space.distance(
+        np.array([0, 0, 0.0]), np.array([3, 4, 0.0])
+    ) == pytest.approx(5.0)
+    assert space.distance(
+        np.array([0, 0, 3.0]), np.array([0, 0, -3.0])
+    ) == pytest.approx(2 * math.pi - 6.0)
+    assert np.allclose(space.clamp(np.array([5.0, -5.0, 0.0]))[:2], [2.0, -1.0])
+
+
+def test_se2_space_interpolates_yaw_short_way():
+    """SE2 interpolation crosses the +-pi seam in yaw."""
+    space = SE2Space("base", (-5.0, 5.0), (-5.0, 5.0))
+    yaws = [
+        w[2]
+        for w in space.interpolate(np.array([0, 0, 3.0]), np.array([0, 0, -3.0]), 0.1)
+    ]
+    assert np.all(np.abs(np.diff([3.0] + yaws)) <= 0.1 + 1e-9)
+    assert (yaws[-1] - (-3.0)) % (2 * math.pi) == pytest.approx(0.0, abs=1e-9)
+
+
 def test_interpolate_resolution_and_endpoint():
     """Interpolation steps stay within resolution and end exactly at the target."""
     space = JointSpace(_gantry_tree(), ["jx_joint", "jy_joint"])
@@ -179,7 +221,9 @@ def _panda_around_obstacle():
     return tree, arm, start, goal
 
 
-def test_birrt_plans_panda_around_obstacle(physics_client_id, make_videos):
+def test_birrt_plans_panda_around_obstacle(
+    physics_client_id, render_client_id, make_videos
+):
     """BiRRT steers the Panda's arm around a block; --make-videos renders it."""
     tree, arm, start, goal = _panda_around_obstacle()
     checker = PyBulletCollisionChecker(physics_client_id)
@@ -206,7 +250,7 @@ def test_birrt_plans_panda_around_obstacle(physics_client_id, make_videos):
     assert path is not None
     assert all(not checker.in_collision(config) for config in path)
     if make_videos:
-        renderer = PyBulletRenderer(physics_client_id)
+        renderer = PyBulletRenderer(render_client_id)
         renderer.load(tree)
         camera = CameraParams(
             target=(0.1, 0.12, 0.8), distance=1.4, yaw=180.0, pitch=-10.0

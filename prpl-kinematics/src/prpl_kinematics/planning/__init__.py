@@ -1,6 +1,8 @@
-"""Motion planning: a joint-space view of a tree and planners over it."""
+"""Motion planning: configuration spaces over a tree and planners over them."""
 
 from prpl_kinematics.planning.birrt import BiRRTPlanner
+from prpl_kinematics.planning.configuration_space import ConfigurationSpace
 from prpl_kinematics.planning.joint_space import JointSpace
+from prpl_kinematics.planning.se2_space import SE2Space
 
-__all__ = ["BiRRTPlanner", "JointSpace"]
+__all__ = ["BiRRTPlanner", "ConfigurationSpace", "JointSpace", "SE2Space"]

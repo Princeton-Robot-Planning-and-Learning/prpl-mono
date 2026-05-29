@@ -18,7 +18,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from prpl_kinematics.ik.interface import InverseKinematics
-from prpl_kinematics.planning.joint_space import JointSpace
+from prpl_kinematics.planning.configuration_space import ConfigurationSpace
 from prpl_kinematics.tree.kinematic_tree import Configuration, KinematicTree
 
 
@@ -34,7 +34,7 @@ class Robot:
 
     name: str
     tree: KinematicTree
-    groups: Mapping[str, JointSpace]
+    groups: Mapping[str, ConfigurationSpace]
     ee_frame: str
     ik: InverseKinematics
     home: Configuration
