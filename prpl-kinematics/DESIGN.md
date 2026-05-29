@@ -87,7 +87,7 @@ visualization.py Shape-soup renderer (FK-driven), capture, video (--make-videos)
 collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.         [built]
 ik/              InverseKinematics protocol; NumericalIK (DLS) + IKFastSolver.    [built]
 planning/        JointSpace + BiRRTPlanner (over a config->bool callable); OMPL.   [built]
-robots/          Assemblies over a tree: SingleArm, Bimanual, MobileBase, MobileManip. [planned]
+robots/          Robot composition (groups, EE, IK, home, ACM) + make_panda.    [built]
 manipulation/    Primitive ABC; Pick, Place with injected grasp generators.       [planned]
 ```
 
@@ -132,6 +132,20 @@ differential stepping, whereas a global solver may jump between IK branches.
 Robot-specific analytic solvers that no general method handles (e.g. the
 Dexmate Vega's non-spherical wrist) plug in as their own `InverseKinematics`.
 
+A `Robot` is composition over a tree, not an inheritance tower: it carries named
+joint groups (`{"arm": JointSpace, "gripper": JointSpace}`), an EE frame, an
+injected `InverseKinematics`, a home configuration, and the robot's intrinsic
+allowed-collision pairs (discovered from the robot alone, so scene collisions
+are never masked). A specific robot is a configured instance from a factory
+(`make_panda`); algorithms consume the capabilities they need (a joint group,
+the IK solver), so robots with extra capabilities just expose more -- a mobile
+base adds an SE(2) space, a bimanual robot a second arm group -- and stay
+swappable without a class hierarchy. The uniform planning substrate makes this
+work: `BiRRTPlanner` already consumes anything offering sample/distance/
+interpolate, so base SE(2) planning and arm joint planning are the same planner
+over different spaces. The `ConfigurationSpace` protocol and an `SE2Space` are
+extracted when the first mobile robot (TidyBot) needs them.
+
 ## What is built today
 
 The minimal, fully-tested core:
@@ -155,6 +169,8 @@ The minimal, fully-tested core:
 - `ik` — `InverseKinematics` protocol, `NumericalIK` (Jacobian-DLS differential
   solve), `IKFastSolver` (per-robot analytic solve), and
   `follow_end_effector_path` (warm-started Cartesian-path tracking).
+- `robots` — `Robot` (composition: named groups, EE, injected IK, home,
+  intrinsic ACM) and `make_panda`.
 
 Tests cover conversions, every joint type, FK propagation, grasp re-parenting,
 snapshotting, URDF loading, FK equivalence with PyBullet on Panda, `.glb` mesh
@@ -163,7 +179,9 @@ attached-object-vs-environment, and Panda rest pose), BiRRT planning (joint-
 space geometry, steering around an obstacle, and a Panda plan around a block),
 and IK (numerical reaching from a nearby seed, smooth warm-started EE-path
 following, IKFast global solves on Panda, branch selection, unreachable targets,
-and both solvers conforming to the `InverseKinematics` protocol).
+and both solvers conforming to the `InverseKinematics` protocol), and robot
+assembly (Panda groups/EE/IK/home/ACM, IK through the robot, a self-collision-
+free home, and planning the arm around an obstacle via the robot's pieces).
 
 ## Milestones (each adds code + tests)
 
@@ -179,9 +197,11 @@ and both solvers conforming to the `InverseKinematics` protocol).
 5. **Planning** — `JointSpace` + `BiRRTPlanner` (wrapping `prpl_utils`) over a
    `config -> bool` callable — done. `OMPLPlanner` next, extracting the
    `MotionPlanner`/`ConfigurationSpace` ABCs once a second implementation exists.
-6. **Robots** — port Panda, Kinova, Dexmate Vega, TidyBot as assemblies. Each
-   exposes *explicitly named* joint groups (e.g. `"arm"`, `"gripper"`) as
-   `JointSpace`s plus an EE link and home config — never a single ambiguous "the
-   robot's joints" vector, and the gripper is a group, not a `finger_state`
-   scalar (principle 7).
+6. **Robots** — `Robot` composition + `make_panda` done. Each robot exposes
+   *explicitly named* joint groups (e.g. `"arm"`, `"gripper"`) as `JointSpace`s
+   plus an EE frame, injected IK, home, and intrinsic ACM — never a single
+   ambiguous "the robot's joints" vector, and the gripper is a group, not a
+   `finger_state` scalar (principle 7). Kinova (IKFast), Dexmate Vega (bimanual,
+   bespoke EAIK IK), and TidyBot (mobile base, adding `SE2Space` + the
+   `ConfigurationSpace` protocol) follow.
 7. **Manipulation** — `Pick`/`Place` on the new stack.
