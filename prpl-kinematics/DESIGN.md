@@ -73,8 +73,9 @@ FK before running collision detection. Consequences:
 geometry/        spatialmath conversions (PyBullet xyzw) + shape specs.          [built]
 tree/            KinematicTree, Joint types, FK, attach (grasp), KinematicState.  [built]
 loading/         URDF -> KinematicTree with per-node geometry (via yourdfpy).     [built]
+meshes.py        Prepare meshes for PyBullet's file importer (convert/cache).      [built]
 visualization.py Shape-soup renderer (FK-driven), capture, video (--make-videos). [built]
-backends/        CollisionBackend ABC; PyBullet impl (shape-soup).               [planned]
+collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.         [built]
 ik/              InverseKinematics ABC; NumericalIK (Jacobian-DLS), AnalyticIK.   [planned]
 planning/        ConfigurationSpace ABC + MotionPlanner ABC; BiRRT, OMPL.         [planned]
 robots/          Assemblies over a tree: SingleArm, Bimanual, MobileBase, MobileManip. [planned]
@@ -86,8 +87,14 @@ and positions every body from the tree's own forward kinematics, so a grasped
 object (re-parented in the tree) renders with no special handling and nothing
 relies on PyBullet's articulation. Meshes go through PyBullet's file importer;
 `.obj`/`.stl`/`.dae` pass through directly and other formats (e.g. `.glb`) are
-converted to `.obj` once via trimesh and cached on disk. The same per-shape,
-FK-positioned approach is what the collision backend will use.
+converted to `.obj` once via trimesh and cached on disk. The collision checker
+uses the same per-shape, FK-positioned approach: one collision body per shape,
+positioned by FK, with non-ignored body pairs tested via `getClosestPoints`. A
+grasped object (re-parented in the tree) collides with the environment for free.
+Same-node and tree-adjacent pairs are ignored; rest-overlapping pairs (an
+allowed-collision matrix) are discovered with `pairs_in_collision` and supplied
+to `ignore`. There is no `CollisionBackend` ABC yet — a planner takes a plain
+`config -> bool` callable; the ABC arrives with a second backend (e.g. FCL).
 
 The `ConfigurationSpace` abstraction (sample/distance/interpolate/is_valid) is
 what lets one planner work over joint space, an SE(2) base, or a Cartesian EE
@@ -107,20 +114,24 @@ The minimal, fully-tested core:
 - `tree.state` — `KinematicState` snapshot of actuated joint values.
 - `geometry.shapes` — `MeshShape`/`BoxShape`/`CylinderShape`/`SphereShape`.
 - `loading.urdf` — `load_urdf` (yourdfpy → tree, with per-node geometry).
+- `meshes` — `to_pybullet_mesh` (native passthrough + cached `.glb`→`.obj`).
 - `visualization` — `PyBulletRenderer`, `render_configurations`, `capture_image`,
-  `save_video`, `to_pybullet_mesh`, plus the `--make-videos` test fixture.
+  `save_video`, plus the `--make-videos` test fixture.
+- `collision` — `PyBulletCollisionChecker` (`in_collision`, `pairs_in_collision`,
+  `ignore`).
 
 Tests cover conversions, every joint type, FK propagation, grasp re-parenting,
 snapshotting, URDF loading, FK equivalence with PyBullet on Panda, `.glb` mesh
-conversion, and shape-soup rendering.
+conversion, shape-soup rendering, and collision checking (primitives, adjacency,
+attached-object-vs-environment, and Panda rest pose).
 
 ## Milestones (each adds code + tests)
 
 1. **Geometry + tree core** — done.
 2. **Loading + visualization** — done. URDF → tree with geometry (FK validated
    against PyBullet); shape-soup FK-driven renderer + `--make-videos` pipeline.
-3. **Backends** — `CollisionBackend` ABC + shape-soup PyBullet impl (same
-   per-shape FK positioning as the renderer; adds allowed-self-collision pairs).
+3. **Collision** — done. Shape-soup `PyBulletCollisionChecker` (FK-positioned
+   bodies, allowed-pair discovery); a grasped object collides for free.
 4. **IK** — `InverseKinematics` ABC; `NumericalIK` (Jacobian-DLS, folding in the
    ee-follow jitter fix), then `AnalyticIK` (EAIK/IKFast port).
 5. **Planning** — `ConfigurationSpace` + `MotionPlanner` ABC; `BiRRTPlanner`
