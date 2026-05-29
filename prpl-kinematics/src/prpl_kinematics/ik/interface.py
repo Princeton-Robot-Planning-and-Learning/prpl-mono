@@ -28,3 +28,4 @@ class InverseKinematics(Protocol):
         group and a preference among multiple solutions (the returned one is the
         closest reachable branch).
         """
+        raise NotImplementedError

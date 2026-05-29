@@ -3,7 +3,6 @@
 import os
 
 import numpy as np
-import pybullet_data
 import pytest
 from spatialmath import SE3
 
@@ -13,6 +12,7 @@ from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.planning import BiRRTPlanner, JointSpace
 from prpl_kinematics.tree.joints import FixedJoint, PrismaticJoint
 from prpl_kinematics.tree.kinematic_tree import Edge, KinematicTree, Node
+from prpl_kinematics.utils import get_assets_path
 from prpl_kinematics.visualization import (
     CameraParams,
     PyBulletRenderer,
@@ -111,7 +111,7 @@ def test_birrt_returns_none_when_start_in_collision(physics_client_id):
 
 def _panda_around_obstacle():
     """A Panda with a block obstacle placed on the arm's straight-line sweep."""
-    path = os.path.join(pybullet_data.getDataPath(), "franka_panda", "panda.urdf")
+    path = str(get_assets_path() / "urdf" / "panda_arm_hand.urdf")
     tree = load_urdf(path)
     block = BoxShape(size=(0.12, 0.12, 0.5))
     tree.add_node(Node("obstacle", visuals=[block], collisions=[block]))

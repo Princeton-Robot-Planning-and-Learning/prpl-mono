@@ -35,7 +35,7 @@ develop = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-prpl_kinematics = ["py.typed"]
+prpl_kinematics = ["py.typed", "assets/**/*", "third_party/**/*"]
 
 [tool.black]
 line-length = 88

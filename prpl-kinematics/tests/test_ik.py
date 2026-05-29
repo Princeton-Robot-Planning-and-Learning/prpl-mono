@@ -3,7 +3,6 @@
 import os
 
 import numpy as np
-import pybullet_data
 import pytest
 from scipy.spatial.transform import Rotation
 from spatialmath import SE3
@@ -15,6 +14,7 @@ from prpl_kinematics.ik import (
 )
 from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.planning import JointSpace
+from prpl_kinematics.utils import get_assets_path
 from prpl_kinematics.visualization import (
     CameraParams,
     PyBulletRenderer,
@@ -26,7 +26,7 @@ ARM = [f"panda_joint{i}" for i in range(1, 8)]
 
 
 def _panda():
-    path = os.path.join(pybullet_data.getDataPath(), "franka_panda", "panda.urdf")
+    path = str(get_assets_path() / "urdf" / "panda_arm_hand.urdf")
     tree = load_urdf(path)
     return tree, JointSpace(tree, ARM)
 

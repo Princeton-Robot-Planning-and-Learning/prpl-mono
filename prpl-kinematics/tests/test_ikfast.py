@@ -4,15 +4,13 @@ The Panda IKFast module is compiled on demand the first time a solver is built; 
 requires a C++ toolchain and LAPACK/BLAS (provided in CI).
 """
 
-import os
-
 import numpy as np
-import pybullet_data
 from scipy.spatial.transform import Rotation
 from spatialmath import SE3
 
 from prpl_kinematics.ik import IKFastInfo, IKFastSolver, InverseKinematics
 from prpl_kinematics.loading import load_urdf
+from prpl_kinematics.utils import get_assets_path
 
 ARM = [f"panda_joint{i}" for i in range(1, 8)]
 EE = "panda_link8"
@@ -26,9 +24,7 @@ INFO = IKFastInfo(
 
 
 def _panda():
-    return load_urdf(
-        os.path.join(pybullet_data.getDataPath(), "franka_panda", "panda.urdf")
-    )
+    return load_urdf(str(get_assets_path() / "urdf" / "panda_arm_hand.urdf"))
 
 
 def _solver(tree):

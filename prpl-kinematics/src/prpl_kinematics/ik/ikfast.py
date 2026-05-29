@@ -85,6 +85,7 @@ class IKFastSolver:
         ik_joints: Sequence[str],
         rng: np.random.Generator,
         max_samples: int = 100,
+        tool_frame: str | None = None,
     ) -> None:
         self._tree = tree
         self._info = info
@@ -94,12 +95,20 @@ class IKFastSolver:
         self._rng = rng
         self._max_samples = max_samples
         self._module = _import_ikfast(info)
+        # Targets are given for ``tool_frame``; IKFast solves for ``ee_link``.
+        # Their relative transform is fixed (both past the last actuated joint).
+        tool = tool_frame if tool_frame is not None else info.ee_link
+        self._ee_from_tool = tree.relative_pose(info.ee_link, tool, {})
 
     def solve(self, target_pose: SE3, seed: Configuration) -> Configuration | None:
-        """The reachable configuration closest to ``seed``, or ``None``."""
+        """The reachable configuration closest to ``seed``, or ``None``.
+
+        ``target_pose`` is the desired world pose of the tool frame (the
+        ``ee_link`` when no ``tool_frame`` was given).
+        """
+        ee_target = target_pose * self._ee_from_tool.inv()
         base_from_ee = (
-            self._tree.forward_kinematics(self._info.base_link, seed).inv()
-            * target_pose
+            self._tree.forward_kinematics(self._info.base_link, seed).inv() * ee_target
         )
         rotation = np.asarray(base_from_ee.R).tolist()
         position = list(np.asarray(base_from_ee.t))
