@@ -14,10 +14,19 @@ dependencies = [
    "gymnasium>=0.29.1",
    "scipy==1.14.0",
    "hello-robot-stretch-urdf",
+   "dexmate-urdf>=0.8.3",
    "prpl_utils>=0.0.1",
 ]
 
 [project.optional-dependencies]
+dexmate-vega = [
+    # EAIK enables analytic-quality IK for the Dexmate Vega left arm via
+    # 2D search over EAIK's 5R closed-form solver. The pip package ships
+    # only an sdist, so installing requires a C++ compiler and the Eigen3
+    # headers (macOS: `brew install eigen`; Debian/Ubuntu: `apt install
+    # libeigen3-dev`). Without it, the robot falls back to pybullet's IK.
+    "EAIK>=1.2.1",
+]
 develop = [
     "black",
     "docformatter",
@@ -62,5 +71,7 @@ module = [
     "pybullet.*",
     "pybullet_utils.*",
     "scipy.*",
+    "dexmate_urdf",
+    "eaik.*",
 ]
 ignore_missing_imports = true

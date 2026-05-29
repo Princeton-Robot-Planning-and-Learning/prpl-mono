@@ -14,7 +14,6 @@ def hsl_to_rgba(hue: float) -> tuple[int, int, int, int]:
 
     Hue is in degrees, saturation and lightness are 50%.
     """
-
     # Convert HSL to RGB using colorsys.
     r, g, b = colorsys.hls_to_rgb(h=hue / 360.0, l=0.5, s=1.0)
 
@@ -25,7 +24,6 @@ def hsl_to_rgba(hue: float) -> tuple[int, int, int, int]:
 def get_luminance(r: int, g: int, b: int) -> float:
     """Calculate the luminance of an RGB shape fill color, to help determine text
     color."""
-
     return 0.299 * r + 0.587 * g + 0.114 * b
 
 
@@ -33,7 +31,6 @@ def visualize_detections_2d(
     img: np.ndarray, detections: List[DetectedObject2D]
 ) -> np.ndarray:
     """Create a new image with detections overlaid on the input image."""
-
     # Convert numpy array to PIL Image.
     pil_img = Image.fromarray(img)
 

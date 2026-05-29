@@ -4,6 +4,22 @@ import pybullet as p
 import pytest
 
 
+def pytest_addoption(parser):
+    """Register custom command-line options."""
+    parser.addoption(
+        "--make-videos",
+        action="store_true",
+        default=False,
+        help="Render videos for tests that support visualization.",
+    )
+
+
+@pytest.fixture(name="make_videos")
+def _make_videos(request) -> bool:
+    """Whether tests that support visualization should render a video."""
+    return bool(request.config.getoption("--make-videos"))
+
+
 @pytest.fixture(scope="function", name="physics_client_id")
 def _connect_to_pybullet():
     """Direct connect to PyBullet physics server, and disconnect when we're done.

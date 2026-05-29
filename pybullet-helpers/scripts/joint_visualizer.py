@@ -2,8 +2,15 @@
 
 import pybullet as p
 
-from pybullet_helpers.gui import create_gui_connection, run_interactive_joint_gui
-from pybullet_helpers.robots import create_pybullet_robot
+from pybullet_helpers.gui import (
+    create_gui_connection,
+    run_interactive_bimanual_joint_gui,
+    run_interactive_joint_gui,
+)
+from pybullet_helpers.robots import (
+    create_pybullet_bimanual_robot,
+    create_pybullet_robot,
+)
 
 
 def _main(robot_name: str) -> None:
@@ -11,11 +18,21 @@ def _main(robot_name: str) -> None:
     p.configureDebugVisualizer(
         p.COV_ENABLE_GUI, True, physicsClientId=physics_client_id
     )
-    robot = create_pybullet_robot(
-        robot_name,
-        physics_client_id,
-        control_mode="reset",
-    )
+    # Try the single-arm registry first, then the bimanual one.
+    try:
+        robot = create_pybullet_robot(
+            robot_name,
+            physics_client_id,
+            control_mode="reset",
+        )
+    except NotImplementedError:
+        bimanual_robot = create_pybullet_bimanual_robot(
+            robot_name,
+            physics_client_id,
+            control_mode="reset",
+        )
+        run_interactive_bimanual_joint_gui(bimanual_robot)
+        return
     run_interactive_joint_gui(robot)
 
 
