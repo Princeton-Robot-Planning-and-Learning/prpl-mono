@@ -3,7 +3,12 @@
 from typing import Type
 
 from pybullet_helpers.robots.assistive_human import AssistiveHumanPyBulletRobot
-from pybullet_helpers.robots.dexmate_vega import DexmateVega1UPyBulletRobot
+from pybullet_helpers.robots.bimanual import BimanualPyBulletRobot
+from pybullet_helpers.robots.dexmate_vega import (
+    DexmateVega1ULeftArmPyBulletRobot,
+    DexmateVega1UPyBulletRobot,
+    DexmateVega1URightArmPyBulletRobot,
+)
 from pybullet_helpers.robots.fetch import FetchPyBulletRobot
 from pybullet_helpers.robots.human import (
     LeftArmHumanPyBulletRobot,
@@ -36,11 +41,16 @@ _BUILT_IN_ROBOT_CLASSES: list[Type[SingleArmPyBulletRobot]] = [
     RightLegHumanPyBulletRobot,
     LeftLegHumanPyBulletRobot,
     SpotPyBulletRobot,
-    DexmateVega1UPyBulletRobot,
+    DexmateVega1ULeftArmPyBulletRobot,
+    DexmateVega1URightArmPyBulletRobot,
 ]
 
 _BUILT_IN_MOBILE_ROBOT_CLASSES: list[Type[SingleArmPyBulletMobileManipulator]] = [
     TidyBotKinova,
+]
+
+_BUILT_IN_BIMANUAL_ROBOT_CLASSES: list[Type[BimanualPyBulletRobot]] = [
+    DexmateVega1UPyBulletRobot,
 ]
 
 
@@ -59,6 +69,16 @@ def create_pybullet_mobile_robot(
 ) -> SingleArmPyBulletMobileManipulator:
     """Create a mobile robot in pybullet with its name."""
     for cls in _BUILT_IN_MOBILE_ROBOT_CLASSES:
+        if robot_name == cls.get_name():
+            return cls(physics_client_id, *args, **kwargs)
+    raise NotImplementedError(f"Unknown robot {robot_name}")
+
+
+def create_pybullet_bimanual_robot(
+    robot_name: str, physics_client_id: int, *args, **kwargs
+) -> BimanualPyBulletRobot:
+    """Create a bimanual robot in pybullet from its name."""
+    for cls in _BUILT_IN_BIMANUAL_ROBOT_CLASSES:
         if robot_name == cls.get_name():
             return cls(physics_client_id, *args, **kwargs)
     raise NotImplementedError(f"Unknown robot {robot_name}")

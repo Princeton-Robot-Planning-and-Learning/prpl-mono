@@ -11,6 +11,7 @@ from pybullet_helpers.geometry import Pose, multiply_poses
 from pybullet_helpers.joint import JointPositions
 from pybullet_helpers.link import get_link_pose, get_relative_link_pose
 from pybullet_helpers.robots import _dexmate_vega_ik as _vega_ik
+from pybullet_helpers.robots.bimanual import BimanualPyBulletRobot
 from pybullet_helpers.robots.single_arm import FingeredSingleArmPyBulletRobot
 
 _EAIK_FALLBACK_WARNED = False
@@ -22,23 +23,17 @@ _EAIK_INSTALL_HINT = (
     "eigen` on macOS or `apt install libeigen3-dev` on Debian/Ubuntu)."
 )
 
-_LEFT_ARM_JOINT_NAMES = [
-    "L_arm_j1",
-    "L_arm_j2",
-    "L_arm_j3",
-    "L_arm_j4",
-    "L_arm_j5",
-    "L_arm_j6",
-    "L_arm_j7",
-]
-
 # The parallel-jaw gripper has two revolute jaw joints; the URDF mimics j2 off j1,
 # but PyBullet does not enforce <mimic>, so we drive both to the same value.
-_LEFT_GRIPPER_JOINT_NAMES = ["L_gripper_j1", "L_gripper_j2"]
 _GRIPPER_OPEN = 0.0
 _GRIPPER_CLOSED = 0.7854
 
 _PYBULLET_MATERIAL_NAME = "dexmate_vega_default"
+
+# vega_1u_gripper.urdf ships with the DexGripper D (forked fingertips). The DexGripper S
+# is kinematically identical (same mount, joints, and limits) and differs only in its
+# meshes, so we swap the mesh paths to use it.
+_GRIPPER_MESH_SUBSTITUTIONS = {"hands/dexd_gripper/": "hands/dexs_gripper/"}
 
 
 def prepare_pybullet_urdf(
@@ -90,62 +85,55 @@ def prepare_pybullet_urdf(
     return new_path
 
 
-class DexmateVega1UPyBulletRobot(FingeredSingleArmPyBulletRobot[float]):
-    """Dexmate Vega 1U humanoid; the left arm with its parallel-jaw gripper is exposed
-    as the actuated arm.
+class _DexmateVegaArm(FingeredSingleArmPyBulletRobot[float]):
+    """One arm (with its parallel-jaw gripper) of the Dexmate Vega 1U humanoid.
 
-    arm_joints are the 7 left-arm joints (L_arm_j1..L_arm_j7) plus the 2 gripper jaw
-    joints. The prismatic Lift and the torso_flip revolute joint are not actuated by
-    this wrapper; they remain at whatever position pybullet's URDF load left them in
-    (zero by default). This matches the standard humanoid pattern of treating the torso
-    as a fixed offset for arm IK.
+    Concrete subclasses set `_side` to "L" or "R". arm_joints are the 7 arm joints
+    ({side}_arm_j1..j7) plus the 2 gripper jaw joints. The prismatic Lift and the
+    torso_flip revolute joint are not part of this arm; they are owned by the bimanual
+    robot (or left at the URDF-load default for the standalone single-arm robot). This
+    matches the standard humanoid pattern of treating the torso as a fixed offset for
+    arm IK.
 
     When the optional `eaik` package is installed, custom_inverse_kinematics runs a
-    2D-search-with-refinement on top of EAIK's 5R closed-form solver, locking L_arm_j4
-    (elbow) and L_arm_j7 (wrist roll) per inner call. See _dexmate_vega_ik.py for
-    details. Otherwise the framework's pybullet IK is used.
+    2D-search-with-refinement on top of EAIK's 5R closed-form solver, locking j4 (elbow)
+    and j7 (wrist roll) per inner call. See _dexmate_vega_ik.py for details. Otherwise
+    the framework's pybullet IK is used.
     """
 
-    @classmethod
-    def get_name(cls) -> str:
-        return "dexmate-vega-1u"
+    _side: str  # "L" or "R"; set by concrete subclasses.
 
     @property
     def default_urdf_path(self) -> Path:
-        # vega_1u_gripper.urdf ships with the DexGripper D (forked fingertips). The
-        # DexGripper S is kinematically identical (same mount, joints, and limits) and
-        # differs only in its meshes, so we swap the mesh paths to use it.
         return prepare_pybullet_urdf(
             get_robot_path("humanoid", "vega_1u"),
             "vega_1u_gripper.urdf",
-            mesh_substitutions={"hands/dexd_gripper/": "hands/dexs_gripper/"},
+            mesh_substitutions=_GRIPPER_MESH_SUBSTITUTIONS,
         )
 
     @cached_property
     def arm_joints(self) -> list[int]:
-        # The 7 left-arm joints followed by the gripper jaw joints. Lift and torso_flip
-        # are excluded: this matches the kinematic chain EAIK solves for, and the
-        # standard humanoid pattern where torso/base motions are planned separately.
-        arm = [self.joint_from_name(n) for n in _LEFT_ARM_JOINT_NAMES]
+        # The 7 arm joints followed by the gripper jaw joints. Lift and torso_flip are
+        # excluded: this matches the kinematic chain EAIK solves for, and the standard
+        # humanoid pattern where torso/base motions are planned separately.
+        arm = [self.joint_from_name(f"{self._side}_arm_j{i}") for i in range(1, 8)]
         return arm + self.finger_ids
 
     @property
     def default_home_joint_positions(self) -> JointPositions:
-        return [0.0] * len(_LEFT_ARM_JOINT_NAMES) + self.finger_state_to_joints(
-            self.open_fingers_state
-        )
+        return [0.0] * 7 + self.finger_state_to_joints(self.open_fingers_state)
 
     @property
     def end_effector_name(self) -> str:
-        return "L_ee_j0"
+        return f"{self._side}_ee_j0"
 
     @property
     def tool_link_name(self) -> str:
-        return "L_ee"
+        return f"{self._side}_ee"
 
     @property
     def finger_joint_names(self) -> list[str]:
-        return _LEFT_GRIPPER_JOINT_NAMES
+        return [f"{self._side}_gripper_j1", f"{self._side}_gripper_j2"]
 
     @property
     def open_fingers_state(self) -> float:
@@ -177,16 +165,16 @@ class DexmateVega1UPyBulletRobot(FingeredSingleArmPyBulletRobot[float]):
         return self.link_from_name("arm_center")
 
     @cached_property
-    def _l_arm_l7_link_id(self) -> int:
-        return self.link_from_name("L_arm_l7")
+    def _arm_l7_link_id(self) -> int:
+        return self.link_from_name(f"{self._side}_arm_l7")
 
     @cached_property
-    def _l_ee_in_l_arm_l7(self) -> Pose:
-        # Fixed transform from L_arm_l7 to L_ee (computed once via pybullet).
+    def _ee_in_arm_l7(self) -> Pose:
+        # Fixed transform from {side}_arm_l7 to {side}_ee (computed once via pybullet).
         return get_relative_link_pose(
             self.robot_id,
             self.tool_link_id,
-            self._l_arm_l7_link_id,
+            self._arm_l7_link_id,
             self.physics_client_id,
         )
 
@@ -200,22 +188,107 @@ class DexmateVega1UPyBulletRobot(FingeredSingleArmPyBulletRobot[float]):
         if not _vega_ik.EAIK_AVAILABLE:
             return None
 
-        # Convert the world-frame L_ee target into a L_arm_l7 target expressed
-        # in arm_center's frame, which is what the EAIK solver expects.
+        # Convert the world-frame ee target into an arm_l7 target expressed in
+        # arm_center's frame, which is what the EAIK solver expects.
         world_from_arm_center = get_link_pose(
             self.robot_id, self._arm_center_link_id, self.physics_client_id
         )
         target_in_arm_center = multiply_poses(
             world_from_arm_center.invert(),
             end_effector_pose,
-            self._l_ee_in_l_arm_l7.invert(),
+            self._ee_in_arm_l7.invert(),
         )
 
         q = _vega_ik.solve_arm_ik(
-            target_in_arm_center.to_matrix(), _vega_ik.get_arm_ik_params("L")
+            target_in_arm_center.to_matrix(), _vega_ik.get_arm_ik_params(self._side)
         )
         if q is None:
             return None
         # The arm solution covers the 7 arm joints; keep the fingers where they are.
         current_fingers = self.finger_state_to_joints(self.get_finger_state())
         return [float(v) for v in q] + current_fingers
+
+
+class DexmateVega1ULeftArmPyBulletRobot(_DexmateVegaArm):
+    """The left arm (with gripper) of the Dexmate Vega 1U.
+
+    The left-arm view of the bimanual robot, but usable standalone.
+    """
+
+    _side = "L"
+
+    @classmethod
+    def get_name(cls) -> str:
+        return "dexmate-vega-1u-left-arm"
+
+
+class DexmateVega1URightArmPyBulletRobot(_DexmateVegaArm):
+    """The right arm (with gripper) of the Dexmate Vega 1U.
+
+    The right-arm view of the bimanual robot, but usable standalone.
+    """
+
+    _side = "R"
+
+    @classmethod
+    def get_name(cls) -> str:
+        return "dexmate-vega-1u-right-arm"
+
+
+class DexmateVega1UPyBulletRobot(BimanualPyBulletRobot):
+    """The full bimanual Dexmate Vega 1U humanoid.
+
+    Exposes left_arm and right_arm (each a gripper-equipped SingleArmPyBulletRobot view
+    bound to one shared body), and owns the shared torso (Lift + torso_flip) and the
+    3-DOF head.
+    """
+
+    @classmethod
+    def get_name(cls) -> str:
+        return "dexmate-vega-1u"
+
+    @property
+    def urdf_path(self) -> Path:
+        return prepare_pybullet_urdf(
+            get_robot_path("humanoid", "vega_1u"),
+            "vega_1u_gripper.urdf",
+            mesh_substitutions=_GRIPPER_MESH_SUBSTITUTIONS,
+        )
+
+    @property
+    def torso_joint_names(self) -> list[str]:
+        return ["Lift", "torso_flip"]
+
+    @property
+    def head_joint_names(self) -> list[str]:
+        return ["head_j1", "head_j2", "head_j3"]
+
+    @classmethod
+    def create_left_arm(
+        cls,
+        physics_client_id: int,
+        robot_id: int,
+        base_pose: Pose,
+        control_mode: str,
+    ) -> FingeredSingleArmPyBulletRobot:
+        return DexmateVega1ULeftArmPyBulletRobot(
+            physics_client_id,
+            base_pose=base_pose,
+            control_mode=control_mode,
+            robot_id=robot_id,
+        )
+
+    @classmethod
+    def create_right_arm(
+        cls,
+        physics_client_id: int,
+        robot_id: int,
+        base_pose: Pose,
+        control_mode: str,
+    ) -> FingeredSingleArmPyBulletRobot:
+        return DexmateVega1URightArmPyBulletRobot(
+            physics_client_id,
+            base_pose=base_pose,
+            control_mode=control_mode,
+            robot_id=robot_id,
+        )
