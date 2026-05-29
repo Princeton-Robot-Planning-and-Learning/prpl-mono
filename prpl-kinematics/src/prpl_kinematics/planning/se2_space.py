@@ -43,6 +43,10 @@ class SE2Space:
         """A uniform pose within the workspace box, yaw over [-pi, pi]."""
         return rng.uniform(self._lower, self._upper)
 
+    def bounds(self) -> tuple[np.ndarray, np.ndarray]:
+        """The workspace box for x/y and ``[-pi, pi]`` for yaw."""
+        return self._lower.copy(), self._upper.copy()
+
     def distance(self, a: np.ndarray, b: np.ndarray) -> float:
         """Translation distance plus yaw-weighted shortest angular distance."""
         return float(np.linalg.norm(self._delta(a, b)))

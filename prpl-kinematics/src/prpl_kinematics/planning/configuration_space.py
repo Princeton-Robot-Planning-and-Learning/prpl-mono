@@ -10,7 +10,7 @@ so one planner spans joint space (``JointSpace``), an SE(2) mobile base
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from typing import Protocol, runtime_checkable
 
 import numpy as np
@@ -31,6 +31,14 @@ class ConfigurationSpace(Protocol):
         """A uniform random coordinate vector within the space."""
         raise NotImplementedError
 
+    def bounds(self) -> tuple[np.ndarray, np.ndarray]:
+        """Finite ``(lower, upper)`` sampling bounds per coordinate.
+
+        Unbounded coordinates (continuous joints) report ``[-pi, pi]`` so a
+        planner that needs explicit bounds has a finite range to sample.
+        """
+        raise NotImplementedError
+
     def distance(self, a: np.ndarray, b: np.ndarray) -> float:
         """Distance between two coordinate vectors."""
         raise NotImplementedError
@@ -45,6 +53,6 @@ class ConfigurationSpace(Protocol):
         """Split a coordinate vector into per-joint values."""
         raise NotImplementedError
 
-    def to_vector(self, config: dict[str, JointValues]) -> np.ndarray:
+    def to_vector(self, config: Mapping[str, JointValues]) -> np.ndarray:
         """Concatenate this space's joint values from ``config`` into a vector."""
         raise NotImplementedError
