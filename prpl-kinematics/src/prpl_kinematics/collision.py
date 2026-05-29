@@ -14,7 +14,7 @@ discovered with :meth:`PyBulletCollisionChecker.pairs_in_collision` and passed t
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 
 import pybullet as p
 
@@ -91,11 +91,24 @@ class PyBulletCollisionChecker:
         for pair in pairs:
             self._ignored.add(frozenset(pair))
 
-    def in_collision(self, config: Configuration, max_distance: float = 0.0) -> bool:
-        """Whether any non-ignored shape pair is within ``max_distance``."""
+    def in_collision(
+        self,
+        config: Configuration,
+        max_distance: float = 0.0,
+        ignored_nodes: Collection[str] = (),
+    ) -> bool:
+        """Whether any non-ignored shape pair is within ``max_distance``.
+
+        ``ignored_nodes`` excludes any pair touching one of those nodes -- used
+        during a grasp to disregard the target object and its support surface.
+        """
         self._position(config)
         for index, (body_a, node_a) in enumerate(self._bodies):
+            if node_a in ignored_nodes:
+                continue
             for body_b, node_b in self._bodies[index + 1 :]:
+                if node_b in ignored_nodes:
+                    continue
                 if node_a == node_b or frozenset({node_a, node_b}) in self._ignored:
                     continue
                 if self._closest_points(body_a, body_b, max_distance):

@@ -74,6 +74,23 @@ class KinematicTree:
         """All frames, keyed by name."""
         return self._nodes
 
+    @property
+    def edges(self) -> Mapping[str, Edge]:
+        """Incoming edges, keyed by child name (the root has none)."""
+        return self._edges
+
+    def set_edge(self, edge: Edge) -> None:
+        """Set ``edge.child``'s incoming edge, replacing any existing one.
+
+        Unlike :meth:`add_edge` (which forbids replacement), this re-parents a
+        node to an arbitrary joint -- used to restore a :class:`KinematicState`.
+        """
+        if edge.parent not in self._nodes:
+            raise ValueError(f"Unknown parent: {edge.parent}")
+        if edge.child not in self._nodes:
+            raise ValueError(f"Unknown child: {edge.child}")
+        self._edges[edge.child] = edge
+
     def add_node(self, node: Node) -> None:
         """Register a frame.
 

@@ -88,7 +88,7 @@ collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.      
 ik/              InverseKinematics protocol; NumericalIK (DLS) + IKFastSolver.    [built]
 planning/        ConfigurationSpace + MotionPlanner; BiRRTPlanner, OMPLPlanner.  [built]
 robots/          Robot composition + Panda, Kinova, TidyBot, Vega (bimanual).    [built]
-manipulation/    Primitive ABC; Pick, Place with injected grasp generators.       [planned]
+manipulation.py  Primitive protocol; Pick, Place (grasp = a tree edge).           [built]
 ```
 
 The renderer is shape-soup: it creates one PyBullet visual body per node shape
