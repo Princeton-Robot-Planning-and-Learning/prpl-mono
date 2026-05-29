@@ -52,6 +52,10 @@ class JointSpace:
         """Euclidean distance between two coordinate vectors."""
         return float(np.linalg.norm(np.subtract(a, b)))
 
+    def clamp(self, vector: np.ndarray) -> np.ndarray:
+        """Clip a coordinate vector to the joint bounds."""
+        return np.clip(vector, self._lower, self._upper)
+
     def interpolate(
         self, a: np.ndarray, b: np.ndarray, resolution: float
     ) -> Iterator[np.ndarray]:
