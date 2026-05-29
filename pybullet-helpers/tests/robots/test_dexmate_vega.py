@@ -12,8 +12,10 @@ from pybullet_helpers.camera import capture_image
 from pybullet_helpers.geometry import Pose, multiply_poses
 from pybullet_helpers.inverse_kinematics import (
     InverseKinematicsError,
+    check_self_collisions,
     inverse_kinematics,
 )
+from pybullet_helpers.joint import get_joint_infos, get_joints
 from pybullet_helpers.manipulation import get_kinematic_plan_to_pick_object
 from pybullet_helpers.robots import _dexmate_vega_ik as _vega_ik
 from pybullet_helpers.robots import dexmate_vega
@@ -431,3 +433,95 @@ def test_dexmate_vega_1u_bimanual_pick_cubes(physics_client_id, make_videos):
 
     if make_videos:
         iio.mimsave("dexmate_vega_1u_bimanual_pick.mp4", frames, fps=20)
+
+
+def test_dexmate_vega_1u_self_collision(physics_client_id):
+    """The bimanual robot is self-collision-free at home but flags a config where the
+    two arms cross into each other."""
+    robot = DexmateVega1UPyBulletRobot(physics_client_id)
+    # Each arm checks the pairs that involve its own links (vs the other arm + head).
+    assert robot.left_arm.self_collision_link_names
+    assert robot.right_arm.self_collision_link_names
+
+    assert not check_self_collisions(robot.left_arm)
+    assert not check_self_collisions(robot.right_arm)
+
+    # Drive both arms up and inward so they cross in front of the torso.
+    robot.left_arm.set_joints([0.0, 1.0, 0.0, -2.5, 0.0, 0.0, 0.0, 0.0, 0.0])
+    robot.right_arm.set_joints([0.0, -1.0, 0.0, -2.5, 0.0, 0.0, 0.0, 0.0, 0.0])
+    assert check_self_collisions(robot.left_arm)
+    assert check_self_collisions(robot.right_arm)
+
+
+def test_dexmate_vega_1u_self_collision_pairs_cover_sampled(physics_client_id):
+    """Guard against URDF drift: the frozen self-collision pair list must cover the
+    cross-group pairs that sampling finds (with a tighter margin than was used to
+    freeze the list)."""
+    robot = DexmateVega1UPyBulletRobot(physics_client_id)
+    rid = robot.robot_id
+    infos = get_joint_infos(rid, get_joints(rid, physics_client_id), physics_client_id)
+    name_of = {info.jointIndex: info.linkName for info in infos}
+
+    def group(link_name):
+        if link_name.startswith(("L_arm", "L_ee", "L_gripper")):
+            return "L"
+        if link_name.startswith(("R_arm", "R_ee", "R_gripper")):
+            return "R"
+        if link_name.startswith("head") or "zed" in link_name:
+            return "head"
+        if link_name in ("lift_link", "arm_center", "torso_flip_link"):
+            return "torso"
+        return "other"
+
+    movable = [i for i, n in name_of.items() if group(n) != "other"]
+    cross = {
+        frozenset(("L", "R")),
+        frozenset(("L", "head")),
+        frozenset(("R", "head")),
+        frozenset(("L", "torso")),
+        frozenset(("R", "torso")),
+    }
+
+    def touching_now(margin):
+        out = set()
+        for idx, a in enumerate(movable):
+            for b in movable[idx + 1 :]:
+                if p.getClosestPoints(
+                    rid,
+                    rid,
+                    distance=margin,
+                    linkIndexA=a,
+                    linkIndexB=b,
+                    physicsClientId=physics_client_id,
+                ):
+                    out.add((a, b))
+        return out
+
+    home_touching = touching_now(0.005)
+    # pylint: disable-next=protected-access
+    frozen = {frozenset(pair) for pair in dexmate_vega._SELF_COLLISION_LINK_PAIRS}
+
+    left, right = robot.left_arm, robot.right_arm
+    l_lo, l_hi = np.array(left.joint_lower_limits), np.array(left.joint_upper_limits)
+    r_lo, r_hi = np.array(right.joint_lower_limits), np.array(right.joint_upper_limits)
+    rng = np.random.default_rng(1)
+    for _ in range(1500):
+        left.set_joints(rng.uniform(l_lo, l_hi).tolist())
+        right.set_joints(rng.uniform(r_lo, r_hi).tolist())
+        robot.set_torso_joints([rng.uniform(0.0, 0.2), rng.uniform(-0.5, 0.5)])
+        for idx, a in enumerate(movable):
+            for b in movable[idx + 1 :]:
+                if (a, b) in home_touching:
+                    continue
+                if frozenset((group(name_of[a]), group(name_of[b]))) not in cross:
+                    continue
+                if p.getClosestPoints(
+                    rid,
+                    rid,
+                    distance=0.01,
+                    linkIndexA=a,
+                    linkIndexB=b,
+                    physicsClientId=physics_client_id,
+                ):
+                    pair = frozenset((name_of[a], name_of[b]))
+                    assert pair in frozen, f"unfrozen colliding pair: {sorted(pair)}"
