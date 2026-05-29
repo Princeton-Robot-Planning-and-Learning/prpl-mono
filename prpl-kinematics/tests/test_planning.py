@@ -61,6 +61,7 @@ def test_joint_space_geometry():
     assert space.distance(np.array([0.0, 0.0]), np.array([3.0, 4.0])) == pytest.approx(
         5.0
     )
+    assert np.allclose(space.clamp(np.array([-3.0, 7.0])), [-1.0, 5.0])
 
 
 def test_interpolate_resolution_and_endpoint():

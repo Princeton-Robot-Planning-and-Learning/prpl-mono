@@ -85,7 +85,7 @@ loading/         URDF -> KinematicTree with per-node geometry (via yourdfpy).   
 meshes.py        Prepare meshes for PyBullet's file importer (convert/cache).      [built]
 visualization.py Shape-soup renderer (FK-driven), capture, video (--make-videos). [built]
 collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.         [built]
-ik/              InverseKinematics ABC; NumericalIK (Jacobian-DLS), AnalyticIK.   [planned]
+ik/              NumericalIK (Jacobian-DLS) + EE-path follower; AnalyticIK next.  [built]
 planning/        JointSpace + BiRRTPlanner (over a config->bool callable); OMPL.   [built]
 robots/          Assemblies over a tree: SingleArm, Bimanual, MobileBase, MobileManip. [planned]
 manipulation/    Primitive ABC; Pick, Place with injected grasp generators.       [planned]
@@ -116,6 +116,15 @@ an SE(2) base, or a Cartesian EE target) arrives with the second planner (OMPL).
 Robots are composition over a tree (named joint groups, an EE link, a home
 config), not an inheritance tower.
 
+`NumericalIK` reuses the same `JointSpace` to solve for a configuration whose
+EE frame reaches a target pose, via damped-least-squares differential steps
+(`dq = J^T (J J^T + lambda^2 I)^-1 e`) with a finite-difference Jacobian over
+the tree's FK. It is a local solver (converges from a seed in the basin);
+`follow_end_effector_path` chains solves warm-started from the previous one so a
+redundant arm tracks a Cartesian path on one smooth IK branch. Global, seedless
+IK is the job of a later `AnalyticIK`, at which point an `InverseKinematics` ABC
+is extracted.
+
 ## What is built today
 
 The minimal, fully-tested core:
@@ -134,14 +143,18 @@ The minimal, fully-tested core:
   `save_video`, plus the `--make-videos` test fixture.
 - `collision` — `PyBulletCollisionChecker` (`in_collision`, `pairs_in_collision`,
   `ignore`).
-- `planning` — `JointSpace` (sample/distance/interpolate, vector<->config) and
-  `BiRRTPlanner` (collision-free joint-space paths via `prpl_utils.BiRRT`).
+- `planning` — `JointSpace` (sample/distance/interpolate/clamp, vector<->config)
+  and `BiRRTPlanner` (collision-free joint-space paths via `prpl_utils.BiRRT`).
+- `ik` — `NumericalIK` (Jacobian-DLS differential solve) and
+  `follow_end_effector_path` (warm-started Cartesian-path tracking).
 
 Tests cover conversions, every joint type, FK propagation, grasp re-parenting,
 snapshotting, URDF loading, FK equivalence with PyBullet on Panda, `.glb` mesh
 conversion, shape-soup rendering, collision checking (primitives, adjacency,
-attached-object-vs-environment, and Panda rest pose), and BiRRT planning (joint-
-space geometry, steering around an obstacle, and a Panda plan around a block).
+attached-object-vs-environment, and Panda rest pose), BiRRT planning (joint-
+space geometry, steering around an obstacle, and a Panda plan around a block),
+and IK (reaching a pose from a nearby seed, unreachable targets, and smooth
+warm-started EE-path following).
 
 ## Milestones (each adds code + tests)
 
@@ -150,8 +163,9 @@ space geometry, steering around an obstacle, and a Panda plan around a block).
    against PyBullet); shape-soup FK-driven renderer + `--make-videos` pipeline.
 3. **Collision** — done. Shape-soup `PyBulletCollisionChecker` (FK-positioned
    bodies, allowed-pair discovery); a grasped object collides for free.
-4. **IK** — `InverseKinematics` ABC; `NumericalIK` (Jacobian-DLS, folding in the
-   ee-follow jitter fix), then `AnalyticIK` (EAIK/IKFast port).
+4. **IK** — `NumericalIK` (Jacobian-DLS) + `follow_end_effector_path` (the
+   warm-started ee-follow jitter fix) — done. `AnalyticIK` (EAIK/IKFast port)
+   next, extracting an `InverseKinematics` ABC once it lands.
 5. **Planning** — `JointSpace` + `BiRRTPlanner` (wrapping `prpl_utils`) over a
    `config -> bool` callable — done. `OMPLPlanner` next, extracting the
    `MotionPlanner`/`ConfigurationSpace` ABCs once a second implementation exists.
