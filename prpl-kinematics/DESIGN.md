@@ -87,7 +87,7 @@ visualization.py Shape-soup renderer (FK-driven), capture, video (--make-videos)
 collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.         [built]
 ik/              InverseKinematics protocol; NumericalIK (DLS) + IKFastSolver.    [built]
 planning/        ConfigurationSpace (JointSpace, SE2Space) + BiRRTPlanner; OMPL.  [built]
-robots/          Robot composition + Panda, Kinova, TidyBot (mobile manip).      [built]
+robots/          Robot composition + Panda, Kinova, TidyBot, Vega (bimanual).    [built]
 manipulation/    Primitive ABC; Pick, Place with injected grasp generators.       [planned]
 ```
 
@@ -120,10 +120,14 @@ wraps like a continuous joint. `BiRRTPlanner` adapts the generic `BiRRT` from
 collision callable (the checker satisfies this) and holding non-planned joints
 fixed at the start configuration -- so the same planner does joint-space arm
 planning and SE(2) base planning. There is no `MotionPlanner` ABC yet; it
-arrives with the second planner (OMPL). Robots are composition over a tree
-(named groups -- a `JointSpace` arm, an `SE2Space` base -- an EE link, a home
-config), not an inheritance tower; a mobile base is a `PlanarJoint` edge from
-the root, so the whole mobile manipulator is one tree.
+arrives with the second planner (OMPL). Robots are composition over a tree:
+named groups (a `JointSpace` arm, an `SE2Space` base) plus `Manipulator`s, each
+pairing an EE frame and an IK solver with a group. A single-arm robot has one
+manipulator; a bimanual robot (Vega) has two, each with its own IK; a mobile
+base is just an extra group. No inheritance tower -- a mobile base is a
+`PlanarJoint` edge from the root, so the whole mobile manipulator is one tree,
+and robot-specific IK (Vega's EAIK joint-locking solver) plugs in via the
+`InverseKinematics` protocol.
 
 IK is structured so that robot-specific solvers are first-class: the
 `InverseKinematics` protocol is just `solve(target_pose, seed) -> Configuration
@@ -179,8 +183,9 @@ The minimal, fully-tested core:
   solve), `IKFastSolver` (per-robot analytic solve), and
   `follow_end_effector_path` (warm-started Cartesian-path tracking).
 - `robots` — `Robot` (composition: named groups, EE, injected IK, home,
-  intrinsic ACM) with `make_panda`, `make_kinova` (Gen3, continuous joints), and
-  `make_tidybot` (Gen3 on an SE(2) mobile base).
+  intrinsic ACM) with `make_panda`, `make_kinova` (Gen3, continuous joints),
+  `make_tidybot` (Gen3 on an SE(2) mobile base), and `make_vega` (bimanual, two
+  manipulators with a bespoke EAIK `VegaArmIK`).
 
 Tests cover conversions, every joint type, FK propagation, grasp re-parenting,
 snapshotting, URDF loading, FK equivalence with PyBullet on Panda, `.glb` mesh
@@ -193,8 +198,9 @@ unreachable targets, and both solvers conforming to the `InverseKinematics`
 protocol), SE(2) spaces (workspace-bounded sampling, yaw wrap-around,
 interpolation), and robot assembly (Panda/Kinova/TidyBot groups/EE/IK/home/ACM,
 IK through the robot, a self-collision-free home, the Gen3's continuous joints,
-planning the arm around an obstacle, and driving TidyBot's SE(2) base around a
-floor pillar -- the same `BiRRTPlanner` over base and arm groups).
+planning the arm around an obstacle, driving TidyBot's SE(2) base around a
+floor pillar with the same `BiRRTPlanner`, and Vega's two arms each solving IK
+through their own manipulator).
 
 ## Milestones (each adds code + tests)
 
@@ -211,11 +217,14 @@ floor pillar -- the same `BiRRTPlanner` over base and arm groups).
    `SE2Space`, and `BiRRTPlanner` (wrapping `prpl_utils`) over either via a
    `config -> bool` callable. `OMPLPlanner` next, extracting a `MotionPlanner`
    ABC once a second planner exists.
-6. **Robots** — `make_panda`, `make_kinova` (Gen3), and `make_tidybot` (Gen3 on
-   an SE(2) mobile base) done. Each robot exposes *explicitly named* groups
-   (e.g. `"arm"`, `"base"`) plus an EE frame, injected IK, home, and intrinsic
-   ACM — never a single ambiguous "the robot's joints" vector, and the gripper
-   is a group, not a `finger_state` scalar (principle 7). TidyBot added
-   `SE2Space` and the `ConfigurationSpace` protocol. Dexmate Vega (bimanual,
-   bespoke EAIK IK) follows.
-7. **Manipulation** — `Pick`/`Place` on the new stack.
+6. **Robots** — done. `make_panda`, `make_kinova` (Gen3), `make_tidybot` (Gen3
+   on an SE(2) mobile base), and `make_vega` (bimanual). Each robot exposes
+   *explicitly named* groups (e.g. `"arm"`, `"base"`, `"left_arm"`) plus
+   `Manipulator`s (EE frame + IK), home, and intrinsic ACM — never a single
+   ambiguous "the robot's joints" vector, and the gripper is a group, not a
+   `finger_state` scalar (principle 7). TidyBot added `SE2Space` and the
+   `ConfigurationSpace` protocol; Vega added the `Manipulator` mapping (two
+   arms) and a bespoke EAIK solver via the `InverseKinematics` protocol.
+7. **OMPL** — second `MotionPlanner` (wrapping `ompl.geometric`) over the
+   existing `ConfigurationSpace`, extracting a `MotionPlanner` ABC.
+8. **Manipulation** — `Pick`/`Place` on the new stack.

@@ -19,7 +19,7 @@ from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.planning.configuration_space import ConfigurationSpace
 from prpl_kinematics.planning.joint_space import JointSpace
 from prpl_kinematics.planning.se2_space import SE2Space
-from prpl_kinematics.robots.robot import Robot
+from prpl_kinematics.robots.robot import Manipulator, Robot
 from prpl_kinematics.tree.joints import PlanarJoint
 from prpl_kinematics.tree.kinematic_tree import Configuration, Edge, Node
 from prpl_kinematics.utils import get_assets_path
@@ -77,8 +77,7 @@ def make_tidybot(
         name="tidybot",
         tree=tree,
         groups=groups,
-        ee_frame=_EE_FRAME,
-        ik=ik,
+        manipulators={"arm": Manipulator("arm", _EE_FRAME, ik)},
         home=home,
         allowed_collision_pairs=discover_allowed_pairs(tree, home),
     )

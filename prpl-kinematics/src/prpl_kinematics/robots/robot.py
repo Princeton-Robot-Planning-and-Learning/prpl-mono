@@ -1,14 +1,14 @@
 """A robot as composition over a KinematicTree.
 
 A ``Robot`` bundles what algorithms need to act on a specific robot: its tree,
-its actuated joints grouped by name (``"arm"``, ``"gripper"``, ...), an
-end-effector frame, an injected inverse-kinematics solver, a home configuration,
-and the robot's intrinsic allowed-collision pairs. This is composition, not an
-inheritance tower: a specific robot is a configured ``Robot`` produced by a
-factory (see e.g. :func:`~prpl_kinematics.robots.panda.make_panda`), and
-algorithms consume the capabilities they need -- a joint group, the IK solver --
-rather than a robot base class. Robots with extra capabilities (a mobile base,
-a second arm) simply expose more groups, so they compose instead of forcing a
+its actuated joints grouped by name (``"arm"``, ``"gripper"``, ``"base"``, ...),
+its end effectors (each a ``Manipulator`` pairing an EE frame and an IK solver
+with a joint group), a home configuration, and the robot's intrinsic
+allowed-collision pairs. This is composition, not an inheritance tower: a
+specific robot is a configured ``Robot`` produced by a factory (see e.g.
+:func:`~prpl_kinematics.robots.panda.make_panda`), and algorithms consume the
+capabilities they need. A bimanual robot simply has two manipulators and a
+mobile manipulator an extra base group, so they compose instead of forcing a
 single inheritance spine.
 """
 
@@ -23,8 +23,17 @@ from prpl_kinematics.tree.kinematic_tree import Configuration, KinematicTree
 
 
 @dataclass(frozen=True)
+class Manipulator:
+    """An end effector: a joint group, its EE frame, and its IK solver."""
+
+    group: str
+    ee_frame: str
+    ik: InverseKinematics
+
+
+@dataclass(frozen=True)
 class Robot:
-    """A specific robot: named joint groups, an end effector, and an IK solver.
+    """A specific robot: named joint groups, manipulators, home, and its ACM.
 
     ``allowed_collision_pairs`` are the robot's intrinsic rest-overlapping link
     pairs, computed from the robot alone; a caller building a scene checker
@@ -35,7 +44,6 @@ class Robot:
     name: str
     tree: KinematicTree
     groups: Mapping[str, ConfigurationSpace]
-    ee_frame: str
-    ik: InverseKinematics
+    manipulators: Mapping[str, Manipulator]
     home: Configuration
     allowed_collision_pairs: frozenset[frozenset[str]]

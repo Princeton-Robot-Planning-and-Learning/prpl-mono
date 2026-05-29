@@ -18,6 +18,7 @@ dependencies = [
    "trimesh>=4.0",
    "pybullet-arm64>=3.2.8",
    "imageio>=2.30",
+   "eaik>=1.2.1",
 ]
 
 [project.optional-dependencies]
