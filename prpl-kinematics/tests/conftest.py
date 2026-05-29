@@ -26,3 +26,16 @@ def _physics_client_id():
     physics_client_id = p.connect(p.DIRECT)
     yield physics_client_id
     p.disconnect(physics_client_id)
+
+
+@pytest.fixture(name="render_client_id")
+def _render_client_id():
+    """A second headless client for rendering.
+
+    A renderer must not share a client with a collision checker: the checker's
+    collision bodies would also be drawn by ``getCameraImage`` (frozen at the
+    last pose the planner tested), ghosting a static robot over the animated one.
+    """
+    render_client_id = p.connect(p.DIRECT)
+    yield render_client_id
+    p.disconnect(render_client_id)

@@ -1,10 +1,11 @@
-"""Bidirectional RRT motion planning over a JointSpace.
+"""Bidirectional RRT motion planning over a ConfigurationSpace.
 
-``BiRRTPlanner`` adapts the generic ``BiRRT`` from ``prpl_utils`` to a
-:class:`~prpl_kinematics.planning.joint_space.JointSpace`: states are flat
-coordinate vectors, and a collision test on a vector is the user-supplied
-``config -> bool`` callable evaluated on the full configuration (the planned
-joints merged over the start configuration, so non-planned joints stay fixed).
+``BiRRTPlanner`` adapts the generic ``BiRRT`` from ``prpl_utils`` to any
+:class:`~prpl_kinematics.planning.configuration_space.ConfigurationSpace` (joint
+space, an SE(2) base, ...): states are flat coordinate vectors, and a collision
+test on a vector is the user-supplied ``config -> bool`` callable evaluated on
+the full configuration (the planned coordinates merged over the start
+configuration, so non-planned joints stay fixed).
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from collections.abc import Callable
 import numpy as np
 from prpl_utils.motion_planning import BiRRT
 
-from prpl_kinematics.planning.joint_space import JointSpace
+from prpl_kinematics.planning.configuration_space import ConfigurationSpace
 from prpl_kinematics.tree.kinematic_tree import Configuration
 
 
@@ -23,7 +24,7 @@ class BiRRTPlanner:
 
     def __init__(
         self,
-        space: JointSpace,
+        space: ConfigurationSpace,
         collision_fn: Callable[[Configuration], bool],
         rng: np.random.Generator,
         resolution: float = 0.05,
