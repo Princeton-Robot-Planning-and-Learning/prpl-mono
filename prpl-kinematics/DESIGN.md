@@ -123,8 +123,8 @@ planning and SE(2) base planning. Both planners satisfy the `MotionPlanner`
 protocol (`plan(start, goal) -> path | None`): `BiRRTPlanner` and `OMPLPlanner`,
 which wraps OMPL's `RRTConnect` (its low-level state handling stays inside the
 class, and a `ConfigurationSpace.bounds()` gives OMPL a finite sampling range).
-BiRRT has lower overhead on easy problems; OMPL scales far better through narrow
-passages (see `notebooks/motion_planner_comparison.ipynb`). Robots are
+`notebooks/motion_planner_comparison.ipynb` compares the two on a Panda reaching
+around an obstacle (planning time and rendered plan animations). Robots are
 composition over a tree:
 named groups (a `JointSpace` arm, an `SE2Space` base) plus `Manipulator`s, each
 pairing an EE frame and an IK solver with a group. A single-arm robot has one
@@ -234,6 +234,6 @@ through their own manipulator).
    arms) and a bespoke EAIK solver via the `InverseKinematics` protocol.
 7. **OMPL** — done. `OMPLPlanner` wraps OMPL's `RRTConnect` over the existing
    `ConfigurationSpace`, behind the extracted `MotionPlanner` protocol.
-   `notebooks/motion_planner_comparison.ipynb` compares it with BiRRT (timing,
-   rendered plans, narrow-passage scaling).
+   `notebooks/motion_planner_comparison.ipynb` compares it with BiRRT (timing
+   and rendered plan animations on a Panda reaching around an obstacle).
 8. **Manipulation** — `Pick`/`Place` on the new stack.

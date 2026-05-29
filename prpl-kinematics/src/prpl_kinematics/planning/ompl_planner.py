@@ -21,6 +21,16 @@ from prpl_kinematics.tree.kinematic_tree import Configuration
 
 ou.setLogLevel(ou.LogLevel.LOG_ERROR)
 
+# OMPL's RNG is process-global and can only be seeded before its first use, so
+# we seed it once (from the first planner's seed) rather than per ``plan`` call.
+_ompl_seeded: set[bool] = set()
+
+
+def _seed_ompl_once(seed: int) -> None:
+    if not _ompl_seeded:
+        ou.RNG.setSeed(seed)
+        _ompl_seeded.add(True)
+
 
 class OMPLPlanner:
     """Plans with OMPL's RRTConnect over a ConfigurationSpace."""
@@ -37,13 +47,12 @@ class OMPLPlanner:
         self._collision_fn = collision_fn
         self._timeout = timeout
         self._simplify = simplify
-        self._seed = int(rng.integers(2**31))
+        _seed_ompl_once(int(rng.integers(2**31)))
 
     def plan(
         self, start: Configuration, goal: Configuration
     ) -> list[Configuration] | None:
         """A collision-free path from ``start`` to ``goal``, or ``None``."""
-        ou.RNG.setSeed(self._seed)
         base = dict(start)
         dimension = self._space.dimension
         lower, upper = self._space.bounds()
