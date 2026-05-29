@@ -10,7 +10,7 @@ kinematics and collision checking consume).
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 
 import numpy as np
 
@@ -79,7 +79,7 @@ class JointSpace:
             index += dof
         return config
 
-    def to_vector(self, config: dict[str, JointValues]) -> np.ndarray:
+    def to_vector(self, config: Mapping[str, JointValues]) -> np.ndarray:
         """Concatenate this space's joint values from ``config`` into a vector."""
         values: list[float] = []
         for name in self._joint_names:

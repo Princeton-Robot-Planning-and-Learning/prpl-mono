@@ -8,7 +8,11 @@ import pytest
 from scipy.spatial.transform import Rotation
 from spatialmath import SE3
 
-from prpl_kinematics.ik import NumericalIK, follow_end_effector_path
+from prpl_kinematics.ik import (
+    InverseKinematics,
+    NumericalIK,
+    follow_end_effector_path,
+)
 from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.planning import JointSpace
 from prpl_kinematics.visualization import (
@@ -40,6 +44,12 @@ def _pose_error(tree, ee, config, target) -> tuple[float, float]:
     position = float(np.linalg.norm(np.asarray(target.t) - np.asarray(reached.t)))
     rotation = Rotation.from_matrix(np.asarray(target.R) @ np.asarray(reached.R).T)
     return position, float(np.linalg.norm(rotation.as_rotvec()))
+
+
+def test_numerical_ik_conforms_to_interface():
+    """NumericalIK satisfies the InverseKinematics protocol."""
+    tree, space = _panda()
+    assert isinstance(NumericalIK(tree, space, "panda_hand"), InverseKinematics)
 
 
 def test_solve_reaches_nearby_pose():

@@ -2,7 +2,9 @@
 
 Each target pose is solved seeded from the previous solution, so a redundant arm tracks
 the path on one continuous IK branch -- avoiding the elbow jitter that comes from
-solving each waypoint independently.
+solving each waypoint independently. This requires a *local* (differential) solver:
+``NumericalIK`` steps continuously from the seed, whereas a global analytic solver may
+jump between IK branches and break the smoothness this function exists to provide.
 """
 
 from __future__ import annotations
