@@ -12,6 +12,7 @@ requires-python = ">=3.10"
 dependencies = [
    "numpy>=1.23.5,<2.0",
    "scipy>=1.10",
+   "prpl_utils>=0.0.1",
    "spatialmath-python>=1.1.10",
    "yourdfpy>=0.0.56",
    "trimesh>=4.0",

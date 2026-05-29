@@ -1,0 +1,166 @@
+"""Unit tests for joint-space BiRRT motion planning."""
+
+import os
+
+import numpy as np
+import pybullet_data
+import pytest
+from spatialmath import SE3
+
+from prpl_kinematics.collision import PyBulletCollisionChecker
+from prpl_kinematics.geometry.shapes import BoxShape
+from prpl_kinematics.loading import load_urdf
+from prpl_kinematics.planning import BiRRTPlanner, JointSpace
+from prpl_kinematics.tree.joints import FixedJoint, PrismaticJoint
+from prpl_kinematics.tree.kinematic_tree import Edge, KinematicTree, Node
+from prpl_kinematics.visualization import (
+    CameraParams,
+    PyBulletRenderer,
+    render_configurations,
+    save_video,
+)
+
+
+def _gantry_tree() -> KinematicTree:
+    """An XY gantry: a small box robot that slides in x then y, plus a central
+    block obstacle it must steer around."""
+    tree = KinematicTree()
+    tree.add_node(Node("jx"))
+    tree.add_node(Node("robot", collisions=[BoxShape(size=(0.2, 0.2, 0.2))]))
+    tree.add_node(Node("obstacle", collisions=[BoxShape(size=(2.0, 2.0, 2.0))]))
+    tree.add_edge(
+        Edge(
+            "world",
+            "jx",
+            PrismaticJoint(name="jx_joint", axis=(1, 0, 0), lower=-1, upper=5),
+        )
+    )
+    tree.add_edge(
+        Edge(
+            "jx",
+            "robot",
+            PrismaticJoint(name="jy_joint", axis=(0, 1, 0), lower=-1, upper=5),
+        )
+    )
+    tree.add_edge(
+        Edge("world", "obstacle", FixedJoint(name="ofix", origin=SE3(2.5, 2.5, 0)))
+    )
+    return tree
+
+
+def test_joint_space_geometry():
+    """A JointSpace samples within bounds and converts vectors round-trip."""
+    space = JointSpace(_gantry_tree(), ["jx_joint", "jy_joint"])
+    assert space.dimension == 2
+    rng = np.random.default_rng(0)
+    for _ in range(50):
+        sample = space.sample(rng)
+        assert np.all(sample >= -1) and np.all(sample <= 5)
+    config = {"jx_joint": [1.5], "jy_joint": [-0.5]}
+    assert space.to_configuration(space.to_vector(config)) == config
+    assert space.distance(np.array([0.0, 0.0]), np.array([3.0, 4.0])) == pytest.approx(
+        5.0
+    )
+
+
+def test_interpolate_resolution_and_endpoint():
+    """Interpolation steps stay within resolution and end exactly at the target."""
+    space = JointSpace(_gantry_tree(), ["jx_joint", "jy_joint"])
+    a, b = np.array([0.0, 0.0]), np.array([1.0, 0.0])
+    waypoints = list(space.interpolate(a, b, resolution=0.1))
+    assert len(waypoints) == 10
+    assert np.allclose(waypoints[-1], b)
+    steps = np.diff([a] + waypoints, axis=0)
+    assert np.all(np.linalg.norm(steps, axis=1) <= 0.1 + 1e-9)
+
+
+def test_birrt_solves_around_obstacle(physics_client_id):
+    """BiRRT finds a collision-free path when the straight line is blocked."""
+    tree = _gantry_tree()
+    checker = PyBulletCollisionChecker(physics_client_id)
+    checker.load(tree)
+    space = JointSpace(tree, ["jx_joint", "jy_joint"])
+    start = {"jx_joint": [0.0], "jy_joint": [0.0]}
+    goal = {"jx_joint": [5.0], "jy_joint": [5.0]}
+    # The straight-line interpolation passes through the central obstacle.
+    direct = space.interpolate(space.to_vector(start), space.to_vector(goal), 0.05)
+    assert any(
+        checker.in_collision({**start, **space.to_configuration(v)}) for v in direct
+    )
+    planner = BiRRTPlanner(
+        space, checker.in_collision, np.random.default_rng(0), num_iters=500
+    )
+    path = planner.plan(start, goal)
+    assert path is not None
+    assert path[0] == start and path[-1] == goal
+    assert all(not checker.in_collision(config) for config in path)
+
+
+def test_birrt_returns_none_when_start_in_collision(physics_client_id):
+    """Planning from a colliding configuration yields no path."""
+    tree = _gantry_tree()
+    checker = PyBulletCollisionChecker(physics_client_id)
+    checker.load(tree)
+    space = JointSpace(tree, ["jx_joint", "jy_joint"])
+    inside = {"jx_joint": [2.5], "jy_joint": [2.5]}
+    goal = {"jx_joint": [5.0], "jy_joint": [5.0]}
+    planner = BiRRTPlanner(space, checker.in_collision, np.random.default_rng(0))
+    assert planner.plan(inside, goal) is None
+
+
+def _panda_around_obstacle():
+    """A Panda with a block obstacle placed on the arm's straight-line sweep."""
+    path = os.path.join(pybullet_data.getDataPath(), "franka_panda", "panda.urdf")
+    tree = load_urdf(path)
+    block = BoxShape(size=(0.12, 0.12, 0.5))
+    tree.add_node(Node("obstacle", visuals=[block], collisions=[block]))
+    tree.add_edge(
+        Edge(
+            tree.root, "obstacle", FixedJoint(name="ofix", origin=SE3(0.2, 0.21, 0.82))
+        )
+    )
+    arm = [f"panda_joint{i}" for i in range(1, 8)]
+    start = {name: [0.0] for name in tree.actuated_joint_names()}
+    start["panda_joint2"] = [-0.5]
+    start["panda_joint4"] = [-1.5]
+    start["panda_joint6"] = [1.0]
+    goal = dict(start)
+    goal["panda_joint1"] = [1.6]
+    return tree, arm, start, goal
+
+
+def test_birrt_plans_panda_around_obstacle(physics_client_id, make_videos):
+    """BiRRT steers the Panda's arm around a block; --make-videos renders it."""
+    tree, arm, start, goal = _panda_around_obstacle()
+    checker = PyBulletCollisionChecker(physics_client_id)
+    checker.load(tree)
+    # The robot's rest-overlapping pairs are intrinsic to the robot; discovering
+    # them must not absorb any arm-vs-obstacle overlap, or the obstacle would be
+    # silently ignored for the rest of planning.
+    allowed = {
+        pair for pair in checker.pairs_in_collision(start) if "obstacle" not in pair
+    }
+    checker.ignore(allowed)
+    assert not checker.in_collision(start)
+    assert not checker.in_collision(goal)
+    space = JointSpace(tree, arm)
+    margin = 0.01
+
+    def collision_with_margin(config):
+        return checker.in_collision(config, max_distance=margin)
+
+    planner = BiRRTPlanner(
+        space, collision_with_margin, np.random.default_rng(0), num_iters=1500
+    )
+    path = planner.plan(start, goal)
+    assert path is not None
+    assert all(not checker.in_collision(config) for config in path)
+    if make_videos:
+        renderer = PyBulletRenderer(physics_client_id)
+        renderer.load(tree)
+        camera = CameraParams(
+            target=(0.1, 0.12, 0.8), distance=1.4, yaw=180.0, pitch=-10.0
+        )
+        frames = render_configurations(renderer, path, camera)
+        save_video(frames, "panda_birrt.mp4", fps=20)
+        assert os.path.exists("panda_birrt.mp4")
