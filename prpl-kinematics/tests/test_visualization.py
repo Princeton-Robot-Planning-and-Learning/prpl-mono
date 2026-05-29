@@ -4,12 +4,12 @@ import os
 
 import numpy as np
 import pybullet as p
-import pybullet_data
 import pytest
 import trimesh
 
 from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.tree.kinematic_tree import KinematicTree
+from prpl_kinematics.utils import get_assets_path
 from prpl_kinematics.visualization import (
     CameraParams,
     PyBulletRenderer,
@@ -20,7 +20,7 @@ from prpl_kinematics.visualization import (
 
 
 def _panda_path() -> str:
-    return os.path.join(pybullet_data.getDataPath(), "franka_panda", "panda.urdf")
+    return str(get_assets_path() / "urdf" / "panda_arm_hand.urdf")
 
 
 def _sweep_configs(tree: KinematicTree, num_steps: int) -> list[dict[str, list[float]]]:

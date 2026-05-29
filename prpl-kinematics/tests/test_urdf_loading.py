@@ -1,18 +1,16 @@
 """Unit tests for URDF loading and forward-kinematics correctness."""
 
-import os
-
 import numpy as np
 import pybullet as p
-import pybullet_data
 from scipy.spatial.transform import Rotation
 
 from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.tree.joints import FixedJoint, PrismaticJoint, RevoluteJoint
+from prpl_kinematics.utils import get_assets_path
 
 
 def _panda_path() -> str:
-    return os.path.join(pybullet_data.getDataPath(), "franka_panda", "panda.urdf")
+    return str(get_assets_path() / "urdf" / "panda_arm_hand.urdf")
 
 
 def test_load_urdf_structure():

@@ -1,8 +1,5 @@
 """Unit tests for PyBullet shape-soup collision checking."""
 
-import os
-
-import pybullet_data
 from spatialmath import SE3
 
 from prpl_kinematics.collision import PyBulletCollisionChecker
@@ -10,6 +7,7 @@ from prpl_kinematics.geometry.shapes import BoxShape
 from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.tree.joints import FixedJoint, PrismaticJoint
 from prpl_kinematics.tree.kinematic_tree import Edge, KinematicTree, Node
+from prpl_kinematics.utils import get_assets_path
 
 
 def _box(name: str, size: float = 0.2) -> Node:
@@ -72,7 +70,7 @@ def test_attached_object_collides_with_environment(physics_client_id):
 
 def test_panda_home_collision_free_with_allowed_pairs(physics_client_id):
     """Panda's rest pose is collision-free once rest-overlapping pairs are allowed."""
-    path = os.path.join(pybullet_data.getDataPath(), "franka_panda", "panda.urdf")
+    path = str(get_assets_path() / "urdf" / "panda_arm_hand.urdf")
     checker = PyBulletCollisionChecker(physics_client_id)
     checker.load(load_urdf(path))
     resting = checker.pairs_in_collision({})
