@@ -19,6 +19,7 @@ dependencies = [
    "pybullet-arm64>=3.2.8",
    "imageio>=2.30",
    "eaik>=1.2.1",
+   "ompl>=2.0.0",
 ]
 
 [project.optional-dependencies]

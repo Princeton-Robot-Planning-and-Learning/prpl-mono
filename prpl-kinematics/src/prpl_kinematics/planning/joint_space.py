@@ -57,9 +57,14 @@ class JointSpace:
 
         Continuous joints (no limits) are sampled over ``[-pi, pi]``.
         """
+        low, high = self.bounds()
+        return rng.uniform(low, high)
+
+    def bounds(self) -> tuple[np.ndarray, np.ndarray]:
+        """Joint limits, with continuous joints reported as ``[-pi, pi]``."""
         low = np.where(self._continuous, -np.pi, self._lower)
         high = np.where(self._continuous, np.pi, self._upper)
-        return rng.uniform(low, high)
+        return low, high
 
     def distance(self, a: np.ndarray, b: np.ndarray) -> float:
         """Euclidean distance, measuring continuous joints the short way around."""

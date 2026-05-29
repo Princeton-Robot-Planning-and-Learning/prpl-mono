@@ -86,7 +86,7 @@ meshes.py        Prepare meshes for PyBullet's file importer (convert/cache).   
 visualization.py Shape-soup renderer (FK-driven), capture, video (--make-videos). [built]
 collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.         [built]
 ik/              InverseKinematics protocol; NumericalIK (DLS) + IKFastSolver.    [built]
-planning/        ConfigurationSpace (JointSpace, SE2Space) + BiRRTPlanner; OMPL.  [built]
+planning/        ConfigurationSpace + MotionPlanner; BiRRTPlanner, OMPLPlanner.  [built]
 robots/          Robot composition + Panda, Kinova, TidyBot, Vega (bimanual).    [built]
 manipulation/    Primitive ABC; Pick, Place with injected grasp generators.       [planned]
 ```
@@ -119,8 +119,13 @@ wraps like a continuous joint. `BiRRTPlanner` adapts the generic `BiRRT` from
 `prpl_utils` to any `ConfigurationSpace`, taking a plain `config -> bool`
 collision callable (the checker satisfies this) and holding non-planned joints
 fixed at the start configuration -- so the same planner does joint-space arm
-planning and SE(2) base planning. There is no `MotionPlanner` ABC yet; it
-arrives with the second planner (OMPL). Robots are composition over a tree:
+planning and SE(2) base planning. Both planners satisfy the `MotionPlanner`
+protocol (`plan(start, goal) -> path | None`): `BiRRTPlanner` and `OMPLPlanner`,
+which wraps OMPL's `RRTConnect` (its low-level state handling stays inside the
+class, and a `ConfigurationSpace.bounds()` gives OMPL a finite sampling range).
+`notebooks/motion_planner_comparison.ipynb` compares the two on a Panda reaching
+around an obstacle (planning time and rendered plan animations). Robots are
+composition over a tree:
 named groups (a `JointSpace` arm, an `SE2Space` base) plus `Manipulator`s, each
 pairing an EE frame and an IK solver with a group. A single-arm robot has one
 manipulator; a bimanual robot (Vega) has two, each with its own IK; a mobile
@@ -177,8 +182,9 @@ The minimal, fully-tested core:
   `save_video`, plus the `--make-videos` test fixture.
 - `collision` — `PyBulletCollisionChecker` (`in_collision`, `pairs_in_collision`,
   `ignore`).
-- `planning` — `ConfigurationSpace` protocol with `JointSpace` and `SE2Space`,
-  and `BiRRTPlanner` (collision-free paths over either, via `prpl_utils.BiRRT`).
+- `planning` — `ConfigurationSpace` protocol (`JointSpace`, `SE2Space`) and
+  `MotionPlanner` protocol with `BiRRTPlanner` (`prpl_utils.BiRRT`) and
+  `OMPLPlanner` (OMPL `RRTConnect`).
 - `ik` — `InverseKinematics` protocol, `NumericalIK` (Jacobian-DLS differential
   solve), `IKFastSolver` (per-robot analytic solve), and
   `follow_end_effector_path` (warm-started Cartesian-path tracking).
@@ -190,9 +196,10 @@ The minimal, fully-tested core:
 Tests cover conversions, every joint type, FK propagation, grasp re-parenting,
 snapshotting, URDF loading, FK equivalence with PyBullet on Panda, `.glb` mesh
 conversion, shape-soup rendering, collision checking (primitives, adjacency,
-attached-object-vs-environment, and Panda rest pose), BiRRT planning (joint-
-space geometry, continuous-joint wrap-around, steering around an obstacle, and a
-Panda plan around a block), IK (numerical reaching from a nearby seed, smooth
+attached-object-vs-environment, and Panda rest pose), motion planning (BiRRT and
+OMPL both conforming to `MotionPlanner`, joint-space geometry, continuous-joint
+wrap-around, steering around an obstacle, and a Panda plan around a block), IK
+(numerical reaching from a nearby seed, smooth
 warm-started EE-path following, IKFast global solves on Panda, branch selection,
 unreachable targets, and both solvers conforming to the `InverseKinematics`
 protocol), SE(2) spaces (workspace-bounded sampling, yaw wrap-around,
@@ -225,6 +232,8 @@ through their own manipulator).
    `finger_state` scalar (principle 7). TidyBot added `SE2Space` and the
    `ConfigurationSpace` protocol; Vega added the `Manipulator` mapping (two
    arms) and a bespoke EAIK solver via the `InverseKinematics` protocol.
-7. **OMPL** — second `MotionPlanner` (wrapping `ompl.geometric`) over the
-   existing `ConfigurationSpace`, extracting a `MotionPlanner` ABC.
+7. **OMPL** — done. `OMPLPlanner` wraps OMPL's `RRTConnect` over the existing
+   `ConfigurationSpace`, behind the extracted `MotionPlanner` protocol.
+   `notebooks/motion_planner_comparison.ipynb` compares it with BiRRT (timing
+   and rendered plan animations on a Panda reaching around an obstacle).
 8. **Manipulation** — `Pick`/`Place` on the new stack.
