@@ -17,11 +17,21 @@ import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
+import numpy as np
+from scipy.spatial.transform import Rotation
 from spatialmath import SE3
 
 JointValues = list[float]  # Length must equal ``num_dof``.
 
 Axis = tuple[float, float, float]
+
+
+def _rotation_about_axis(theta: float, axis: Axis) -> np.ndarray:
+    """3x3 rotation matrix for an angle ``theta`` about a (possibly unnormalized)
+    ``axis``."""
+    unit = np.asarray(axis, dtype=float)
+    unit = unit / np.linalg.norm(unit)
+    return Rotation.from_rotvec(theta * unit).as_matrix()
 
 
 @dataclass(frozen=True)
@@ -81,7 +91,7 @@ class RevoluteJoint(Joint):
 
     def transform(self, values: JointValues) -> SE3:
         (theta,) = values
-        return self.origin * SE3.AngVec(theta, self.axis)
+        return self.origin * SE3.Rt(_rotation_about_axis(theta, self.axis), [0, 0, 0])
 
     @property
     def lower_limits(self) -> list[float]:
