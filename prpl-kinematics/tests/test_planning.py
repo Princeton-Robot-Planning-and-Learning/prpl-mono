@@ -112,10 +112,12 @@ def _panda_around_obstacle():
     """A Panda with a block obstacle placed on the arm's straight-line sweep."""
     path = os.path.join(pybullet_data.getDataPath(), "franka_panda", "panda.urdf")
     tree = load_urdf(path)
-    block = BoxShape(size=(0.2, 0.2, 0.4))
+    block = BoxShape(size=(0.12, 0.12, 0.5))
     tree.add_node(Node("obstacle", visuals=[block], collisions=[block]))
     tree.add_edge(
-        Edge(tree.root, "obstacle", FixedJoint(name="ofix", origin=SE3(0.2, 0.2, 0.85)))
+        Edge(
+            tree.root, "obstacle", FixedJoint(name="ofix", origin=SE3(0.2, 0.21, 0.82))
+        )
     )
     arm = [f"panda_joint{i}" for i in range(1, 8)]
     start = {name: [0.0] for name in tree.actuated_joint_names()}
@@ -132,10 +134,23 @@ def test_birrt_plans_panda_around_obstacle(physics_client_id, make_videos):
     tree, arm, start, goal = _panda_around_obstacle()
     checker = PyBulletCollisionChecker(physics_client_id)
     checker.load(tree)
-    checker.ignore(checker.pairs_in_collision(start))
+    # The robot's rest-overlapping pairs are intrinsic to the robot; discovering
+    # them must not absorb any arm-vs-obstacle overlap, or the obstacle would be
+    # silently ignored for the rest of planning.
+    allowed = {
+        pair for pair in checker.pairs_in_collision(start) if "obstacle" not in pair
+    }
+    checker.ignore(allowed)
+    assert not checker.in_collision(start)
+    assert not checker.in_collision(goal)
     space = JointSpace(tree, arm)
+    margin = 0.01
+
+    def collision_with_margin(config):
+        return checker.in_collision(config, max_distance=margin)
+
     planner = BiRRTPlanner(
-        space, checker.in_collision, np.random.default_rng(0), num_iters=1000
+        space, collision_with_margin, np.random.default_rng(0), num_iters=1500
     )
     path = planner.plan(start, goal)
     assert path is not None
@@ -143,7 +158,9 @@ def test_birrt_plans_panda_around_obstacle(physics_client_id, make_videos):
     if make_videos:
         renderer = PyBulletRenderer(physics_client_id)
         renderer.load(tree)
-        camera = CameraParams(distance=2.0, yaw=70.0, width=480, height=360)
+        camera = CameraParams(
+            target=(0.1, 0.12, 0.8), distance=1.4, yaw=180.0, pitch=-10.0
+        )
         frames = render_configurations(renderer, path, camera)
         save_video(frames, "panda_birrt.mp4", fps=20)
         assert os.path.exists("panda_birrt.mp4")
