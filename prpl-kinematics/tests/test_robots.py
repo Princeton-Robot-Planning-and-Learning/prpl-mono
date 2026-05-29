@@ -18,8 +18,8 @@ def test_panda_assembly_structure():
     assert isinstance(robot, Robot)
     assert robot.groups["arm"].dimension == 7
     assert robot.groups["gripper"].dimension == 2
-    assert robot.ee_frame == "tool_link"
-    assert isinstance(robot.ik, InverseKinematics)
+    assert robot.manipulators["arm"].ee_frame == "tool_link"
+    assert isinstance(robot.manipulators["arm"].ik, InverseKinematics)
     assert robot.allowed_collision_pairs  # intrinsic rest overlaps discovered
     arm = robot.groups["arm"]
     home_vector = arm.to_vector(robot.home)
@@ -32,11 +32,15 @@ def test_panda_assembly_structure():
 def test_panda_ik_through_robot():
     """The robot's injected IK solver reaches a reachable pose."""
     robot = make_panda()
-    target = robot.tree.forward_kinematics(robot.ee_frame, robot.home)
+    target = robot.tree.forward_kinematics(
+        robot.manipulators["arm"].ee_frame, robot.home
+    )
     seed = {**dict(robot.home), "panda_joint4": [-1.5]}
-    solution = robot.ik.solve(target, seed)
+    solution = robot.manipulators["arm"].ik.solve(target, seed)
     assert solution is not None
-    reached = robot.tree.forward_kinematics(robot.ee_frame, solution)
+    reached = robot.tree.forward_kinematics(
+        robot.manipulators["arm"].ee_frame, solution
+    )
     assert np.linalg.norm(np.asarray(reached.t) - np.asarray(target.t)) < 1e-6
 
 

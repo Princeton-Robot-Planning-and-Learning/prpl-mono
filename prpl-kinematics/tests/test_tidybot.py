@@ -44,17 +44,21 @@ def test_tidybot_assembly_structure():
     assert robot.groups["base"].dimension == 3
     assert robot.groups["arm"].dimension == 7
     assert isinstance(robot.tree.joint("base"), PlanarJoint)
-    assert robot.ee_frame == "tool_frame"
-    assert isinstance(robot.ik, InverseKinematics)
+    assert robot.manipulators["arm"].ee_frame == "tool_frame"
+    assert isinstance(robot.manipulators["arm"].ik, InverseKinematics)
     assert robot.allowed_collision_pairs
 
 
 def test_tidybot_base_moves_whole_arm():
     """Driving the base translates the end effector by the same amount."""
     robot = make_tidybot()
-    home_ee = robot.tree.forward_kinematics(robot.ee_frame, robot.home).t
+    home_ee = robot.tree.forward_kinematics(
+        robot.manipulators["arm"].ee_frame, robot.home
+    ).t
     moved = {**dict(robot.home), "base": [1.0, 0.5, 0.0]}
-    moved_ee = robot.tree.forward_kinematics(robot.ee_frame, moved).t
+    moved_ee = robot.tree.forward_kinematics(
+        robot.manipulators["arm"].ee_frame, moved
+    ).t
     assert np.allclose(
         np.asarray(moved_ee) - np.asarray(home_ee), [1.0, 0.5, 0.0], atol=1e-6
     )
@@ -91,10 +95,12 @@ def test_tidybot_arm_ik_through_robot():
         **dict(robot.home),
         **{name: [v] for name, v in zip(_ARM, [0.3, -0.5, 1.2, -1.0, 0.4, 0.8, -0.6])},
     }
-    target = robot.tree.forward_kinematics(robot.ee_frame, truth)
-    solution = robot.ik.solve(target, robot.home)
+    target = robot.tree.forward_kinematics(robot.manipulators["arm"].ee_frame, truth)
+    solution = robot.manipulators["arm"].ik.solve(target, robot.home)
     assert solution is not None
-    reached = robot.tree.forward_kinematics(robot.ee_frame, solution)
+    reached = robot.tree.forward_kinematics(
+        robot.manipulators["arm"].ee_frame, solution
+    )
     assert np.linalg.norm(np.asarray(reached.t) - np.asarray(target.t)) < 1e-4
 
 
@@ -113,7 +119,9 @@ def test_tidybot_base_then_arm_video(physics_client_id, render_client_id, make_v
     robot.tree.add_node(pillar_node)
     robot.tree.add_edge(pillar_edge)
     mid = {**dict(at_goal), "joint_1": [at_goal["joint_1"][0] + 1.0]}
-    box_at = np.asarray(robot.tree.forward_kinematics(robot.ee_frame, mid).t)
+    box_at = np.asarray(
+        robot.tree.forward_kinematics(robot.manipulators["arm"].ee_frame, mid).t
+    )
     armbox = BoxShape(size=(0.1, 0.1, 0.4))
     robot.tree.add_node(Node("armbox", visuals=[armbox], collisions=[armbox]))
     robot.tree.add_edge(
