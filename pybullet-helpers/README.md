@@ -57,9 +57,7 @@ For consistency with Bullet IK, ensure that the inertial frame of the robot URDF
 
 ## Dexmate Vega 1U
 
-The Vega 1U humanoid arm doesn't have a spherical wrist (its last three joints have cm-scale offsets), so neither IKFast nor EAIK can produce a closed-form 6D solver for it directly. Instead, `DexmateVega1UPyBulletRobot.custom_inverse_kinematics` locks two joints (the elbow `L_arm_j4` and the wrist roll `L_arm_j7`), runs a 2D refinement search over those locked values, and uses EAIK's 5R closed-form solver as the inner loop. The 5R chain after locking matches EAIK's catalog of analytically-solvable structures, and Nelder-Mead on EAIK's least-squares pose residual reliably finds the 1D solvability manifold for arbitrary 6D targets. Typical roundtrip: ~130 ms, sub-µm position error.
-
-This path requires the optional `eaik` dependency:
+The Vega 1U arms have no spherical wrist, so there is no closed-form 6D IK for them. They use a hybrid analytic IK built on [EAIK](https://pypi.org/project/EAIK/), which is an optional dependency:
 
 ```
 # macOS:

@@ -1,9 +1,12 @@
 """Utilities for GUIs."""
 
+from typing import Callable, Sequence
+
 import numpy as np
 import pybullet as p
 
 from pybullet_helpers.geometry import Pose, Pose3D, matrix_from_quat, set_pose
+from pybullet_helpers.robots.bimanual import BimanualPyBulletRobot
 from pybullet_helpers.robots.single_arm import SingleArmPyBulletRobot
 
 
@@ -55,73 +58,115 @@ def create_gui_connection(
     return physics_client_id
 
 
-def run_interactive_joint_gui(robot: SingleArmPyBulletRobot) -> None:
-    """Visualize a robot's joint space."""
-
+def _run_interactive_joint_gui(
+    physics_client_id: int,
+    joint_names: Sequence[str],
+    lower_limits: Sequence[float],
+    upper_limits: Sequence[float],
+    initial_positions: Sequence[float],
+    set_joints_fn: Callable[[list[float]], None],
+    end_effector_poses_fn: Callable[[], list[Pose]],
+    end_effector_button_label: str,
+) -> None:
+    """Slider-driven joint-space visualization loop shared by the single-arm and
+    bimanual GUIs."""
     p.configureDebugVisualizer(
-        p.COV_ENABLE_GUI, True, physicsClientId=robot.physics_client_id
+        p.COV_ENABLE_GUI, True, physicsClientId=physics_client_id
     )
 
-    initial_joints = robot.get_joint_positions()
-
     slider_ids: list[int] = []
-    for i, joint_name in enumerate(robot.arm_joint_names):
-        lower, upper = robot.get_joint_limits_from_name(joint_name)
-        # Handle circular joints.
-        if np.isinf(lower):
-            lower = -10
-        if np.isinf(upper):
-            upper = 10
-        current = initial_joints[i]
-        slider_id = p.addUserDebugParameter(
-            paramName=joint_name,
-            rangeMin=lower,
-            rangeMax=upper,
-            startValue=current,
-            physicsClientId=robot.physics_client_id,
+    for joint_name, lower, upper, current in zip(
+        joint_names, lower_limits, upper_limits, initial_positions, strict=True
+    ):
+        # Handle circular/unbounded joints.
+        lower = -10.0 if np.isinf(lower) else float(lower)
+        upper = 10.0 if np.isinf(upper) else float(upper)
+        slider_ids.append(
+            p.addUserDebugParameter(
+                paramName=joint_name,
+                rangeMin=lower,
+                rangeMax=upper,
+                startValue=current,
+                physicsClientId=physics_client_id,
+            )
         )
-        slider_ids.append(slider_id)
-    show_end_effector_button_id = p.addUserDebugParameter(
-        "Show end effector", 0, -1, 0, physicsClientId=robot.physics_client_id
+    show_end_effectors_button_id = p.addUserDebugParameter(
+        end_effector_button_label, 0, -1, 0, physicsClientId=physics_client_id
     )
 
     frame_ids: set[int] = set()
     current_button_value = p.readUserDebugParameter(
-        show_end_effector_button_id, physicsClientId=robot.physics_client_id
+        show_end_effectors_button_id, physicsClientId=physics_client_id
     )
     while True:
         joint_positions = []
         for slider_id in slider_ids:
             try:
-                v = p.readUserDebugParameter(
-                    slider_id, physicsClientId=robot.physics_client_id
+                joint_positions.append(
+                    p.readUserDebugParameter(
+                        slider_id, physicsClientId=physics_client_id
+                    )
                 )
             except p.error:
                 print("WARNING: failed to read parameter, skipping")
                 break
-            joint_positions.append(v)
         if len(joint_positions) != len(slider_ids):
             continue
-        robot.set_joints(joint_positions)
+        set_joints_fn(joint_positions)
         try:
             button_value = p.readUserDebugParameter(
-                show_end_effector_button_id, physicsClientId=robot.physics_client_id
+                show_end_effectors_button_id, physicsClientId=physics_client_id
             )
             if button_value != current_button_value:
-                # Visualize the end effector pose.
+                # Visualize the end effector pose(s).
                 for frame_id in frame_ids:
-                    p.removeUserDebugItem(
-                        frame_id, physicsClientId=robot.physics_client_id
+                    p.removeUserDebugItem(frame_id, physicsClientId=physics_client_id)
+                frame_ids = set()
+                for ee_pose in end_effector_poses_fn():
+                    frame_ids |= visualize_pose(
+                        ee_pose, physics_client_id=physics_client_id
                     )
-                ee_pose = robot.get_end_effector_pose()
-                print(ee_pose.position)
-                frame_ids = visualize_pose(
-                    ee_pose,
-                    physics_client_id=robot.physics_client_id,
-                )
                 current_button_value = button_value
         except p.error:
             print("WARNING: failed to read button value")
+
+
+def run_interactive_joint_gui(robot: SingleArmPyBulletRobot) -> None:
+    """Visualize a single-arm robot's joint space."""
+    limits = [robot.get_joint_limits_from_name(n) for n in robot.arm_joint_names]
+    _run_interactive_joint_gui(
+        robot.physics_client_id,
+        robot.arm_joint_names,
+        [lo for lo, _ in limits],
+        [hi for _, hi in limits],
+        robot.get_joint_positions(),
+        robot.set_joints,
+        lambda: [robot.get_end_effector_pose()],
+        "Show end effector",
+    )
+
+
+def run_interactive_bimanual_joint_gui(robot: BimanualPyBulletRobot) -> None:
+    """Visualize a bimanual robot's full joint space (torso, both arms, head)."""
+    joint_names = (
+        list(robot.torso_joint_names)
+        + list(robot.left_arm.arm_joint_names)
+        + list(robot.right_arm.arm_joint_names)
+        + list(robot.head_joint_names)
+    )
+    _run_interactive_joint_gui(
+        robot.physics_client_id,
+        joint_names,
+        robot.action_space.low.tolist(),
+        robot.action_space.high.tolist(),
+        robot.get_joint_positions(),
+        robot.set_joints,
+        lambda: [
+            robot.left_arm.get_end_effector_pose(),
+            robot.right_arm.get_end_effector_pose(),
+        ],
+        "Show end effectors",
+    )
 
 
 def visualize_pose(
