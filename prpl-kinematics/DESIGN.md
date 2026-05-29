@@ -70,15 +70,21 @@ FK before running collision detection. Consequences:
 ## Layered structure (target)
 
 ```
-geometry/      spatialmath <-> external-convention conversions (PyBullet xyzw).   [built]
-tree/          KinematicTree, Joint types, FK, attach (grasp), KinematicState.    [built]
-loading/       URDF -> KinematicTree (via yourdfpy).                              [planned]
-backends/      CollisionBackend / Renderer ABCs; PyBullet impls (shape-soup).     [planned]
-ik/            InverseKinematics ABC; NumericalIK (Jacobian-DLS), AnalyticIK.     [planned]
-planning/      ConfigurationSpace ABC + MotionPlanner ABC; BiRRT, OMPL.           [planned]
-robots/        Assemblies over a tree: SingleArm, Bimanual, MobileBase, MobileManip. [planned]
-manipulation/  Primitive ABC; Pick, Place with injected grasp generators.        [planned]
+geometry/        spatialmath <-> external-convention conversions (PyBullet xyzw). [built]
+tree/            KinematicTree, Joint types, FK, attach (grasp), KinematicState.  [built]
+loading/         URDF -> KinematicTree (via yourdfpy).                            [built]
+visualization.py PyBullet viewer: capture frames, save videos (--make-videos).   [built]
+backends/        CollisionBackend ABC; PyBullet impl (shape-soup).               [planned]
+ik/              InverseKinematics ABC; NumericalIK (Jacobian-DLS), AnalyticIK.   [planned]
+planning/        ConfigurationSpace ABC + MotionPlanner ABC; BiRRT, OMPL.         [planned]
+robots/          Assemblies over a tree: SingleArm, Bimanual, MobileBase, MobileManip. [planned]
+manipulation/    Primitive ABC; Pick, Place with injected grasp generators.       [planned]
 ```
+
+The v1 visualizer drives PyBullet's own articulation to render a configuration
+(robust mesh handling); the tree's kinematics are validated independently by a
+forward-kinematics test that compares against PyBullet across random configs. A
+shape-soup `Renderer` on top of the collision backend may replace it later.
 
 The `ConfigurationSpace` abstraction (sample/distance/interpolate/is_valid) is
 what lets one planner work over joint space, an SE(2) base, or a Cartesian EE
@@ -96,15 +102,20 @@ The minimal, fully-tested core:
   `add_edge`, `forward_kinematics`, `relative_pose`, `attach`,
   `actuated_joint_names`, `joint`, `path_from_root`).
 - `tree.state` — `KinematicState` snapshot of actuated joint values.
+- `loading.urdf` — `load_urdf` (yourdfpy → tree).
+- `visualization` — `load_urdf_for_rendering`, `render_configurations`,
+  `capture_image`, `save_video`, plus the `--make-videos` test fixture.
 
-21 unit tests cover conversions, every joint type, FK propagation, grasp
-re-parenting, and snapshotting.
+Tests cover conversions, every joint type, FK propagation, grasp re-parenting,
+snapshotting, URDF loading, FK equivalence with PyBullet on Panda, and video
+rendering (a Panda joint sweep).
 
 ## Milestones (each adds code + tests)
 
 1. **Geometry + tree core** — done.
-2. **Loading** — `yourdfpy` URDF → tree; round-trip FK against a known robot.
-3. **Backends** — `CollisionBackend`/`Renderer` ABCs + shape-soup PyBullet impls.
+2. **Loading + visualization** — done. URDF → tree (FK validated against
+   PyBullet); `--make-videos` rendering pipeline.
+3. **Backends** — `CollisionBackend` ABC + shape-soup PyBullet impl.
 4. **IK** — `InverseKinematics` ABC; `NumericalIK` (Jacobian-DLS, folding in the
    ee-follow jitter fix), then `AnalyticIK` (EAIK/IKFast port).
 5. **Planning** — `ConfigurationSpace` + `MotionPlanner` ABC; `BiRRTPlanner`

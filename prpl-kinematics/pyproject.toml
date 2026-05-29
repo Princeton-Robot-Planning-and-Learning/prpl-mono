@@ -13,6 +13,9 @@ dependencies = [
    "numpy>=1.23.5,<2.0",
    "scipy>=1.10",
    "spatialmath-python>=1.1.10",
+   "yourdfpy>=0.0.56",
+   "pybullet-arm64>=3.2.8",
+   "imageio>=2.30",
 ]
 
 [project.optional-dependencies]
@@ -58,10 +61,12 @@ exclude = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "
 [[tool.mypy.overrides]]
 module = [
     "pybullet.*",
+    "pybullet_data.*",
     "pybullet_utils.*",
     "scipy.*",
     "spatialmath.*",
     "yourdfpy.*",
+    "imageio.*",
     "eaik.*",
     "ompl.*",
 ]
