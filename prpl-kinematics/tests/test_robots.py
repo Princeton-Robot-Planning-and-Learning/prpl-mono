@@ -18,12 +18,15 @@ def test_panda_assembly_structure():
     assert isinstance(robot, Robot)
     assert robot.groups["arm"].dimension == 7
     assert robot.groups["gripper"].dimension == 2
-    assert robot.ee_frame == "panda_link8"
+    assert robot.ee_frame == "tool_link"
     assert isinstance(robot.ik, InverseKinematics)
     assert robot.allowed_collision_pairs  # intrinsic rest overlaps discovered
     arm = robot.groups["arm"]
     home_vector = arm.to_vector(robot.home)
     assert np.allclose(home_vector, arm.clamp(home_vector))  # home within limits
+    # The exact Franka Emika joint limits.
+    assert robot.tree.joint("panda_joint1").lower_limits[0] == -2.8973
+    assert robot.tree.joint("panda_joint4").upper_limits[0] == -0.0698
 
 
 def test_panda_ik_through_robot():
