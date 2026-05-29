@@ -1,2 +1,6 @@
 # Rendered video artifacts from --make-videos tests.
 *.mp4
+
+# Compiled IKFast modules (built on demand from the committed C++ source).
+*.so
+src/prpl_kinematics/third_party/ikfast/**/build/

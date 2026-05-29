@@ -85,7 +85,7 @@ loading/         URDF -> KinematicTree with per-node geometry (via yourdfpy).   
 meshes.py        Prepare meshes for PyBullet's file importer (convert/cache).      [built]
 visualization.py Shape-soup renderer (FK-driven), capture, video (--make-videos). [built]
 collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.         [built]
-ik/              NumericalIK (Jacobian-DLS) + EE-path follower; AnalyticIK next.  [built]
+ik/              InverseKinematics protocol; NumericalIK (DLS) + IKFastSolver.    [built]
 planning/        JointSpace + BiRRTPlanner (over a config->bool callable); OMPL.   [built]
 robots/          Assemblies over a tree: SingleArm, Bimanual, MobileBase, MobileManip. [planned]
 manipulation/    Primitive ABC; Pick, Place with injected grasp generators.       [planned]
@@ -116,14 +116,21 @@ an SE(2) base, or a Cartesian EE target) arrives with the second planner (OMPL).
 Robots are composition over a tree (named joint groups, an EE link, a home
 config), not an inheritance tower.
 
-`NumericalIK` reuses the same `JointSpace` to solve for a configuration whose
-EE frame reaches a target pose, via damped-least-squares differential steps
+IK is structured so that robot-specific solvers are first-class: the
+`InverseKinematics` protocol is just `solve(target_pose, seed) -> Configuration
+| None`, and any conforming object (generic or bespoke) is usable
+interchangeably. Two implementations ship. `NumericalIK` reuses the same
+`JointSpace` and solves via damped-least-squares differential steps
 (`dq = J^T (J J^T + lambda^2 I)^-1 e`) with a finite-difference Jacobian over
-the tree's FK. It is a local solver (converges from a seed in the basin);
-`follow_end_effector_path` chains solves warm-started from the previous one so a
-redundant arm tracks a Cartesian path on one smooth IK branch. Global, seedless
-IK is the job of a later `AnalyticIK`, at which point an `InverseKinematics` ABC
-is extracted.
+the tree's FK; it is a *local* solver (converges from a seed in the basin).
+`IKFastSolver` wraps a per-robot IKFast module (compiled on demand from
+committed C++), using the tree's FK to put the target in the solver's base
+frame and returning the limit-respecting candidate closest to the seed; it is
+*global* and seedless. `follow_end_effector_path` deliberately requires
+`NumericalIK`, not the protocol: smooth Cartesian tracking needs continuous
+differential stepping, whereas a global solver may jump between IK branches.
+Robot-specific analytic solvers that no general method handles (e.g. the
+Dexmate Vega's non-spherical wrist) plug in as their own `InverseKinematics`.
 
 ## What is built today
 
@@ -145,7 +152,8 @@ The minimal, fully-tested core:
   `ignore`).
 - `planning` — `JointSpace` (sample/distance/interpolate/clamp, vector<->config)
   and `BiRRTPlanner` (collision-free joint-space paths via `prpl_utils.BiRRT`).
-- `ik` — `NumericalIK` (Jacobian-DLS differential solve) and
+- `ik` — `InverseKinematics` protocol, `NumericalIK` (Jacobian-DLS differential
+  solve), `IKFastSolver` (per-robot analytic solve), and
   `follow_end_effector_path` (warm-started Cartesian-path tracking).
 
 Tests cover conversions, every joint type, FK propagation, grasp re-parenting,
@@ -153,8 +161,9 @@ snapshotting, URDF loading, FK equivalence with PyBullet on Panda, `.glb` mesh
 conversion, shape-soup rendering, collision checking (primitives, adjacency,
 attached-object-vs-environment, and Panda rest pose), BiRRT planning (joint-
 space geometry, steering around an obstacle, and a Panda plan around a block),
-and IK (reaching a pose from a nearby seed, unreachable targets, and smooth
-warm-started EE-path following).
+and IK (numerical reaching from a nearby seed, smooth warm-started EE-path
+following, IKFast global solves on Panda, branch selection, unreachable targets,
+and both solvers conforming to the `InverseKinematics` protocol).
 
 ## Milestones (each adds code + tests)
 
@@ -163,9 +172,10 @@ warm-started EE-path following).
    against PyBullet); shape-soup FK-driven renderer + `--make-videos` pipeline.
 3. **Collision** — done. Shape-soup `PyBulletCollisionChecker` (FK-positioned
    bodies, allowed-pair discovery); a grasped object collides for free.
-4. **IK** — `NumericalIK` (Jacobian-DLS) + `follow_end_effector_path` (the
-   warm-started ee-follow jitter fix) — done. `AnalyticIK` (EAIK/IKFast port)
-   next, extracting an `InverseKinematics` ABC once it lands.
+4. **IK** — done. `InverseKinematics` protocol with two implementations:
+   `NumericalIK` (Jacobian-DLS) + `follow_end_effector_path` (the warm-started
+   ee-follow jitter fix), and `IKFastSolver` (per-robot analytic, compiled on
+   demand). Robot-specific solvers (e.g. Vega EAIK) plug in via the protocol.
 5. **Planning** — `JointSpace` + `BiRRTPlanner` (wrapping `prpl_utils`) over a
    `config -> bool` callable — done. `OMPLPlanner` next, extracting the
    `MotionPlanner`/`ConfigurationSpace` ABCs once a second implementation exists.
