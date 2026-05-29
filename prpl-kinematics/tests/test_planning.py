@@ -1,5 +1,6 @@
 """Unit tests for joint-space BiRRT motion planning."""
 
+import math
 import os
 
 import numpy as np
@@ -10,7 +11,7 @@ from prpl_kinematics.collision import PyBulletCollisionChecker
 from prpl_kinematics.geometry.shapes import BoxShape
 from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.planning import BiRRTPlanner, JointSpace
-from prpl_kinematics.tree.joints import FixedJoint, PrismaticJoint
+from prpl_kinematics.tree.joints import FixedJoint, PrismaticJoint, RevoluteJoint
 from prpl_kinematics.tree.kinematic_tree import Edge, KinematicTree, Node
 from prpl_kinematics.utils import get_assets_path
 from prpl_kinematics.visualization import (
@@ -62,6 +63,54 @@ def test_joint_space_geometry():
         5.0
     )
     assert np.allclose(space.clamp(np.array([-3.0, 7.0])), [-1.0, 5.0])
+
+
+def _continuous_space() -> JointSpace:
+    tree = KinematicTree()
+    tree.add_node(Node("a"))
+    tree.add_edge(
+        Edge("world", "a", RevoluteJoint(name="cont", lower=-math.inf, upper=math.inf))
+    )
+    return JointSpace(tree, ["cont"])
+
+
+def test_continuous_joint_distance_wraps_around():
+    """A continuous joint measures the shorter way around 2*pi."""
+    space = _continuous_space()
+    assert space.distance(np.array([3.0]), np.array([-3.0])) == pytest.approx(
+        2 * math.pi - 6.0
+    )
+
+
+def test_continuous_joint_samples_within_pi():
+    """A continuous joint (infinite limits) samples over [-pi, pi]."""
+    space = _continuous_space()
+    rng = np.random.default_rng(0)
+    for _ in range(50):
+        value = space.sample(rng)[0]
+        assert -math.pi <= value <= math.pi
+
+
+def test_continuous_joint_interpolates_short_way():
+    """Interpolation crosses the +-pi seam instead of unwinding the long way."""
+    space = _continuous_space()
+    waypoints = [
+        w[0] for w in space.interpolate(np.array([3.0]), np.array([-3.0]), 0.1)
+    ]
+    steps = np.diff([3.0] + waypoints)
+    assert np.all(np.abs(steps) <= 0.1 + 1e-9)
+    assert (waypoints[-1] - (-3.0)) % (2 * math.pi) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_finite_revolute_distance_is_euclidean():
+    """A limited revolute joint does not wrap; distance stays Euclidean."""
+    tree = KinematicTree()
+    tree.add_node(Node("a"))
+    tree.add_edge(
+        Edge("world", "a", RevoluteJoint(name="r", lower=-math.pi, upper=math.pi))
+    )
+    space = JointSpace(tree, ["r"])
+    assert space.distance(np.array([3.0]), np.array([-3.0])) == pytest.approx(6.0)
 
 
 def test_interpolate_resolution_and_endpoint():

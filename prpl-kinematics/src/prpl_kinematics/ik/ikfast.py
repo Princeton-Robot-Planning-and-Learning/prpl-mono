@@ -124,7 +124,8 @@ class IKFastSolver:
                 vector = np.asarray(candidate, dtype=float)
                 if not np.allclose(vector, self._space.clamp(vector)):
                     continue  # out of joint limits
-                distance = float(np.linalg.norm(vector - seed_vector))
+                # Wrap-aware so continuous joints aren't judged a full turn away.
+                distance = self._space.distance(vector, seed_vector)
                 if distance < best_distance:
                     best_distance = distance
                     best = {**dict(seed), **self._space.to_configuration(vector)}

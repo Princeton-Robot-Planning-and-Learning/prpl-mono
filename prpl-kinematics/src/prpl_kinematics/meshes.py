@@ -1,9 +1,11 @@
 """Prepare mesh files for PyBullet's file importer.
 
-PyBullet's file-based mesh loader (used by both the renderer and the collision
-checker) reads ``.obj``/``.stl``/``.dae`` natively and has no vertex-count limit,
-unlike the programmatic ``createVisualShape(vertices=...)`` path. Other formats
-(e.g. ``.glb``) are converted to ``.obj`` once via trimesh and cached on disk.
+PyBullet's mesh loaders have no vertex-count limit (unlike the programmatic
+``createVisualShape(vertices=...)`` path), but they accept different formats. The
+visual loader reads ``.obj``/``.stl``/``.dae`` natively, while
+``createCollisionShape`` only reads ``.obj``/``.stl``. Anything outside the
+relevant set (e.g. ``.glb`` for either, or ``.dae`` for collision) is converted
+to ``.obj`` once via trimesh and cached on disk.
 """
 
 from __future__ import annotations
@@ -15,19 +17,22 @@ from typing import Any
 
 import trimesh
 
-_NATIVE_MESH_FORMATS = frozenset({".obj", ".stl", ".dae"})
+_VISUAL_NATIVE_FORMATS = frozenset({".obj", ".stl", ".dae"})
+_COLLISION_NATIVE_FORMATS = frozenset({".obj", ".stl"})
 _MESH_CACHE_DIR = os.path.join(tempfile.gettempdir(), "prpl_kinematics_mesh_cache")
 
 
-def to_pybullet_mesh(filename: str) -> str:
+def to_pybullet_mesh(filename: str, collision: bool = False) -> str:
     """Return a path to a PyBullet-loadable mesh for ``filename``.
 
-    Native formats are returned unchanged; others are converted to ``.obj`` via
-    trimesh and cached on disk by source path and modification time, so the
-    conversion is paid at most once per mesh.
+    Formats the target loader reads natively are returned unchanged; others are
+    converted to ``.obj`` via trimesh and cached on disk by source path and
+    modification time, so the conversion is paid at most once per mesh. Set
+    ``collision`` for ``createCollisionShape``, which does not read ``.dae``.
     """
+    native = _COLLISION_NATIVE_FORMATS if collision else _VISUAL_NATIVE_FORMATS
     extension = os.path.splitext(filename)[1].lower()
-    if extension in _NATIVE_MESH_FORMATS:
+    if extension in native:
         return filename
     os.makedirs(_MESH_CACHE_DIR, exist_ok=True)
     key = f"{os.path.abspath(filename)}:{os.path.getmtime(filename)}"

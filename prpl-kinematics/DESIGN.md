@@ -87,7 +87,7 @@ visualization.py Shape-soup renderer (FK-driven), capture, video (--make-videos)
 collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.         [built]
 ik/              InverseKinematics protocol; NumericalIK (DLS) + IKFastSolver.    [built]
 planning/        JointSpace + BiRRTPlanner (over a config->bool callable); OMPL.   [built]
-robots/          Robot composition (groups, EE, IK, home, ACM) + make_panda.    [built]
+robots/          Robot composition (groups, EE, IK, home, ACM) + Panda, Kinova. [built]
 manipulation/    Primitive ABC; Pick, Place with injected grasp generators.       [planned]
 ```
 
@@ -95,8 +95,10 @@ The renderer is shape-soup: it creates one PyBullet visual body per node shape
 and positions every body from the tree's own forward kinematics, so a grasped
 object (re-parented in the tree) renders with no special handling and nothing
 relies on PyBullet's articulation. Meshes go through PyBullet's file importer;
-`.obj`/`.stl`/`.dae` pass through directly and other formats (e.g. `.glb`) are
-converted to `.obj` once via trimesh and cached on disk. The collision checker
+the visual loader reads `.obj`/`.stl`/`.dae` directly while `createCollisionShape`
+reads only `.obj`/`.stl`, so anything outside the relevant set (e.g. `.glb`, or
+`.dae` for collision) is converted to `.obj` once via trimesh and cached on disk.
+The collision checker
 uses the same per-shape, FK-positioned approach: one collision body per shape,
 positioned by FK, with non-ignored body pairs tested via `getClosestPoints`. A
 grasped object (re-parented in the tree) collides with the environment for free.
@@ -107,7 +109,10 @@ to `ignore`. There is no `CollisionBackend` ABC yet — a planner takes a plain
 
 A `JointSpace` is a group of actuated joints in a fixed order, supplying the
 sample/distance/interpolate operations a sampling planner needs plus conversion
-between a flat coordinate vector and a `Configuration`. `BiRRTPlanner` adapts the
+between a flat coordinate vector and a `Configuration`. Continuous joints
+(revolute with infinite limits, e.g. Kinova's joints 1/3/5/7) are handled
+throughout: they sample over `[-pi, pi]`, and distance and interpolation take
+the shorter way around the 2*pi seam. `BiRRTPlanner` adapts the
 generic `BiRRT` from `prpl_utils` to it, taking a plain `config -> bool`
 collision callable (the checker satisfies this) and holding non-planned joints
 fixed at the start configuration. There is no `MotionPlanner` or
@@ -170,18 +175,19 @@ The minimal, fully-tested core:
   solve), `IKFastSolver` (per-robot analytic solve), and
   `follow_end_effector_path` (warm-started Cartesian-path tracking).
 - `robots` — `Robot` (composition: named groups, EE, injected IK, home,
-  intrinsic ACM) and `make_panda`.
+  intrinsic ACM) with `make_panda` and `make_kinova` (Gen3, continuous joints).
 
 Tests cover conversions, every joint type, FK propagation, grasp re-parenting,
 snapshotting, URDF loading, FK equivalence with PyBullet on Panda, `.glb` mesh
 conversion, shape-soup rendering, collision checking (primitives, adjacency,
 attached-object-vs-environment, and Panda rest pose), BiRRT planning (joint-
-space geometry, steering around an obstacle, and a Panda plan around a block),
-and IK (numerical reaching from a nearby seed, smooth warm-started EE-path
-following, IKFast global solves on Panda, branch selection, unreachable targets,
-and both solvers conforming to the `InverseKinematics` protocol), and robot
-assembly (Panda groups/EE/IK/home/ACM, IK through the robot, a self-collision-
-free home, and planning the arm around an obstacle via the robot's pieces).
+space geometry, continuous-joint wrap-around, steering around an obstacle, and a
+Panda plan around a block), IK (numerical reaching from a nearby seed, smooth
+warm-started EE-path following, IKFast global solves on Panda, branch selection,
+unreachable targets, and both solvers conforming to the `InverseKinematics`
+protocol), and robot assembly (Panda and Kinova Gen3 groups/EE/IK/home/ACM, IK
+through the robot, a self-collision-free home, the Gen3's continuous joints, and
+planning the arm around an obstacle via the robot's pieces).
 
 ## Milestones (each adds code + tests)
 
@@ -197,11 +203,11 @@ free home, and planning the arm around an obstacle via the robot's pieces).
 5. **Planning** — `JointSpace` + `BiRRTPlanner` (wrapping `prpl_utils`) over a
    `config -> bool` callable — done. `OMPLPlanner` next, extracting the
    `MotionPlanner`/`ConfigurationSpace` ABCs once a second implementation exists.
-6. **Robots** — `Robot` composition + `make_panda` done. Each robot exposes
-   *explicitly named* joint groups (e.g. `"arm"`, `"gripper"`) as `JointSpace`s
-   plus an EE frame, injected IK, home, and intrinsic ACM — never a single
-   ambiguous "the robot's joints" vector, and the gripper is a group, not a
-   `finger_state` scalar (principle 7). Kinova (IKFast), Dexmate Vega (bimanual,
-   bespoke EAIK IK), and TidyBot (mobile base, adding `SE2Space` + the
+6. **Robots** — `Robot` composition + `make_panda` + `make_kinova` (Gen3) done.
+   Each robot exposes *explicitly named* joint groups (e.g. `"arm"`, `"gripper"`)
+   as `JointSpace`s plus an EE frame, injected IK, home, and intrinsic ACM —
+   never a single ambiguous "the robot's joints" vector, and the gripper is a
+   group, not a `finger_state` scalar (principle 7). Dexmate Vega (bimanual,
+   bespoke EAIK IK) and TidyBot (mobile base, adding `SE2Space` + the
    `ConfigurationSpace` protocol) follow.
 7. **Manipulation** — `Pick`/`Place` on the new stack.

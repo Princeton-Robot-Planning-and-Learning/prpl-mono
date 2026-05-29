@@ -35,7 +35,7 @@ def _create_collision_shape(physics_client_id: int, shape: Shape) -> int:
         return int(
             p.createCollisionShape(
                 p.GEOM_MESH,
-                fileName=to_pybullet_mesh(shape.filename),
+                fileName=to_pybullet_mesh(shape.filename, collision=True),
                 meshScale=list(shape.scale),
                 **common,
             )
@@ -137,3 +137,21 @@ class PyBulletCollisionChecker:
             physicsClientId=self._physics_client_id,
         )
         return len(points) > 0
+
+
+def discover_allowed_pairs(
+    tree: KinematicTree, config: Configuration
+) -> frozenset[frozenset[str]]:
+    """The link pairs overlapping with the robot alone at ``config``.
+
+    These are the robot's intrinsic rest overlaps (its allowed-collision matrix);
+    discovering them from the robot by itself keeps environment collisions from being
+    masked. Runs in a throwaway DIRECT client.
+    """
+    physics_client_id = p.connect(p.DIRECT)
+    try:
+        checker = PyBulletCollisionChecker(physics_client_id)
+        checker.load(tree)
+        return frozenset(checker.pairs_in_collision(config))
+    finally:
+        p.disconnect(physics_client_id)
