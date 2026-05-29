@@ -22,10 +22,11 @@ checking or rendering itself.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from spatialmath import SE3
 
+from prpl_kinematics.geometry.shapes import Shape
 from prpl_kinematics.tree.joints import FixedJoint, Joint, JointValues
 
 Configuration = Mapping[str, JointValues]
@@ -33,15 +34,16 @@ Configuration = Mapping[str, JointValues]
 
 @dataclass
 class Node:
-    """A named frame, optionally carrying collision/visual geometry.
+    """A named frame, optionally carrying visual and collision geometry.
 
-    ``geometry`` is an opaque handle (e.g. a path to a mesh or a primitive-shape
-    spec). The tree never interprets it; only consumers that render or check
-    collisions do.
+    ``visuals`` and ``collisions`` are shape lists in the node's own frame. The
+    tree never interprets them; only consumers that render or check collisions
+    do.
     """
 
     name: str
-    geometry: object | None = None
+    visuals: list[Shape] = field(default_factory=list)
+    collisions: list[Shape] = field(default_factory=list)
 
 
 @dataclass
