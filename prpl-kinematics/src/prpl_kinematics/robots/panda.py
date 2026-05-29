@@ -9,14 +9,13 @@ discovery at each use site.
 from __future__ import annotations
 
 import numpy as np
-import pybullet as p
 
-from prpl_kinematics.collision import PyBulletCollisionChecker
+from prpl_kinematics.collision import discover_allowed_pairs
 from prpl_kinematics.ik.ikfast import IKFastInfo, IKFastSolver
 from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.planning.joint_space import JointSpace
 from prpl_kinematics.robots.robot import Robot
-from prpl_kinematics.tree.kinematic_tree import Configuration, KinematicTree
+from prpl_kinematics.tree.kinematic_tree import Configuration
 from prpl_kinematics.utils import get_assets_path
 
 _ARM_JOINTS = [f"panda_joint{i}" for i in range(1, 8)]
@@ -36,19 +35,6 @@ _IKFAST_INFO = IKFastInfo(
     ee_link=_IKFAST_EE,
     free_joints=["panda_joint7"],
 )
-
-
-def _intrinsic_allowed_pairs(
-    tree: KinematicTree, config: Configuration
-) -> frozenset[frozenset[str]]:
-    """Link pairs that overlap with the robot alone at ``config`` (its ACM)."""
-    physics_client_id = p.connect(p.DIRECT)
-    try:
-        checker = PyBulletCollisionChecker(physics_client_id)
-        checker.load(tree)
-        return frozenset(checker.pairs_in_collision(config))
-    finally:
-        p.disconnect(physics_client_id)
 
 
 def make_panda(rng: np.random.Generator | None = None) -> Robot:
@@ -73,5 +59,5 @@ def make_panda(rng: np.random.Generator | None = None) -> Robot:
         ee_frame=_EE_FRAME,
         ik=ik,
         home=home,
-        allowed_collision_pairs=_intrinsic_allowed_pairs(tree, home),
+        allowed_collision_pairs=discover_allowed_pairs(tree, home),
     )
