@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prpl_kinematics"
+version = "0.0.1"
+description = "Kinematics-only robot modeling, IK, motion planning, and manipulation primitives built on a general KinematicTree."
+readme = "README.md"
+requires-python = ">=3.10"
+# Lists only what the code imports.
+dependencies = [
+   "numpy>=1.23.5,<2.0",
+   "scipy>=1.10",
+   "spatialmath-python>=1.1.10",
+]
+
+[project.optional-dependencies]
+develop = [
+    "black",
+    "docformatter",
+    "isort",
+    "mypy",
+    "pylint>=2.14.5",
+    "pytest-pylint>=0.18.0",
+    "pytest>=7.2.2",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+prpl_kinematics = ["py.typed"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+extend-exclude = "third_party/*"
+
+[tool.docformatter]
+line-length = 88
+wrap-summaries = 88
+wrap-descriptions = 88
+
+[tool.isort]
+py_version = 310
+profile = "black"
+multi_line_output = 2
+skip_glob = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "__pycache__/"]
+split_on_trailing_comma = true
+
+[tool.mypy]
+strict_equality = true
+disallow_untyped_calls = true
+warn_unreachable = true
+exclude = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "__pycache__/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "pybullet.*",
+    "pybullet_utils.*",
+    "scipy.*",
+    "spatialmath.*",
+    "yourdfpy.*",
+    "eaik.*",
+    "ompl.*",
+]
+ignore_missing_imports = true
