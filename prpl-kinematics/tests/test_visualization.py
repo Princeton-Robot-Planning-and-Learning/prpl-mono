@@ -17,6 +17,7 @@ from prpl_kinematics.tree.kinematic_tree import Configuration, Edge, KinematicTr
 from prpl_kinematics.tree.state import KinematicState
 from prpl_kinematics.utils import get_assets_path
 from prpl_kinematics.visualization import (
+    DEFAULT_BACKGROUND_COLOR,
     BlenderRenderer,
     CameraParams,
     PyBulletRenderer,
@@ -143,6 +144,24 @@ def test_pybullet_renders_shape_color(physics_client_id):
     ]
     red_over_blue = frame[:, :, 0].astype(int) - frame[:, :, 2].astype(int)
     assert float((red_over_blue > 40).mean()) > 0.02  # a clearly red region exists
+
+
+def test_pybullet_background_default_and_disable(physics_client_id):
+    """A background pixel is the soft-purple default, or white when disabled."""
+    tree = KinematicTree(root="base")
+    box = BoxShape(size=(0.2, 0.2, 0.2))
+    tree.add_node(Node("box", visuals=[box]))
+    tree.add_edge(Edge("base", "box", FixedJoint(name="f", origin=SE3())))
+    camera = CameraParams(target=(0, 0, 0), distance=2.0)
+
+    renderer = PyBulletRenderer(physics_client_id)  # default soft-purple background
+    renderer.load(tree)
+    purple = [round(c * 255) for c in DEFAULT_BACKGROUND_COLOR]
+    assert renderer.render_frames([{}], camera)[0][0, 0].tolist() == purple
+
+    plain = PyBulletRenderer(physics_client_id, background_color=None)
+    plain.load(tree)
+    assert plain.render_frames([{}], camera)[0][0, 0].tolist() == [255, 255, 255]
 
 
 def test_blender_executable_honors_env(monkeypatch):

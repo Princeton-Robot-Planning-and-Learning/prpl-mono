@@ -36,7 +36,11 @@ from prpl_kinematics.geometry.shapes import (
 )
 from prpl_kinematics.meshes import to_pybullet_mesh
 from prpl_kinematics.tree.kinematic_tree import Configuration, KinematicTree
-from prpl_kinematics.visualization.interface import CameraParams, Renderer
+from prpl_kinematics.visualization.interface import (
+    DEFAULT_BACKGROUND_COLOR,
+    CameraParams,
+    Renderer,
+)
 
 _SCRIPT = os.path.join(os.path.dirname(__file__), "_blender_script.py")
 _MACOS_BLENDER = "/Applications/Blender.app/Contents/MacOS/Blender"
@@ -96,10 +100,12 @@ class BlenderRenderer(Renderer):
         blender_executable: str | None = None,
         samples: int = 64,
         ground_plane: bool = True,
+        background_color: tuple[float, float, float] = DEFAULT_BACKGROUND_COLOR,
     ) -> None:
         self._blender = blender_executable or _find_blender()
         self._samples = samples
         self._ground_plane = ground_plane
+        self._background_color = background_color
         self._tree: KinematicTree | None = None
         self._shapes: list[dict] = []
         self._nodes: list[str] = []  # nodes carrying visual shapes
@@ -154,6 +160,7 @@ class BlenderRenderer(Renderer):
             job = {
                 "samples": self._samples,
                 "ground_plane": self._ground_plane,
+                "background_color": list(self._background_color),
                 "camera": {
                     "target": list(camera.target),
                     "distance": camera.distance,

@@ -191,7 +191,8 @@ The minimal, fully-tested core:
 - `visualization` — `Renderer` interface with `PyBulletRenderer` (shape-soup
   preview) and `BlenderRenderer` (headless-Blender, high-fidelity), plus
   `render_configurations`, `render_states` (batches a grasp plan by tree
-  structure), `capture_image`, `save_video`, and the `--make-videos` test fixture.
+  structure), `capture_image`, `save_video`, a configurable scene background
+  (soft-purple `DEFAULT_BACKGROUND_COLOR`), and the `--make-videos` test fixture.
 - `collision` — `PyBulletCollisionChecker` (`in_collision`, `pairs_in_collision`,
   `ignore`).
 - `planning` — `ConfigurationSpace` protocol (`JointSpace`, `SE2Space`) and

@@ -15,7 +15,13 @@ from prpl_kinematics.geometry.shapes import BoxShape, CylinderShape, MeshShape, 
 from prpl_kinematics.geometry.transforms import pose_to_pybullet
 from prpl_kinematics.meshes import to_pybullet_mesh
 from prpl_kinematics.tree.kinematic_tree import Configuration, KinematicTree
-from prpl_kinematics.visualization.interface import CameraParams, Renderer
+from prpl_kinematics.visualization.interface import (
+    DEFAULT_BACKGROUND_COLOR,
+    CameraParams,
+    Renderer,
+)
+
+Color = tuple[float, float, float]
 
 
 def _create_visual_shape(physics_client_id: int, shape: Shape) -> int:
@@ -51,8 +57,13 @@ def _create_visual_shape(physics_client_id: int, shape: Shape) -> int:
 class PyBulletRenderer(Renderer):
     """Renders a KinematicTree by positioning per-shape visual bodies via FK."""
 
-    def __init__(self, physics_client_id: int) -> None:
+    def __init__(
+        self,
+        physics_client_id: int,
+        background_color: Color | None = DEFAULT_BACKGROUND_COLOR,
+    ) -> None:
         self._physics_client_id = physics_client_id
+        self._background_color = background_color
         self._tree: KinematicTree | None = None
         self._bodies: list[tuple[int, str]] = []
 
@@ -89,13 +100,19 @@ class PyBulletRenderer(Renderer):
 
     def capture_image(self, camera: CameraParams = CameraParams()) -> np.ndarray:
         """Capture an RGB image of the current scene from a synthetic camera."""
-        return capture_image(self._physics_client_id, camera)
+        return capture_image(self._physics_client_id, camera, self._background_color)
 
 
 def capture_image(
-    physics_client_id: int, camera: CameraParams = CameraParams()
+    physics_client_id: int,
+    camera: CameraParams = CameraParams(),
+    background_color: Color | None = DEFAULT_BACKGROUND_COLOR,
 ) -> np.ndarray:
-    """Capture an RGB image (H, W, 3) ``uint8`` from a synthetic camera."""
+    """Capture an RGB image (H, W, 3) ``uint8`` from a synthetic camera.
+
+    ``ER_TINY_RENDERER`` clears to white; when ``background_color`` is set, the
+    background pixels (segmentation ``-1``) are recolored to it.
+    """
     view = p.computeViewMatrixFromYawPitchRoll(
         cameraTargetPosition=camera.target,
         distance=camera.distance,
@@ -110,7 +127,7 @@ def capture_image(
         nearVal=camera.near,
         farVal=camera.far,
     )
-    _, _, rgba, _, _ = p.getCameraImage(
+    _, _, rgba, _, segmentation = p.getCameraImage(
         camera.width,
         camera.height,
         viewMatrix=view,
@@ -120,5 +137,13 @@ def capture_image(
     )
     image = np.reshape(
         np.asarray(rgba, dtype=np.uint8), (camera.height, camera.width, 4)
-    )
-    return image[:, :, :3]
+    )[:, :, :3]
+    if background_color is not None:
+        mask = np.reshape(
+            np.asarray(segmentation, dtype=np.int32), (camera.height, camera.width)
+        )
+        image = image.copy()
+        image[mask == -1] = np.array(
+            [round(channel * 255) for channel in background_color], dtype=np.uint8
+        )
+    return image

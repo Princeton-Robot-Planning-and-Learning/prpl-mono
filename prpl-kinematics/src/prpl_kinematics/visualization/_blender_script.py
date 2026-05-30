@@ -142,14 +142,32 @@ def build_objects(shapes):
     return objects, geometry_scale
 
 
-def setup_world():
-    """Set a soft, light-gray environment background."""
+def setup_world(color):
+    """Show ``color`` as the camera background while keeping ambient light low.
+
+    The camera sees the full-strength background color, but lighting rays see a dim
+    version, so the visible background stays a soft color without a bright environment
+    flooding (and desaturating) the scene.
+    """
+    rgba = (color[0], color[1], color[2], 1.0)
     world = bpy.context.scene.world or bpy.data.worlds.new("World")
     bpy.context.scene.world = world
     world.use_nodes = True
-    background = world.node_tree.nodes["Background"]
-    background.inputs[0].default_value = (0.85, 0.86, 0.88, 1.0)
-    background.inputs[1].default_value = 1.0
+    tree = world.node_tree
+    tree.nodes.clear()
+    output = tree.nodes.new("ShaderNodeOutputWorld")
+    mix = tree.nodes.new("ShaderNodeMixShader")
+    light_path = tree.nodes.new("ShaderNodeLightPath")
+    visible = tree.nodes.new("ShaderNodeBackground")
+    visible.inputs[0].default_value = rgba
+    visible.inputs[1].default_value = 1.0
+    ambient = tree.nodes.new("ShaderNodeBackground")
+    ambient.inputs[0].default_value = rgba
+    ambient.inputs[1].default_value = 0.25  # dim fill so colors stay saturated
+    tree.links.new(light_path.outputs["Is Camera Ray"], mix.inputs["Fac"])
+    tree.links.new(ambient.outputs["Background"], mix.inputs[1])
+    tree.links.new(visible.outputs["Background"], mix.inputs[2])
+    tree.links.new(mix.outputs["Shader"], output.inputs["Surface"])
 
 
 def add_ground_plane():
@@ -164,14 +182,14 @@ def add_ground_plane():
 def setup_lighting():
     """A soft area key light plus a fill sun."""
     key = bpy.data.lights.new("Key", type="AREA")
-    key.energy = 200.0
+    key.energy = 90.0
     key.size = 3.0
     key_obj = bpy.data.objects.new("Key", key)
     bpy.context.collection.objects.link(key_obj)
     key_obj.location = (1.5, -1.5, 2.5)
     key_obj.rotation_euler = (math.radians(35), 0.0, math.radians(45))
     sun = bpy.data.lights.new("Sun", type="SUN")
-    sun.energy = 2.0
+    sun.energy = 1.2
     sun_obj = bpy.data.objects.new("Sun", sun)
     bpy.context.collection.objects.link(sun_obj)
     sun_obj.rotation_euler = (math.radians(50), math.radians(15), math.radians(-30))
@@ -210,6 +228,9 @@ def setup_render(job):
     scene.cycles.samples = job["samples"]
     scene.cycles.device = "CPU"
     scene.cycles.use_denoising = True
+    # Faithful color; the default AgX desaturates saturated materials. With the
+    # low-ambient world and moderate lamps below, exposure stays in range.
+    scene.view_settings.view_transform = "Standard"
     scene.render.resolution_x = job["camera"]["width"]
     scene.render.resolution_y = job["camera"]["height"]
     scene.render.image_settings.file_format = "PNG"
@@ -222,7 +243,7 @@ def main():
         job = json.load(handle)
 
     clear_scene()
-    setup_world()
+    setup_world(job["background_color"])
     setup_render(job)
     if job["ground_plane"]:
         add_ground_plane()
