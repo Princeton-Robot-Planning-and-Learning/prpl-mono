@@ -112,15 +112,22 @@ class VegaArmIK:
     def _best_for_lock(
         self, qa: float, qb: float, target: np.ndarray
     ) -> tuple[np.ndarray | None, float]:
-        """Solve EAIK with the two joints locked; return the best in-limits solution."""
-        robot = EAIK.Robot(
-            self._h,
-            self._p,
-            np.eye(3),
-            [(_LOCK_A, float(qa)), (_LOCK_B, float(qb))],
-            True,
-        )
-        candidates = np.asarray(robot.calculate_IK(target).Q)
+        """Solve EAIK with the two joints locked; return the best in-limits solution.
+
+        Some locked values make the residual 5R chain degenerate (e.g. two axes
+        parallel), which EAIK reports by raising; treat those as unsolvable.
+        """
+        try:
+            robot = EAIK.Robot(
+                self._h,
+                self._p,
+                np.eye(3),
+                [(_LOCK_A, float(qa)), (_LOCK_B, float(qb))],
+                True,
+            )
+            candidates = np.asarray(robot.calculate_IK(target).Q)
+        except RuntimeError:
+            return None, np.inf
         if candidates.size == 0:
             return None, np.inf
         if candidates.ndim == 1:

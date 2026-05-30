@@ -9,6 +9,7 @@ import os
 
 import numpy as np
 import pytest
+from spatialmath import SE3
 
 from prpl_kinematics.collision import PyBulletCollisionChecker
 from prpl_kinematics.ik import InverseKinematics
@@ -54,6 +55,21 @@ def test_vega_both_arms_solve_ik():
         assert solution is not None
         reached = robot.tree.forward_kinematics(manipulator.ee_frame, solution)
         assert np.linalg.norm(np.asarray(reached.t) - np.asarray(target.t)) < 1e-3
+
+
+def test_vega_left_arm_solves_top_down_grasp():
+    """A top-down grasp in the reachable region solves without EAIK crashing.
+
+    The lock-value search visits degenerate 5R chains (parallel axes) that EAIK rejects
+    by raising; the solver must treat those as unsolvable, not propagate.
+    """
+    robot = make_vega()
+    manipulator = robot.manipulators["left"]
+    target = SE3.Rt(SE3.Rx(np.pi).R, [0.35, 0.30, 0.85])  # gripper z-axis down
+    solution = manipulator.ik.solve(target, robot.home)
+    assert solution is not None
+    reached = robot.tree.forward_kinematics(manipulator.ee_frame, solution)
+    assert np.linalg.norm(np.asarray(reached.t) - np.asarray(target.t)) < 1e-2
 
 
 def test_vega_home_is_self_collision_free(physics_client_id):
