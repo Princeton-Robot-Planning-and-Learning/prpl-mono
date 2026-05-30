@@ -184,7 +184,8 @@ The minimal, fully-tested core:
   `add_edge`, `forward_kinematics`, `relative_pose`, `attach`,
   `actuated_joint_names`, `joint`, `path_from_root`).
 - `tree.state` — `KinematicState` snapshot of actuated joint values.
-- `geometry.shapes` — `MeshShape`/`BoxShape`/`CylinderShape`/`SphereShape`.
+- `geometry.shapes` — `MeshShape`/`BoxShape`/`CylinderShape`/`SphereShape`, each
+  with an optional RGBA `color` honored by both renderers.
 - `loading.urdf` — `load_urdf` (yourdfpy → tree, with per-node geometry).
 - `meshes` — `to_pybullet_mesh` (native passthrough + cached `.glb`→`.obj`).
 - `visualization` — `Renderer` interface with `PyBulletRenderer` (shape-soup

@@ -25,6 +25,8 @@ def _create_visual_shape(physics_client_id: int, shape: Shape) -> int:
         "visualFrameOrientation": orientation,
         "physicsClientId": physics_client_id,
     }
+    if shape.color is not None:
+        common["rgbaColor"] = list(shape.color)
     if isinstance(shape, MeshShape):
         return int(
             p.createVisualShape(

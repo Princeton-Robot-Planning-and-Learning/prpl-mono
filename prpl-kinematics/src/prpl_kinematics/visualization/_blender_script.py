@@ -102,9 +102,8 @@ def make_primitive(spec):
         bpy.ops.mesh.primitive_uv_sphere_add(radius=1.0)
     obj = bpy.context.view_layer.objects.active
     bpy.ops.object.shade_smooth()
-    obj.data.materials.append(
-        principled_material("primitive", (0.55, 0.58, 0.62, 1.0), roughness=0.5)
-    )
+    color = spec.get("color", (0.55, 0.58, 0.62, 1.0))
+    obj.data.materials.append(principled_material("primitive", color, roughness=0.5))
     return obj
 
 
@@ -126,7 +125,12 @@ def build_objects(shapes):
         if spec["kind"] == "mesh":
             obj = import_mesh(spec["file"])
             bpy.ops.object.shade_smooth()
-            if not obj.data.materials:
+            if "color" in spec:  # an explicit color overrides any embedded material
+                obj.data.materials.clear()
+                obj.data.materials.append(
+                    principled_material("robot", spec["color"], roughness=0.4)
+                )
+            elif not obj.data.materials:
                 obj.data.materials.append(
                     principled_material("robot", (0.9, 0.9, 0.92, 1.0), roughness=0.4)
                 )

@@ -115,6 +115,36 @@ def test_blender_shape_spec_covers_primitives_and_meshes():
     assert all(len(s["origin"]) == 7 for s in specs)  # [x,y,z, qx,qy,qz,qw]
 
 
+def test_shape_color_defaults_to_none():
+    """Shapes are uncolored by default, so backends apply their own defaults."""
+    assert BoxShape(size=(1.0, 1.0, 1.0)).color is None
+
+
+def test_blender_spec_includes_color_only_when_set():
+    """The Blender job spec carries an explicit color and omits it otherwise."""
+    plain = _shape_spec(0, "n", BoxShape(size=(1.0, 1.0, 1.0)))
+    colored = _shape_spec(
+        0, "n", BoxShape(size=(1.0, 1.0, 1.0), color=(1.0, 0.0, 0.0, 1.0))
+    )
+    assert "color" not in plain
+    assert colored["color"] == [1.0, 0.0, 0.0, 1.0]
+
+
+def test_pybullet_renders_shape_color(physics_client_id):
+    """A red box renders with a red-dominant region (the color reaches PyBullet)."""
+    tree = KinematicTree(root="base")
+    box = BoxShape(size=(0.6, 0.6, 0.6), color=(1.0, 0.0, 0.0, 1.0))
+    tree.add_node(Node("box", visuals=[box]))
+    tree.add_edge(Edge("base", "box", FixedJoint(name="f", origin=SE3())))
+    renderer = PyBulletRenderer(physics_client_id)
+    renderer.load(tree)
+    frame = renderer.render_frames([{}], CameraParams(target=(0, 0, 0), distance=2.0))[
+        0
+    ]
+    red_over_blue = frame[:, :, 0].astype(int) - frame[:, :, 2].astype(int)
+    assert float((red_over_blue > 40).mean()) > 0.02  # a clearly red region exists
+
+
 def test_blender_executable_honors_env(monkeypatch):
     """The Blender backend resolves its executable from $PRPL_BLENDER first."""
     monkeypatch.setenv("PRPL_BLENDER", "/custom/blender")
