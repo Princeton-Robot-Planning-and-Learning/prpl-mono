@@ -8,6 +8,7 @@ render with no special handling and the same plans target either backend.
 
 from prpl_kinematics.visualization.blender_renderer import BlenderRenderer
 from prpl_kinematics.visualization.interface import (
+    DEFAULT_BACKGROUND_COLOR,
     CameraParams,
     Renderer,
     render_configurations,
@@ -20,6 +21,7 @@ from prpl_kinematics.visualization.pybullet_renderer import (
 )
 
 __all__ = [
+    "DEFAULT_BACKGROUND_COLOR",
     "BlenderRenderer",
     "CameraParams",
     "PyBulletRenderer",

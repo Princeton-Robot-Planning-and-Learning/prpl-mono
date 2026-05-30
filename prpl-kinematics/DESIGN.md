@@ -184,13 +184,15 @@ The minimal, fully-tested core:
   `add_edge`, `forward_kinematics`, `relative_pose`, `attach`,
   `actuated_joint_names`, `joint`, `path_from_root`).
 - `tree.state` — `KinematicState` snapshot of actuated joint values.
-- `geometry.shapes` — `MeshShape`/`BoxShape`/`CylinderShape`/`SphereShape`.
+- `geometry.shapes` — `MeshShape`/`BoxShape`/`CylinderShape`/`SphereShape`, each
+  with an optional RGBA `color` honored by both renderers.
 - `loading.urdf` — `load_urdf` (yourdfpy → tree, with per-node geometry).
 - `meshes` — `to_pybullet_mesh` (native passthrough + cached `.glb`→`.obj`).
 - `visualization` — `Renderer` interface with `PyBulletRenderer` (shape-soup
   preview) and `BlenderRenderer` (headless-Blender, high-fidelity), plus
   `render_configurations`, `render_states` (batches a grasp plan by tree
-  structure), `capture_image`, `save_video`, and the `--make-videos` test fixture.
+  structure), `capture_image`, `save_video`, a configurable scene background
+  (soft-purple `DEFAULT_BACKGROUND_COLOR`), and the `--make-videos` test fixture.
 - `collision` — `PyBulletCollisionChecker` (`in_collision`, `pairs_in_collision`,
   `ignore`).
 - `planning` — `ConfigurationSpace` protocol (`JointSpace`, `SE2Space`) and

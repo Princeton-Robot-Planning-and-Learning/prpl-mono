@@ -19,6 +19,9 @@ import numpy as np
 from prpl_kinematics.tree.kinematic_tree import Configuration, KinematicTree
 from prpl_kinematics.tree.state import KinematicState
 
+# A light, soft purple used as the default scene background by both renderers.
+DEFAULT_BACKGROUND_COLOR = (0.91, 0.87, 0.96)
+
 
 @dataclass(frozen=True)
 class CameraParams:
