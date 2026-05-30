@@ -400,7 +400,7 @@ Build Version: 1.6.7995.38578 For more information, please see http://wiki.ros.o
   </joint>
   <link name="L_ee" />
   <joint name="L_ee_j0" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 -1.57079" />
+    <origin xyz="0 0 0.23" rpy="0 0 -1.57079" />
     <parent link="L_arm_l8" />
     <child link="L_ee" />
   </joint>
@@ -619,7 +619,7 @@ Build Version: 1.6.7995.38578 For more information, please see http://wiki.ros.o
   </joint>
   <link name="R_ee" />
   <joint name="R_ee_j0" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 1.57079" />
+    <origin xyz="0 0 0.2" rpy="0 0 1.57079" />
     <parent link="R_arm_l8" />
     <child link="R_ee" />
   </joint>
