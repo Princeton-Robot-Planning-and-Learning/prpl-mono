@@ -44,7 +44,8 @@ from prpl_kinematics.visualization.interface import (
 
 _SCRIPT = os.path.join(os.path.dirname(__file__), "_blender_script.py")
 _MACOS_BLENDER = "/Applications/Blender.app/Contents/MacOS/Blender"
-# Formats Blender imports natively; anything else is converted to .obj on the way.
+# Formats Blender imports natively (keeping full mesh detail and materials);
+# anything else is converted to .obj via trimesh on the way in.
 _BLENDER_NATIVE_FORMATS = frozenset(
     {".obj", ".stl", ".dae", ".glb", ".gltf", ".ply", ".fbx"}
 )

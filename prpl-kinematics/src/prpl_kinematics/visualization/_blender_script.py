@@ -58,7 +58,8 @@ def import_mesh(path):
     before = {obj.name for obj in bpy.data.objects}
     extension = os.path.splitext(path)[1].lower()
     if extension == ".obj":
-        bpy.ops.wm.obj_import(filepath=path)
+        # No axis conversion: a converted .obj is already in the link frame.
+        bpy.ops.wm.obj_import(filepath=path, forward_axis="Y", up_axis="Z")
     elif extension == ".stl":
         bpy.ops.wm.stl_import(filepath=path)
     elif extension == ".dae":
@@ -84,6 +85,11 @@ def import_mesh(path):
     if len(mesh_names) > 1:
         bpy.ops.object.join()
     result_name = mesh_names[0]
+    if extension in (".glb", ".gltf"):
+        # Undo the glTF importer's Y-up to Z-up rotation so the baked vertices land
+        # in the link frame the URDF (and PyBullet) expect.
+        obj = bpy.data.objects[result_name]
+        obj.matrix_world = Matrix.Rotation(math.radians(-90), 4, "X") @ obj.matrix_world
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     for name in new_names:
         if name != result_name and name in bpy.data.objects:
