@@ -83,7 +83,7 @@ geometry/        spatialmath conversions (PyBullet xyzw) + shape specs.         
 tree/            KinematicTree, Joint types, FK, attach (grasp), KinematicState.  [built]
 loading/         URDF -> KinematicTree with per-node geometry (via yourdfpy).     [built]
 meshes.py        Prepare meshes for PyBullet's file importer (convert/cache).      [built]
-visualization.py Shape-soup renderer (FK-driven), capture, video (--make-videos). [built]
+visualization/   Renderer interface; PyBulletRenderer + BlenderRenderer (FK-driven). [built]
 collision.py     Shape-soup collision checker (FK-driven) + allowed pairs.         [built]
 ik/              InverseKinematics protocol; NumericalIK (DLS) + IKFastSolver.    [built]
 planning/        ConfigurationSpace + MotionPlanner; BiRRTPlanner, OMPLPlanner.  [built]
@@ -91,13 +91,22 @@ robots/          Robot composition + Panda, Kinova, TidyBot, Vega (bimanual).   
 manipulation.py  Primitive protocol; Pick, Place (grasp = a tree edge).           [built]
 ```
 
-The renderer is shape-soup: it creates one PyBullet visual body per node shape
-and positions every body from the tree's own forward kinematics, so a grasped
-object (re-parented in the tree) renders with no special handling and nothing
-relies on PyBullet's articulation. Meshes go through PyBullet's file importer;
-the visual loader reads `.obj`/`.stl`/`.dae` directly while `createCollisionShape`
-reads only `.obj`/`.stl`, so anything outside the relevant set (e.g. `.glb`, or
-`.dae` for collision) is converted to `.obj` once via trimesh and cached on disk.
+Rendering goes through a `Renderer` interface (`load`, `render`, `capture_image`,
+`render_frames`): a backend only needs each geometry-bearing node's world pose
+(from the tree's forward kinematics) plus its shapes, so a grasped object
+(re-parented in the tree) renders with no special handling and nothing relies on
+PyBullet's articulation. `PyBulletRenderer` is the fast shape-soup preview --- one
+PyBullet visual body per node shape, positioned by FK each frame.
+`BlenderRenderer` is the high-fidelity backend: since `bpy` is not installable for
+every Python, it serializes the scene (shapes + per-frame FK poses + camera) to
+JSON and drives a headless `blender --background` process that builds the scene
+once, renders every frame with Cycles, and writes PNGs that are read back. Meshes
+go through PyBullet's file importer for the PyBullet backend; the visual loader
+reads `.obj`/`.stl`/`.dae` directly while `createCollisionShape` reads only
+`.obj`/`.stl`, so anything outside the relevant set (e.g. `.glb`, or `.dae` for
+collision) is converted to `.obj` once via trimesh and cached on disk. Blender
+imports `.obj`/`.stl`/`.dae`/`.glb` natively (keeping embedded materials), falling
+back to the same conversion for anything it cannot read.
 The collision checker
 uses the same per-shape, FK-positioned approach: one collision body per shape,
 positioned by FK, with non-ignored body pairs tested via `getClosestPoints`. A
@@ -178,8 +187,10 @@ The minimal, fully-tested core:
 - `geometry.shapes` — `MeshShape`/`BoxShape`/`CylinderShape`/`SphereShape`.
 - `loading.urdf` — `load_urdf` (yourdfpy → tree, with per-node geometry).
 - `meshes` — `to_pybullet_mesh` (native passthrough + cached `.glb`→`.obj`).
-- `visualization` — `PyBulletRenderer`, `render_configurations`, `capture_image`,
-  `save_video`, plus the `--make-videos` test fixture.
+- `visualization` — `Renderer` interface with `PyBulletRenderer` (shape-soup
+  preview) and `BlenderRenderer` (headless-Blender, high-fidelity), plus
+  `render_configurations`, `render_states` (batches a grasp plan by tree
+  structure), `capture_image`, `save_video`, and the `--make-videos` test fixture.
 - `collision` — `PyBulletCollisionChecker` (`in_collision`, `pairs_in_collision`,
   `ignore`).
 - `planning` — `ConfigurationSpace` protocol (`JointSpace`, `SE2Space`) and
@@ -236,4 +247,12 @@ through their own manipulator).
    `ConfigurationSpace`, behind the extracted `MotionPlanner` protocol.
    `notebooks/motion_planner_comparison.ipynb` compares it with BiRRT (timing
    and rendered plan animations on a Panda reaching around an obstacle).
-8. **Manipulation** — `Pick`/`Place` on the new stack.
+8. **Manipulation** — done. `Pick`/`Place` primitives on the new stack: a grasp
+   is a tree edge (`attach`), a plan is a `list[KinematicState]` whose object edge
+   flips at the grasp, and collision logic follows pybullet-helpers (plan to a
+   pregrasp against all obstacles, then descend/retreat disregarding the target
+   object and its support surface).
+9. **Blender rendering** — done. `Renderer` interface extracted, with
+   `BlenderRenderer` (headless `blender --background`, Cycles) alongside
+   `PyBulletRenderer`. Same FK-driven inputs and `--make-videos` pattern; robots,
+   grasped objects, and obstacles all render via FK with no special handling.

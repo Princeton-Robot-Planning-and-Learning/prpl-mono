@@ -10,7 +10,7 @@ extension-pkg-whitelist=numpy,pybullet
 ignore=CVS,venv
 
 # Add paths to the blacklist.
-ignore-paths=src/prpl_kinematics/third_party,src/prpl_kinematics/assets
+ignore-paths=src/prpl_kinematics/third_party,src/prpl_kinematics/assets,src/prpl_kinematics/visualization/_blender_script.py
 
 # Add files or directories matching the regex patterns to the blacklist. The
 # regex matches against base names, not paths.

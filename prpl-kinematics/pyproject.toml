@@ -60,7 +60,7 @@ split_on_trailing_comma = true
 strict_equality = true
 disallow_untyped_calls = true
 warn_unreachable = true
-exclude = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "__pycache__/"]
+exclude = ["venv/*", ".venv/*", "build", "dist", "third_party", "third-party", "__pycache__/", "_blender_script.py"]
 
 [[tool.mypy.overrides]]
 module = [

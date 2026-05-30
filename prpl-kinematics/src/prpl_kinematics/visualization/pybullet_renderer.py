@@ -1,4 +1,4 @@
-"""PyBullet-based visualization: a shape-soup renderer, capture, and video.
+"""PyBullet shape-soup renderer: one visual body per node shape, FK-positioned.
 
 ``PyBulletRenderer`` creates one PyBullet visual body per node shape and, each
 frame, positions every body from the tree's forward kinematics. Nothing uses
@@ -8,10 +8,6 @@ correctly with no special handling.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
-
-import imageio.v2 as imageio
 import numpy as np
 import pybullet as p
 
@@ -19,21 +15,7 @@ from prpl_kinematics.geometry.shapes import BoxShape, CylinderShape, MeshShape, 
 from prpl_kinematics.geometry.transforms import pose_to_pybullet
 from prpl_kinematics.meshes import to_pybullet_mesh
 from prpl_kinematics.tree.kinematic_tree import Configuration, KinematicTree
-
-
-@dataclass(frozen=True)
-class CameraParams:
-    """Synthetic-camera settings for image capture."""
-
-    target: tuple[float, float, float] = (0.0, 0.0, 0.5)
-    distance: float = 1.5
-    yaw: float = 45.0
-    pitch: float = -30.0
-    width: int = 480
-    height: int = 360
-    fov: float = 60.0
-    near: float = 0.1
-    far: float = 100.0
+from prpl_kinematics.visualization.interface import CameraParams, Renderer
 
 
 def _create_visual_shape(physics_client_id: int, shape: Shape) -> int:
@@ -64,7 +46,7 @@ def _create_visual_shape(physics_client_id: int, shape: Shape) -> int:
     return int(p.createVisualShape(p.GEOM_SPHERE, radius=shape.radius, **common))
 
 
-class PyBulletRenderer:
+class PyBulletRenderer(Renderer):
     """Renders a KinematicTree by positioning per-shape visual bodies via FK."""
 
     def __init__(self, physics_client_id: int) -> None:
@@ -103,6 +85,10 @@ class PyBulletRenderer:
                 body, position, orientation, physicsClientId=self._physics_client_id
             )
 
+    def capture_image(self, camera: CameraParams = CameraParams()) -> np.ndarray:
+        """Capture an RGB image of the current scene from a synthetic camera."""
+        return capture_image(self._physics_client_id, camera)
+
 
 def capture_image(
     physics_client_id: int, camera: CameraParams = CameraParams()
@@ -134,21 +120,3 @@ def capture_image(
         np.asarray(rgba, dtype=np.uint8), (camera.height, camera.width, 4)
     )
     return image[:, :, :3]
-
-
-def render_configurations(
-    renderer: PyBulletRenderer,
-    configs: Iterable[Configuration],
-    camera: CameraParams = CameraParams(),
-) -> list[np.ndarray]:
-    """Render each configuration and capture a frame."""
-    frames = []
-    for config in configs:
-        renderer.render(config)
-        frames.append(capture_image(renderer.physics_client_id, camera))
-    return frames
-
-
-def save_video(frames: Sequence[np.ndarray], path: str, fps: int = 20) -> None:
-    """Write captured frames to a video file."""
-    imageio.mimsave(path, list(frames), fps=fps)

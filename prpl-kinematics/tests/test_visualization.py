@@ -6,17 +6,26 @@ import numpy as np
 import pybullet as p
 import pytest
 import trimesh
+from spatialmath import SE3
 
+from prpl_kinematics.geometry.shapes import BoxShape
 from prpl_kinematics.loading import load_urdf
-from prpl_kinematics.tree.kinematic_tree import KinematicTree
+from prpl_kinematics.meshes import to_pybullet_mesh
+from prpl_kinematics.robots import make_panda
+from prpl_kinematics.tree.joints import FixedJoint
+from prpl_kinematics.tree.kinematic_tree import Configuration, Edge, KinematicTree, Node
+from prpl_kinematics.tree.state import KinematicState
 from prpl_kinematics.utils import get_assets_path
 from prpl_kinematics.visualization import (
+    BlenderRenderer,
     CameraParams,
     PyBulletRenderer,
+    Renderer,
     render_configurations,
+    render_states,
     save_video,
-    to_pybullet_mesh,
 )
+from prpl_kinematics.visualization.blender_renderer import _shape_spec
 
 
 def _panda_path() -> str:
@@ -85,3 +94,104 @@ def test_panda_sweep_video(physics_client_id, make_videos):
     frames = render_configurations(renderer, _sweep_configs(tree, 48), camera)
     save_video(frames, "panda_sweep.mp4", fps=20)
     assert os.path.exists("panda_sweep.mp4")
+
+
+def test_renderers_conform_to_interface(physics_client_id):
+    """Both backends are Renderers (the protocol the helpers consume)."""
+    assert isinstance(PyBulletRenderer(physics_client_id), Renderer)
+    assert isinstance(BlenderRenderer(blender_executable="/usr/bin/false"), Renderer)
+
+
+def test_blender_shape_spec_covers_primitives_and_meshes():
+    """The Blender job spec captures each shape kind without launching Blender."""
+    tree = load_urdf(_panda_path())
+    specs = []
+    index = 0
+    for name, node in tree.nodes.items():
+        for shape in node.visuals:
+            specs.append(_shape_spec(index, name, shape))
+            index += 1
+    assert specs and all(s["kind"] == "mesh" for s in specs)  # Panda is all meshes
+    assert all(len(s["origin"]) == 7 for s in specs)  # [x,y,z, qx,qy,qz,qw]
+
+
+def test_blender_executable_honors_env(monkeypatch):
+    """The Blender backend resolves its executable from $PRPL_BLENDER first."""
+    monkeypatch.setenv("PRPL_BLENDER", "/custom/blender")
+    assert BlenderRenderer().blender_executable == "/custom/blender"
+
+
+class _RecordingRenderer(Renderer):
+    """A renderer that records each render_frames batch and the cube's parent."""
+
+    def __init__(self, tree: KinematicTree) -> None:
+        self._tree = tree
+        self.batch_sizes: list[int] = []
+        self.parents_at_call: list[str] = []
+
+    def load(self, tree: KinematicTree) -> None:
+        pass
+
+    def render(self, config: Configuration) -> None:
+        pass
+
+    def capture_image(self, camera: CameraParams = CameraParams()) -> np.ndarray:
+        return np.zeros((1, 1, 3), dtype=np.uint8)
+
+    def render_frames(self, configs, camera=CameraParams()):
+        config_list = list(configs)
+        self.batch_sizes.append(len(config_list))
+        self.parents_at_call.append(self._tree.edges["cube"].parent)
+        return [np.zeros((1, 1, 3), dtype=np.uint8) for _ in config_list]
+
+
+def test_render_states_batches_by_structure():
+    """render_states groups consecutive same-structure states into one batch."""
+    robot = make_panda()
+    tree = robot.tree
+    cube = BoxShape(size=(0.05, 0.05, 0.05))
+    tree.add_node(Node("cube", visuals=[cube], collisions=[cube]))
+    tree.add_edge(
+        Edge(tree.root, "cube", FixedJoint(name="cf", origin=SE3(0.4, 0.0, 0.2)))
+    )
+    on_table = KinematicState.from_tree(tree, robot.home)
+    tree.attach("cube", "tool_link", SE3(0.0, 0.0, 0.1))
+    held = KinematicState.from_tree(tree, robot.home)
+    tree.set_edge(
+        Edge(tree.root, "cube", FixedJoint(name="cf2", origin=SE3(0.5, 0.0, 0.2)))
+    )
+    placed = KinematicState.from_tree(tree, robot.home)
+
+    plan = [on_table, on_table, held, held, held, placed, placed]
+    recorder = _RecordingRenderer(tree)
+    frames = render_states(recorder, plan, tree)
+
+    assert len(frames) == len(plan)
+    assert recorder.batch_sizes == [2, 3, 2]  # one batch per structural segment
+    assert recorder.parents_at_call == [tree.root, "tool_link", tree.root]
+
+
+def test_panda_blender_video(make_videos):
+    """With --make-videos, render the sweep through Blender (skips if absent)."""
+    if not make_videos:
+        pytest.skip("pass --make-videos to render the video")
+    try:
+        renderer = BlenderRenderer(samples=48)
+    except FileNotFoundError:
+        pytest.skip("Blender executable not found")
+    tree = load_urdf(_panda_path())
+    renderer.load(tree)
+    camera = CameraParams(
+        target=(0.15, 0.0, 0.45),
+        distance=1.3,
+        yaw=55.0,
+        pitch=-18.0,
+        fov=50.0,
+        width=480,
+        height=360,
+    )
+    frames = render_configurations(renderer, _sweep_configs(tree, 24), camera)
+    assert len(frames) == 24
+    assert frames[0].shape == (360, 480, 3)
+    save_video(frames, "panda_blender_sweep.mp4", fps=20)
+    assert os.path.exists("panda_blender_sweep.mp4")
