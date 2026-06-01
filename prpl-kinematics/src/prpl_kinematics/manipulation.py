@@ -24,6 +24,7 @@ from spatialmath import SE3
 
 from prpl_kinematics.collision import PyBulletCollisionChecker
 from prpl_kinematics.ik.follow import follow_end_effector_path
+from prpl_kinematics.ik.interface import InverseKinematics
 from prpl_kinematics.ik.numerical import NumericalIK
 from prpl_kinematics.planning.joint_space import JointSpace
 from prpl_kinematics.planning.motion_planner import MotionPlanner
@@ -84,7 +85,7 @@ class Pick:
             grasp_world = object_world * grasp
             pregrasp_world = grasp_world * SE3(0.0, 0.0, -self._approach)
 
-            pregrasp_cfg = ik.solve(pregrasp_world, config)
+            pregrasp_cfg = _reach(self._follow_ik, ik, pregrasp_world, config)
             if pregrasp_cfg is None:
                 continue
             approach = self._planner.plan(config, pregrasp_cfg)
@@ -167,7 +168,7 @@ class Place:
             place_world = placement * ee_from_object.inv()
             preplace_world = place_world * SE3(0.0, 0.0, -self._approach)
 
-            preplace_cfg = ik.solve(preplace_world, config)
+            preplace_cfg = _reach(self._follow_ik, ik, preplace_world, config)
             if preplace_cfg is None:
                 continue
             approach = self._planner.plan(config, preplace_cfg)
@@ -211,6 +212,22 @@ def _follow_ik(robot: Robot, manipulator: Manipulator) -> NumericalIK:
     group = robot.groups[manipulator.group]
     assert isinstance(group, JointSpace), "Cartesian following needs a JointSpace arm"
     return NumericalIK(robot.tree, group, manipulator.ee_frame)
+
+
+def _reach(
+    numerical: NumericalIK,
+    analytic: InverseKinematics,
+    target: SE3,
+    seed: Configuration,
+) -> Configuration | None:
+    """A configuration reaching ``target``, preferring a seed-local solution.
+
+    Tries the differential solver from ``seed`` first: when the target is near the
+    seed (e.g. a pregrasp just off a ready pose) this stays on the seed's IK branch,
+    giving a short, smooth approach. Falls back to the analytic solver for global
+    reach when the differential solve does not converge.
+    """
+    return numerical.solve(target, seed) or analytic.solve(target, seed)
 
 
 def _cartesian_segment(

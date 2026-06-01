@@ -73,49 +73,76 @@ class VegaArmIK:
         self._ee_from_tool = tree.relative_pose(ee_link, tool, {})
 
     def solve(self, target_pose: SE3, seed: Configuration) -> Configuration | None:
-        """A configuration reaching ``target_pose`` (the tool frame), or ``None``."""
+        """A configuration reaching ``target_pose`` (the tool frame), or ``None``.
+
+        Among all configurations that reach the pose (the locked joints trace a
+        1-D solvable manifold, and EAIK yields several 5R branches per lock), the
+        one closest to ``seed`` is returned -- so the solver follows the seed onto
+        a natural, away-from-limits branch rather than an arbitrary contorted one.
+        """
         ee_target = target_pose * self._ee_from_tool.inv()
         in_base = (
             self._tree.forward_kinematics(self._base_frame, seed).inv() * ee_target
         )
         target = np.asarray(in_base.A)
+        seed_q = np.array([float(seed[name][0]) for name in self._arm_joints])
 
-        a_lo, a_hi = self._lower[_LOCK_A] + 0.05, self._upper[_LOCK_A] - 0.05
-        b_lo, b_hi = self._lower[_LOCK_B] + 0.05, self._upper[_LOCK_B] - 0.05
-        grid = sorted(
+        # Search the locked joints across (nearly) their full range; degenerate
+        # locks anywhere are caught when EAIK raises, so only a tiny edge margin
+        # is needed to keep solutions inside the limits.
+        a_lo, a_hi = self._lower[_LOCK_A] + 1e-3, self._upper[_LOCK_A] - 1e-3
+        b_lo, b_hi = self._lower[_LOCK_B] + 1e-3, self._upper[_LOCK_B] - 1e-3
+        solutions: list[np.ndarray] = []
+        grid = []
+        for qa in np.linspace(a_lo, a_hi, self._grid_size):
+            for qb in np.linspace(b_lo, b_hi, self._grid_size):
+                residual, _ = self._best_for_lock(qa, qb, target, solutions)
+                grid.append((residual, qa, qb))
+        grid.sort(key=lambda item: item[0])
+
+        # Refine the most promising locks, plus the seed's own locked values, onto
+        # the solvable manifold (the grid rarely lands on it exactly).
+        refine = [(qa, qb) for _, qa, qb in grid[: self._refine_seeds]]
+        refine.append(
             (
-                (*self._best_for_lock(qa, qb, target)[::-1], qa, qb)
-                for qa in np.linspace(a_lo, a_hi, self._grid_size)
-                for qb in np.linspace(b_lo, b_hi, self._grid_size)
-            ),
-            key=lambda item: item[0],
+                float(np.clip(seed_q[_LOCK_A], a_lo, a_hi)),
+                float(np.clip(seed_q[_LOCK_B], b_lo, b_hi)),
+            )
         )
-        best_residual, best_q, _, _ = grid[0]
-        for _, _, qa_seed, qb_seed in grid[: self._refine_seeds]:
-            if best_residual < self._tolerance:
-                break
+        for qa_seed, qb_seed in refine:
             opt = minimize(
-                lambda x: self._best_for_lock(x[0], x[1], target)[1],
+                # Clamp the unsolvable-lock penalty to a finite value so the
+                # simplex's convergence test does not subtract infinities.
+                lambda x: min(
+                    self._best_for_lock(x[0], x[1], target, solutions)[0], 1e3
+                ),
                 x0=[qa_seed, qb_seed],
                 method="Nelder-Mead",
+                bounds=[(a_lo, a_hi), (b_lo, b_hi)],
                 options={"xatol": 1e-5, "fatol": 1e-6, "maxiter": 200},
             )
-            q, residual = self._best_for_lock(opt.x[0], opt.x[1], target)
-            if residual < best_residual:
-                best_residual, best_q = residual, q
+            self._best_for_lock(opt.x[0], opt.x[1], target, solutions)
 
-        if best_q is None or best_residual >= self._tolerance:
+        if not solutions:
             return None
+        best_q = min(solutions, key=lambda q: float(np.linalg.norm(q - seed_q)))
         values = {name: [float(v)] for name, v in zip(self._arm_joints, best_q)}
         return {**dict(seed), **values}
 
     def _best_for_lock(
-        self, qa: float, qb: float, target: np.ndarray
-    ) -> tuple[np.ndarray | None, float]:
-        """Solve EAIK with the two joints locked; return the best in-limits solution.
+        self,
+        qa: float,
+        qb: float,
+        target: np.ndarray,
+        solutions: list[np.ndarray],
+    ) -> tuple[float, np.ndarray | None]:
+        """EAIK with two joints locked: return the best residual and best config.
 
-        Some locked values make the residual 5R chain degenerate (e.g. two axes
-        parallel), which EAIK reports by raising; treat those as unsolvable.
+        In-limits candidates whose residual is within tolerance are appended to
+        ``solutions`` (accumulating every reaching branch for seed-closest
+        selection). Some locked values make the residual 5R chain degenerate (e.g.
+        two axes parallel), which EAIK reports by raising; treat those as
+        unsolvable.
         """
         try:
             robot = EAIK.Robot(
@@ -127,19 +154,17 @@ class VegaArmIK:
             )
             candidates = np.asarray(robot.calculate_IK(target).Q)
         except RuntimeError:
-            return None, np.inf
+            return np.inf, None
         if candidates.size == 0:
-            return None, np.inf
+            return np.inf, None
         if candidates.ndim == 1:
             candidates = candidates[None, :]
-        unlocked = np.ones(len(self._arm_joints), dtype=bool)
-        unlocked[[_LOCK_A, _LOCK_B]] = False
         best_q: np.ndarray | None = None
         best_residual = np.inf
         for q in candidates:
-            if np.any(q[unlocked] < self._lower[unlocked] - 1e-6):
-                continue
-            if np.any(q[unlocked] > self._upper[unlocked] + 1e-6):
+            # Check every joint, including the locked ones: the bounded refinement
+            # can still probe lock values at the very edge of the limits.
+            if np.any(q < self._lower - 1e-6) or np.any(q > self._upper + 1e-6):
                 continue
             pose = robot.fwdkin(q)
             position_error = float(np.linalg.norm(pose[:3, 3] - target[:3, 3]))
@@ -150,4 +175,6 @@ class VegaArmIK:
             residual = position_error + angle_error
             if residual < best_residual:
                 best_residual, best_q = residual, np.asarray(q, dtype=float)
-        return best_q, best_residual
+            if residual < self._tolerance:
+                solutions.append(np.asarray(q, dtype=float))
+        return best_residual, best_q
