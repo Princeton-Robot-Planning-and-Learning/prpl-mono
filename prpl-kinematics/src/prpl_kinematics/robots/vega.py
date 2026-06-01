@@ -26,12 +26,14 @@ def _gripper_joints(side: str) -> list[str]:
     return [f"{side}_gripper_j1", f"{side}_gripper_j2"]
 
 
-# A natural, gravity-stable home for the left arm (j1..j7): arms forward and down,
-# grippers at chest height. Chosen to minimize static gravity torque (the arms hold
-# themselves) while keeping every joint well inside its limits. The right arm
-# mirrors it across the body via these per-joint sign flips.
-_LEFT_ARM_HOME = [1.83, 0.51, 0.0, -2.04, 0.0, 0.27, 0.0]
-_ARM_MIRROR = [-1, -1, -1, 1, 1, -1, -1]
+# A natural, manipulation-ready home (per-arm j1..j7): forearms down-forward with
+# the grippers angled downward at chest height. Each arm was optimized to minimize
+# static gravity torque (so the arms nearly hold themselves) and stay well inside
+# its joint limits, while pointing the gripper down-forward -- a ready posture from
+# which a tabletop grasp is a short, smooth reach. The two arms are optimized
+# independently (Vega's arms are not a simple sign-flip mirror of each other).
+_LEFT_ARM_HOME = [1.809, 0.636, -0.244, -2.04, 0.841, 0.129, -0.833]
+_RIGHT_ARM_HOME = [-1.043, -1.278, -0.793, -1.778, -0.148, -0.396, 0.417]
 
 
 def make_vega() -> Robot:
@@ -54,9 +56,9 @@ def make_vega() -> Robot:
         for side_name, prefix in [("left", "L"), ("right", "R")]
     }
     arm_home: dict[str, list[float]] = {}
-    for i, (left, mirror) in enumerate(zip(_LEFT_ARM_HOME, _ARM_MIRROR), start=1):
+    for i, (left, right) in enumerate(zip(_LEFT_ARM_HOME, _RIGHT_ARM_HOME), start=1):
         arm_home[f"L_arm_j{i}"] = [left]
-        arm_home[f"R_arm_j{i}"] = [left * mirror]
+        arm_home[f"R_arm_j{i}"] = [right]
     home: Configuration = {
         name: arm_home.get(name, [0.0] * tree.joint(name).num_dof)
         for name in tree.actuated_joint_names()
