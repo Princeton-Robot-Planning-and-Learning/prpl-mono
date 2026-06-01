@@ -34,6 +34,10 @@ def _gripper_joints(side: str) -> list[str]:
 # independently (Vega's arms are not a simple sign-flip mirror of each other).
 _LEFT_ARM_HOME = [1.809, 0.636, -0.244, -2.04, 0.841, 0.129, -0.833]
 _RIGHT_ARM_HOME = [-1.043, -1.278, -0.793, -1.778, -0.148, -0.396, 0.417]
+# Rest the parallel jaws open (each finger is revolute over [0, 0.785]); like the
+# Panda's open home, this is the ready-to-grasp pose, and a grasp closes on the
+# object rather than starting clamped shut through it.
+_GRIPPER_OPEN = 0.6
 
 
 def make_vega() -> Robot:
@@ -55,12 +59,15 @@ def make_vega() -> Robot:
         )
         for side_name, prefix in [("left", "L"), ("right", "R")]
     }
-    arm_home: dict[str, list[float]] = {}
+    rest: dict[str, list[float]] = {}
     for i, (left, right) in enumerate(zip(_LEFT_ARM_HOME, _RIGHT_ARM_HOME), start=1):
-        arm_home[f"L_arm_j{i}"] = [left]
-        arm_home[f"R_arm_j{i}"] = [right]
+        rest[f"L_arm_j{i}"] = [left]
+        rest[f"R_arm_j{i}"] = [right]
+    for side in ("L", "R"):
+        for finger in _gripper_joints(side):
+            rest[finger] = [_GRIPPER_OPEN]
     home: Configuration = {
-        name: arm_home.get(name, [0.0] * tree.joint(name).num_dof)
+        name: rest.get(name, [0.0] * tree.joint(name).num_dof)
         for name in tree.actuated_joint_names()
     }
     return Robot(

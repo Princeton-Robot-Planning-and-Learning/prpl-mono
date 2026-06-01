@@ -207,6 +207,130 @@ class Place:
         return None
 
 
+class Handover:
+    """Pass a held object from one manipulator to the other.
+
+    The object starts grasped by ``from_manipulator``. The giving arm carries it
+    to a handover pose between the arms; the receiving arm reaches a pregrasp and
+    descends along the grasp's approach axis until the receiving gripper takes the
+    object (it re-parents from the giving gripper onto the receiving one); then the
+    giving arm withdraws to its rest pose. ``handover_poses`` yields the object's
+    world pose during the transfer and ``grasps`` the receiving gripper's pose in
+    the object frame; the first combination whose carry, receive, descent, and
+    withdrawal all succeed is used.
+
+    Because the object is just a tree edge, no second object is needed: only the
+    edge's parent flips, mid-air, from one gripper to the other. The two arms move
+    one at a time (carry, then receive, then withdraw), so each phase is a single
+    arm's collision-checked motion against an otherwise static scene. The giving
+    arm withdraws by motion-planning back to ``give_rest`` rather than by a straight
+    Cartesian pull: at a centered handover the redundant arm is near full stretch,
+    and a Cartesian retreat swings its elbow into the torso, whereas the planner
+    routes around it.
+    """
+
+    def __init__(
+        self,
+        robot: Robot,
+        checker: PyBulletCollisionChecker,
+        give_planner: MotionPlanner,
+        receive_planner: MotionPlanner,
+        object_frame: str,
+        handover_poses: Iterable[SE3],
+        grasps: Iterable[SE3],
+        from_manipulator: str = "left",
+        to_manipulator: str = "right",
+        approach_distance: float = 0.12,
+        descend_resolution: float = 0.02,
+        give_rest: Configuration | None = None,
+    ) -> None:
+        self._robot = robot
+        self._checker = checker
+        self._give_planner = give_planner
+        self._receive_planner = receive_planner
+        self._object = object_frame
+        self._handover_poses = handover_poses
+        self._grasps = grasps
+        self._giver = robot.manipulators[from_manipulator]
+        self._taker = robot.manipulators[to_manipulator]
+        self._approach = approach_distance
+        self._resolution = descend_resolution
+        self._give_rest = robot.home if give_rest is None else give_rest
+        self._give_space = robot.groups[self._giver.group]
+        self._give_follow = _follow_ik(robot, self._giver)
+        self._take_follow = _follow_ik(robot, self._taker)
+
+    def plan(self, state: KinematicState) -> list[KinematicState] | None:
+        """A handover plan ending with the object held by the receiving arm, or
+        ``None``."""
+        tree = self._robot.tree
+        give_ee, take_ee = self._giver.ee_frame, self._taker.ee_frame
+        ignore = {self._object}
+        for handover_pose in self._handover_poses:
+            config: Configuration = state.apply(tree)  # restore the scene each attempt
+            # Carry the object to the handover pose by moving the giving arm; the
+            # object follows because it is parented onto the giving gripper.
+            ee_from_object = tree.relative_pose(give_ee, self._object, config)
+            give_target = handover_pose * ee_from_object.inv()
+            give_cfg = _reach(self._give_follow, self._giver.ik, give_target, config)
+            if give_cfg is None:
+                continue
+            carry = self._give_planner.plan(config, give_cfg)
+            if carry is None:
+                continue
+            config = carry[-1]
+
+            for grasp in self._grasps:
+                grasp_world = handover_pose * grasp
+                pregrasp_world = grasp_world * SE3(0.0, 0.0, -self._approach)
+
+                pregrasp_cfg = _reach(
+                    self._take_follow, self._taker.ik, pregrasp_world, config
+                )
+                if pregrasp_cfg is None:
+                    continue
+                approach = self._receive_planner.plan(config, pregrasp_cfg)
+                if approach is None:
+                    continue
+                descend = _cartesian_segment(
+                    self._take_follow,
+                    self._checker,
+                    pregrasp_world,
+                    grasp_world,
+                    pregrasp_cfg,
+                    ignore,
+                    self._resolution,
+                )
+                if descend is None:
+                    continue
+                grasp_cfg = descend[-1]
+
+                plan = [
+                    KinematicState.from_tree(tree, c)
+                    for c in [*carry, *approach, *descend]
+                ]
+                # The receiving gripper takes the object: flip its parent edge.
+                tree.attach(
+                    self._object,
+                    take_ee,
+                    tree.relative_pose(take_ee, self._object, grasp_cfg),
+                )
+                # Withdraw the giving arm to its rest pose (keeping the receiving
+                # arm, now holding the object, where it is).
+                rest_cfg = {
+                    **grasp_cfg,
+                    **self._give_space.to_configuration(
+                        self._give_space.to_vector(self._give_rest)
+                    ),
+                }
+                withdraw = self._give_planner.plan(grasp_cfg, rest_cfg)
+                if withdraw is None:
+                    continue
+                plan += [KinematicState.from_tree(tree, c) for c in withdraw]
+                return plan
+        return None
+
+
 def _follow_ik(robot: Robot, manipulator: Manipulator) -> NumericalIK:
     """A differential IK over the manipulator's arm group, for Cartesian following."""
     group = robot.groups[manipulator.group]
