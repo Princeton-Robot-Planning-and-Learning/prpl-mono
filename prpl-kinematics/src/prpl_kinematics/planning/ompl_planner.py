@@ -21,31 +21,48 @@ from prpl_kinematics.tree.kinematic_tree import Configuration
 
 ou.setLogLevel(ou.LogLevel.LOG_ERROR)
 
-# OMPL's RNG is process-global and can only be seeded before its first use, so
-# we seed it once (from the first planner's seed) rather than per ``plan`` call.
-_ompl_seeded: set[bool] = set()
+# OMPL's RNG is process-global: ``ou.RNG.setSeed`` only takes effect before the
+# RNG's first use. ``seed_ompl`` records the one seed applied this process and
+# refuses a conflicting re-seed rather than silently dropping it.
+_ompl_seed: list[int] = []
 
 
-def _seed_ompl_once(seed: int) -> None:
-    if not _ompl_seeded:
-        ou.RNG.setSeed(seed)
-        _ompl_seeded.add(True)
+def seed_ompl(seed: int) -> None:
+    """Seed OMPL's process-global RNG, once per process.
+
+    OMPL's RNG is shared across every ``OMPLPlanner`` and only honors a seed set
+    before its first use, so call this once, before constructing any planner.
+    Re-calling with the same seed is a no-op; re-calling with a *different* seed
+    raises -- the second seed could not take effect, so a silent no-op would be a
+    reproducibility trap. To collect IID samples, seed once and run repeatedly
+    (consecutive draws from the seeded stream are independent); for fully
+    reproducible per-seed runs, use one process per seed.
+    """
+    if _ompl_seed:
+        if _ompl_seed[0] != seed:
+            raise RuntimeError(
+                f"OMPL's RNG is process-global and already seeded with "
+                f"{_ompl_seed[0]}; it cannot be re-seeded to {seed} in the same "
+                f"process. Use one process per seed for reproducible per-seed runs."
+            )
+        return
+    ou.RNG.setSeed(int(seed))
+    _ompl_seed.append(int(seed))
 
 
 class OMPLPlanner:
     """Plans with OMPL's RRTConnect over a ConfigurationSpace.
 
-    Caveat: OMPL's RNG is process-global, so only the *first* planner's ``rng``
-    seeds it; later instances' seeds are ignored. This makes ``rng`` a partly
-    false affordance for multi-seed experiments -- to be reworked into an
-    explicit one-time ``seed_ompl`` (see the deferred design issue).
+    Unlike :class:`BiRRTPlanner`, this takes no per-instance ``rng``: OMPL's RNG is
+    process-global (see :func:`seed_ompl`), so a per-instance seed could not be
+    honored. Seed the process once with ``seed_ompl`` for reproducibility, or leave
+    it unseeded for OMPL's default.
     """
 
     def __init__(
         self,
         space: ConfigurationSpace,
         collision_fn: Callable[[Configuration], bool],
-        rng: np.random.Generator,
         timeout: float = 5.0,
         simplify: bool = True,
     ) -> None:
@@ -53,7 +70,6 @@ class OMPLPlanner:
         self._collision_fn = collision_fn
         self._timeout = timeout
         self._simplify = simplify
-        _seed_ompl_once(int(rng.integers(2**31)))
 
     def plan(
         self, start: Configuration, goal: Configuration
