@@ -1,5 +1,6 @@
-# Rendered video artifacts from --make-videos tests.
+# Rendered video artifacts from --make-videos tests and the render scripts.
 *.mp4
+*.gif
 
 # Compiled IKFast modules (built on demand from the committed C++ source).
 *.so

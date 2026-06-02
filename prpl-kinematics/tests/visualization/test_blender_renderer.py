@@ -63,6 +63,21 @@ def test_blender_spec_includes_color_only_when_set():
     assert colored["color"] == [1.0, 0.0, 0.0, 1.0]
 
 
+def test_blender_spec_marks_emissive_shapes():
+    """The Blender job spec flags emissive shapes (glowing markers) and omits it
+    otherwise."""
+    plain = _shape_spec(
+        0, "n", BoxShape(size=(1.0, 1.0, 1.0), color=(1.0, 0.0, 0.0, 1.0))
+    )
+    glowing = _shape_spec(
+        0,
+        "n",
+        BoxShape(size=(1.0, 1.0, 1.0), color=(1.0, 0.0, 0.0, 1.0), emissive=True),
+    )
+    assert "emissive" not in plain
+    assert glowing["emissive"] is True
+
+
 def test_blender_executable_honors_env(monkeypatch):
     """The Blender backend resolves its executable from $PRPL_BLENDER first."""
     monkeypatch.setenv("PRPL_BLENDER", "/custom/blender")

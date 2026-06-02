@@ -40,6 +40,24 @@ def principled_material(name, color, roughness=0.45, metallic=0.0):
     return material
 
 
+def emissive_material(name, color, strength=1.6):
+    """A pure-emission material: glows with ``color``, independent of scene light.
+
+    Uses a dedicated Emission shader (stable input names across Blender versions)
+    so saturated markers stay vivid instead of washing out under the key light.
+    """
+    material = bpy.data.materials.new(name)
+    material.use_nodes = True
+    nodes = material.node_tree.nodes
+    nodes.clear()
+    emission = nodes.new("ShaderNodeEmission")
+    emission.inputs["Color"].default_value = color
+    emission.inputs["Strength"].default_value = strength
+    output = nodes.new("ShaderNodeOutputMaterial")
+    material.node_tree.links.new(emission.outputs["Emission"], output.inputs["Surface"])
+    return material
+
+
 def clear_scene():
     """Remove the default objects and meshes from the startup scene."""
     bpy.ops.object.select_all(action="SELECT")
@@ -109,7 +127,12 @@ def make_primitive(spec):
     obj = bpy.context.view_layer.objects.active
     bpy.ops.object.shade_smooth()
     color = spec.get("color", (0.55, 0.58, 0.62, 1.0))
-    obj.data.materials.append(principled_material("primitive", color, roughness=0.5))
+    if spec.get("emissive"):
+        obj.data.materials.append(emissive_material("marker", color))
+    else:
+        obj.data.materials.append(
+            principled_material("primitive", color, roughness=0.5)
+        )
     return obj
 
 

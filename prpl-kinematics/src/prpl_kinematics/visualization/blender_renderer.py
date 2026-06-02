@@ -76,6 +76,8 @@ def _shape_spec(index: int, node: str, shape: Shape) -> dict:
     spec: dict = {"id": index, "node": node, "origin": _pose_list(shape.origin)}
     if shape.color is not None:
         spec["color"] = list(shape.color)
+    if shape.emissive:
+        spec["emissive"] = True
     if isinstance(shape, MeshShape):
         extension = os.path.splitext(shape.filename)[1].lower()
         path = (
