@@ -6,6 +6,9 @@ into PyBullet collision/visual shapes; the tree itself never interprets them. A
 node may hold several visual and several collision shapes. When ``color`` is
 ``None`` the backend's default applies (and a mesh keeps any material it ships
 with); setting it tints the shape in both the PyBullet and Blender renderers.
+``emissive`` makes the shape glow with its own color (a self-lit marker that
+stays saturated regardless of scene lighting); the Blender renderer honors it,
+the PyBullet renderer just shows the flat color.
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ class MeshShape:
     scale: tuple[float, float, float] = (1.0, 1.0, 1.0)
     origin: SE3 = field(default_factory=SE3)
     color: Color | None = None
+    emissive: bool = False
 
 
 @dataclass(frozen=True)
@@ -34,6 +38,7 @@ class BoxShape:
     size: tuple[float, float, float]
     origin: SE3 = field(default_factory=SE3)
     color: Color | None = None
+    emissive: bool = False
 
 
 @dataclass(frozen=True)
@@ -44,6 +49,7 @@ class CylinderShape:
     length: float
     origin: SE3 = field(default_factory=SE3)
     color: Color | None = None
+    emissive: bool = False
 
 
 @dataclass(frozen=True)
@@ -53,6 +59,7 @@ class SphereShape:
     radius: float
     origin: SE3 = field(default_factory=SE3)
     color: Color | None = None
+    emissive: bool = False
 
 
 Shape = MeshShape | BoxShape | CylinderShape | SphereShape
