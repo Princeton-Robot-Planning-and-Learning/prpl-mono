@@ -10,7 +10,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 # Lists only what the code imports.
 dependencies = [
-   "numpy>=1.23.5,<2.0",
+   # numpy 2 is supported (the suite passes on it); the optional ssik extra
+   # requires numpy>=2, so the cap is not pinned below it.
+   "numpy>=1.23.5",
    "scipy>=1.10",
    "prpl_utils>=0.0.1",
    "spatialmath-python>=1.1.10",
@@ -23,6 +25,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Optional analytic IK backend (ssik); requires numpy>=2. See ik/ssik.py.
+ssik = ["ssik[urdf]>=1.2"]
 develop = [
     "black",
     "docformatter",
@@ -74,5 +78,6 @@ module = [
     "imageio.*",
     "eaik.*",
     "ompl.*",
+    "ssik.*",
 ]
 ignore_missing_imports = true

@@ -10,6 +10,8 @@ two ``Manipulator``s, each with its own
 from __future__ import annotations
 
 from prpl_kinematics.collision import discover_allowed_pairs
+from prpl_kinematics.ik.interface import InverseKinematics
+from prpl_kinematics.ik.ssik import SSIKSolver
 from prpl_kinematics.loading import load_urdf
 from prpl_kinematics.planning.joint_space import JointSpace
 from prpl_kinematics.robots.robot import Manipulator, Robot
@@ -40,23 +42,33 @@ _RIGHT_ARM_HOME = [-1.043, -1.278, -0.793, -1.778, -0.148, -0.396, 0.417]
 _GRIPPER_OPEN = 0.6
 
 
-def make_vega() -> Robot:
-    """Assemble a bimanual Dexmate Vega 1U Robot (with parallel-jaw grippers)."""
-    tree = load_urdf(str(get_assets_path() / "urdf" / "vega" / "vega_1u_gripper.urdf"))
+def make_vega(ik: str = "eaik") -> Robot:
+    """Assemble a bimanual Dexmate Vega 1U Robot (with parallel-jaw grippers).
+
+    ``ik`` selects the per-arm analytic IK backend: ``"eaik"`` (default, the
+    bundled :class:`~prpl_kinematics.robots.vega_ik.VegaArmIK` lock-and-search) or
+    ``"ssik"`` (the optional :class:`~prpl_kinematics.ik.ssik.SSIKSolver`, which
+    requires the ``ssik`` package). Both solve Vega's non-SRS 7R arm.
+    """
+    urdf = get_assets_path() / "urdf" / "vega" / "vega_1u_gripper.urdf"
+    tree = load_urdf(str(urdf))
     groups = {
         "left_arm": JointSpace(tree, _arm_joints("L")),
         "right_arm": JointSpace(tree, _arm_joints("R")),
         "left_gripper": JointSpace(tree, _gripper_joints("L")),
         "right_gripper": JointSpace(tree, _gripper_joints("R")),
     }
+
+    def make_ik(prefix: str) -> InverseKinematics:
+        arm, ee, tool = _arm_joints(prefix), f"{prefix}_arm_l7", f"{prefix}_ee"
+        if ik == "ssik":
+            return SSIKSolver(tree, arm, ee, urdf, tool_frame=tool)
+        if ik == "eaik":
+            return VegaArmIK(tree, arm, ee, tool_frame=tool)
+        raise ValueError(f"unknown ik backend {ik!r}; expected 'eaik' or 'ssik'")
+
     manipulators = {
-        side_name: Manipulator(
-            f"{side_name}_arm",
-            f"{prefix}_ee",
-            VegaArmIK(
-                tree, _arm_joints(prefix), f"{prefix}_arm_l7", tool_frame=f"{prefix}_ee"
-            ),
-        )
+        side_name: Manipulator(f"{side_name}_arm", f"{prefix}_ee", make_ik(prefix))
         for side_name, prefix in [("left", "L"), ("right", "R")]
     }
     rest: dict[str, list[float]] = {}
