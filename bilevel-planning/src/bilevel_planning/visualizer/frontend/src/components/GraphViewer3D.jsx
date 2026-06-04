@@ -70,6 +70,13 @@ export function GraphViewer3D({ graphData }) {
       console.log('Clicked point:', point);
 
       if (point.customdata) {
+        // Abstract-action edge marker: customdata is an object, not a node id.
+        if (typeof point.customdata === 'object' && point.customdata.kind === 'abstract_action') {
+          setSelectedNode({ id: null, abstractActionName: point.customdata.name });
+          setStateImage(null);
+          setRenderError(null);
+          return;
+        }
         const nodeId = point.customdata;
         console.log('Node clicked:', nodeId);
 
@@ -139,7 +146,8 @@ export function GraphViewer3D({ graphData }) {
           }
         } else if (nodeId.startsWith('s:')) {
           console.log('Abstract state clicked');
-          setSelectedNode({ id: nodeId, stateData: null });
+          const abstractNode = graphData?.nodes?.find(n => n.id === nodeId);
+          setSelectedNode({ id: nodeId, stateData: null, atoms: abstractNode?.atoms ?? null });
           setStateImage(null);
           setRenderError(null);
         } else {
@@ -412,9 +420,33 @@ export function GraphViewer3D({ graphData }) {
       {/* Info Panel - Always visible */}
       <div style={styles.info}>
         {selectedNode ? (
+          selectedNode.abstractActionName ? (
+          <>
+            <strong>Abstract action</strong>
+            <div style={{ marginTop: '6px', fontFamily: 'monospace', fontSize: '13px' }}>
+              {selectedNode.abstractActionName}
+            </div>
+          </>
+          ) : (
           <>
             <strong>Selected Node:</strong> {selectedNode.id}
             <br />
+            {selectedNode.atoms && (
+              <div style={{ marginTop: '10px' }}>
+                <strong>Atoms ({selectedNode.atoms.length}):</strong>
+                {selectedNode.atoms.length > 0 ? (
+                  <ul style={{ margin: '5px 0 0', paddingLeft: '18px', fontFamily: 'monospace', fontSize: '12px' }}>
+                    {selectedNode.atoms.map((atom, i) => (
+                      <li key={i}>{atom}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ marginTop: '5px', color: '#666', fontStyle: 'italic' }}>
+                    (no atoms — empty abstract state)
+                  </div>
+                )}
+              </div>
+            )}
             {loadingImage && (
               <div style={{ marginTop: '10px', color: '#666' }}>
                 Loading visualization...
@@ -445,6 +477,7 @@ export function GraphViewer3D({ graphData }) {
               </div>
             )}
           </>
+          )
         ) : (
           <div style={{ color: '#666', fontStyle: 'italic' }}>
             <strong>Node Inspector</strong>

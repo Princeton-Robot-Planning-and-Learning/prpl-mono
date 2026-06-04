@@ -3,7 +3,7 @@
 import pickle
 from collections import deque
 from pathlib import Path
-from typing import Callable, Generic, Hashable, TypeVar
+from typing import Any, Callable, Generic, Hashable, TypeVar
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -22,24 +22,31 @@ _A = TypeVar("_A", bound=Hashable)  # abstract action
 
 
 def _hierarchical_layout(graph: nx.DiGraph) -> dict[str, tuple[float, float]]:
-    """Assign each node an (x, y) in a top-down layered arrangement.
+    """Assign each node an (x, y) in a top-down tree arrangement.
 
-    Each node's layer is its longest-path distance from any root (node with in_degree 0)
-    when the graph is a DAG, or its shortest-path distance via BFS otherwise. Nodes
-    within a layer are spread evenly along x. Roots sit at y=0 and descendants descend
-    (y decreases).
+    The y coordinate is the node's layer (depth): its longest-path distance
+    from any root (node with in_degree 0) when the graph is a DAG, or its
+    shortest-path distance via BFS otherwise. Roots sit at y=0 and descendants
+    descend (y decreases).
 
-    Coordinates are unscaled; the caller is expected to center and rescale them to its
-    preferred display box.
+    The x coordinate comes from a tree layout over a spanning forest of the
+    graph: leaves are spaced evenly left to right and every internal node is
+    centered over its children. Sibling subtrees occupy disjoint x ranges, so
+    distinct branches fan out instead of stacking onto the same per-layer
+    slots.
+
+    Coordinates are unscaled; the caller is expected to center and rescale them
+    to its preferred display box.
     """
     if not graph.nodes:
         return {}
 
-    roots = [n for n in graph.nodes if graph.in_degree(n) == 0]
+    roots = sorted(n for n in graph.nodes if graph.in_degree(n) == 0)
     if not roots:
         # Pure cycle (or no identifiable root): pick any node to start.
-        roots = [next(iter(graph.nodes))]
+        roots = [min(graph.nodes)]
 
+    # --- y: layer (depth) ---------------------------------------------------
     layer_of: dict[str, int] = {}
     if nx.is_directed_acyclic_graph(graph):
         # Longest-path layering: each node sits one layer below its
@@ -63,20 +70,142 @@ def _hierarchical_layout(graph: nx.DiGraph) -> dict[str, tuple[float, float]]:
         for node in graph.nodes:
             layer_of.setdefault(node, 0)
 
-    # Group by layer and spread evenly along x. Sort within a layer for
-    # deterministic output across runs.
-    layers: dict[int, list[str]] = {}
-    for node, layer in layer_of.items():
-        layers.setdefault(layer, []).append(node)
+    # --- x: subtree-centroid layout over a spanning forest ------------------
+    # Claim one tree-parent per node via BFS from the roots, so a node with
+    # several predecessors (a merge) is pulled toward only one of them rather
+    # than averaged between two columns. Every tree edge is a real graph edge,
+    # and longest-path layering keeps a child's layer below its tree-parent's,
+    # so edges still read downward. Children are listed in sorted order to fix
+    # a deterministic left-to-right ordering of subtrees.
+    tree_children: dict[str, list[str]] = {n: [] for n in graph.nodes}
+    visited: set[str] = set()
+    forest_roots: list[str] = []
+    # Real roots first, then any node not yet placed (a cycle component with
+    # no in_degree-0 node), so every node lands in exactly one spanning tree.
+    seeds = roots + [n for n in sorted(graph.nodes) if n not in roots]
+    for seed in seeds:
+        if seed in visited:
+            continue
+        forest_roots.append(seed)
+        visited.add(seed)
+        queue = deque([seed])
+        while queue:
+            u = queue.popleft()
+            for v in sorted(graph.successors(u)):
+                if v not in visited:
+                    visited.add(v)
+                    tree_children[u].append(v)
+                    queue.append(v)
 
-    positions: dict[str, tuple[float, float]] = {}
-    for layer, nodes_in_layer in layers.items():
-        nodes_in_layer.sort()
-        count = len(nodes_in_layer)
-        for i, node in enumerate(nodes_in_layer):
-            x = 0.0 if count == 1 else (i / (count - 1) - 0.5) * 2.0
-            positions[node] = (x, float(-layer))
-    return positions
+    # Iterative post-order: leaves take the next x slot left to right, and
+    # every internal node is placed at the mean x of its children.
+    x_of: dict[str, float] = {}
+    next_leaf_x = 0.0
+    for root in forest_roots:
+        stack: list[tuple[str, bool]] = [(root, False)]
+        while stack:
+            node, expanded = stack.pop()
+            if expanded:
+                kids = tree_children[node]
+                if kids:
+                    x_of[node] = sum(x_of[k] for k in kids) / len(kids)
+                else:
+                    x_of[node] = next_leaf_x
+                    next_leaf_x += 1.0
+            else:
+                stack.append((node, True))
+                # Push children reversed so the leftmost is popped first and
+                # therefore claims the smallest leaf x.
+                for child in reversed(tree_children[node]):
+                    stack.append((child, False))
+
+    return {node: (x_of[node], float(-layer_of[node])) for node in graph.nodes}
+
+
+def _center_and_scale(
+    positions: dict[str, tuple[float, float]], box: float = 20.0
+) -> dict[str, tuple[float, float]]:
+    """Center positions on the origin and uniformly scale them into a box.
+
+    The larger of the layout's width/height is scaled to span ``box``,
+    preserving aspect. Each plane is scaled independently so a small graph (the
+    abstract plane) still fills the box rather than being squished to match a
+    larger graph's node spacing. Empty input returns an empty dict.
+    """
+    if not positions:
+        return {}
+    xs = [p[0] for p in positions.values()]
+    ys = [p[1] for p in positions.values()]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    center_x = (min_x + max_x) / 2.0
+    center_y = (min_y + max_y) / 2.0
+    max_dim = max(max_x - min_x, max_y - min_y, 1.0)
+    scale = box / max_dim
+    return {
+        nid: ((x - center_x) * scale, (y - center_y) * scale)
+        for nid, (x, y) in positions.items()
+    }
+
+
+def _fit_into_bounds(
+    positions: dict[str, tuple[float, float]],
+    x_lo: float,
+    x_hi: float,
+    y_lo: float,
+    y_hi: float,
+) -> dict[str, tuple[float, float]]:
+    """Remap positions to span the given x/y bounds, per axis.
+
+    Used so the abstract plane occupies the same xy bounding box as the concrete plane
+    rather than filling a square box of its own (which would stretch its dominant axis
+    past the concrete extent). Each axis is mapped independently; an axis with no extent
+    collapses to the bound midpoint.
+    """
+    if not positions:
+        return {}
+    xs = [p[0] for p in positions.values()]
+    ys = [p[1] for p in positions.values()]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+
+    def remap(v: float, lo: float, hi: float, tgt_lo: float, tgt_hi: float) -> float:
+        if hi - lo < 1e-9:
+            return (tgt_lo + tgt_hi) / 2.0
+        return tgt_lo + (v - lo) / (hi - lo) * (tgt_hi - tgt_lo)
+
+    return {
+        nid: (
+            remap(x, min_x, max_x, x_lo, x_hi),
+            remap(y, min_y, max_y, y_lo, y_hi),
+        )
+        for nid, (x, y) in positions.items()
+    }
+
+
+def _abstract_state_atom_strs(abstract_state: Any) -> list[str] | None:
+    """Sorted atom strings for an abstract state, or None if it has none.
+
+    Abstract states are generic; relational ones expose their ground atoms as
+    a ``.atoms`` set. When that attribute is absent there is nothing to list,
+    so the abstract node carries no atoms.
+    """
+    atoms = getattr(abstract_state, "atoms", None)
+    if atoms is None:
+        return None
+    return sorted(str(atom) for atom in atoms)
+
+
+def _abstract_action_name(abstract_action: Any) -> str:
+    """Short display name for an abstract action.
+
+    Relational abstract actions (ground operators) expose a ``.short_str`` like
+    ``Pick(robot, block)``; fall back to ``str`` for anything else.
+    """
+    short = getattr(abstract_action, "short_str", None)
+    if isinstance(short, str):
+        return short
+    return str(abstract_action)
 
 
 class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
@@ -361,6 +490,53 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         )
         anim.save(save_path, writer="pillow")
 
+    def _abstract_depths(
+        self, state_to_abstract: dict[int, int]
+    ) -> tuple[dict[int, int], dict[int, int | None]]:
+        """Depth and nearest mapped ancestor for each concrete state.
+
+        Walks the concrete search graph (self-loops excluded) in topological
+        order. ``incoming_depth[cid]`` is the depth an abstract node at concrete
+        state ``cid`` takes -- the number of abstract-state changes along the
+        path from the root -- and ``last_mapped[cid]`` is its nearest
+        abstract-mapped concrete ancestor (or None). A state reached by two
+        paths at conflicting depths is assumed not to occur and raises.
+        """
+        graph: nx.DiGraph = nx.DiGraph()
+        for state in self.states:
+            graph.add_node(self._state_to_id(state))
+        for source_state, _, target_state in self.action_edges:
+            uid = self._state_to_id(source_state)
+            vid = self._state_to_id(target_state)
+            if uid != vid:
+                graph.add_edge(uid, vid)
+        if not nx.is_directed_acyclic_graph(graph):
+            raise ValueError(
+                "Concrete search graph has a cycle (beyond self-loops); cannot "
+                "assign abstract depths for the visualizer."
+            )
+        incoming_depth: dict[int, int] = {}
+        last_mapped: dict[int, int | None] = {}
+        for cid in nx.topological_sort(graph):
+            parents = list(graph.predecessors(cid))
+            if not parents:
+                resolved: tuple[int, int | None] = (0, None)
+            else:
+                candidates: set[tuple[int, int | None]] = set()
+                for p in parents:
+                    if p in state_to_abstract:
+                        candidates.add((incoming_depth[p] + 1, p))
+                    else:
+                        candidates.add((incoming_depth[p], last_mapped[p]))
+                if len(candidates) != 1:
+                    raise ValueError(
+                        "A concrete state is reached at conflicting abstract "
+                        "depths; depth-stamping assumes this cannot happen."
+                    )
+                resolved = next(iter(candidates))
+            incoming_depth[cid], last_mapped[cid] = resolved
+        return incoming_depth, last_mapped
+
     def _build_graph_payload(self, final_state: _X | None = None) -> dict:
         """Build the frontend-facing topology dict for the visualizer.
 
@@ -373,40 +549,21 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
 
         Concrete node ids in the emitted payload are short insertion-order
         integers (``x:0``, ``x:1``, ...) rather than the content-hash ints
-        used for internal deduplication. Abstract node ids use the same
-        insertion-order index space (``s:0``, ``s:1``, ...).
+        used for internal deduplication. Abstract nodes are depth-stamped:
+        ``s:<abstract_id>_<depth>``, where ``depth`` counts abstract-state
+        changes along the concrete path from the root, so the same abstract
+        state reached at different depths becomes distinct nodes (see
+        ``_abstract_depths``).
         """
         # ------------------------------------------------------------------
-        # Phase 1: analyze topology and pick which concrete nodes to render.
+        # Phase 1: gather concrete node ids and the concrete->abstract map.
         # ------------------------------------------------------------------
-        adj: dict[int, set[int]] = {}  # state_id -> next state_ids
-        rev_adj: dict[int, set[int]] = {}  # state_id -> previous state_ids
-        for source_state, _, target_state in self.action_edges:
-            uid = self._state_to_id(source_state)
-            vid = self._state_to_id(target_state)
-            adj.setdefault(uid, set()).add(vid)
-            rev_adj.setdefault(vid, set()).add(uid)
-
         state_to_abstract: dict[int, int] = {}
         for x, s in self.state_abstractor_edges:
             state_to_abstract[self._state_to_id(x)] = self._abstract_state_to_id(s)
 
-        # Keep nodes that are not part of a degree-1 chain (roots, leaves,
-        # branches, merges, or any node with an abstract mapping).
-        kept_state_ids: set[int] = set()
-        for state in self.states:
-            sid = self._state_to_id(state)
-            in_d = len(rev_adj.get(sid, set()))
-            out_d = len(adj.get(sid, set()))
-            is_critical = (
-                in_d == 0
-                or out_d == 0
-                or out_d > 1
-                or in_d > 1
-                or sid in state_to_abstract
-            )
-            if is_critical:
-                kept_state_ids.add(sid)
+        # Render every concrete state the planner produced.
+        kept_state_ids: set[int] = {self._state_to_id(state) for state in self.states}
 
         # Short display ids for concrete nodes. Content hashes are
         # internally unambiguous but 80-digit integers are useless in a
@@ -419,25 +576,18 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             return f"x:{display_id_of[content_hash]}"
 
         # ------------------------------------------------------------------
-        # Phase 2: stitch edges between kept nodes, skipping pruned chains.
+        # Phase 2: one layout edge per action edge between concrete nodes.
         # ------------------------------------------------------------------
+        # Self-loops (a no-op step that lands back on the same deduplicated
+        # state) carry no information and are dropped everywhere they'd render.
         G_layout: nx.DiGraph = nx.DiGraph()
         for sid in kept_state_ids:
             G_layout.add_node(concrete_nid(sid))
-        for sid in kept_state_ids:
-            for child_id in adj.get(sid, set()):
-                curr = child_id
-                visited: set[int] = set()
-                while (
-                    curr not in kept_state_ids and curr in adj and curr not in visited
-                ):
-                    visited.add(curr)
-                    next_nodes = adj[curr]
-                    if not next_nodes:
-                        break
-                    curr = next(iter(next_nodes))
-                if curr in kept_state_ids:
-                    G_layout.add_edge(concrete_nid(sid), concrete_nid(curr))
+        for source_state, _, target_state in self.action_edges:
+            uid = self._state_to_id(source_state)
+            vid = self._state_to_id(target_state)
+            if uid != vid:
+                G_layout.add_edge(concrete_nid(uid), concrete_nid(vid))
 
         # ------------------------------------------------------------------
         # Phase 3: lay out the kept concrete nodes, scale into [-10, 10].
@@ -447,25 +597,7 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         # graph has cycles), then spread nodes evenly within each layer.
         # Roots sit at top (y=0), descendants descend. Produces a clean
         # top-down DAG read for BPGs produced by a planner.
-        layout_pos = _hierarchical_layout(G_layout)
-
-        # Uniform scale into a [-10, 10] box, preserving aspect.
-        if layout_pos:
-            xs = [p[0] for p in layout_pos.values()]
-            ys = [p[1] for p in layout_pos.values()]
-            min_x, max_x = min(xs), max(xs)
-            min_y, max_y = min(ys), max(ys)
-            width = max_x - min_x
-            height = max_y - min_y
-            center_x = (min_x + max_x) / 2.0
-            center_y = (min_y + max_y) / 2.0
-            max_dim = max(width, height, 1.0)
-            scale_factor = 20.0 / max_dim
-            for nid, (layout_x, layout_y) in layout_pos.items():
-                layout_pos[nid] = (
-                    (layout_x - center_x) * scale_factor,
-                    (layout_y - center_y) * scale_factor,
-                )
+        layout_pos = _center_and_scale(_hierarchical_layout(G_layout))
 
         # ------------------------------------------------------------------
         # Phase 4: build the (G, pos) triple we'll emit.
@@ -487,38 +619,76 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         for u, v in G_layout.edges():
             G.add_edge(u, v, type="action")
 
-        # Abstract state nodes on the z_top plane, positioned at the xy
-        # centroid of their kept concrete members.
-        abstract_members: dict[int, list[str]] = {}
-        for cid, aid in state_to_abstract.items():
-            if cid in kept_state_ids:
-                abstract_members.setdefault(aid, []).append(concrete_nid(cid))
-        for abstract_idx in range(len(self.abstract_states)):
-            abs_nid = f"s:{abstract_idx}"
-            members = abstract_members.get(abstract_idx, [])
-            if members:
-                cx = sum(pos[m][0] for m in members) / len(members)
-                cy = sum(pos[m][1] for m in members) / len(members)
-            else:
-                cx, cy = 0.0, 0.0
-            pos[abs_nid] = (cx, cy, z_top)
-            G.add_node(abs_nid, type="abstract")
+        # Abstract states on the z_top plane, depth-stamped by the concrete
+        # search. Each abstract state is split into one node per depth at which
+        # the concrete search reaches it, where depth counts abstract-state
+        # changes along the concrete path from the root. This unrolls the
+        # abstract graph into a DAG with no back-edges: revisiting an abstract
+        # state (e.g. a plan that returns to the root abstract state) shows up
+        # as a fresh node one layer deeper rather than an edge pointing back.
+        incoming_depth, last_mapped = self._abstract_depths(state_to_abstract)
 
-        # State-abstractor edges (concrete -> abstract, cross the z planes)
-        # and abstract-action edges (abstract -> abstract on z_top).
-        for cid, aid in state_to_abstract.items():
-            if cid in kept_state_ids:
-                G.add_edge(concrete_nid(cid), f"s:{aid}", type="abstractor")
-        for src_abs, _action, dst_abs in self.abstract_action_edges:
-            src_idx = self._abstract_state_to_id(src_abs)
-            dst_idx = self._abstract_state_to_id(dst_abs)
-            G.add_edge(f"s:{src_idx}", f"s:{dst_idx}", type="abstract_action")
+        def abstract_nid(aid: int, depth: int) -> str:
+            return f"s:{aid}_{depth}"
 
-        # Display-id keyed mirror of state_to_abstract so the final node
-        # loop can look up an abstract id by concrete node id cheaply.
-        display_to_abstract: dict[int, int] = {
-            display_id_of[cid]: aid for cid, aid in state_to_abstract.items()
-        }
+        # Short name for each realized abstract transition (src abstract id ->
+        # dst abstract id), used to label abstract-action edges.
+        abstract_action_name_by_pair: dict[tuple[int, int], str] = {}
+        for src_abs, action, dst_abs in self.abstract_action_edges:
+            pair = (
+                self._abstract_state_to_id(src_abs),
+                self._abstract_state_to_id(dst_abs),
+            )
+            abstract_action_name_by_pair[pair] = _abstract_action_name(action)
+
+        # Build the depth-stamped abstract nodes and the abstractor / abstract-
+        # action edges from the mapped concrete states.
+        abstract_node_to_aid: dict[str, int] = {}
+        G_abstract: nx.DiGraph = nx.DiGraph()
+        abstractor_edges: list[tuple[str, str]] = []
+        abstract_action_specs: list[tuple[str, str, str | None]] = []
+        for cid, aid in state_to_abstract.items():
+            node_id = abstract_nid(aid, incoming_depth[cid])
+            abstract_node_to_aid[node_id] = aid
+            G_abstract.add_node(node_id)
+            abstractor_edges.append((concrete_nid(cid), node_id))
+            parent_cid = last_mapped[cid]
+            if parent_cid is not None:
+                parent_aid = state_to_abstract[parent_cid]
+                parent_node_id = abstract_nid(parent_aid, incoming_depth[parent_cid])
+                G_abstract.add_edge(parent_node_id, node_id)
+                name = abstract_action_name_by_pair.get((parent_aid, aid))
+                abstract_action_specs.append((parent_node_id, node_id, name))
+
+        # Lay out the abstract DAG (depth -> layer) and fit it into the concrete
+        # plane's xy bounds so the two planes line up.
+        abstract_layout = _hierarchical_layout(G_abstract)
+        if layout_pos:
+            concrete_xs = [p[0] for p in layout_pos.values()]
+            concrete_ys = [p[1] for p in layout_pos.values()]
+            abstract_pos = _fit_into_bounds(
+                abstract_layout,
+                min(concrete_xs),
+                max(concrete_xs),
+                min(concrete_ys),
+                max(concrete_ys),
+            )
+        else:
+            abstract_pos = _center_and_scale(abstract_layout)
+        for node_id in abstract_node_to_aid:
+            ax, ay = abstract_pos.get(node_id, (0.0, 0.0))
+            pos[node_id] = (ax, ay, z_top)
+            G.add_node(node_id, type="abstract")
+
+        # State-abstractor edges (concrete -> abstract, cross the z planes).
+        for concrete_node, abstract_node in abstractor_edges:
+            G.add_edge(concrete_node, abstract_node, type="abstractor")
+        # Abstract-action edges (abstract -> abstract on z_top).
+        for src_node, dst_node, name in abstract_action_specs:
+            attrs: dict = {"type": "abstract_action"}
+            if name is not None:
+                attrs["name"] = name
+            G.add_edge(src_node, dst_node, **attrs)
 
         # ------------------------------------------------------------------
         # Phase 5: plan membership + time index.
@@ -528,21 +698,19 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         start_node: str | None = None
         goal_node: str | None = None
         if final_state is not None:
+            seen_abstract: set[str] = set()
             for s in self.extract_plan(final_state).states:
                 sid = self._state_to_id(s)
                 if sid in kept_state_ids:
                     plan_node_ids.append(concrete_nid(sid))
-            if plan_node_ids:
-                start_node = plan_node_ids[0]
-                goal_node = plan_node_ids[-1]
-            seen_abstract: set[str] = set()
-            for x_node in plan_node_ids:
-                display_id = int(x_node.split(":")[1])
-                if display_id in display_to_abstract:
-                    s_node = f"s:{display_to_abstract[display_id]}"
+                if sid in state_to_abstract:
+                    s_node = abstract_nid(state_to_abstract[sid], incoming_depth[sid])
                     if s_node not in seen_abstract:
                         seen_abstract.add(s_node)
                         abstract_plan_node_ids.append(s_node)
+            if plan_node_ids:
+                start_node = plan_node_ids[0]
+                goal_node = plan_node_ids[-1]
         plan_nodes_set = set(plan_node_ids)
         abstract_plan_nodes_set = set(abstract_plan_node_ids)
 
@@ -574,15 +742,20 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             if not is_abstract:
                 if node_id in node_time_index:
                     node_dict["time_index"] = node_time_index[node_id]
-                display_id = int(node_id.split(":")[1])
-                if display_id in display_to_abstract:
-                    node_dict["abstract_state_id"] = display_to_abstract[display_id]
+            else:
+                aid = abstract_node_to_aid[node_id]
+                atom_strs = _abstract_state_atom_strs(self.abstract_states[aid])
+                if atom_strs is not None:
+                    node_dict["atoms"] = atom_strs
             nodes.append(node_dict)
 
-        edges: list[dict] = [
-            {"source": u, "target": v, "type": G.edges[u, v]["type"]}
-            for u, v in G.edges()
-        ]
+        edges: list[dict] = []
+        for u, v in G.edges():
+            edge_data = G.edges[u, v]
+            edge_dict: dict = {"source": u, "target": v, "type": edge_data["type"]}
+            if "name" in edge_data:
+                edge_dict["name"] = edge_data["name"]
+            edges.append(edge_dict)
 
         plan_info = {
             "nodes": plan_node_ids,
