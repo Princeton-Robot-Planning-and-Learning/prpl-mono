@@ -56,33 +56,25 @@ python examples/simple_two_state.py
 ```
 
 Each example prints a summary of the graph it built and writes a
-pickle bundle to `examples/data/`. To view one in the visualizer:
+pickle bundle to `examples/data/`. To view one in the visualizer, launch
+it with the bundle and a renderer file:
 
 ```bash
-python -m bilevel_planning.visualizer
+python -m bilevel_planning.visualizer \
+    --bundle examples/data/simple_two_state.pkl \
+    --renderer examples/renderers/gradient.py
 ```
 
-Open http://localhost:5001, paste the snippet below into the **Python
-renderer** pane, click **Apply renderer**, then upload the `.pkl` from
-`examples/data/`. The snippet maps each concrete state `(i,)` to a
-solid color along a red-to-green gradient, so clicking through the
-chain `c0 -> c1 -> c2 -> c3 -> c4` walks visibly from red to green:
-
-```python
-import numpy as np
-
-def render_state(state):
-    # The example concrete states are single-int tuples like (0,), (1,),
-    # ..., (4,). Map the index to a color along a red -> green gradient.
-    (index,) = state
-    t = index / 4.0
-    color = np.array([int(255 * (1 - t)), int(255 * t), 0], dtype=np.uint8)
-    return np.broadcast_to(color, (256, 256, 3)).astype(np.uint8)
-```
+This opens a browser to the graph, already clickable — no upload or
+copy-paste needed. The renderer in
+[`renderers/gradient.py`](renderers/gradient.py) maps each concrete state
+`(i,)` to a solid color along a red-to-green gradient, so clicking through
+the chain `c0 -> c1 -> c2 -> c3 -> c4` walks visibly from red to green.
 
 The point of these examples is the graph structure, not the imagery —
-the render above exists just to make it visually obvious which node
-you're clicking.
+the renderer exists just to make it visually obvious which node you're
+clicking. A renderer is any Python file defining
+`render_state(state) -> HxWx3 uint8 array`.
 
 ## Examples
 

@@ -1,7 +1,8 @@
 """Smoke tests for the visualizer Flask backend.
 
 Uses Flask's in-process test client so these tests run inside pytest without starting a
-real server.
+real server. The bundle and renderer are loaded via the same helpers the launcher uses
+(``load_bundle_from_path`` / ``load_renderer_from_path``).
 """
 
 import base64
@@ -15,11 +16,15 @@ from PIL import Image
 
 from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
 from bilevel_planning.visualizer import app as visualizer_app
-from bilevel_planning.visualizer.app import create_app
+from bilevel_planning.visualizer.app import (
+    create_app,
+    load_bundle_from_path,
+    load_renderer_from_path,
+)
 
-# Source for a renderer the test client can post to /api/set_renderer; turns
-# the (3,) state arrays from _build_demo_bundle_bytes into a small solid-color
-# patch so the PNG round-trip is easy to assert against.
+# Source for a renderer file; turns the (3,) state arrays from
+# _write_demo_bundle into a small solid-color patch so the PNG round-trip is
+# easy to assert against.
 RENDERER_SOURCE = """
 import numpy as np
 def render_state(state):
@@ -32,12 +37,11 @@ def render_state(state):
 
 @pytest.fixture(autouse=True)
 def _reset_module_state():
-    """Clear the module-level caches before each test.
+    """Clear the module-level caches before and after each test.
 
     ``app.py`` stores the loaded bundle and the current renderer in module
-    globals so the Flask routes can see them across requests. That's fine
-    for a running backend but leaks between tests; reset all three so each
-    test starts fresh.
+    globals so the Flask routes can see them across requests. Reset all
+    three so each test starts fresh.
     """
     visualizer_app.GRAPH_DATA = {}
     visualizer_app.STATE_DATA = {}
@@ -48,8 +52,8 @@ def _reset_module_state():
     visualizer_app.RENDER_FN = None
 
 
-def _build_demo_bundle_bytes(tmp_path: Path) -> tuple[bytes, list[str]]:
-    """Build a small BPG, return its serialized bundle bytes and node ids."""
+def _write_demo_bundle(tmp_path: Path) -> tuple[Path, list[str]]:
+    """Build a small BPG, write its bundle to disk, return the path and node ids."""
     bpg: BilevelPlanningGraph = BilevelPlanningGraph()
     states = [
         np.array([220, 40, 40], dtype=np.uint8),
@@ -68,25 +72,18 @@ def _build_demo_bundle_bytes(tmp_path: Path) -> tuple[bytes, list[str]]:
 
     bundle_path = tmp_path / "bundle.pkl"
     bpg.export(bundle_path, final_state=states[-1])
-    bundle_bytes = bundle_path.read_bytes()
-    bundle = pickle.loads(bundle_bytes)
-    return bundle_bytes, list(bundle["states"].keys())
+    node_ids = list(pickle.loads(bundle_path.read_bytes())["states"].keys())
+    return bundle_path, node_ids
 
 
-def _upload_bundle(client, bundle_bytes: bytes, filename: str = "demo.pkl"):
-    return client.post(
-        "/api/load_pickle",
-        data={"file": (io.BytesIO(bundle_bytes), filename)},
-        content_type="multipart/form-data",
-    )
+def _write_renderer(tmp_path: Path, source: str = RENDERER_SOURCE) -> Path:
+    renderer_path = tmp_path / "renderer.py"
+    renderer_path.write_text(source, encoding="utf-8")
+    return renderer_path
 
 
-def _apply_renderer(client, source: str = RENDERER_SOURCE):
-    return client.post("/api/set_renderer", json={"source": source})
-
-
-def test_health_endpoint():
-    """``/api/health`` reports an empty backend at boot."""
+def test_health_endpoint_reports_empty_boot():
+    """``/api/health`` reports an empty backend before anything is loaded."""
     app = create_app()
     client = app.test_client()
     resp = client.get("/api/health")
@@ -106,37 +103,32 @@ def test_graph_endpoint_requires_load():
     assert resp.status_code == 400
 
 
-def test_load_graph_apply_renderer_and_visualize_roundtrip(tmp_path: Path):
-    """Upload a bundle, apply a renderer, and render a node end-to-end."""
-    bundle_bytes, node_ids = _build_demo_bundle_bytes(tmp_path)
+def test_preload_and_visualize_roundtrip(tmp_path: Path):
+    """Preload a bundle + renderer from disk, then render a node end-to-end."""
+    bundle_path, node_ids = _write_demo_bundle(tmp_path)
+    renderer_path = _write_renderer(tmp_path)
+
+    num_states = load_bundle_from_path(bundle_path)
+    assert num_states == len(node_ids)
+    load_renderer_from_path(renderer_path)
 
     app = create_app()
     client = app.test_client()
 
-    resp = _upload_bundle(client, bundle_bytes)
-    assert resp.status_code == 200, resp.get_json()
-    payload = resp.get_json()
-    assert payload["success"] is True
-    assert payload["num_states"] == len(node_ids)
-    assert payload["filename"] == "demo.pkl"
+    # Health reflects the preloaded state.
+    health = client.get("/api/health").get_json()
+    assert health["graph_loaded"] is True
+    assert health["renderer_ready"] is True
+    assert health["num_states"] == len(node_ids)
 
-    # /api/graph serves the topology after load.
+    # /api/graph serves the topology.
     resp = client.get("/api/graph")
     assert resp.status_code == 200
     graph = resp.get_json()
     assert set(graph.keys()) >= {"nodes", "edges", "plan", "config"}
 
-    # Visualization fails until a renderer is applied.
+    # Visualization succeeds and the PNG decodes.
     target = node_ids[0]
-    resp = client.post("/api/visualize_state", json={"node_id": target})
-    assert resp.status_code == 400
-
-    # Apply a renderer; health flips renderer_ready.
-    resp = _apply_renderer(client)
-    assert resp.status_code == 200, resp.get_json()
-    assert client.get("/api/health").get_json()["renderer_ready"] is True
-
-    # Visualization now succeeds and the PNG decodes.
     resp = client.post("/api/visualize_state", json={"node_id": target})
     assert resp.status_code == 200, resp.get_json()
     payload = resp.get_json()
@@ -152,52 +144,33 @@ def test_load_graph_apply_renderer_and_visualize_roundtrip(tmp_path: Path):
 
 def test_visualize_unknown_node_returns_404(tmp_path: Path):
     """Asking for a node id that isn't in the loaded bundle returns 404."""
-    bundle_bytes, _ = _build_demo_bundle_bytes(tmp_path)
+    bundle_path, _ = _write_demo_bundle(tmp_path)
+    load_bundle_from_path(bundle_path)
+    load_renderer_from_path(_write_renderer(tmp_path))
 
     app = create_app()
     client = app.test_client()
-    _upload_bundle(client, bundle_bytes)
-    _apply_renderer(client)
-
     resp = client.post("/api/visualize_state", json={"node_id": "x:doesnotexist"})
     assert resp.status_code == 404
 
 
-def test_load_pickle_rejects_wrong_shape():
+def test_load_bundle_rejects_wrong_shape(tmp_path: Path):
     """A pickle that isn't a ``{'graph':..., 'states':...}`` bundle is rejected."""
-    bad_bytes = pickle.dumps({"only_states": {}})
-
-    app = create_app()
-    client = app.test_client()
-    resp = _upload_bundle(client, bad_bytes, filename="bad.pkl")
-    assert resp.status_code == 400
+    bad_path = tmp_path / "bad.pkl"
+    bad_path.write_bytes(pickle.dumps({"only_states": {}}))
+    with pytest.raises(ValueError, match="visualizer bundle"):
+        load_bundle_from_path(bad_path)
 
 
-def test_load_pickle_rejects_missing_file_field():
-    """A POST without a 'file' multipart field is rejected with 400."""
-    app = create_app()
-    client = app.test_client()
-    resp = client.post("/api/load_pickle", data={}, content_type="multipart/form-data")
-    assert resp.status_code == 400
+def test_load_renderer_rejects_file_without_entrypoint(tmp_path: Path):
+    """A renderer file that doesn't define ``render_state`` is rejected."""
+    renderer_path = _write_renderer(tmp_path, source="x = 1\n")
+    with pytest.raises(ValueError, match="render_state"):
+        load_renderer_from_path(renderer_path)
 
 
-def test_set_renderer_rejects_source_without_entrypoint():
-    """Source that doesn't define ``render_state`` is rejected with 400."""
-    app = create_app()
-    client = app.test_client()
-    resp = client.post("/api/set_renderer", json={"source": "x = 1\n"})
-    assert resp.status_code == 400
-    assert "render_state" in resp.get_json()["error"]
-
-
-def test_set_renderer_rejects_broken_source():
-    """Source that raises during ``exec`` is rejected with 400 plus traceback."""
-    app = create_app()
-    client = app.test_client()
-    resp = client.post(
-        "/api/set_renderer", json={"source": "raise RuntimeError('nope')\n"}
-    )
-    assert resp.status_code == 400
-    payload = resp.get_json()
-    assert "nope" in payload["error"]
-    assert "traceback" in payload
+def test_load_renderer_propagates_exec_errors(tmp_path: Path):
+    """A renderer file that raises during exec surfaces the error."""
+    renderer_path = _write_renderer(tmp_path, source="raise RuntimeError('nope')\n")
+    with pytest.raises(RuntimeError, match="nope"):
+        load_renderer_from_path(renderer_path)

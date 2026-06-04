@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { applyDefaultStyles, jsonToPlotlyTraces, getPlotlyLayout, getPlotlyConfig } from '../utils/plotlyHelpers';
 
-export function GraphViewer3D({ graphData, pickleLoaded = false, rendererReady = false }) {
+export function GraphViewer3D({ graphData }) {
   const [selectedNode, setSelectedNode] = useState(null);
   const [renderError, setRenderError] = useState(null);
   const [stateImage, setStateImage] = useState(null);
@@ -40,12 +40,10 @@ export function GraphViewer3D({ graphData, pickleLoaded = false, rendererReady =
   React.useEffect(() => {
     console.log('GraphViewer3D props updated:', {
       hasGraphData: !!graphData,
-      pickleLoaded,
-      rendererReady,
       nodeCount: graphData?.nodes?.length,
       edgeCount: graphData?.edges?.length,
     });
-  }, [graphData, pickleLoaded, rendererReady]);
+  }, [graphData]);
   
   // Reset state when graphData changes (e.g., loading a new graph)
   React.useEffect(() => {
@@ -66,8 +64,7 @@ export function GraphViewer3D({ graphData, pickleLoaded = false, rendererReady =
   // Hooks must be called unconditionally, before any early returns
   const handleClick = useCallback(async (event) => {
     console.log('handleClick triggered');
-    console.log('pickleLoaded:', pickleLoaded, 'rendererReady:', rendererReady);
-    
+
     if (event.points && event.points.length > 0) {
       const point = event.points[0];
       console.log('Clicked point:', point);
@@ -75,40 +72,20 @@ export function GraphViewer3D({ graphData, pickleLoaded = false, rendererReady =
       if (point.customdata) {
         const nodeId = point.customdata;
         console.log('Node clicked:', nodeId);
-        
+
         // If it's a concrete node and we have state data, log the state
         if (nodeId.startsWith('x:')) {
           const stateData = graphData?.state_data?.[nodeId] || 'No state data available';
           console.log('Concrete state data:', stateData);
           console.log('Full state object:', stateData);
-          
+
           // Always set selected node for concrete nodes
           setSelectedNode({ id: nodeId, stateData });
-          
-          // Short-circuit visualization if we're not yet set up. The
-          // checks are ordered so the user sees the next step they need
-          // to take, not a generic error.
-          if (!pickleLoaded) {
-            const msg = 'Load a pickle bundle first using the "Load pickle bundle" button in the header.';
-            console.warn(msg);
-            setRenderError(msg);
-            setStateImage(null);
-            setLoadingImage(false);
-            return;
-          }
-          if (!rendererReady) {
-            const msg = 'Apply a Python renderer first: expand the "Python renderer" pane in the header and click "Apply renderer".';
-            console.warn(msg);
-            setRenderError(msg);
-            setStateImage(null);
-            setLoadingImage(false);
-            return;
-          }
-          
+
           // Clear previous image and error
           setStateImage(null);
           setRenderError(null);
-          
+
           // Request visualization from backend
           setLoadingImage(true);
           try {
@@ -174,7 +151,7 @@ export function GraphViewer3D({ graphData, pickleLoaded = false, rendererReady =
         console.warn('Clicked point has no customdata:', point);
       }
     }
-  }, [graphData, pickleLoaded, rendererReady]);
+  }, [graphData]);
 
   /**
    * Memoize traces and layouts
@@ -281,8 +258,7 @@ export function GraphViewer3D({ graphData, pickleLoaded = false, rendererReady =
     return (
       <div style={styles.container}>
         <div style={styles.message}>
-          <h2>No graph data loaded</h2>
-          <p>Please load a graph JSON file using the file input above.</p>
+          <h2>Loading graph…</h2>
         </div>
       </div>
     );
@@ -386,8 +362,6 @@ export function GraphViewer3D({ graphData, pickleLoaded = false, rendererReady =
           </div>
         </div>
 
-        <div>Pickle: {pickleLoaded ? 'Loaded' : 'Not loaded'}</div>
-        <div>Renderer: {rendererReady ? 'Ready' : 'Not set'}</div>
         <div>Nodes: {graphData?.nodes?.length || 0}</div>
       </div>
       
