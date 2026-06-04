@@ -7,7 +7,16 @@ node_modules
 coverage
 
 # Production
-dist
+#
+# NOTE: dist/ is intentionally committed so that users (e.g. students in a
+# lab) can run the visualizer without installing Node/npm. Rebuild it with
+# scripts/build_frontend.sh after changing any frontend source, and commit
+# the result. The build/ directory is not used and stays ignored.
+#
+# The monorepo-root .gitignore has a global `dist/` rule; the negations
+# below re-include this one bundle directory.
+!dist/
+!dist/**
 build
 
 # Misc

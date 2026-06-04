@@ -8,9 +8,10 @@ requests.
 
 The same Flask process also serves the built React frontend at ``/``, so
 the visualizer runs as a single ``python -m bilevel_planning.visualizer``
-invocation. The frontend bundle lives at ``visualizer/frontend/dist/`` and
-must be built once with ``npm ci && npm run build`` from the
-``frontend/`` directory.
+invocation. The frontend bundle at ``visualizer/frontend/dist/`` is
+committed to the repo, so users need no Node, npm, or build step.
+Maintainers rebuild it with ``scripts/build_frontend.sh`` after editing
+the frontend source.
 
 Security: ``/api/set_renderer`` runs arbitrary Python in the backend
 process. The server binds to ``127.0.0.1`` so only local clients can reach
@@ -292,9 +293,10 @@ def create_app() -> Flask:
                 jsonify(
                     {
                         "error": (
-                            "Frontend bundle not found. Build it once with "
-                            "'npm ci && npm run build' from "
-                            "bilevel_planning/visualizer/frontend/."
+                            "Frontend bundle not found. It normally ships "
+                            "committed in the repo; if it is missing, "
+                            "regenerate it with scripts/build_frontend.sh "
+                            "(requires Node)."
                         ),
                         "expected_path": str(FRONTEND_DIST_DIR),
                     }
@@ -318,9 +320,9 @@ def run_webapp(port: int = 5001, debug: bool = True) -> None:
     succeed.
 
     The same process serves the React frontend at ``/`` from
-    ``visualizer/frontend/dist/``, so a single ``python -m
-    bilevel_planning.visualizer`` invocation is enough — no second npm
-    process required.
+    ``visualizer/frontend/dist/``, which is committed to the repo. A single
+    ``python -m bilevel_planning.visualizer`` invocation is enough — no
+    Node, npm, or build step required.
 
     Binds to ``127.0.0.1`` — the ``/api/set_renderer`` endpoint runs
     arbitrary Python and must not be reachable from outside the host.
@@ -330,7 +332,7 @@ def run_webapp(port: int = 5001, debug: bool = True) -> None:
     if not FRONTEND_DIST_DIR.exists():
         print(
             "WARNING: frontend bundle not found at "
-            f"{FRONTEND_DIST_DIR}. Run 'npm ci && npm run build' from "
-            "bilevel_planning/visualizer/frontend/ to build it."
+            f"{FRONTEND_DIST_DIR}. It normally ships committed in the repo; "
+            "regenerate it with scripts/build_frontend.sh (requires Node)."
         )
     app.run(debug=debug, port=port, host="127.0.0.1")
