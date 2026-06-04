@@ -1,14 +1,16 @@
-"""Universal entry point for the bilevel planning visualizer.
+"""Entry point for the bilevel planning visualizer.
 
 Usage:
 
-    python -m bilevel_planning.visualizer [--port N] [--no-debug]
+    python -m bilevel_planning.visualizer \
+        --bundle path/to/bundle.pkl \
+        --renderer path/to/renderer.py [--port N] [--debug] [--no-open]
 
-Boots the Flask backend and serves the built React frontend at the same
-port. Open the printed URL in a browser, paste your ``render_state``
-source into the **Python renderer** pane and apply it, then upload a
-pickle bundle. See ``bilevel_planning.visualizer.app`` for the security
-model.
+Loads the bundle (a ``BilevelPlanningGraph.export()`` pickle) and the
+renderer file (defining ``render_state(state)``), boots the Flask backend
+serving the built React frontend, and opens a browser to a graph that is
+immediately clickable. See ``bilevel_planning.visualizer.app`` for the
+security model.
 """
 
 import argparse
@@ -21,9 +23,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m bilevel_planning.visualizer",
         description=(
-            "Run the bilevel planning visualizer. The renderer is supplied "
-            "at runtime from the browser's 'Python renderer' pane."
+            "Run the bilevel planning visualizer on a bundle and renderer "
+            "chosen at launch."
         ),
+    )
+    parser.add_argument(
+        "--bundle",
+        required=True,
+        help="Path to a .pkl visualizer bundle from BilevelPlanningGraph.export().",
+    )
+    parser.add_argument(
+        "--renderer",
+        required=True,
+        help="Path to a Python file defining render_state(state) -> HxWx3 uint8 array.",
     )
     parser.add_argument(
         "--port",
@@ -32,13 +44,24 @@ def main() -> None:
         help="Port to bind the Flask server to (default: 5001).",
     )
     parser.add_argument(
-        "--no-debug",
+        "--debug",
         action="store_true",
-        help="Disable Flask's debug mode (auto-reload + verbose errors).",
+        help="Enable Flask's debug mode (verbose errors).",
+    )
+    parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Don't open a browser tab on startup.",
     )
     args = parser.parse_args()
 
-    run_webapp(port=args.port, debug=not args.no_debug)
+    run_webapp(
+        bundle=args.bundle,
+        renderer=args.renderer,
+        port=args.port,
+        debug=args.debug,
+        open_browser=not args.no_open,
+    )
 
 
 if __name__ == "__main__":

@@ -36,18 +36,16 @@ npm run dev
 
 Vite serves on `http://localhost:3000` and proxies `/api/*` to the
 Python backend on `http://localhost:5001`. Run the backend separately
-in another terminal while you're iterating.
+in another terminal (with `--bundle`/`--renderer`) while you're iterating.
 
-## Supplying the renderer
+## The bundle and renderer
 
-The visualizer won't display state images until you give the backend a
-`render_state` callable. The header has a **Python renderer** pane
-(expanded by default) with a textarea — edit the source so
-`render_state(state)` returns an HxWx3 uint8 RGB array, then click
-**Apply renderer**. The source is POSTed to `/api/set_renderer` and
-`exec`'d in the backend process, so any package installed in the
-backend's Python environment is importable.
+The frontend has no upload or code-entry UI: the backend is launched with
+a bundle and a renderer file already chosen, then this frontend fetches
+`/api/graph` on load and renders states via `/api/visualize_state` when
+you click a node. See the backend module `bilevel_planning.visualizer.app`
+for how the bundle and `render_state` file are loaded.
 
-The arbitrary-`exec` surface is the reason the backend binds to
-`127.0.0.1`. Don't put it behind a reverse proxy exposing it to untrusted
-networks.
+The renderer file is `exec`'d in the backend process, which is why the
+backend binds to `127.0.0.1`. Don't put it behind a reverse proxy
+exposing it to untrusted networks.

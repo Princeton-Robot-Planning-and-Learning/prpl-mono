@@ -67,6 +67,13 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     bpg.export(out_path, final_state=goal)
     print(f"\nWrote visualizer bundle to {out_path}")
+    renderer_path = Path(__file__).parent / "renderers" / "gradient.py"
+    print(
+        "\nView it with:\n"
+        f"  python -m bilevel_planning.visualizer \\\n"
+        f"      --bundle {out_path} \\\n"
+        f"      --renderer {renderer_path}"
+    )
 
 
 if __name__ == "__main__":

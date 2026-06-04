@@ -1,10 +1,11 @@
 """Flask backend for visualizing concrete states from a bilevel planning graph.
 
 Environment-agnostic: the backend never imports a simulation package. The
-user POSTs Python source to ``/api/set_renderer`` from the browser; the
-backend ``exec``s the source, expects a callable named ``render_state`` to
-land in the namespace, and caches it for subsequent ``/api/visualize_state``
-requests.
+visualizer is launched with a bundle and a renderer file already chosen
+(see ``run_webapp`` and ``python -m bilevel_planning.visualizer``). At
+startup the backend loads the bundle's graph and states and ``exec``s the
+renderer file, which must define a callable named ``render_state``;
+``/api/visualize_state`` then renders states on demand.
 
 The same Flask process also serves the built React frontend at ``/``, so
 the visualizer runs as a single ``python -m bilevel_planning.visualizer``
@@ -13,10 +14,10 @@ committed to the repo, so users need no Node, npm, or build step.
 Maintainers rebuild it with ``scripts/build_frontend.sh`` after editing
 the frontend source.
 
-Security: ``/api/set_renderer`` runs arbitrary Python in the backend
-process. The server binds to ``127.0.0.1`` so only local clients can reach
-it. Do not put this behind a reverse proxy exposing it to untrusted
-networks.
+Security: the renderer file is ``exec``'d as arbitrary Python in the
+backend process. The server binds to ``127.0.0.1`` so only local clients
+can reach it. Do not put this behind a reverse proxy exposing it to
+untrusted networks.
 """
 
 # pylint: disable=global-statement,wrong-import-position,wrong-import-order
@@ -34,7 +35,9 @@ matplotlib.use("Agg")
 import base64
 import io
 import pickle
+import threading
 import traceback
+import webbrowser
 from pathlib import Path
 from typing import Any, Callable
 
@@ -45,18 +48,18 @@ from PIL import Image  # type: ignore[import-untyped]
 
 RenderStateFn = Callable[[Any], np.ndarray]
 
-# Backend state. ``GRAPH_DATA`` is the frontend-facing topology dict served
-# by ``/api/graph``; ``STATE_DATA`` maps node ids to the original state
-# objects, indexed into by ``/api/visualize_state``. Both come from the
-# same pickle uploaded via ``/api/load_pickle``. ``RENDER_FN`` is the
-# render callable supplied at runtime via ``/api/set_renderer``.
+# Backend state, populated at startup from the launch arguments (see
+# ``load_bundle_from_path`` / ``load_renderer_from_path``). ``GRAPH_DATA``
+# is the frontend-facing topology dict served by ``/api/graph``;
+# ``STATE_DATA`` maps node ids to the original state objects, indexed into
+# by ``/api/visualize_state``. ``RENDER_FN`` is the render callable loaded
+# from the renderer file.
 GRAPH_DATA: dict = {}
 STATE_DATA: dict = {}
 RENDER_FN: RenderStateFn | None = None
 
-# Name the exec'd source must bind to for ``/api/set_renderer`` to pick it
-# up. Keeping this a constant makes the browser template and the backend
-# agree without hardcoding duplicate strings.
+# Name the renderer file must bind for ``load_renderer_from_path`` to pick
+# it up.
 RENDERER_ENTRYPOINT = "render_state"
 
 # Location of the built React frontend bundle, served as static files at
@@ -67,142 +70,17 @@ FRONTEND_DIST_DIR = Path(__file__).parent / "frontend" / "dist"
 def create_app() -> Flask:
     """Build the Flask app.
 
-    The app boots with no renderer; ``/api/visualize_state`` returns 400
-    until the user supplies one via ``/api/set_renderer``.
+    The graph, states, and renderer are loaded into the module globals at
+    launch (see ``run_webapp``), before requests are served.
     """
-    global RENDER_FN
-    RENDER_FN = None
-
     app = Flask(__name__)
     CORS(app)
-
-    @app.route("/api/load_pickle", methods=["POST"])
-    def load_pickle():
-        global GRAPH_DATA, STATE_DATA
-        try:
-            upload = request.files.get("file")
-            if upload is None:
-                return (
-                    jsonify(
-                        {
-                            "error": (
-                                "Request must include a 'file' multipart "
-                                "field with the visualizer pickle bundle."
-                            ),
-                        }
-                    ),
-                    400,
-                )
-
-            try:
-                bundle = pickle.load(upload.stream)
-            except Exception as exc:  # pylint: disable=broad-exception-caught
-                return (
-                    jsonify(
-                        {
-                            "error": f"Could not unpickle uploaded file: {exc}",
-                            "traceback": traceback.format_exc(),
-                        }
-                    ),
-                    400,
-                )
-
-            if not (
-                isinstance(bundle, dict) and "graph" in bundle and "states" in bundle
-            ):
-                return (
-                    jsonify(
-                        {
-                            "error": (
-                                "Pickle is not a bilevel-planning visualizer "
-                                "bundle; expected a dict with 'graph' and "
-                                "'states' keys. Regenerate with "
-                                "BilevelPlanningGraph.export()."
-                            ),
-                        }
-                    ),
-                    400,
-                )
-
-            GRAPH_DATA = bundle["graph"]
-            STATE_DATA = bundle["states"]
-
-            num_states = len(STATE_DATA)
-            return jsonify(
-                {
-                    "success": True,
-                    "num_states": num_states,
-                    "filename": upload.filename,
-                    "message": f"Loaded {num_states} states from {upload.filename}",
-                }
-            )
-
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
     @app.route("/api/graph", methods=["GET"])
     def graph():
         if not GRAPH_DATA:
-            return (
-                jsonify({"error": "No graph loaded. Call /api/load_pickle first."}),
-                400,
-            )
+            return jsonify({"error": "No graph loaded."}), 400
         return jsonify(GRAPH_DATA)
-
-    @app.route("/api/set_renderer", methods=["POST"])
-    def set_renderer():
-        """Install a user-supplied ``render_state`` callable from Python source.
-
-        Request body: ``{"source": "<python source code>"}``. The source is
-        exec'd in a fresh namespace and must bind a callable named
-        ``render_state`` that takes one argument (a state from the loaded
-        pickle) and returns an HxWx3 uint8 RGB array.
-        """
-        global RENDER_FN
-        try:
-            data = request.get_json()
-            if not data or "source" not in data:
-                return (
-                    jsonify({"error": "Request body must include a 'source' field."}),
-                    400,
-                )
-            source = data["source"]
-
-            namespace: dict[str, Any] = {}
-            try:
-                # pylint: disable=exec-used
-                exec(source, namespace)
-            except Exception as exc:  # pylint: disable=broad-exception-caught
-                return (
-                    jsonify(
-                        {
-                            "error": f"Renderer source failed to execute: {exc}",
-                            "traceback": traceback.format_exc(),
-                        }
-                    ),
-                    400,
-                )
-
-            candidate = namespace.get(RENDERER_ENTRYPOINT)
-            if not callable(candidate):
-                return (
-                    jsonify(
-                        {
-                            "error": (
-                                f"Source must define a callable named "
-                                f"'{RENDERER_ENTRYPOINT}' taking a single "
-                                f"state argument."
-                            ),
-                        }
-                    ),
-                    400,
-                )
-
-            RENDER_FN = candidate
-            return jsonify({"success": True})
-
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
 
     @app.route("/api/visualize_state", methods=["POST"])
     def visualize_state():
@@ -216,26 +94,10 @@ def create_app() -> Flask:
                 return jsonify({"error": "node_id is required"}), 400
 
             if not STATE_DATA:
-                return (
-                    jsonify(
-                        {"error": "No state data loaded. Call /api/load_pickle first."}
-                    ),
-                    400,
-                )
+                return jsonify({"error": "No state data loaded."}), 400
 
             if RENDER_FN is None:
-                return (
-                    jsonify(
-                        {
-                            "error": (
-                                "No renderer is ready. Apply a render_state "
-                                "function from the browser's Python renderer "
-                                "pane first."
-                            ),
-                        }
-                    ),
-                    400,
-                )
+                return jsonify({"error": "No renderer loaded."}), 400
 
             if node_id not in STATE_DATA:
                 return jsonify({"error": f"Node ID not found: {node_id}"}), 404
@@ -311,28 +173,90 @@ def create_app() -> Flask:
     return app
 
 
-def run_webapp(port: int = 5001, debug: bool = True) -> None:
+def load_bundle_from_path(path: str | Path) -> int:
+    """Load a visualizer bundle from disk into ``GRAPH_DATA``/``STATE_DATA``.
+
+    The bundle is the pickle produced by ``BilevelPlanningGraph.export()``.
+    Returns the number of states loaded. Raises ``ValueError`` if the file
+    isn't a visualizer bundle.
+    """
+    global GRAPH_DATA, STATE_DATA
+    with open(path, "rb") as f:
+        bundle = pickle.load(f)
+    if not (isinstance(bundle, dict) and "graph" in bundle and "states" in bundle):
+        raise ValueError(
+            f"{path} is not a bilevel-planning visualizer bundle; expected a "
+            "dict with 'graph' and 'states' keys. Regenerate with "
+            "BilevelPlanningGraph.export()."
+        )
+    GRAPH_DATA = bundle["graph"]
+    STATE_DATA = bundle["states"]
+    return len(STATE_DATA)
+
+
+def load_renderer_from_path(path: str | Path) -> None:
+    """Load a ``render_state`` callable from a Python source file into ``RENDER_FN``.
+
+    The file is ``exec``'d and must bind a callable named ``render_state``
+    that takes one state (from the bundle) and returns an HxWx3 uint8 RGB
+    array. Raises ``ValueError`` if no such callable is defined.
+    """
+    global RENDER_FN
+    source = Path(path).read_text(encoding="utf-8")
+    namespace: dict[str, Any] = {}
+    # pylint: disable=exec-used
+    exec(source, namespace)
+    candidate = namespace.get(RENDERER_ENTRYPOINT)
+    if not callable(candidate):
+        raise ValueError(
+            f"{path} must define a callable named '{RENDERER_ENTRYPOINT}' "
+            "taking a single state argument."
+        )
+    RENDER_FN = candidate
+
+
+def run_webapp(
+    bundle: str | Path,
+    renderer: str | Path,
+    port: int = 5001,
+    debug: bool = False,
+    open_browser: bool = True,
+) -> None:
     """Run the visualization Flask server on localhost.
 
-    The server boots with no renderer; the user supplies one through the
-    browser's "Python renderer" pane (which posts source to
-    ``/api/set_renderer``) before any ``/api/visualize_state`` request can
-    succeed.
+    Loads ``bundle`` (a ``BilevelPlanningGraph.export()`` pickle) and
+    ``renderer`` (a Python file defining ``render_state``) before serving,
+    so the browser opens to a graph that is immediately clickable — no
+    upload or paste step. ``open_browser`` opens a tab once the server is up.
 
     The same process serves the React frontend at ``/`` from
     ``visualizer/frontend/dist/``, which is committed to the repo. A single
     ``python -m bilevel_planning.visualizer`` invocation is enough — no
     Node, npm, or build step required.
 
-    Binds to ``127.0.0.1`` — the ``/api/set_renderer`` endpoint runs
-    arbitrary Python and must not be reachable from outside the host.
+    Binds to ``127.0.0.1`` — the renderer file runs arbitrary Python and
+    must not be reachable from outside the host.
     """
     app = create_app()
-    print(f"Starting visualizer on http://127.0.0.1:{port}")
+    load_bundle_from_path(bundle)
+    load_renderer_from_path(renderer)
+
+    url = f"http://127.0.0.1:{port}"
+    print(f"Starting visualizer on {url}")
     if not FRONTEND_DIST_DIR.exists():
         print(
             "WARNING: frontend bundle not found at "
             f"{FRONTEND_DIST_DIR}. It normally ships committed in the repo; "
             "regenerate it with scripts/build_frontend.sh (requires Node)."
         )
-    app.run(debug=debug, port=port, host="127.0.0.1")
+    if open_browser:
+        # Open the tab shortly after this thread hands control to the server.
+        threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+    # The reloader re-execs this process, which would re-open the browser and
+    # reload the bundle; disable it when we own the browser tab.
+    app.run(
+        debug=debug,
+        port=port,
+        host="127.0.0.1",
+        use_reloader=debug and not open_browser,
+    )
