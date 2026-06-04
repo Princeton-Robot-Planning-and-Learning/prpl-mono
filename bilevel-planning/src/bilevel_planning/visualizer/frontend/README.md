@@ -1,24 +1,29 @@
 # Bilevel Planning Visualizer — Frontend
 
-React + Vite frontend for the bilevel planning graph visualizer. Built
-once with `npm run build`, then served at `/` by the Flask backend at
-`bilevel_planning.visualizer.app`. There's only one process at runtime —
-this directory only matters during installation and frontend development.
+React + Vite frontend for the bilevel planning graph visualizer. Served
+at `/` by the Flask backend at `bilevel_planning.visualizer.app`. There's
+only one process at runtime — this directory only matters when you're
+editing the frontend.
 
-## Prerequisites
+## Users don't need Node
 
-- Node.js 18+
+The built bundle (`dist/`) is committed to the repo, so anyone who has
+installed the Python package can run `python -m
+bilevel_planning.visualizer` directly. **No Node, npm, or build step is
+required to use the visualizer.** This directory matters only to
+maintainers editing the React source.
 
-## One-time build
+## Rebuilding the bundle (maintainers)
+
+Requires Node.js 18+. After changing any frontend source, rebuild and
+commit the updated `dist/`:
 
 ```bash
-npm ci
-npm run build
+../../../../scripts/build_frontend.sh   # from this directory
 ```
 
-This produces `dist/`, which the Python backend serves as static files.
-After this, users only ever run `python -m bilevel_planning.visualizer`.
-No npm process is needed at runtime.
+or equivalently `npm ci && npm run build`. Committing the result is what
+keeps the no-Node-required guarantee true for users.
 
 ## Frontend development mode
 
