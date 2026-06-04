@@ -17,6 +17,9 @@ dependencies = [
    "flask",
    "flask-cors",
    "pillow",
+   "relational_structs",
+   "prpl_utils",
+   "pyperplan",
 ]
 
 [project.optional-dependencies]
