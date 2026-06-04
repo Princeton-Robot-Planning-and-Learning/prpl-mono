@@ -1,11 +1,8 @@
 // Default node/edge styling. The backend exports only topology and plan
 // membership; the frontend owns presentation.
 const NODE_COLORS = {
-  planAbstractAssoc: 'rgb(255, 165, 0)', // orange: plan + in an abstract group
-  planSimple:        'rgb(44, 160, 44)', // green:  plan + no abstract group
-  abstractAssoc:     'rgb(148, 103, 189)', // purple: concrete + in abstract group
-  concreteSimple:    'rgb(31, 119, 180)', // blue:   concrete + no abstract group
-  abstract:          'rgb(148, 103, 189)', // purple: abstract state nodes
+  concrete: 'rgb(31, 119, 180)', // blue:   concrete search states (lower plane)
+  abstract: 'rgb(148, 103, 189)', // purple: abstract states (upper plane)
 };
 
 const NODE_SIZE_PLAN = 12;
@@ -22,19 +19,8 @@ const EDGE_ALPHA = 0.7;
 
 function defaultNodeStyle(node) {
   const inPlan = Boolean(node.in_plan);
-  const hasAbstractAssoc = node.abstract_state_id !== undefined;
-  let color;
-  if (node.type === 'abstract') {
-    color = NODE_COLORS.abstract;
-  } else if (inPlan && hasAbstractAssoc) {
-    color = NODE_COLORS.planAbstractAssoc;
-  } else if (inPlan) {
-    color = NODE_COLORS.planSimple;
-  } else if (hasAbstractAssoc) {
-    color = NODE_COLORS.abstractAssoc;
-  } else {
-    color = NODE_COLORS.concreteSimple;
-  }
+  const color =
+    node.type === 'abstract' ? NODE_COLORS.abstract : NODE_COLORS.concrete;
   return {
     color,
     size: inPlan ? NODE_SIZE_PLAN : NODE_SIZE_DEFAULT,
@@ -83,97 +69,33 @@ export function jsonToPlotlyTraces(graphData) {
   console.log('Converting graph to Plotly traces...');
   const traces = [];
   
-  // Categorize concrete and abstract nodes for separate Plotly traces.
-  const planAssocNodes = graphData.nodes.filter(n => n.type === 'concrete' && n.in_plan && n.abstract_state_id !== undefined);
-  const planSimpleNodes = graphData.nodes.filter(n => n.type === 'concrete' && n.in_plan && n.abstract_state_id === undefined);
-  const concreteAssocNodes = graphData.nodes.filter(n => n.type === 'concrete' && !n.in_plan && n.abstract_state_id !== undefined);
-  const concreteSimpleNodes = graphData.nodes.filter(n => n.type === 'concrete' && !n.in_plan && n.abstract_state_id === undefined);
+  // Two node planes: all concrete search states (lower) and all abstract
+  // states (upper). The plan path is conveyed by the timeline overlay, not
+  // a separate color, so concrete nodes share one trace; per-node color
+  // arrays still let the overlay recolor individual nodes.
+  const concreteNodes = graphData.nodes.filter(n => n.type === 'concrete');
   const abstractNodes = graphData.nodes.filter(n => n.type === 'abstract');
 
   console.log(`Node counts:
-    Plan (Assoc): ${planAssocNodes.length}
-    Plan (Simple): ${planSimpleNodes.length}
-    Concrete (Assoc): ${concreteAssocNodes.length}
-    Concrete (Simple): ${concreteSimpleNodes.length}
+    Concrete: ${concreteNodes.length}
     Abstract: ${abstractNodes.length}
   `);
-  
-  // Plan Nodes (Abstract Associated) - Orange
-  if (planAssocNodes.length > 0) {
-    traces.push({
-      type: 'scatter3d',
-      mode: 'markers',
-      x: planAssocNodes.map(n => n.position[0]),
-      y: planAssocNodes.map(n => n.position[1]),
-      z: planAssocNodes.map(n => n.position[2]),
-      marker: {
-        size: planAssocNodes.map(n => n.size),
-        color: planAssocNodes.map(n => n.color),
-        opacity: 1.0,
-        line: { width: 2, color: 'white' },
-      },
-      customdata: planAssocNodes.map(n => n.id),
-      text: planAssocNodes.map(n => `Abstract ID: ${n.abstract_state_id}`),
-      name: 'Plan (Abstract Assoc)',
-      hovertemplate: '<b>%{customdata}</b><br>Type: Plan (Abstract Assoc)<br>%{text}',
-    });
-  }
 
-  // Plan Nodes (Simple) - Green
-  if (planSimpleNodes.length > 0) {
+  // Concrete state nodes on the z_bottom plane.
+  if (concreteNodes.length > 0) {
     traces.push({
       type: 'scatter3d',
       mode: 'markers',
-      x: planSimpleNodes.map(n => n.position[0]),
-      y: planSimpleNodes.map(n => n.position[1]),
-      z: planSimpleNodes.map(n => n.position[2]),
+      x: concreteNodes.map(n => n.position[0]),
+      y: concreteNodes.map(n => n.position[1]),
+      z: concreteNodes.map(n => n.position[2]),
       marker: {
-        size: planSimpleNodes.map(n => n.size),
-        color: planSimpleNodes.map(n => n.color),
-        opacity: 1.0,
-        line: { width: 2, color: 'white' },
+        size: concreteNodes.map(n => n.size),
+        color: concreteNodes.map(n => n.color),
+        opacity: concreteNodes.map(n => n.alpha),
       },
-      customdata: planSimpleNodes.map(n => n.id),
-      name: 'Plan',
-      hovertemplate: '<b>%{customdata}</b><br>Type: Plan',
-    });
-  }
-
-  // Concrete Nodes (Abstract Associated) - Purple
-  if (concreteAssocNodes.length > 0) {
-    traces.push({
-      type: 'scatter3d',
-      mode: 'markers',
-      x: concreteAssocNodes.map(n => n.position[0]),
-      y: concreteAssocNodes.map(n => n.position[1]),
-      z: concreteAssocNodes.map(n => n.position[2]),
-      marker: {
-        size: concreteAssocNodes.map(n => n.size),
-        color: concreteAssocNodes.map(n => n.color),
-        opacity: concreteAssocNodes.map(n => n.alpha),
-      },
-      customdata: concreteAssocNodes.map(n => n.id),
-      text: concreteAssocNodes.map(n => `Abstract ID: ${n.abstract_state_id}`),
-      name: 'Concrete (Abstract Assoc)',
-      hovertemplate: '<b>%{customdata}</b><br>Type: Concrete (Abstract Assoc)<br>%{text}',
-    });
-  }
-
-  // Concrete Nodes (Simple) - Blue
-  if (concreteSimpleNodes.length > 0) {
-    traces.push({
-      type: 'scatter3d',
-      mode: 'markers',
-      x: concreteSimpleNodes.map(n => n.position[0]),
-      y: concreteSimpleNodes.map(n => n.position[1]),
-      z: concreteSimpleNodes.map(n => n.position[2]),
-      marker: {
-        size: concreteSimpleNodes.map(n => n.size),
-        color: concreteSimpleNodes.map(n => n.color),
-        opacity: concreteSimpleNodes.map(n => n.alpha),
-      },
-      customdata: concreteSimpleNodes.map(n => n.id),
-      name: 'Concrete States',
+      customdata: concreteNodes.map(n => n.id),
+      name: 'Concrete states',
       hovertemplate: '<b>%{customdata}</b><br>Type: Concrete',
     });
   }
@@ -193,7 +115,7 @@ export function jsonToPlotlyTraces(graphData) {
         symbol: 'diamond',
       },
       customdata: abstractNodes.map(n => n.id),
-      name: 'Abstract States',
+      name: 'Abstract states',
       hovertemplate: '<b>%{customdata}</b><br>Type: Abstract',
     });
   }
@@ -246,10 +168,79 @@ export function jsonToPlotlyTraces(graphData) {
   // Add edge traces
   const actionTrace = createEdgeTrace(edgesByType.action, 'Actions');
   if (actionTrace) traces.push(actionTrace);
-  const abstractorTrace = createEdgeTrace(edgesByType.abstractor, 'Abstractor');
+  const abstractorTrace = createEdgeTrace(edgesByType.abstractor, 'Abstraction');
   if (abstractorTrace) traces.push(abstractorTrace);
   const abstractActionTrace = createEdgeTrace(edgesByType.abstract_action, 'Abstract actions');
   if (abstractActionTrace) traces.push(abstractActionTrace);
+
+  // Clickable midpoint markers carrying each abstract action's short name.
+  // Plotly doesn't reliably fire click events on 3D lines, so these markers
+  // are what make the abstract-action edges inspectable.
+  const labeledAbstractActions = edgesByType.abstract_action.filter(e => e.name);
+  if (labeledAbstractActions.length > 0) {
+    const mx = [], my = [], mz = [], customdata = [], text = [];
+    labeledAbstractActions.forEach(edge => {
+      const source = graphData.nodes.find(n => n.id === edge.source);
+      const target = graphData.nodes.find(n => n.id === edge.target);
+      if (source && target) {
+        // Seat each label at the edge midpoint. Depth-stamping removes
+        // antiparallel edges, so labels no longer collide there.
+        mx.push((source.position[0] + target.position[0]) / 2);
+        my.push((source.position[1] + target.position[1]) / 2);
+        mz.push((source.position[2] + target.position[2]) / 2);
+        customdata.push({ kind: 'abstract_action', name: edge.name });
+        text.push(edge.name);
+      }
+    });
+    traces.push({
+      type: 'scatter3d',
+      mode: 'markers',
+      x: mx, y: my, z: mz,
+      marker: { size: 5, color: 'rgb(0, 0, 0)', symbol: 'square', opacity: 0.7 },
+      customdata,
+      text,
+      name: 'Abstract action labels',
+      hovertemplate: '%{text}<extra></extra>',
+      showlegend: false,
+    });
+  }
+
+  // Direction cones for abstract-action edges. Scatter3d lines have no
+  // arrowheads, so without these you can't tell which way an edge points.
+  if (edgesByType.abstract_action.length > 0) {
+    const cx = [], cy = [], cz = [], cu = [], cv = [], cw = [];
+    edgesByType.abstract_action.forEach(edge => {
+      const source = graphData.nodes.find(n => n.id === edge.source);
+      const target = graphData.nodes.find(n => n.id === edge.target);
+      if (source && target) {
+        const [sx, sy, sz] = source.position;
+        const [tx, ty, tz] = target.position;
+        let dx = tx - sx, dy = ty - sy, dz = tz - sz;
+        const len = Math.hypot(dx, dy, dz) || 1;
+        // Seat the cone ~70% of the way toward the target, pointing along the
+        // edge (unit vector, so all arrowheads render the same size).
+        cx.push(sx + 0.7 * dx);
+        cy.push(sy + 0.7 * dy);
+        cz.push(sz + 0.7 * dz);
+        cu.push(dx / len);
+        cv.push(dy / len);
+        cw.push(dz / len);
+      }
+    });
+    traces.push({
+      type: 'cone',
+      x: cx, y: cy, z: cz,
+      u: cu, v: cv, w: cw,
+      sizemode: 'absolute',
+      sizeref: 0.15,
+      anchor: 'center',
+      colorscale: [[0, 'rgb(0, 0, 0)'], [1, 'rgb(0, 0, 0)']],
+      showscale: false,
+      hoverinfo: 'skip',
+      showlegend: false,
+      name: 'Abstract action directions',
+    });
+  }
 
   console.log(`Total traces created: ${traces.length}`);
   return traces;
@@ -262,6 +253,20 @@ export function jsonToPlotlyTraces(graphData) {
  * @returns {Object} Plotly layout object
  */
 export function getPlotlyLayout(graphData) {
+  // Render the scene box with sides proportional to the data extent rather
+  // than forcing a cube, so a narrow, deep tree isn't stretched sideways to
+  // fill the full width. Floor the in-plane fractions so a very narrow layout
+  // stays readable, and give z a fixed fraction so the two planes stay clearly
+  // separated.
+  const xs = graphData.nodes.map(n => n.position[0]);
+  const ys = graphData.nodes.map(n => n.position[1]);
+  const xRange = (Math.max(...xs) - Math.min(...xs)) || 1;
+  const yRange = (Math.max(...ys) - Math.min(...ys)) || 1;
+  const maxRange = Math.max(xRange, yRange);
+  const MIN_FRAC = 0.5;
+  const xAspect = Math.max(xRange / maxRange, MIN_FRAC);
+  const yAspect = Math.max(yRange / maxRange, MIN_FRAC);
+
   return {
     scene: {
       camera: {
@@ -289,11 +294,11 @@ export function getPlotlyLayout(graphData) {
         zeroline: false,
         range: [graphData.config.z_bottom, graphData.config.z_top]
       },
-      // 'cube' gives each axis equal visual length regardless of data
-      // extent, so the abstract plane (z=z_top) is visibly separated from
-      // the concrete plane (z=z_bottom) even though the xy range is much
-      // wider than [z_bottom, z_top].
-      aspectmode: 'cube',
+      // Proportional box (see above), with z exaggerated to 0.5 so the
+      // abstract plane (z=z_top) stays visibly separated from the concrete
+      // plane (z=z_bottom) despite the tiny [z_bottom, z_top] data range.
+      aspectmode: 'manual',
+      aspectratio: { x: xAspect, y: yAspect, z: 0.5 },
       bgcolor: 'white',
     },
     clickmode: 'event+select', // Enable click events and selection
