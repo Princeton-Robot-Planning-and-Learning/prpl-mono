@@ -2,12 +2,28 @@ import React, { useState, useCallback, useMemo } from 'react';
 import Plot from 'react-plotly.js';
 import { applyDefaultStyles, jsonToPlotlyTraces, getPlotlyLayout, getPlotlyConfig } from '../utils/plotlyHelpers';
 
+// Starting camera used when the user hasn't moved the view yet. Must match the
+// default eye/up in getPlotlyLayout() so the zoom buttons dolly from the same
+// pose the scene first renders with.
+const DEFAULT_CAMERA = {
+  eye: { x: 1.3, y: 1.3, z: 1.5 },
+  up: { x: 0, y: 0, z: 1 },
+  center: { x: 0, y: 0, z: 0 },
+};
+const ZOOM_IN_FACTOR = 0.8;
+const ZOOM_OUT_FACTOR = 1.25;
+
 export function GraphViewer3D({ graphData }) {
   const [selectedNode, setSelectedNode] = useState(null);
   const [renderError, setRenderError] = useState(null);
   const [stateImage, setStateImage] = useState(null);
   const [loadingImage, setLoadingImage] = useState(false);
   const [cameraState, setCameraState] = useState(null); // Store camera position
+  // Bumped on each zoom-button press to force Plotly to re-read the camera.
+  // Plotly ignores programmatic camera changes while a scene's uirevision is
+  // held constant (so manual scroll/rotate persist); changing this value on a
+  // button press is what lets the dolly buttons actually move the camera.
+  const [zoomTick, setZoomTick] = useState(0);
   const [currentTime, setCurrentTime] = useState(null); // Timeline slider position
   const [playbackSpeed, setPlaybackSpeed] = useState(200); // ms per step
   const [playDirection, setPlayDirection] = useState(null); // null, 'next', 'prev'
@@ -161,6 +177,43 @@ export function GraphViewer3D({ graphData }) {
     }
   }, [graphData]);
 
+  // Dolly the camera by scaling its eye vector toward (factor < 1, zoom in) or
+  // away from (factor > 1, zoom out) the scene center. This goes past the
+  // scroll wheel's built-in zoom cap. Operates on the live camera (cameraState
+  // if the user has moved it, otherwise the layout default) and bumps zoomTick
+  // so Plotly applies the result despite the constant scene uirevision.
+  const handleZoom = useCallback((factor) => {
+    setCameraState(prev => {
+      const cam = prev || DEFAULT_CAMERA;
+      const center = cam.center || DEFAULT_CAMERA.center;
+      const eye = cam.eye || DEFAULT_CAMERA.eye;
+      let ex = center.x + (eye.x - center.x) * factor;
+      let ey = center.y + (eye.y - center.y) * factor;
+      let ez = center.z + (eye.z - center.z) * factor;
+      // Clamp the eye-to-center distance so zooming in can't cross the center
+      // (which flips the view) and zooming out can't lose the scene entirely.
+      const dist = Math.hypot(ex - center.x, ey - center.y, ez - center.z) || 1;
+      const clamped = Math.max(0.1, Math.min(50, dist));
+      const s = clamped / dist;
+      ex = center.x + (ex - center.x) * s;
+      ey = center.y + (ey - center.y) * s;
+      ez = center.z + (ez - center.z) * s;
+      return {
+        ...cam,
+        center,
+        up: cam.up || DEFAULT_CAMERA.up,
+        eye: { x: ex, y: ey, z: ez },
+      };
+    });
+    setZoomTick(prev => prev + 1);
+  }, []);
+
+  // Restore the default camera (also via a uirevision bump so it takes effect).
+  const handleResetView = useCallback(() => {
+    setCameraState(null);
+    setZoomTick(prev => prev + 1);
+  }, []);
+
   /**
    * Memoize traces and layouts
    * This prevents expensive re-calculates on every component re-render.
@@ -234,20 +287,25 @@ export function GraphViewer3D({ graphData }) {
       console.log('Generated traces:', traces.length);
       
       const layout = getPlotlyLayout(graphData);
-      
+
       // UI Persistence: maintain camera view
       if (cameraState) {
         layout.scene.camera = cameraState;
       }
-      
+      // Scene-scoped uirevision: constant across manual scroll/rotate (so the
+      // camera is preserved) but bumped by the zoom buttons so a programmatic
+      // camera change is actually applied. Kept separate from the top-level
+      // uirevision so it doesn't reset legend toggles.
+      layout.scene.uirevision = `cam-${zoomTick}`;
+
       const config = getPlotlyConfig();
-      
+
       return { traces, layout, config, error: null };
     } catch (err) {
       console.error('Error generating Plotly data:', err);
       return { traces: null, layout: null, config: null, error: err };
     }
-  }, [graphData, cameraState, currentTime]);
+  }, [graphData, cameraState, currentTime, zoomTick]);
   
   // Plotly's datarevision hint tells the library to re-examine its
   // data arrays. Bump it whenever the trace inputs change (a new graph
@@ -367,6 +425,37 @@ export function GraphViewer3D({ graphData }) {
           <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
             <p>Red = current; darker = visited.</p>
             <p>Can hold prev/next to auto-step.</p>
+          </div>
+        </div>
+
+        {/* Zoom controls: dolly the camera past the scroll wheel's zoom cap. */}
+        <div style={{ marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid #ccc', padding: '5px' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Zoom</div>
+          <div style={{ display: 'flex', gap: '5px' }}>
+            <button
+              onClick={() => handleZoom(ZOOM_IN_FACTOR)}
+              style={{ flex: 1, cursor: 'pointer', padding: '2px', fontSize: '13px', fontWeight: 'bold' }}
+              title="Zoom in"
+            >
+              +
+            </button>
+            <button
+              onClick={() => handleZoom(ZOOM_OUT_FACTOR)}
+              style={{ flex: 1, cursor: 'pointer', padding: '2px', fontSize: '13px', fontWeight: 'bold' }}
+              title="Zoom out"
+            >
+              &minus;
+            </button>
+            <button
+              onClick={handleResetView}
+              style={{ flex: 2, cursor: 'pointer', padding: '2px', fontSize: '11px' }}
+              title="Reset to the default camera"
+            >
+              Reset view
+            </button>
+          </div>
+          <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
+            <p>Buttons zoom past the scroll-wheel limit.</p>
           </div>
         </div>
 
