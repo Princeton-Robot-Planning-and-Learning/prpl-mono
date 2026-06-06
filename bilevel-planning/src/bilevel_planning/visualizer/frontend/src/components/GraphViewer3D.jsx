@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import Plot from 'react-plotly.js';
 import { applyDefaultStyles, jsonToPlotlyTraces, getPlotlyLayout, getPlotlyConfig } from '../utils/plotlyHelpers';
 
@@ -27,31 +27,18 @@ export function GraphViewer3D({ graphData }) {
   const [currentTime, setCurrentTime] = useState(null); // Timeline slider position
   const [playbackSpeed, setPlaybackSpeed] = useState(200); // ms per step
   const [playDirection, setPlayDirection] = useState(null); // null, 'next', 'prev'
+  // Latest timeline position, mirrored in a ref so the playback loop can read it
+  // without being torn down and recreated on every step.
+  const currentTimeRef = useRef(null);
+  // Monotonic counter to drop stale render responses: a slower earlier render
+  // completing after a newer one must not overwrite the newer frame.
+  const renderSeqRef = useRef(0);
 
-  // Auto-stepping effect
-  React.useEffect(() => {
-    if (!playDirection) return;
+  // The playback loop is defined further down (it depends on the timeline->node
+  // map and the render helper). Pacing it by render completion -- rather than a
+  // fixed-rate setInterval -- is what keeps fast playback from piling up and
+  // appearing to "get stuck".
 
-    const step = () => {
-      setCurrentTime(prevTime => {
-        const current = prevTime ?? (graphData?.config?.min_time ?? 0);
-        if (playDirection === 'next') {
-           const max = graphData?.config?.max_time ?? 100;
-           return Math.min(max, current + 1);
-        } else {
-           const min = graphData?.config?.min_time ?? 0;
-           return Math.max(min, current - 1);
-        }
-      });
-    };
-
-    // Execute immediately so that a quick click triggers at least one step
-    step(); 
-    
-    const id = setInterval(step, playbackSpeed);
-    return () => clearInterval(id);
-  }, [playDirection, playbackSpeed, graphData]);
-  
   // Log prop changes
   React.useEffect(() => {
     console.log('GraphViewer3D props updated:', {
@@ -69,14 +56,77 @@ export function GraphViewer3D({ graphData }) {
     setLoadingImage(false);
     setRenderError(null);
     setCameraState(null);
+    // Stop any in-progress playback when a new graph loads.
+    setPlayDirection(null);
     // Initialize timeline to min_time if available
     if (graphData && graphData.config && typeof graphData.config.min_time === 'number') {
       setCurrentTime(graphData.config.min_time);
+      currentTimeRef.current = graphData.config.min_time;
     } else {
       setCurrentTime(null);
+      currentTimeRef.current = null;
     }
   }, [graphData]);
   
+  // Fetch and display the backend rendering of one concrete state node. The
+  // returned promise resolves when this request is done (or aborts), which is
+  // what lets the playback loop pace itself by render completion. A monotonic
+  // sequence number drops stale responses, and an abort timeout guarantees the
+  // promise always settles so a hung backend can never stall playback.
+  const doFetch = useCallback(async (nodeId) => {
+    const seq = ++renderSeqRef.current;
+    // Keep the previous image on screen until the new one arrives, rather than
+    // clearing it here. Clearing would unmount the <img>, collapsing and then
+    // re-expanding the panel every frame -- the source of the playback jitter.
+    setLoadingImage(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch('/api/visualize_state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ node_id: nodeId }),
+        signal: controller.signal,
+      });
+      if (seq !== renderSeqRef.current) return; // a newer frame superseded this one
+      if (response.ok) {
+        const data = await response.json();
+        if (seq !== renderSeqRef.current) return;
+        setStateImage({ src: data.image, width: data.width, height: data.height });
+        setRenderError(null);
+      } else {
+        const contentType = response.headers.get('content-type');
+        let errorMsg;
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          errorMsg = `Visualization failed: ${error.error || 'Unknown error'}`;
+        } else {
+          errorMsg = `Visualization failed: ${response.status} ${response.statusText}`;
+        }
+        setRenderError(errorMsg);
+        setStateImage(null);
+      }
+    } catch (error) {
+      if (seq !== renderSeqRef.current) return;
+      const msg = error.name === 'AbortError'
+        ? 'Visualization timed out.'
+        : `Error: ${error.message}. Is the visualizer backend running?`;
+      setRenderError(msg);
+      setStateImage(null);
+    } finally {
+      clearTimeout(timeoutId);
+      if (seq === renderSeqRef.current) setLoadingImage(false);
+    }
+  }, []);
+
+  // Select a concrete node and render its state image. Returns the render
+  // promise so callers (the playback loop) can await completion.
+  const renderNode = useCallback((nodeId) => {
+    const stateData = graphData?.state_data?.[nodeId] || 'No state data available';
+    setSelectedNode({ id: nodeId, stateData });
+    return doFetch(nodeId);
+  }, [graphData, doFetch]);
+
   // Hooks must be called unconditionally, before any early returns
   const handleClick = useCallback(async (event) => {
     console.log('handleClick triggered');
@@ -96,70 +146,9 @@ export function GraphViewer3D({ graphData }) {
         const nodeId = point.customdata;
         console.log('Node clicked:', nodeId);
 
-        // If it's a concrete node and we have state data, log the state
+        // If it's a concrete node, select it and render its state.
         if (nodeId.startsWith('x:')) {
-          const stateData = graphData?.state_data?.[nodeId] || 'No state data available';
-          console.log('Concrete state data:', stateData);
-          console.log('Full state object:', stateData);
-
-          // Always set selected node for concrete nodes
-          setSelectedNode({ id: nodeId, stateData });
-
-          // Clear previous image and error
-          setStateImage(null);
-          setRenderError(null);
-
-          // Request visualization from backend
-          setLoadingImage(true);
-          try {
-            console.log('Requesting visualization for node:', nodeId);
-            const response = await fetch('/api/visualize_state', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ node_id: nodeId }),
-            });
-            
-            console.log('Response status:', response.status, response.statusText);
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log('Visualization received, image length:', data.image?.length);
-              setStateImage({
-                src: data.image,
-                width: data.width,
-                height: data.height
-              });
-              setRenderError(null); // Clear any previous errors
-            } else {
-              // Try to parse error as JSON
-              const contentType = response.headers.get('content-type');
-              console.log('Error response content-type:', contentType);
-              
-              if (contentType && contentType.includes('application/json')) {
-                const error = await response.json();
-                console.error('Failed to get visualization (JSON error):', error);
-                const errorMsg = `Visualization failed: ${error.error || 'Unknown error'}`;
-                setRenderError(errorMsg);
-                console.error('Full error:', error);
-              } else {
-                // Not JSON - might be HTML error page or empty
-                const text = await response.text();
-                console.error('Failed to get visualization (non-JSON response):', text);
-                const errorMsg = `Visualization failed: ${response.status} ${response.statusText}`;
-                setRenderError(errorMsg);
-              }
-              setStateImage(null);
-            }
-          } catch (error) {
-            console.error('Error fetching visualization:', error);
-            const errorMsg = `Error: ${error.message}. Is the visualizer backend running?`;
-            setRenderError(errorMsg);
-            setStateImage(null);
-          } finally {
-            setLoadingImage(false);
-          }
+          renderNode(nodeId);
         } else if (nodeId.startsWith('s:')) {
           console.log('Abstract state clicked');
           const abstractNode = graphData?.nodes?.find(n => n.id === nodeId);
@@ -175,7 +164,64 @@ export function GraphViewer3D({ graphData }) {
         console.warn('Clicked point has no customdata:', point);
       }
     }
+  }, [graphData, renderNode]);
+
+  // Map each timeline step (a concrete node's time_index) to its node. The
+  // backend stamps a unique time_index on every concrete node, so this is a
+  // 1:1 lookup from the slider/playback position to the node to render.
+  const timeIndexToNode = useMemo(() => {
+    const m = new Map();
+    for (const n of graphData?.nodes ?? []) {
+      if (n.type === 'concrete' && typeof n.time_index === 'number') {
+        m.set(n.time_index, n);
+      }
+    }
+    return m;
   }, [graphData]);
+
+  // Move the timeline to step ``t``: update the slider/highlight and render the
+  // corresponding state. Returns the render promise so the playback loop can
+  // wait for the frame before scheduling the next one.
+  const renderTimeStep = useCallback((t) => {
+    setCurrentTime(t);
+    currentTimeRef.current = t;
+    const node = timeIndexToNode.get(t);
+    return node ? renderNode(node.id) : Promise.resolve();
+  }, [timeIndexToNode, renderNode]);
+
+  // Playback loop. Each iteration advances one step, renders it, and only then
+  // schedules the next iteration -- after whatever time is left in the playback
+  // interval. Pacing by completion (instead of a blind setInterval) keeps a slow
+  // matplotlib render from letting frames pile up, which previously made
+  // playback stall until the user pressed Play again. Stops at the timeline ends.
+  React.useEffect(() => {
+    if (!playDirection) return;
+    const min = graphData?.config?.min_time ?? 0;
+    const max = graphData?.config?.max_time ?? 100;
+    let cancelled = false;
+    let timer = null;
+
+    const loop = async () => {
+      if (cancelled) return;
+      const cur = currentTimeRef.current ?? (playDirection === 'next' ? min - 1 : max + 1);
+      const next = playDirection === 'next' ? cur + 1 : cur - 1;
+      if (next < min || next > max) {
+        setPlayDirection(null); // reached an end; stop
+        return;
+      }
+      const started = performance.now();
+      await renderTimeStep(next);
+      if (cancelled) return;
+      const elapsed = performance.now() - started;
+      timer = setTimeout(loop, Math.max(0, playbackSpeed - elapsed));
+    };
+    loop();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [playDirection, playbackSpeed, graphData, renderTimeStep]);
 
   // Dolly the camera by scaling its eye vector toward (factor < 1, zoom in) or
   // away from (factor > 1, zoom out) the scene center. This goes past the
@@ -369,7 +415,7 @@ export function GraphViewer3D({ graphData }) {
             max={graphData?.config?.max_time ?? 100}
             step={1}
             value={currentTime !== null ? currentTime : (graphData?.config?.min_time ?? 0)}
-            onChange={(e) => setCurrentTime(Number(e.target.value))}
+            onChange={(e) => renderTimeStep(Number(e.target.value))}
             style={{ width: '100%', cursor: 'pointer' }}
           />
           
@@ -536,7 +582,7 @@ export function GraphViewer3D({ graphData }) {
                 )}
               </div>
             )}
-            {loadingImage && (
+            {loadingImage && !stateImage && (
               <div style={{ marginTop: '10px', color: '#666' }}>
                 Loading visualization...
               </div>
