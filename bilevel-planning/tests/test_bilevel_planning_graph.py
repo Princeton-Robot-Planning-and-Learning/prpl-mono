@@ -189,6 +189,85 @@ def test_export_roundtrip(tmp_path: Path):
         assert "atoms" not in n
 
 
+def test_export_full_abstract_graph(tmp_path: Path):
+    """The abstract plane renders the whole search graph, not just the refined path.
+
+    Mirrors the obstruction2d-o1-basic shape: the refiner only instantiates the
+    path root -> Holding(target) -> OnTarget, but the search also generated an
+    unrefined branch (Pick the obstruction) and an unrealized edge back to the
+    root (Place the target on the table). Both must show up: the branch as a new
+    leaf, and the back-edge as a duplicate root one layer deeper.
+    """
+    bpg: BilevelPlanningGraph = BilevelPlanningGraph()
+    states = [np.array([i], dtype=np.int64) for i in range(3)]
+    for s in states:
+        bpg.add_state_node(s)
+    root = _AtomsAbstractState(frozenset({"OnTable(t)", "OnTable(o)"}))
+    holding_t = _AtomsAbstractState(frozenset({"Holding(t)", "OnTable(o)"}))
+    holding_o = _AtomsAbstractState(frozenset({"Holding(o)", "OnTable(t)"}))
+    on_target = _AtomsAbstractState(frozenset({"OnTarget(t)", "OnTable(o)"}))
+    for a in (root, holding_t, holding_o, on_target):
+        bpg.add_abstract_state_node(a)
+
+    # Concrete (refined) path: root -> holding_t -> on_target.
+    bpg.add_state_abstractor_edge(states[0], root)
+    bpg.add_state_abstractor_edge(states[1], holding_t)
+    bpg.add_state_abstractor_edge(states[2], on_target)
+    bpg.add_action_edge(states[0], "step", states[1])
+    bpg.add_action_edge(states[1], "step", states[2])
+
+    # Full abstract search graph, including transitions never refined.
+    bpg.add_abstract_action_edge(root, "Pick(t)", holding_t)  # realized
+    bpg.add_abstract_action_edge(root, "Pick(o)", holding_o)  # unrefined branch
+    bpg.add_abstract_action_edge(holding_t, "Place->target", on_target)  # realized
+    bpg.add_abstract_action_edge(holding_t, "Place(t)", root)  # unrealized back-edge
+
+    path = tmp_path / "bundle.pkl"
+    bpg.export(path, final_state=states[-1])
+    with open(path, "rb") as f:
+        graph = pickle.load(f)["graph"]
+
+    # root (aid 0) at depth 0 and again at depth 2 (the unrolled back-edge);
+    # holding_t (1) and holding_o (2) at depth 1; on_target (3) at depth 2.
+    abstract_ids = sorted(n["id"] for n in graph["nodes"] if n["type"] == "abstract")
+    assert abstract_ids == ["s:0_0", "s:0_2", "s:1_1", "s:2_1", "s:3_2"]
+
+    aa = {
+        (e["source"], e["target"]): e.get("name")
+        for e in graph["edges"]
+        if e["type"] == "abstract_action"
+    }
+    assert aa == {
+        ("s:0_0", "s:1_1"): "Pick(t)",
+        ("s:0_0", "s:2_1"): "Pick(o)",
+        ("s:1_1", "s:3_2"): "Place->target",
+        ("s:1_1", "s:0_2"): "Place(t)",
+    }
+    # No edge points back to the depth-0 root; the back-edge is unrolled forward.
+    assert all(target != "s:0_0" for _, target in aa)
+
+    # The unrefined branch (Holding(o)) and the duplicate root carry no
+    # abstractor edge, since the refiner never sampled a concrete state there.
+    abstractor_targets = {
+        e["target"] for e in graph["edges"] if e["type"] == "abstractor"
+    }
+    assert "s:2_1" not in abstractor_targets
+    assert "s:0_2" not in abstractor_targets
+    assert {"s:0_0", "s:1_1", "s:3_2"} <= abstractor_targets
+
+    # The concrete plane here is a single linear chain (zero x-extent). The
+    # abstract plane must still spread its branches rather than collapsing them
+    # onto one column, so sibling nodes get distinct positions.
+    pos = {
+        n["id"]: tuple(n["position"][:2])
+        for n in graph["nodes"]
+        if n["type"] == "abstract"
+    }
+    assert pos["s:1_1"] != pos["s:2_1"]  # the two depth-1 branches
+    assert pos["s:3_2"] != pos["s:0_2"]  # the two depth-2 branches
+    assert len(set(pos.values())) == len(pos)  # no two abstract nodes coincide
+
+
 def test_abstract_state_atom_strs():
     """``_abstract_state_atom_strs`` extracts sorted atoms, else None."""
     assert _abstract_state_atom_strs("no-atoms-attr") is None

@@ -1,5 +1,6 @@
 """Bilevel planning graphs: primarily for visualization, analysis, debugging."""
 
+import heapq
 import pickle
 from collections import deque
 from pathlib import Path
@@ -554,6 +555,11 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         changes along the concrete path from the root, so the same abstract
         state reached at different depths becomes distinct nodes (see
         ``_abstract_depths``).
+
+        The abstract plane renders the entire abstract search graph -- every
+        abstract state and abstract-action edge the planner generated -- not
+        only the transitions the refiner instantiated with concrete states.
+        ``node.in_plan`` distinguishes the refined plan from the rest.
         """
         # ------------------------------------------------------------------
         # Phase 1: gather concrete node ids and the concrete->abstract map.
@@ -626,6 +632,10 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         # abstract graph into a DAG with no back-edges: revisiting an abstract
         # state (e.g. a plan that returns to the root abstract state) shows up
         # as a fresh node one layer deeper rather than an edge pointing back.
+        #
+        # The loop below renders only the abstract transitions the refiner
+        # actually instantiated with concrete states; the grafting pass that
+        # follows extends this to the entire abstract search graph.
         incoming_depth, last_mapped = self._abstract_depths(state_to_abstract)
 
         def abstract_nid(aid: int, depth: int) -> str:
@@ -644,28 +654,105 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         # Build the depth-stamped abstract nodes and the abstractor / abstract-
         # action edges from the mapped concrete states.
         abstract_node_to_aid: dict[str, int] = {}
+        abstract_node_depth: dict[str, int] = {}
         G_abstract: nx.DiGraph = nx.DiGraph()
         abstractor_edges: list[tuple[str, str]] = []
         abstract_action_specs: list[tuple[str, str, str | None]] = []
+        rendered_action_edges: set[tuple[str, str]] = set()
         for cid, aid in state_to_abstract.items():
             node_id = abstract_nid(aid, incoming_depth[cid])
             abstract_node_to_aid[node_id] = aid
+            abstract_node_depth[node_id] = incoming_depth[cid]
             G_abstract.add_node(node_id)
             abstractor_edges.append((concrete_nid(cid), node_id))
             parent_cid = last_mapped[cid]
             if parent_cid is not None:
                 parent_aid = state_to_abstract[parent_cid]
                 parent_node_id = abstract_nid(parent_aid, incoming_depth[parent_cid])
-                G_abstract.add_edge(parent_node_id, node_id)
-                name = abstract_action_name_by_pair.get((parent_aid, aid))
-                abstract_action_specs.append((parent_node_id, node_id, name))
+                if (parent_node_id, node_id) not in rendered_action_edges:
+                    rendered_action_edges.add((parent_node_id, node_id))
+                    G_abstract.add_edge(parent_node_id, node_id)
+                    name = abstract_action_name_by_pair.get((parent_aid, aid))
+                    abstract_action_specs.append((parent_node_id, node_id, name))
+
+        # Grafting pass: extend the abstract plane from the refiner-instantiated
+        # transitions above to the ENTIRE abstract search graph -- every abstract
+        # state in ``self.abstract_states`` and every edge in
+        # ``self.abstract_action_edges``, including branches the refiner never
+        # sampled a concrete state for. Nothing new is generated here: this only
+        # re-renders abstract states and actions the planner already explored.
+        #
+        # The same depth-unrolling rule applies: an edge into an already-seen
+        # abstract state spawns a fresh node one layer deeper rather than a
+        # back-edge. To keep this finite on cyclic abstract graphs, each abstract
+        # state is expanded (its outgoing edges followed) only at its shallowest
+        # rendered depth; deeper duplicates render as leaves. Processing nodes in
+        # nondecreasing depth order guarantees the shallowest occurrence of each
+        # abstract state is the one that gets expanded.
+        abstract_adj: dict[int, list[tuple[int, str | None]]] = {}
+        for src_abs, action, dst_abs in self.abstract_action_edges:
+            s_aid = self._abstract_state_to_id(src_abs)
+            d_aid = self._abstract_state_to_id(dst_abs)
+            abstract_adj.setdefault(s_aid, []).append(
+                (d_aid, _abstract_action_name(action))
+            )
+
+        # Min-heap of (depth, tiebreak, node_id); tiebreak keeps ordering stable
+        # and avoids comparing node-id strings.
+        heap: list[tuple[int, int, str]] = []
+        tiebreak = 0
+        for node_id, depth in abstract_node_depth.items():
+            heapq.heappush(heap, (depth, tiebreak, node_id))
+            tiebreak += 1
+        expanded_aids: set[int] = set()
+        while heap:
+            depth, _, node_id = heapq.heappop(heap)
+            aid = abstract_node_to_aid[node_id]
+            if aid in expanded_aids:
+                continue  # a shallower duplicate was already expanded
+            expanded_aids.add(aid)
+            for dst_aid, name in abstract_adj.get(aid, []):
+                dst_node = abstract_nid(dst_aid, depth + 1)
+                if (node_id, dst_node) in rendered_action_edges:
+                    continue
+                rendered_action_edges.add((node_id, dst_node))
+                if dst_node not in abstract_node_to_aid:
+                    abstract_node_to_aid[dst_node] = dst_aid
+                    abstract_node_depth[dst_node] = depth + 1
+                    G_abstract.add_node(dst_node)
+                    heapq.heappush(heap, (depth + 1, tiebreak, dst_node))
+                    tiebreak += 1
+                G_abstract.add_edge(node_id, dst_node)
+                abstract_action_specs.append((node_id, dst_node, name))
+
+        # Any abstract state disconnected from the instantiated roots (no path
+        # via abstract-action edges, e.g. a never-instantiated isolated state)
+        # still gets a node so the plane shows every abstract state.
+        rendered_aids = set(abstract_node_to_aid.values())
+        for aid in range(len(self.abstract_states)):
+            if aid not in rendered_aids:
+                node_id = abstract_nid(aid, 0)
+                abstract_node_to_aid[node_id] = aid
+                abstract_node_depth[node_id] = 0
+                G_abstract.add_node(node_id)
 
         # Lay out the abstract DAG (depth -> layer) and fit it into the concrete
-        # plane's xy bounds so the two planes line up.
+        # plane's xy bounds so the two planes line up. When the concrete plane is
+        # degenerate on an axis -- e.g. a single linear trajectory has zero
+        # x-extent -- fitting would squash the whole abstract plane onto that
+        # line and stack its branches on top of each other, so fall back to the
+        # abstract plane's own box (it now carries the full, possibly branching,
+        # search graph rather than a single refined path).
         abstract_layout = _hierarchical_layout(G_abstract)
-        if layout_pos:
-            concrete_xs = [p[0] for p in layout_pos.values()]
-            concrete_ys = [p[1] for p in layout_pos.values()]
+        concrete_xs = [p[0] for p in layout_pos.values()]
+        concrete_ys = [p[1] for p in layout_pos.values()]
+        concrete_has_extent = (
+            concrete_xs
+            and concrete_ys
+            and max(concrete_xs) - min(concrete_xs) > 1e-9
+            and max(concrete_ys) - min(concrete_ys) > 1e-9
+        )
+        if concrete_has_extent:
             abstract_pos = _fit_into_bounds(
                 abstract_layout,
                 min(concrete_xs),
