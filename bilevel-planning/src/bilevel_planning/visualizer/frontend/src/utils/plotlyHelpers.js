@@ -7,6 +7,10 @@ const NODE_COLORS = {
 
 const NODE_SIZE_PLAN = 12;
 const NODE_SIZE_DEFAULT = 10;
+// Abstract nodes are drawn noticeably larger than concrete ones so the upper
+// (abstract) plane reads as the higher-level summary of the lower plane.
+const ABSTRACT_NODE_SIZE_PLAN = 22;
+const ABSTRACT_NODE_SIZE_DEFAULT = 20;
 const NODE_ALPHA_PLAN = 1.0;
 const NODE_ALPHA_DEFAULT = 0.7;
 
@@ -19,11 +23,13 @@ const EDGE_ALPHA = 0.7;
 
 function defaultNodeStyle(node) {
   const inPlan = Boolean(node.in_plan);
-  const color =
-    node.type === 'abstract' ? NODE_COLORS.abstract : NODE_COLORS.concrete;
+  const isAbstract = node.type === 'abstract';
+  const color = isAbstract ? NODE_COLORS.abstract : NODE_COLORS.concrete;
+  const planSize = isAbstract ? ABSTRACT_NODE_SIZE_PLAN : NODE_SIZE_PLAN;
+  const defaultSize = isAbstract ? ABSTRACT_NODE_SIZE_DEFAULT : NODE_SIZE_DEFAULT;
   return {
     color,
-    size: inPlan ? NODE_SIZE_PLAN : NODE_SIZE_DEFAULT,
+    size: inPlan ? planSize : defaultSize,
     alpha: inPlan ? NODE_ALPHA_PLAN : NODE_ALPHA_DEFAULT,
   };
 }
@@ -112,7 +118,7 @@ export function jsonToPlotlyTraces(graphData) {
         size: abstractNodes.map(n => n.size),
         color: abstractNodes.map(n => n.color),
         opacity: abstractNodes.map(n => n.alpha),
-        symbol: 'diamond',
+        symbol: 'circle',
       },
       customdata: abstractNodes.map(n => n.id),
       name: 'Abstract states',
@@ -165,13 +171,21 @@ export function jsonToPlotlyTraces(graphData) {
     };
   }
   
-  // Add edge traces
+  // Add edge traces. The action and abstract-action edges are kept out of the
+  // legend (showlegend false): they're self-evident from the graph and only
+  // cluttered the legend. The abstraction edges stay legended.
   const actionTrace = createEdgeTrace(edgesByType.action, 'Actions');
-  if (actionTrace) traces.push(actionTrace);
+  if (actionTrace) {
+    actionTrace.showlegend = false;
+    traces.push(actionTrace);
+  }
   const abstractorTrace = createEdgeTrace(edgesByType.abstractor, 'Abstraction');
   if (abstractorTrace) traces.push(abstractorTrace);
   const abstractActionTrace = createEdgeTrace(edgesByType.abstract_action, 'Abstract actions');
-  if (abstractActionTrace) traces.push(abstractActionTrace);
+  if (abstractActionTrace) {
+    abstractActionTrace.showlegend = false;
+    traces.push(abstractActionTrace);
+  }
 
   // Clickable midpoint markers carrying each abstract action's short name.
   // Plotly doesn't reliably fire click events on 3D lines, so these markers
@@ -278,20 +292,32 @@ export function getPlotlyLayout(graphData) {
         eye: { x: 1.3, y: 1.3, z: 1.5 },
         up: { x: 0, y: 0, z: 1 },
       },
-      xaxis: { 
+      // Axis coordinates are abstract layout positions, so their numeric values
+      // are meaningless to the viewer: hide the tick labels, tick marks, and
+      // axis titles. The grid/box is kept for depth cues.
+      xaxis: {
         visible: true,
         showgrid: true,
         zeroline: false,
+        showticklabels: false,
+        ticks: '',
+        title: { text: '' },
       },
-      yaxis: { 
+      yaxis: {
         visible: true,
         showgrid: true,
         zeroline: false,
+        showticklabels: false,
+        ticks: '',
+        title: { text: '' },
       },
-      zaxis: { 
+      zaxis: {
         visible: true,
         showgrid: true,
         zeroline: false,
+        showticklabels: false,
+        ticks: '',
+        title: { text: '' },
         range: [graphData.config.z_bottom, graphData.config.z_top]
       },
       // Proportional box (see above), with z exaggerated to 0.5 so the
@@ -311,13 +337,9 @@ export function getPlotlyLayout(graphData) {
       bordercolor: 'gray',
       borderwidth: 1,
     },
-    margin: { l: 0, r: 0, t: 30, b: 0 },
+    margin: { l: 0, r: 0, t: 0, b: 0 },
     paper_bgcolor: 'white',
     plot_bgcolor: 'white',
-    title: {
-      text: 'Bilevel Planning Graph',
-      font: { size: 16 }
-    }
   };
 }
 
