@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
+from relational_structs import Object, ObjectCentricState, Type
 
 from bilevel_planning.bilevel_planning_graph import (
     BilevelPlanningGraph,
@@ -104,7 +105,8 @@ def test_export_roundtrip(tmp_path: Path):
     with open(path, "rb") as f:
         bundle = pickle.load(f)
 
-    assert set(bundle.keys()) == {"graph", "states"}
+    assert set(bundle.keys()) == {"graph", "states", "constant_state"}
+    assert bundle["constant_state"] is None  # none passed
     graph = bundle["graph"]
     states = bundle["states"]
 
@@ -348,3 +350,43 @@ def test_export_abstract_depth_unrolling(tmp_path: Path):
     }
     # No abstract-action edge points back to the depth-0 root.
     assert all(target != "s:0_0" for _, target in aa)
+
+
+def test_export_stores_constant_state(tmp_path: Path):
+    """``export(constant_state=...)`` stores it once; the states are not mutated.
+
+    The static objects are merged into a state only at render time (by the visualizer
+    backend), so they are not baked into every stored state.
+    """
+    block_t = Type("block")
+    wall_t = Type("wall")
+    states = [
+        ObjectCentricState(
+            {Object("b", block_t): np.array([float(i)])}, {block_t: ["x"]}
+        )
+        for i in range(2)
+    ]
+    bpg: BilevelPlanningGraph = BilevelPlanningGraph()
+    for s in states:
+        bpg.add_state_node(s)
+    bpg.add_action_edge(states[0], "step", states[1])
+    constant_state = ObjectCentricState(
+        {Object("wall", wall_t): np.array([9.0])}, {wall_t: ["y"]}
+    )
+
+    path = tmp_path / "with_const.pkl"
+    bpg.export(path, final_state=states[-1], constant_state=constant_state)
+    with open(path, "rb") as f:
+        bundle = pickle.load(f)
+    # The constant state is stored once, separate from the per-step states.
+    assert "wall" in {o.name for o in bundle["constant_state"]}
+    # The stored states are unchanged -- no static objects baked into them.
+    for state in bundle["states"].values():
+        names = {o.name for o in state}
+        assert "b" in names and "wall" not in names
+
+    # Without constant_state, the bundle key is None.
+    path2 = tmp_path / "no_const.pkl"
+    bpg.export(path2, final_state=states[-1])
+    with open(path2, "rb") as f:
+        assert pickle.load(f)["constant_state"] is None

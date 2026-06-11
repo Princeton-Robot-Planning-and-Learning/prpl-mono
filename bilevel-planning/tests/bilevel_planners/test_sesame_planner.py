@@ -17,6 +17,8 @@ from bilevel_planning.abstract_plan_generators.heuristic_search_plan_generator i
     RelationalHeuristicSearchAbstractPlanGenerator,
 )
 from bilevel_planning.bilevel_planners.sesame_planner import SesamePlanner
+from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
+from bilevel_planning.sesame import run_sesame
 from bilevel_planning.structs import (
     FunctionalGoal,
     GroundParameterizedController,
@@ -26,6 +28,7 @@ from bilevel_planning.structs import (
     PlanningProblem,
     RelationalAbstractGoal,
     RelationalAbstractState,
+    SesameModels,
     TransitionFailure,
 )
 from bilevel_planning.trajectory_samplers.parameterized_controller_sampler import (
@@ -355,3 +358,96 @@ def test_relational_sesame():
     # )
 
     del bpg
+
+
+def test_run_sesame():
+    """``run_sesame`` builds the planner from ``SesameModels`` and returns (plan,
+    bpg)."""
+    grid_n = 4
+    state_space = Box(0.0, float(grid_n), shape=(2,))
+    action_space = Box(-0.5, 0.5, shape=(2,))
+    initial_state = np.array([0.0, 0.0])
+
+    def transition_fn(x, u):
+        return x + u
+
+    loc_type = Type("loc")
+    at = Predicate("at", [loc_type])
+    adjacent = Predicate("adjacent", [loc_type, loc_type])
+    loc_to_xy = lambda loc: tuple(map(int, loc.name[len("loc-") :].split("-")))
+
+    start = loc_type("?start")
+    end = loc_type("?end")
+    move_operator = LiftedOperator(
+        "move",
+        [start, end],
+        preconditions={at([start]), adjacent([start, end])},
+        add_effects={at([end])},
+        delete_effects={at([start])},
+    )
+
+    class GroundMoveController(GroundParameterizedController, MockController):
+        """Move deterministically (offset 0) from one cell to an adjacent one."""
+
+        def __init__(self, objects):
+            start_loc, end_loc = objects
+            sx, sy = loc_to_xy(start_loc)
+            ex, ey = loc_to_xy(end_loc)
+            MockController.__init__(self, (ex - sx, ey - sy), offset_mag=0.0)
+            GroundParameterizedController.__init__(self, objects)
+
+    move_skill = LiftedSkill(
+        move_operator, LiftedParameterizedController([start, end], GroundMoveController)
+    )
+
+    objects = {
+        loc_type(f"loc-{x}-{y}") for x in range(grid_n + 1) for y in range(grid_n + 1)
+    }
+    adjacent_atoms = set()
+    for x in range(grid_n + 1):
+        for y in range(grid_n + 1):
+            for dx, dy in [(-1, 0), (1, 0), (0, 1), (0, -1)]:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx <= grid_n and 0 <= ny <= grid_n:
+                    adjacent_atoms.add(
+                        adjacent([loc_type(f"loc-{x}-{y}"), loc_type(f"loc-{nx}-{ny}")])
+                    )
+
+    def state_abstractor(state):
+        x, y = round(state[0]), round(state[1])
+        loc = loc_type(f"loc-{x}-{y}")
+        return RelationalAbstractState({at([loc])} | adjacent_atoms, objects)
+
+    target = loc_type("loc-2-2")
+
+    def goal_deriver(state):
+        del state
+        return RelationalAbstractGoal({at([target])}, state_abstractor)
+
+    models = SesameModels(
+        observation_space=state_space,
+        state_space=state_space,
+        action_space=action_space,
+        transition_fn=transition_fn,
+        types={loc_type},
+        predicates={at, adjacent},
+        observation_to_state=lambda o: o,
+        state_abstractor=state_abstractor,
+        goal_deriver=goal_deriver,
+        skills={move_skill},
+    )
+
+    plan, bpg = run_sesame(
+        models,
+        initial_state,
+        seed=123,
+        max_abstract_plans=10,
+        samples_per_step=10,
+        max_skill_horizon=5,
+        timeout=10.0,
+    )
+    assert plan is not None
+    assert isinstance(bpg, BilevelPlanningGraph)
+    # Ended at the goal cell.
+    final = plan.states[-1]
+    assert (round(final[0]), round(final[1])) == (2, 2)
