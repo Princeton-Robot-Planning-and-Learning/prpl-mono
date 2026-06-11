@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from PIL import Image
+from relational_structs import Object, ObjectCentricState, Type
 
 from bilevel_planning.bilevel_planning_graph import BilevelPlanningGraph
 from bilevel_planning.visualizer import app as visualizer_app
@@ -45,10 +46,12 @@ def _reset_module_state():
     """
     visualizer_app.GRAPH_DATA = {}
     visualizer_app.STATE_DATA = {}
+    visualizer_app.CONSTANT_STATE = None
     visualizer_app.RENDER_FN = None
     yield
     visualizer_app.GRAPH_DATA = {}
     visualizer_app.STATE_DATA = {}
+    visualizer_app.CONSTANT_STATE = None
     visualizer_app.RENDER_FN = None
 
 
@@ -152,6 +155,46 @@ def test_visualize_unknown_node_returns_404(tmp_path: Path):
     client = app.test_client()
     resp = client.post("/api/visualize_state", json={"node_id": "x:doesnotexist"})
     assert resp.status_code == 404
+
+
+def test_visualize_merges_constant_state(tmp_path: Path):
+    """The backend merges the bundle's ``constant_state`` in before rendering."""
+    block_t, wall_t = Type("block"), Type("wall")
+    states = [
+        ObjectCentricState(
+            {Object("b", block_t): np.array([float(i)])}, {block_t: ["x"]}
+        )
+        for i in range(2)
+    ]
+    bpg: BilevelPlanningGraph = BilevelPlanningGraph()
+    for s in states:
+        bpg.add_state_node(s)
+    bpg.add_action_edge(states[0], "step", states[1])
+    constant_state = ObjectCentricState(
+        {Object("wall", wall_t): np.array([9.0])}, {wall_t: ["y"]}
+    )
+    bundle_path = tmp_path / "bundle.pkl"
+    bpg.export(bundle_path, final_state=states[-1], constant_state=constant_state)
+
+    # Renderer encodes the number of objects in the rendered state into the pixels.
+    renderer_path = _write_renderer(
+        tmp_path,
+        "import numpy as np\n"
+        "def render_state(state):\n"
+        "    return np.full((4, 4, 3), len(list(state)), dtype=np.uint8)\n",
+    )
+    load_bundle_from_path(bundle_path)
+    load_renderer_from_path(renderer_path)
+    node_id = next(iter(pickle.loads(bundle_path.read_bytes())["states"]))
+
+    client = create_app().test_client()
+    payload = client.post("/api/visualize_state", json={"node_id": node_id}).get_json()
+    png = base64.b64decode(payload["image"].split(",", 1)[1])
+    image = np.asarray(Image.open(io.BytesIO(png)))
+    # Two objects rendered (the block plus the merged-in wall), not one.
+    assert int(image[0, 0, 0]) == 2
+    # The stored state itself is untouched (one object).
+    assert len(list(visualizer_app.STATE_DATA[node_id])) == 1
 
 
 def test_load_bundle_rejects_wrong_shape(tmp_path: Path):

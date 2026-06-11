@@ -56,6 +56,11 @@ RenderStateFn = Callable[[Any], np.ndarray]
 # from the renderer file.
 GRAPH_DATA: dict = {}
 STATE_DATA: dict = {}
+# Static objects (walls, table) the env keeps separate from the per-step state.
+# Stored once in the bundle and merged into a state at render time -- mirroring how
+# the env merges constants only when it needs the full scene (e.g. to render).
+# ``None`` when the bundle has no constant objects.
+CONSTANT_STATE: Any = None
 RENDER_FN: RenderStateFn | None = None
 
 # Name the renderer file must bind for ``load_renderer_from_path`` to pick
@@ -103,6 +108,12 @@ def create_app() -> Flask:
                 return jsonify({"error": f"Node ID not found: {node_id}"}), 404
 
             state = STATE_DATA[node_id]
+            if CONSTANT_STATE is not None:
+                # Merge the static objects in only for rendering (the env does the
+                # same), so the renderer sees the full scene without them being
+                # baked into every stored state.
+                state = state.copy()
+                state.data.update(CONSTANT_STATE.data)
             rgb_array = RENDER_FN(state)
             image = Image.fromarray(np.asarray(rgb_array).astype("uint8"))
 
@@ -180,7 +191,7 @@ def load_bundle_from_path(path: str | Path) -> int:
     Returns the number of states loaded. Raises ``ValueError`` if the file
     isn't a visualizer bundle.
     """
-    global GRAPH_DATA, STATE_DATA
+    global GRAPH_DATA, STATE_DATA, CONSTANT_STATE
     with open(path, "rb") as f:
         bundle = pickle.load(f)
     if not (isinstance(bundle, dict) and "graph" in bundle and "states" in bundle):
@@ -191,6 +202,7 @@ def load_bundle_from_path(path: str | Path) -> int:
         )
     GRAPH_DATA = bundle["graph"]
     STATE_DATA = bundle["states"]
+    CONSTANT_STATE = bundle.get("constant_state")
     return len(STATE_DATA)
 
 

@@ -13,6 +13,7 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from prpl_utils.utils import consistent_hash
+from relational_structs import ObjectCentricState
 
 from bilevel_planning.structs import Plan
 
@@ -869,11 +870,12 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
         self,
         path: Path,
         final_state: _X | None = None,
+        constant_state: ObjectCentricState | None = None,
         **kwargs,
     ) -> None:
         """Write a single pickle bundling graph topology and state objects.
 
-        The resulting pickle is a dict with two keys:
+        The resulting pickle is a dict with three keys:
 
           * ``"graph"``: the frontend-facing topology dict (nodes, edges,
             plan info, config) produced by ``_build_graph_payload``. The
@@ -882,12 +884,21 @@ class BilevelPlanningGraph(Generic[_X, _U, _S, _A]):
             ``"x:<display_id>"`` to the original state objects. Display
             ids are insertion-order indices into ``self.states``. The
             backend indexes into this dict when rendering a specific node.
+          * ``"constant_state"``: optional static objects (e.g. walls, a table)
+            that the environment keeps separate from the per-step state. It is
+            stored once here; the visualizer backend merges it into a state at
+            render time (mirroring how the env merges constants only when it
+            needs the full scene), so the renderer draws the full picture
+            without duplicating the static objects into every state.
         """
         graph_payload = self._build_graph_payload(final_state=final_state, **kwargs)
         states_payload: dict[str, _X] = {
             f"x:{idx}": state for idx, state in enumerate(self.states)
         }
-
-        bundle = {"graph": graph_payload, "states": states_payload}
+        bundle = {
+            "graph": graph_payload,
+            "states": states_payload,
+            "constant_state": constant_state,
+        }
         with open(path, "wb") as f:
             pickle.dump(bundle, f)
