@@ -18,7 +18,10 @@ develop = [
     "mypy",
     "pylint>=2.14.5",
     "pytest-pylint>=0.18.0",
-    "pytest>=7.2.2",
+    # pytest 9.1 dropped the deprecated `path` arg from the pytest_collect_file
+    # hookspec, which pytest-pylint 0.21.0 (its latest release) still declares,
+    # so the --pylint plugin fails to register. Cap until pytest-pylint catches up.
+    "pytest>=7.2.2,<9.1",
 ]
 
 [tool.setuptools.packages.find]
