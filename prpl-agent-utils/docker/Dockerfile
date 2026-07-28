@@ -33,11 +33,12 @@ RUN if [ "$USER_GID" != "1000" ] || [ "$USER_UID" != "1000" ]; then \
     fi
 
 # System packages: basic dev tools plus what the firewall script needs
-# (jq, dnsutils, aggregate, iptables, ipset, iproute2) and a Python runtime.
+# (jq, dnsutils, aggregate, iptables, ipset, iproute2), util-linux for the
+# setpriv root-to-node privilege transition, and a Python runtime.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
-        sudo \
         curl \
+        util-linux \
         jq \
         iptables \
         ipset \
@@ -64,18 +65,16 @@ ENV PATH="$PATH:/usr/local/share/npm-global/bin"
 # Claude Code CLI.
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
-# Firewall script — node user gets passwordless sudo for this one script only.
+# Firewall script — the root entrypoint runs this before permanently dropping
+# to the unprivileged node user.
 COPY init-firewall.sh /usr/local/bin/init-firewall.sh
-RUN chmod +x /usr/local/bin/init-firewall.sh \
-    && echo "node ALL=(root) NOPASSWD:SETENV: /usr/local/bin/init-firewall.sh" \
-       > /etc/sudoers.d/node-firewall \
-    && chmod 0440 /etc/sudoers.d/node-firewall
+RUN chmod 0755 /usr/local/bin/init-firewall.sh
 
 # Config directories for the node user.
 RUN mkdir -p /home/node/.claude \
     && chown -R node:node /home/node/.claude
 
-# Entrypoint: init firewall → exec the agent CLI.
+# Entrypoint: init firewall → drop privileges → exec the agent CLI.
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
@@ -83,7 +82,9 @@ ENV DEVCONTAINER=true
 ENV CLAUDE_CONFIG_DIR=/home/node/.claude
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-USER node
+# The entrypoint needs NET_ADMIN while it initializes iptables. It permanently
+# drops to node (including all capability sets) before executing agent code.
+USER root
 WORKDIR /sandbox
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

@@ -70,6 +70,25 @@ Authentication comes from `claude login` on the host (or
 `CLAUDE_CODE_OAUTH_TOKEN`); the operator's live `~/.claude` directory is never
 read or written by the sandboxed CLI.
 
+## Red teaming the sandbox
+
+`integration_tests/red_team_sandbox.py` runs adversarial prompts against a real
+agent and checks a canary file outside the sandbox after each one. It covers
+path escapes through the file tools and bash, network restriction, the
+privilege drop (the agent user must not regain root or re-run the firewall
+script), and host-config persistence (container writes under `~/.claude` must
+not survive on the host).
+
+```bash
+python integration_tests/red_team_sandbox.py --docker           # full suite
+python integration_tests/red_team_sandbox.py --firewall-only    # no API cost
+python integration_tests/red_team_sandbox.py --home-persist-only
+```
+
+The full suite spends real API budget (capped at $1 per prompt, typically much
+less). Without `--docker` it tests the host sandbox, where the bash read
+escapes are reported as known limitations rather than breaches.
+
 ## Requirements
 
 - Python 3.10+

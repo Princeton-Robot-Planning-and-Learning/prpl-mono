@@ -50,6 +50,18 @@ print("something went wrong", file=sys.stderr)
 sys.exit(1)
 """
 
+# Writes far more to stderr than a PIPE buffer holds before emitting its
+# result, which would deadlock a PIPE-backed stderr against the stdout parser.
+_NOISY_STDERR_CLI = """\
+#!/usr/bin/env python3
+import json
+import sys
+
+sys.stderr.write("x" * 1_000_000)
+sys.stderr.flush()
+print(json.dumps({"type": "result", "is_error": False, "result": "ok"}))
+"""
+
 
 def _install_fake_cli(tmp_path: Path, monkeypatch, script: str) -> Path:
     cli = tmp_path / "fake_claude"
@@ -136,6 +148,14 @@ def test_claude_code_agent_cli_failure(tmp_path, monkeypatch):
     agent = ClaudeCodeAgent(tmp_path / "sandbox", use_docker=False)
     with pytest.raises(RuntimeError, match="no result"):
         agent.query("Prompt.")
+
+
+def test_claude_code_agent_large_stderr_no_deadlock(tmp_path, monkeypatch):
+    """A CLI that floods stderr cannot deadlock the stream parser."""
+    _install_fake_cli(tmp_path, monkeypatch, _NOISY_STDERR_CLI)
+    agent = ClaudeCodeAgent(tmp_path / "sandbox", use_docker=False)
+    response = agent.query("Prompt.")
+    assert response.text == "ok"
 
 
 def test_real_claude_code_agent(tmp_path, request):

@@ -14,8 +14,9 @@ import json
 import logging
 import os
 import subprocess
+import tempfile
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from prpl_agent_utils.claude_auth import (
     get_claude_oauth_token,
@@ -203,19 +204,25 @@ class ClaudeCodeAgent(Agent):
         log_dir = self._sandbox_dir / ".agent_logs"
         log_dir.mkdir(exist_ok=True)
         logger.info("Running agent: %s ...", " ".join(cmd[:8]))
-        with subprocess.Popen(
-            cmd,
-            cwd=str(cwd) if cwd is not None else None,
-            env=env,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        ) as proc:
-            return _parse_stream(proc, log_dir / "stream.jsonl")
+        # stderr goes to a file, not a PIPE: stdout is parsed to EOF before
+        # stderr is read, so a CLI that fills a stderr PIPE buffer first would
+        # deadlock against the parser.
+        with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as stderr_file:
+            with subprocess.Popen(
+                cmd,
+                cwd=str(cwd) if cwd is not None else None,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=stderr_file,
+                text=True,
+            ) as proc:
+                return _parse_stream(proc, log_dir / "stream.jsonl", stderr_file)
 
 
-def _parse_stream(proc: subprocess.Popen[str], stream_log_path: Path) -> AgentResponse:
+def _parse_stream(
+    proc: subprocess.Popen[str], stream_log_path: Path, stderr_file: IO[str]
+) -> AgentResponse:
     """Parse ``stream-json`` output from a Claude CLI process into a response.
 
     Assistant messages and tool calls are logged as they stream; the final
@@ -266,8 +273,8 @@ def _parse_stream(proc: subprocess.Popen[str], stream_log_path: Path) -> AgentRe
                 stop_reason = msg.get("subtype") or stop_reason
 
     proc.wait()
-    assert proc.stderr is not None
-    stderr_output = proc.stderr.read()
+    stderr_file.seek(0)
+    stderr_output = stderr_file.read()
 
     if result_text is None:
         raise RuntimeError(
