@@ -70,6 +70,16 @@ Authentication comes from `claude login` on the host (or
 `CLAUDE_CODE_OAUTH_TOKEN`); the operator's live `~/.claude` directory is never
 read or written by the sandboxed CLI.
 
+## Example
+
+`examples/pendulum_pure_agent.ipynb` works through the recipe in [*Now what? A
+recipe for after the problem
+setting*](https://tomsilver.github.io/blog/2026/now-whats-your-solution/) on
+gymnasium's `Pendulum-v1`: a random baseline, a pure agent method that writes and
+revises its own policy inside the sandbox, and an energy-shaping oracle. Install
+the extra dependencies with `pip install -e ".[examples]"`. Running it spends a
+few tens of cents of API budget.
+
 ## Red teaming the sandbox
 
 `integration_tests/red_team_sandbox.py` runs adversarial prompts against a real

@@ -11,6 +11,10 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
+examples = [
+    "gymnasium[classic-control]",
+    "jupyter",
+]
 develop = [
     "black",
     "docformatter",
