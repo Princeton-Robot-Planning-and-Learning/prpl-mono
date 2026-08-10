@@ -9,10 +9,14 @@ See [`DESIGN.md`](DESIGN.md) for the architecture and roadmap.
 
 ## Status
 
-Early. The built core is the geometry layer and the `KinematicTree` (joints,
-forward kinematics, grasp via re-parenting, state snapshots). Loading, backends,
-IK, planning, robots, and manipulation are planned milestones — each lands with
-unit tests.
+Early, and the API may still change. The geometry layer and the `KinematicTree`
+(joints, forward kinematics, grasp via re-parenting, state snapshots) are the
+stable core. Built on top of them: URDF loading, PyBullet and Blender backends,
+numerical and analytic IK (IKFast, EAIK, optionally SSIK), BiRRT and OMPL motion
+planning, manipulation primitives, and robot models for the Franka Panda, Kinova
+Gen3, TidyBot, and the bimanual Dexmate Vega.
+
+Pin a version if you need stable behavior.
 
 ## Requirements
 
@@ -20,7 +24,20 @@ unit tests.
 
 ## Installation
 
-From the monorepo root, with [uv](https://docs.astral.sh/uv/):
+```
+pip install prpl_kinematics
+```
+
+IKFast solvers are compiled from the bundled C++ sources on first use, which needs
+a C++ toolchain and LAPACK/BLAS. The other IK backends have no such requirement.
+
+The optional `ssik` extra adds the SSIK analytic IK backend:
+
+```
+pip install "prpl_kinematics[ssik]"
+```
+
+For development, from the monorepo root, with [uv](https://docs.astral.sh/uv/):
 
 ```
 uv pip install -e "./prpl-kinematics[develop]"

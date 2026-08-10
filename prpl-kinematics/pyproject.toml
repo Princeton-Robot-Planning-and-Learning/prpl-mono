@@ -7,7 +7,16 @@ name = "prpl_kinematics"
 version = "0.0.1"
 description = "Kinematics-only robot modeling, IK, motion planning, and manipulation primitives built on a general KinematicTree."
 readme = "README.md"
+# PEP 639 form. The bundled IKFast sources under third_party/ are Apache-2.0; see
+# src/prpl_kinematics/third_party/ikfast/NOTICE.
+license = "MIT AND Apache-2.0"
+license-files = ["LICENSE", "src/prpl_kinematics/third_party/ikfast/LICENSE"]
 requires-python = ">=3.10"
+classifiers = [
+   "Programming Language :: Python :: 3",
+   "Operating System :: OS Independent",
+]
+
 # Lists only what the code imports.
 dependencies = [
    # numpy 2 is supported (the suite passes on it); the optional ssik extra
@@ -37,11 +46,20 @@ develop = [
     "pytest>=7.2.2",
 ]
 
+[project.urls]
+Repository = "https://github.com/Princeton-Robot-Planning-and-Learning/prpl-mono"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-prpl_kinematics = ["py.typed", "assets/**/*", "third_party/**/*"]
+# Only py.typed is listed explicitly. The assets and third_party trees reach the
+# distribution through setuptools-scm, which includes git-tracked files: globbing them
+# from the filesystem instead would sweep in the gitignored IKFast build products
+# (per-platform .so, .o, build/, __pycache__) left behind by a local compile. Shipping
+# those breaks IKFast for everyone else, because _import_ikfast() compiles only when it
+# finds no .so and would otherwise load one built for the wrong platform.
+prpl_kinematics = ["py.typed"]
 
 [tool.black]
 line-length = 88
