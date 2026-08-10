@@ -31,32 +31,25 @@ pip install prpl_kinematics
 IKFast solvers are compiled from the bundled C++ sources on first use, which needs
 a C++ toolchain and LAPACK/BLAS. The other IK backends have no such requirement.
 
-The optional `ssik` extra adds the SSIK analytic IK backend:
+### Optional extras
 
 ```
-pip install "prpl_kinematics[ssik]"
+pip install "prpl_kinematics[planning]"   # OMPLPlanner and seed_ompl
+pip install "prpl_kinematics[ssik]"       # the SSIK analytic IK backend
 ```
 
-For development, from the monorepo root, with [uv](https://docs.astral.sh/uv/):
+`ompl` publishes wheels for far fewer platforms than everything else here (none for
+Windows, and macOS 15 or newer only), so it stays out of the base install. Importing
+`OMPLPlanner` or `seed_ompl` without it raises an `ImportError` saying so; everything
+else, including `BiRRTPlanner`, works untouched.
+
+## Development
+
+From the monorepo root, with [uv](https://docs.astral.sh/uv/):
 
 ```
 uv pip install -e "./prpl-kinematics[develop]"
 ```
-
-### Optional extras
-
-`OMPLPlanner` and `seed_ompl` need the `planning` extra, because `ompl` publishes
-wheels for far fewer platforms than everything else here (none for Windows, and
-macOS 15 or newer only):
-
-```
-uv pip install -e "./prpl-kinematics[planning]"
-```
-
-Without it, importing those two names raises an `ImportError` saying so; everything
-else, including `BiRRTPlanner`, works untouched.
-
-## Development
 
 ```
 ./run_ci_checks.sh   # autoformat, mypy, pylint, pytest
