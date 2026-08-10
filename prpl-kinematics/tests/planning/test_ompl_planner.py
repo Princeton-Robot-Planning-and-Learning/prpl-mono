@@ -6,16 +6,15 @@ from spatialmath import SE3
 
 from prpl_kinematics.collision import PyBulletCollisionChecker
 from prpl_kinematics.geometry.shapes import BoxShape
-from prpl_kinematics.planning import (
-    BiRRTPlanner,
-    JointSpace,
-    MotionPlanner,
-    OMPLPlanner,
-    ompl_planner,
-    seed_ompl,
-)
+from prpl_kinematics.planning import BiRRTPlanner, JointSpace, MotionPlanner
 from prpl_kinematics.tree.joints import FixedJoint, PrismaticJoint
 from prpl_kinematics.tree.kinematic_tree import Edge, KinematicTree, Node
+
+# ompl is an optional dependency, so skip this module rather than fail collection when
+# it is absent.
+ompl_planner = pytest.importorskip("prpl_kinematics.planning.ompl_planner")
+OMPLPlanner = ompl_planner.OMPLPlanner
+seed_ompl = ompl_planner.seed_ompl
 
 
 def _gantry_tree() -> KinematicTree:

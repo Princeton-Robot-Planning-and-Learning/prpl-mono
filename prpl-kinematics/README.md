@@ -43,6 +43,19 @@ For development, from the monorepo root, with [uv](https://docs.astral.sh/uv/):
 uv pip install -e "./prpl-kinematics[develop]"
 ```
 
+### Optional extras
+
+`OMPLPlanner` and `seed_ompl` need the `planning` extra, because `ompl` publishes
+wheels for far fewer platforms than everything else here (none for Windows, and
+macOS 15 or newer only):
+
+```
+uv pip install -e "./prpl-kinematics[planning]"
+```
+
+Without it, importing those two names raises an `ImportError` saying so; everything
+else, including `BiRRTPlanner`, works untouched.
+
 ## Development
 
 ```
