@@ -21,13 +21,20 @@ dependencies = [
    "pybullet-arm64>=3.2.8",
    "imageio>=2.30",
    "eaik>=1.2.1",
-   "ompl>=2.0.0",
 ]
 
 [project.optional-dependencies]
+# OMPL-backed motion planning (OMPLPlanner, seed_ompl). Kept optional because ompl
+# publishes no sdist and wheels for far fewer platforms than everything else here --
+# none for Windows, and macOS 15 or newer only -- so requiring it would narrow the
+# whole package to those platforms. BiRRTPlanner needs nothing extra.
+planning = ["ompl>=2.0.0"]
 # Optional analytic IK backend (ssik); requires numpy>=2. See ik/ssik.py.
 ssik = ["ssik[urdf]>=1.2"]
 develop = [
+    # Pulled in so that the OMPL tests still run in CI and in a dev install, even
+    # though ompl is optional for users.
+    "ompl>=2.0.0",
     "black",
     "docformatter",
     "isort",
