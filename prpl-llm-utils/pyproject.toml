@@ -7,12 +7,22 @@ name = "prpl_llm_utils"
 version = "0.1.0"
 description = "LLM utils from the Princeton Robot Planning and Learning group."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
+classifiers = [
+   "Programming Language :: Python :: 3",
+   "Operating System :: OS Independent",
+]
 dependencies = [
    "ImageHash",
    "openai",
    "google-genai",
+   "Pillow",
 ]
+
+[project.urls]
+Repository = "https://github.com/Princeton-Robot-Planning-and-Learning/prpl-mono"
 
 [project.optional-dependencies]
 develop = [
