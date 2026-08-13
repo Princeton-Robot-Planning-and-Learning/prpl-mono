@@ -29,13 +29,20 @@ def _gripper_joints(side: str) -> list[str]:
 
 
 # A natural, manipulation-ready home (per-arm j1..j7): forearms down-forward with
-# the grippers angled downward at chest height. Each arm was optimized to minimize
-# static gravity torque (so the arms nearly hold themselves) and stay well inside
-# its joint limits, while pointing the gripper down-forward -- a ready posture from
-# which a tabletop grasp is a short, smooth reach. The two arms are optimized
-# independently (Vega's arms are not a simple sign-flip mirror of each other).
+# the grippers angled downward at chest height, a ready posture from which a
+# tabletop grasp is a short, smooth reach. The left posture was optimized to
+# reduce static gravity torque while staying well inside its joint limits; the
+# right home is its mirror, so the robot rests symmetrically. Between the two
+# candidate postures, the left one holds gravity with the lower peak joint torque
+# (about 15 vs 21 N*m in the URDF model, 2.9 vs 4.0 A on hardware), which matters
+# for a long-lived parked pose; even so, the shoulder joints work noticeably to
+# hold it. Vega's arms are not exact mechanical mirrors, so the mirrored posture's
+# gravity load and the symmetry of the gripper poses (~2.5 cm residual) are
+# approximate. See prpl-mono issue #529 for the measurements behind this choice.
 _LEFT_ARM_HOME = [1.809, 0.636, -0.244, -2.04, 0.841, 0.129, -0.833]
-_RIGHT_ARM_HOME = [-1.043, -1.278, -0.793, -1.778, -0.148, -0.396, 0.417]
+# The left-to-right mirror map (from the URDF joint limits) flips the sign of
+# every joint except j4, the elbow, whose range is identical on both arms.
+_RIGHT_ARM_HOME = [q if i == 3 else -q for i, q in enumerate(_LEFT_ARM_HOME)]
 # Rest the parallel jaws open (each finger is revolute over [0, 0.785]); like the
 # Panda's open home, this is the ready-to-grasp pose, and a grasp closes on the
 # object rather than starting clamped shut through it.
