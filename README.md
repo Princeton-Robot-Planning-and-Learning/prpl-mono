@@ -72,6 +72,8 @@ export UV_PUBLISH_TOKEN=pypi-YOUR_TOKEN_HERE
 | tomsgeoms2d | `tomsgeoms2d` | `toms-geoms-2d/` |
 | pybullet_helpers | `pybullet_helpers` | `pybullet-helpers/` |
 | bilevel_planning | `bilevel_planning` | `bilevel-planning/` |
+| prpl_kinematics | `prpl_kinematics` | `prpl-kinematics/` |
+| prpl_llm_utils | `prpl_llm_utils` | `prpl-llm-utils/` |
 
 ## Troubleshooting
 
