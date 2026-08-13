@@ -72,6 +72,29 @@ def test_vega_left_arm_solves_top_down_grasp():
     assert np.linalg.norm(np.asarray(reached.t) - np.asarray(target.t)) < 1e-2
 
 
+def test_vega_home_is_mirror_symmetric():
+    """At home the two gripper frames sit near-mirrored about the y=0 plane.
+
+    The right arm home is defined as the mirror of the left. Vega's arms are not exact
+    mechanical mirrors, so the residual is a few centimeters, not zero.
+    """
+    robot = make_vega()
+    left = np.asarray(robot.tree.forward_kinematics("L_ee", robot.home).t)
+    right = np.asarray(robot.tree.forward_kinematics("R_ee", robot.home).t)
+    assert np.abs(left - right * np.array([1.0, -1.0, 1.0])).max() < 0.04
+
+
+def test_vega_home_is_within_joint_limits():
+    """Every home joint value sits strictly inside its URDF limits."""
+    robot = make_vega()
+    for name in robot.tree.actuated_joint_names():
+        joint = robot.tree.joint(name)
+        for value, low, high in zip(
+            robot.home[name], joint.lower_limits, joint.upper_limits
+        ):
+            assert low <= value <= high, f"{name}: {value} outside [{low}, {high}]"
+
+
 def test_vega_home_is_self_collision_free(physics_client_id):
     """Home is collision-free once the robot's intrinsic ACM is allowed."""
     robot = make_vega()
