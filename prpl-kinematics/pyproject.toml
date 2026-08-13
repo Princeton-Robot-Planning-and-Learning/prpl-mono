@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prpl_kinematics"
-version = "0.0.1"
+version = "0.0.2"
 description = "Kinematics-only robot modeling, IK, motion planning, and manipulation primitives built on a general KinematicTree."
 readme = "README.md"
 # PEP 639 form. The bundled IKFast sources under third_party/ are Apache-2.0; see
