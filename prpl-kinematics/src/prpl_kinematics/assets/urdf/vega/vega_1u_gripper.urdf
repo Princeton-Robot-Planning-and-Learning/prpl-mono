@@ -111,10 +111,9 @@ Build Version: 1.6.7995.38578 For more information, please see http://wiki.ros.o
   </joint>
   <link name="head_l2">
     <inertial>
-      <origin xyz="3.533E-05 0.01618 0.03389" rpy="0 0 0" />
+      <origin xyz="5.66105e-07 0.000244411 0.0303453" rpy="0 0 0" />
       <mass value="0.60772" />
-      <inertia ixx="0.00052" ixy="8.06625E-08" ixz="-1.98086E-08" iyy="0.00039" iyz="-0.0001"
-        izz="0.0005" />
+      <inertia ixx="0.000559127" ixy="-7.39058e-10" ixz="3.61875e-09" iyy="0.000331023" iyz="5.3256e-06" izz="0.00051985" />
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
@@ -624,174 +623,174 @@ Build Version: 1.6.7995.38578 For more information, please see http://wiki.ros.o
     <child link="R_ee" />
   </joint>
   <joint name="L_hand_mount" type="fixed">
-    <origin xyz="0.0 0 0.078" rpy="0 0 0" />
+    <origin xyz="0.0 0 0.0825" rpy="0 0 -1.5708" />
     <parent link="L_arm_l8" />
     <child link="L_gripper_base" />
   </joint>
   <link name="L_gripper_base">
     <inertial>
-      <origin xyz="-0.01121 1.23227E-05 -0.01567" rpy="0 0 0" />
-      <mass value="0.39258" />
-      <inertia ixx="0.00024" ixy="-1.37984E-08" ixz="-1.01327E-06" iyy="0.00017" iyz="-1.37898E-08"
-        izz="0.0003" />
+      <origin xyz="2.54679129763742E-05 -0.0150492008909715 -0.00958449575866547" rpy="0 0 0" />
+      <mass value="0.217869646528476" />
+      <inertia ixx="0.000134910583008351" ixy="1.44479504067597E-07" ixz="-8.23176263717005E-08"
+        iyy="0.000196473423815308" iyz="1.3724955220451E-05" izz="0.000218204188765615" />
     </inertial>
     <visual>
-      <origin xyz="-0.004 0 -0.078" rpy="-1.57079 1.57079 1.57079" />
+      <origin xyz="-0.004 0 -0.0825" rpy="-1.57079 1.57079 1.57079" />
       <geometry>
         <mesh filename="../../hands/f5d6_hand/meshes/visual/connector.glb" />
       </geometry>
     </visual>
     <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <origin xyz="0 0 0" rpy="-1.5708 0 1.5708" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/visual/gripper_base.glb" />
+        <mesh filename="../../hands/dexs_gripper/meshes/visual/gripper_base.glb" />
       </geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/collision/gripper_base.obj" />
+        <mesh filename="../../hands/dexs_gripper/meshes/collision/gripper_base.obj" />
       </geometry>
     </collision>
   </link>
   <joint name="L_gripper_j1" type="revolute">
-    <origin xyz="4.92002E-18 0.0258 0.02875" rpy="0 0 0" />
+    <origin xyz="-0.025807 -0.0015 0.02935" rpy="0 0 0" />
     <parent link="L_gripper_base" />
     <child link="L_gripper_l1" />
-    <axis xyz="-1 0 0" />
+    <axis xyz="0 -1 0" />
     <limit lower="0" upper="0.7854" effort="0" velocity="0" />
   </joint>
   <link name="L_gripper_l1">
     <inertial>
-      <origin xyz="-2.78908E-05 -0.00741 0.05495" rpy="0 0 0" />
-      <mass value="0.09974" />
-      <inertia ixx="7.72528E-05" ixy="-8.58153E-11" ixz="9.06127E-10" iyy="7.34223E-05"
-        iyz="4.63509E-06" izz="1.8247E-05" />
+      <origin xyz="0.00843468195369693 0.00212306263380547 0.066602737854433" rpy="0 0 0" />
+      <mass value="0.0417789910080777" />
+      <inertia ixx="3.45990297357139E-05" ixy="5.9170331352587E-08" ixz="-2.46643561022285E-06"
+        iyy="3.8061658079238E-05" iyz="2.0311185517981E-07" izz="6.02613617857357E-06" />
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/visual/gripper_l1.glb" />
+        <mesh filename="../../hands/dexs_gripper/meshes/visual/gripper_l1.glb" />
       </geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/collision/gripper_l1.obj" />
+        <mesh filename="../../hands/dexs_gripper/meshes/collision/gripper_l1.obj" />
       </geometry>
     </collision>
   </link>
   <joint name="L_gripper_j2" type="revolute">
-    <origin xyz="-1.39916E-18 -0.0258 0.02875" rpy="0 0 0" />
+    <origin xyz="0.025793 -0.0015 0.02935" rpy="0 0 0" />
     <parent link="L_gripper_base" />
     <child link="L_gripper_l2" />
-    <axis xyz="1 0 0" />
+    <axis xyz="0 1 0" />
     <limit lower="0" upper="0.7854" effort="0" velocity="0" />
     <mimic joint="L_gripper_j1" multiplier="1" offset="0" />
   </joint>
   <link name="L_gripper_l2">
     <inertial>
-      <origin xyz="-2.8025E-05 0.0074 0.05493" rpy="0 0 0" />
-      <mass value="0.09973" />
-      <inertia ixx="7.72502E-05" ixy="5.08385E-11" ixz="9.39246E-10" iyy="7.34168E-05"
-        iyz="-4.63633E-06" izz="1.82497E-05" />
+      <origin xyz="-0.00843466215895156 0.00212309596761592 0.0666025713535334" rpy="0 0 0" />
+      <mass value="0.0417790873345589" />
+      <inertia ixx="3.45990988601083E-05" ixy="-5.91723975840897E-08" ixz="2.46643867114077E-06"
+        iyy="3.80617304119821E-05" iyz="2.03115741505284E-07" izz="6.0261372375696E-06" />
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/visual/gripper_l2.glb" />
+        <mesh filename="../../hands/dexs_gripper/meshes/visual/gripper_l2.glb" />
       </geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/collision/gripper_l2.obj" />
+        <mesh filename="../../hands/dexs_gripper/meshes/collision/gripper_l2.obj" />
       </geometry>
     </collision>
   </link>
   <joint name="R_hand_mount" type="fixed">
-    <origin xyz="0 0 0.078" rpy="0 0 0" />
+    <origin xyz="0 0 0.0825" rpy="0 0 -1.5708" />
     <parent link="R_arm_l8" />
     <child link="R_gripper_base" />
   </joint>
   <link name="R_gripper_base">
     <inertial>
-      <origin xyz="-0.01121 1.23227E-05 -0.01567" rpy="0 0 0" />
-      <mass value="0.39258" />
-      <inertia ixx="0.00024" ixy="-1.37984E-08" ixz="-1.01327E-06" iyy="0.00017" iyz="-1.37898E-08"
-        izz="0.0003" />
+      <origin xyz="2.54679129763742E-05 -0.0150492008909715 -0.00958449575866547" rpy="0 0 0" />
+      <mass value="0.217869646528476" />
+      <inertia ixx="0.000134910583008351" ixy="1.44479504067597E-07" ixz="-8.23176263717005E-08"
+        iyy="0.000196473423815308" iyz="1.3724955220451E-05" izz="0.000218204188765615" />
     </inertial>
     <visual>
-      <origin xyz="-0.004 0 -0.078" rpy="-1.57079 1.57079 1.57079" />
+      <origin xyz="-0.004 0 -0.0825" rpy="-1.57079 1.57079 1.57079" />
       <geometry>
         <mesh filename="../../hands/f5d6_hand/meshes/visual/connector.glb" />
       </geometry>
     </visual>
     <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <origin xyz="0 0 0" rpy="-1.5708 0 1.5708" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/visual/gripper_base.glb" />
+        <mesh filename="../../hands/dexs_gripper/meshes/visual/gripper_base.glb" />
       </geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/collision/gripper_base.obj" />
+        <mesh filename="../../hands/dexs_gripper/meshes/collision/gripper_base.obj" />
       </geometry>
     </collision>
   </link>
   <joint name="R_gripper_j1" type="revolute">
-    <origin xyz="4.92002E-18 0.0258 0.02875" rpy="0 0 0" />
+    <origin xyz="-0.025807 -0.0015 0.02935" rpy="0 0 0" />
     <parent link="R_gripper_base" />
     <child link="R_gripper_l1" />
-    <axis xyz="-1 0 0" />
+    <axis xyz="0 -1 0" />
     <limit lower="0" upper="0.7854" effort="0" velocity="0" />
   </joint>
   <link name="R_gripper_l1">
     <inertial>
-      <origin xyz="-2.78908E-05 -0.00741 0.05495" rpy="0 0 0" />
-      <mass value="0.09974" />
-      <inertia ixx="7.72528E-05" ixy="-8.58153E-11" ixz="9.06127E-10" iyy="7.34223E-05"
-        iyz="4.63509E-06" izz="1.8247E-05" />
+      <origin xyz="0.00843468195369693 0.00212306263380547 0.066602737854433" rpy="0 0 0" />
+      <mass value="0.0417789910080777" />
+      <inertia ixx="3.45990297357139E-05" ixy="5.9170331352587E-08" ixz="-2.46643561022285E-06"
+        iyy="3.8061658079238E-05" iyz="2.0311185517981E-07" izz="6.02613617857357E-06" />
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/visual/gripper_l1.glb" />
+        <mesh filename="../../hands/dexs_gripper/meshes/visual/gripper_l1.glb" />
       </geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/collision/gripper_l1.obj" />
+        <mesh filename="../../hands/dexs_gripper/meshes/collision/gripper_l1.obj" />
       </geometry>
     </collision>
   </link>
   <joint name="R_gripper_j2" type="revolute">
-    <origin xyz="-1.39916E-18 -0.0258 0.02875" rpy="0 0 0" />
+    <origin xyz="0.025793 -0.0015 0.02935" rpy="0 0 0" />
     <parent link="R_gripper_base" />
     <child link="R_gripper_l2" />
-    <axis xyz="1 0 0" />
+    <axis xyz="0 1 0" />
     <limit lower="0" upper="0.7854" effort="0" velocity="0" />
     <mimic joint="R_gripper_j1" multiplier="1" offset="0" />
   </joint>
   <link name="R_gripper_l2">
     <inertial>
-      <origin xyz="-2.8025E-05 0.0074 0.05493" rpy="0 0 0" />
-      <mass value="0.09973" />
-      <inertia ixx="7.72502E-05" ixy="5.08385E-11" ixz="9.39246E-10" iyy="7.34168E-05"
-        iyz="-4.63633E-06" izz="1.82497E-05" />
+      <origin xyz="-0.00843466215895156 0.00212309596761592 0.0666025713535334" rpy="0 0 0" />
+      <mass value="0.0417790873345589" />
+      <inertia ixx="3.45990988601083E-05" ixy="-5.91723975840897E-08" ixz="2.46643867114077E-06"
+        iyy="3.80617304119821E-05" iyz="2.03115741505284E-07" izz="6.0261372375696E-06" />
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/visual/gripper_l2.glb" />
+        <mesh filename="../../hands/dexs_gripper/meshes/visual/gripper_l2.glb" />
       </geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="../../hands/dexd_gripper/meshes/collision/gripper_l2.obj" />
+        <mesh filename="../../hands/dexs_gripper/meshes/collision/gripper_l2.obj" />
       </geometry>
     </collision>
   </link>
