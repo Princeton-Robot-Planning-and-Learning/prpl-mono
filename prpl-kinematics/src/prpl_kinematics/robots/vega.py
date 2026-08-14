@@ -57,6 +57,10 @@ def make_vega(ik: str = "eaik") -> Robot:
     ``"ssik"`` (the optional :class:`~prpl_kinematics.ik.ssik.SSIKSolver`, which
     requires the ``ssik`` package). Both solve Vega's non-SRS 7R arm.
     """
+    # Vendored from dexmate_urdf 0.8.4 (grippers are the Dexgripper S, matching the
+    # lab hardware), with two prpl modifications: the L_ee/R_ee tool frames carry
+    # fingertip offsets, and the visual-only wrist-camera links are removed because
+    # the lab unit has no wrist camera. See prpl-mono issue #532.
     urdf = get_assets_path() / "urdf" / "vega" / "vega_1u_gripper.urdf"
     tree = load_urdf(str(urdf))
     groups = {
