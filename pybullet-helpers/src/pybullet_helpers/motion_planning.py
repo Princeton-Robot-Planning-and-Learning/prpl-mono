@@ -191,6 +191,7 @@ def run_smooth_motion_planning_to_pose(
     base_link_to_held_obj: Pose | None = None,
     max_time: float = np.inf,
     max_candidate_plans: int | None = None,
+    ik_max_time_per_candidate: float = 1.0,
     joint_geometric_scalar: float = 0.9,
     birrt_extend_num_interp: int = 10,
     birrt_num_attempts: int = 10,
@@ -236,6 +237,10 @@ def run_smooth_motion_planning_to_pose(
     rng = np.random.default_rng(seed)
 
     while time.perf_counter() - start_time < max_time and num_iters < iter_ub:
+        # Count attempts rather than successes: with an unreachable target pose no
+        # plan is ever found, and counting successes would loop forever whenever
+        # max_time is infinite.
+        num_iters += 1
         # Sample a target pose.
         target_pose = target_pose_sampler()
         # Transform to end effector space.
@@ -244,12 +249,16 @@ def run_smooth_motion_planning_to_pose(
         )
         # Sample a collision-free joint target. If none exist, we'll just
         # go back to sampling a different target pose.
+        # Bound each IK sampling attempt: with an unreachable target the sampler
+        # yields nothing, and an unbounded budget would spin forever regardless of
+        # max_candidate_plans (which limits yielded candidates, not attempts).
+        remaining_time = max_time - (time.perf_counter() - start_time)
         for target_joint_positions in sample_collision_free_inverse_kinematics(
             robot,
             end_effector_pose,
             collision_ids,
             rng,
-            max_time=max_time,
+            max_time=min(ik_max_time_per_candidate, remaining_time),
             max_candidates=1,
         ):
             # Try motion planning to the target.
@@ -273,7 +282,6 @@ def run_smooth_motion_planning_to_pose(
             )
             # Score the motion plan.
             if motion_plan is not None:
-                num_iters += 1
                 score = _score_motion_plan(motion_plan)
                 if score < best_motion_plan_score:
                     best_motion_plan = motion_plan

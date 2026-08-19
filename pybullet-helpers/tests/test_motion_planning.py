@@ -19,6 +19,7 @@ from pybullet_helpers.motion_planning import (
     run_base_motion_planning,
     run_motion_planning,
     run_single_arm_mobile_base_motion_planning,
+    run_smooth_motion_planning_to_pose,
     select_shortest_motion_plan,
     smoothly_follow_end_effector_path,
 )
@@ -623,3 +624,44 @@ def test_base_motion_planning_to_goal():
     # for base_pose in plan:
     #     robot.set_base(base_pose)
     #     time.sleep(0.5)
+
+
+def test_run_smooth_motion_planning_to_pose_unreachable_target(physics_client_id):
+    """An unreachable target fails in bounded time instead of hanging.
+
+    With the default max_time (inf), the per-candidate IK budget and
+    attempt-counting must terminate the search; previously an unreachable
+    target spun the IK sampler indefinitely.
+    """
+    import time as _time
+
+    robot = KinovaGen3RobotiqGripperPyBulletRobot(physics_client_id)
+    unreachable_pose = Pose((10.0, 0.0, 0.0))
+    start = _time.perf_counter()
+    plan = run_smooth_motion_planning_to_pose(
+        unreachable_pose,
+        robot,
+        collision_ids=set(),
+        end_effector_frame_to_plan_frame=Pose.identity(),
+        seed=123,
+        max_candidate_plans=3,
+    )
+    elapsed = _time.perf_counter() - start
+    assert plan is None
+    # Three attempts at <= 1 s of IK sampling each, plus generous slack.
+    assert elapsed < 15.0
+
+
+def test_run_smooth_motion_planning_to_pose_reachable_target(physics_client_id):
+    """The per-candidate IK budget does not break feasible queries."""
+    robot = KinovaGen3RobotiqGripperPyBulletRobot(physics_client_id)
+    reachable_pose = robot.get_end_effector_pose()
+    plan = run_smooth_motion_planning_to_pose(
+        reachable_pose,
+        robot,
+        collision_ids=set(),
+        end_effector_frame_to_plan_frame=Pose.identity(),
+        seed=123,
+        max_candidate_plans=3,
+    )
+    assert plan is not None
