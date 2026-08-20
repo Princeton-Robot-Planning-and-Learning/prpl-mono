@@ -1,5 +1,6 @@
 """Tests for PyBullet motion planning."""
 
+import time
 from functools import partial
 
 import numpy as np
@@ -633,11 +634,9 @@ def test_run_smooth_motion_planning_to_pose_unreachable_target(physics_client_id
     attempt-counting must terminate the search; previously an unreachable
     target spun the IK sampler indefinitely.
     """
-    import time as _time
-
     robot = KinovaGen3RobotiqGripperPyBulletRobot(physics_client_id)
     unreachable_pose = Pose((10.0, 0.0, 0.0))
-    start = _time.perf_counter()
+    start = time.perf_counter()
     plan = run_smooth_motion_planning_to_pose(
         unreachable_pose,
         robot,
@@ -646,7 +645,7 @@ def test_run_smooth_motion_planning_to_pose_unreachable_target(physics_client_id
         seed=123,
         max_candidate_plans=3,
     )
-    elapsed = _time.perf_counter() - start
+    elapsed = time.perf_counter() - start
     assert plan is None
     # Three attempts at <= 1 s of IK sampling each, plus generous slack.
     assert elapsed < 15.0
