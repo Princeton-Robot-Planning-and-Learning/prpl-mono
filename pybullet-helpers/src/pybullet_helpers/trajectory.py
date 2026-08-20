@@ -127,7 +127,13 @@ class ConcatTrajectory(Trajectory[TrajectoryPoint]):
                 assert time >= start_time
                 return traj(time - start_time)
             start_time = end_time
-        raise ValueError(f"Time {time} exceeds duration {self.duration}")
+        if not self.trajs:
+            raise ValueError(f"Time {time} exceeds duration {self.duration}")
+        # Compensated summation in self.duration (CPython 3.12+ sum()) can exceed
+        # the naive fold above by one ULP, so a time equal to the total duration
+        # falls through the loop. Return the end of the final segment instead.
+        last_traj = self.trajs[-1]
+        return last_traj(last_traj.duration)
 
     def get_sub_trajectory(
         self, start_time: float, end_time: float
