@@ -6,4 +6,6 @@ is the single source of truth for forward kinematics, and physics engines such
 as PyBullet are used only as pluggable collision/render backends.
 """
 
-__version__ = "0.0.1"
+from importlib.metadata import version as _version
+
+__version__ = _version("prpl-kinematics")
