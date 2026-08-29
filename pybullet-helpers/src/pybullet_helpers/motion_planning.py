@@ -18,6 +18,7 @@ from pybullet_helpers.geometry import (
     iter_between_poses,
     multiply_poses,
     set_pose,
+    wrap_angle,
 )
 from pybullet_helpers.inverse_kinematics import (
     InverseKinematicsError,
@@ -505,15 +506,18 @@ def remap_se2_pose_plan_to_constant_distance(
     if len(plan) < 2:
         return plan
 
+    # Rotations are interpolated the short way round: a step from +3.0 rad to
+    # -3.0 rad is a 0.28 rad turn, not a 6 rad spin (which is what the planner
+    # collision-checked, since it interpolates orientations by slerp).
     def _interpolate_fn(p1: SE2Pose, p2: SE2Pose, t: float) -> SE2Pose:
         return SE2Pose(
             p1.x + t * (p2.x - p1.x),
             p1.y + t * (p2.y - p1.y),
-            p1.rot + t * (p2.rot - p1.rot),
+            wrap_angle(p1.rot + t * wrap_angle(p2.rot - p1.rot)),
         )
 
     def _distance_fn(p1: SE2Pose, p2: SE2Pose) -> float:
-        return max(abs(p2.x - p1.x), abs(p2.y - p1.y), abs(p2.rot - p1.rot))
+        return max(abs(p2.x - p1.x), abs(p2.y - p1.y), abs(wrap_angle(p2.rot - p1.rot)))
 
     distances = [_distance_fn(p1, p2) for p1, p2 in zip(plan[:-1], plan[1:])]
 

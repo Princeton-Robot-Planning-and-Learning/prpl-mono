@@ -6,7 +6,14 @@ from functools import partial
 import numpy as np
 import pybullet as p
 
-from pybullet_helpers.geometry import Pose, SE2Pose, get_pose, multiply_poses, set_pose
+from pybullet_helpers.geometry import (
+    Pose,
+    SE2Pose,
+    get_pose,
+    multiply_poses,
+    set_pose,
+    wrap_angle,
+)
 from pybullet_helpers.inverse_kinematics import (
     check_collisions_with_held_object,
     inverse_kinematics,
@@ -17,6 +24,7 @@ from pybullet_helpers.math_utils import geometric_sequence
 from pybullet_helpers.motion_planning import (
     MotionPlanningHyperparameters,
     get_joint_positions_distance,
+    remap_se2_pose_plan_to_constant_distance,
     run_base_motion_planning,
     run_motion_planning,
     run_single_arm_mobile_base_motion_planning,
@@ -753,3 +761,19 @@ def test_base_motion_planning_platform_clearance():
             distance = min((point[8] for point in closest), default=1.0)
             assert distance >= minimum - 1e-3, (distance, minimum)
     p.disconnect(physics_client_id)
+
+
+def test_remap_se2_pose_plan_turns_the_short_way():
+    """Re-sampling a plan whose heading crosses +-pi interpolates the rotation the
+    short way round (a 0.36 rad turn), not through a full spin."""
+    plan = [SE2Pose(0.0, 0.0, 2.97), SE2Pose(0.0, 0.0, -2.96)]
+    remapped = remap_se2_pose_plan_to_constant_distance(plan, max_distance=0.2)
+    assert 2 <= len(remapped) <= 3
+    assert np.isclose(remapped[0].rot, plan[0].rot)
+    assert np.isclose(remapped[-1].rot, plan[-1].rot)
+    for p1, p2 in zip(remapped[:-1], remapped[1:]):
+        turn = abs(wrap_angle(p2.rot - p1.rot))
+        assert turn <= 0.2 + 1e-9
+    # And each intermediate heading is on the short arc through +-pi.
+    for pose in remapped[1:-1]:
+        assert abs(pose.rot) > 2.96
