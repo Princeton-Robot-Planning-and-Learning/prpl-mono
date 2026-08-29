@@ -710,21 +710,46 @@ def test_base_motion_planning_platform_clearance():
         distance = min(point[8] for point in closest)
         assert distance >= clearance - 1e-3, distance
 
-    # A start pose inside the clearance band is refused outright.
-    set_pose(obstacle, Pose((0.19, 0.0, 0.0)), physics_client_id)
-    assert (
-        run_base_motion_planning(
-            robot,
-            initial_pose,
-            target_pose,
-            (-5.0, -5.0),
-            (5.0, 5.0),
-            collision_bodies,
-            123,
-            physics_client_id,
-            platform=platform,
-            hyperparameters=hyperparameters,
-        )
-        is None
+    # Starting inside the clearance band of a body (3 cm from a block behind
+    # the platform) is allowed: the plan may move away from that body but
+    # never nearer than the start distance, and keeps the full clearance
+    # from everything else.
+    behind = create_pybullet_block(
+        (0.0, 0.0, 1.0, 1.0), (0.05, 0.3, 0.2), physics_client_id
     )
+    set_pose(behind, Pose((-0.18, 0.0, 0.0)), physics_client_id)
+    robot.set_base(initial_pose)
+    set_pose(
+        platform, multiply_poses(initial_pose, base_to_platform), physics_client_id
+    )
+    start_gap = min(
+        point[8]
+        for point in p.getClosestPoints(
+            platform, behind, 1.0, physicsClientId=physics_client_id
+        )
+    )
+    assert start_gap < clearance
+    plan = run_base_motion_planning(
+        robot,
+        initial_pose,
+        target_pose,
+        (-5.0, -5.0),
+        (5.0, 5.0),
+        {obstacle, behind},
+        123,
+        physics_client_id,
+        platform=platform,
+        hyperparameters=hyperparameters,
+    )
+    assert plan is not None
+    for pose in plan:
+        robot.set_base(pose)
+        set_pose(platform, multiply_poses(pose, base_to_platform), physics_client_id)
+        for body, minimum in ((obstacle, clearance), (behind, start_gap)):
+            closest = p.getClosestPoints(
+                platform, body, 1.0, physicsClientId=physics_client_id
+            )
+            # No points within a metre means well clear.
+            distance = min((point[8] for point in closest), default=1.0)
+            assert distance >= minimum - 1e-3, (distance, minimum)
     p.disconnect(physics_client_id)

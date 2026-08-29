@@ -8,6 +8,7 @@ from functools import partial
 from typing import Callable, Collection, Iterable, Iterator, Optional
 
 import numpy as np
+import pybullet as p
 from prpl_utils.motion_planning import RRT, BiRRT
 
 from pybullet_helpers.geometry import (
@@ -54,8 +55,11 @@ class MotionPlanningHyperparameters:
     ``platform_clearance`` is the distance (metres) the mobile base's platform
     body must keep from every collision body during base motion planning: a
     platform pose closer than that counts as a collision. Zero (the default)
-    accepts anything short of contact. Only :func:`run_base_motion_planning`
-    (and its mobile-manipulator wrapper) use it.
+    accepts anything short of contact. A body the platform already starts
+    closer to than that is held to the start distance instead, so the plan
+    can move away from it but never nearer. Only
+    :func:`run_base_motion_planning` (and its mobile-manipulator wrapper)
+    use it.
     """
 
     birrt_extend_num_interp: int = 10
@@ -565,6 +569,27 @@ def run_base_motion_planning(
             platform_pose = multiply_poses(pt, base_to_platform)
             set_pose(platform, platform_pose, physics_client_id)
 
+    # Per-body clearance for the platform: the configured clearance, except
+    # for bodies the platform already starts within it of, which are held
+    # to the start distance (never nearer than now).
+    platform_thresholds: dict[int, float] = {}
+    if platform is not None:
+        _set_robot(initial_pose)
+        p.performCollisionDetection(physicsClientId=physics_client_id)
+        for collision_body in collision_bodies:
+            threshold = max(1e-6, hyperparameters.platform_clearance)
+            if threshold > 1e-6:
+                closest = p.getClosestPoints(
+                    platform,
+                    collision_body,
+                    threshold,
+                    physicsClientId=physics_client_id,
+                )
+                if closest:
+                    start_distance = min(point[8] for point in closest)
+                    threshold = max(1e-6, min(threshold, start_distance - 1e-4))
+            platform_thresholds[collision_body] = threshold
+
     def _collision_fn(pt: Pose) -> bool:
         _set_robot(pt)
         if check_collisions_with_held_object(
@@ -582,7 +607,7 @@ def run_base_motion_planning(
                     platform,
                     collision_body,
                     physics_client_id,
-                    distance_threshold=max(1e-6, hyperparameters.platform_clearance),
+                    distance_threshold=platform_thresholds[collision_body],
                     perform_collision_detection=False,
                 ):
                     return True
