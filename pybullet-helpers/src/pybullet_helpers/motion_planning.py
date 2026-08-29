@@ -49,12 +49,20 @@ from pybullet_helpers.trajectory import (
 
 @dataclass(frozen=True)
 class MotionPlanningHyperparameters:
-    """Hyperparameters for motion planning."""
+    """Hyperparameters for motion planning.
+
+    ``platform_clearance`` is the distance (metres) the mobile base's platform
+    body must keep from every collision body during base motion planning: a
+    platform pose closer than that counts as a collision. Zero (the default)
+    accepts anything short of contact. Only :func:`run_base_motion_planning`
+    (and its mobile-manipulator wrapper) use it.
+    """
 
     birrt_extend_num_interp: int = 10
     birrt_num_attempts: int = 10
     birrt_num_iters: int = 100
     birrt_smooth_amt: int = 50
+    platform_clearance: float = 0.0
 
 
 def run_motion_planning(
@@ -167,7 +175,6 @@ def select_shortest_motion_plan(
     joint_distance_fn: Callable[[JointPositions, JointPositions], float],
 ) -> list[JointPositions]:
     """Return the motion plan that has the least cumulative distance."""
-
     shortest_motion_plan: list[JointPositions] | None = None
     shortest_length = np.inf
 
@@ -310,7 +317,6 @@ def smoothly_follow_end_effector_path(
     NOTE: if allow_skipping_intermediates is True, then some intermediate
     waypoints may be skipped if inverse kinematics fails.
     """
-
     joint_position_path: list[JointPositions] = []
     if include_start:
         joint_position_path.append(initial_joints)
@@ -376,7 +382,6 @@ def create_joint_distance_fn(
     weight_base: float = 0.9,
 ) -> Callable[[JointPositions, JointPositions], float]:
     """Helper for creating a joint distance function for a robot."""
-
     weights = geometric_sequence(weight_base, len(robot.arm_joint_names))
     joint_infos = get_joint_infos(
         robot.robot_id, robot.arm_joints, robot.physics_client_id
@@ -404,7 +409,6 @@ def get_joint_positions_distance(
     **kwargs,
 ):
     """Get the distance between two joint positions."""
-
     if metric == "end_effector":
         return _get_end_effector_joint_positions_distance(robot, q1, q2, **kwargs)
 
@@ -446,7 +450,6 @@ def remap_joint_position_plan_to_constant_distance(
 ) -> list[JointPositions]:
     """Re-interpolate a joint position plan so that it has constant distance with a max
     distance specified."""
-
     joint_infos = get_joint_infos(
         robot.robot_id, robot.arm_joints, robot.physics_client_id
     )
@@ -579,6 +582,7 @@ def run_base_motion_planning(
                     platform,
                     collision_body,
                     physics_client_id,
+                    distance_threshold=max(1e-6, hyperparameters.platform_clearance),
                     perform_collision_detection=False,
                 ):
                     return True

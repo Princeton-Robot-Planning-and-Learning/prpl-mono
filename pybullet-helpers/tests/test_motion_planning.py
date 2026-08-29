@@ -6,7 +6,7 @@ from functools import partial
 import numpy as np
 import pybullet as p
 
-from pybullet_helpers.geometry import Pose, SE2Pose, set_pose
+from pybullet_helpers.geometry import Pose, SE2Pose, get_pose, multiply_poses, set_pose
 from pybullet_helpers.inverse_kinematics import (
     check_collisions_with_held_object,
     inverse_kinematics,
@@ -323,7 +323,6 @@ def test_task_space_motion_planning(physics_client_id):
 
 def test_select_shortest_motion_plan(physics_client_id):
     """Tests for select_shortest_motion_plan()."""
-
     robot = FetchPyBulletRobot(physics_client_id)
     joint_initial = robot.get_joint_positions()
     joint_space = robot.action_space
@@ -510,7 +509,6 @@ def test_smoothly_follow_end_effector_path(physics_client_id):
 
 def test_run_single_arm_mobile_base_motion_planning():
     """Tests for run_single_arm_mobile_base_motion_planning()."""
-
     # Uncomment for debugging.
     # from pybullet_helpers.gui import create_gui_connection
     # physics_client_id = create_gui_connection(camera_yaw=210, camera_distance=1.0)
@@ -574,7 +572,6 @@ def test_run_single_arm_mobile_base_motion_planning():
 
 def test_base_motion_planning_to_goal():
     """Tests for run_base_motion_planning_to_goal()."""
-
     # Uncomment for debugging.
     # from pybullet_helpers.gui import create_gui_connection
     # physics_client_id = create_gui_connection(camera_pitch=-90)
@@ -630,9 +627,9 @@ def test_base_motion_planning_to_goal():
 def test_run_smooth_motion_planning_to_pose_unreachable_target(physics_client_id):
     """An unreachable target fails in bounded time instead of hanging.
 
-    With the default max_time (inf), the per-candidate IK budget and
-    attempt-counting must terminate the search; previously an unreachable
-    target spun the IK sampler indefinitely.
+    With the default max_time (inf), the per-candidate IK budget and attempt-counting
+    must terminate the search; previously an unreachable target spun the IK sampler
+    indefinitely.
     """
     robot = KinovaGen3RobotiqGripperPyBulletRobot(physics_client_id)
     unreachable_pose = Pose((10.0, 0.0, 0.0))
@@ -664,3 +661,70 @@ def test_run_smooth_motion_planning_to_pose_reachable_target(physics_client_id):
         max_candidate_plans=3,
     )
     assert plan is not None
+
+
+def test_base_motion_planning_platform_clearance():
+    """With platform_clearance set, every planned base pose keeps the platform at least
+    that far from the obstacles; a start pose inside the band is refused."""
+    physics_client_id = p.connect(p.DIRECT)
+    robot = KinovaGen3RobotiqGripperPyBulletRobot(physics_client_id, fixed_base=False)
+    platform = create_pybullet_block(
+        (0.3, 1.0, 0.3, 1.0), (0.1, 0.1, 0.1), physics_client_id
+    )
+    # A wall with a gap: the direct route passes the wall's end closely.
+    obstacle = create_pybullet_block(
+        (1.0, 0.0, 0.0, 1.0), (0.05, 0.6, 0.2), physics_client_id
+    )
+    set_pose(obstacle, Pose((1.0, 0.45, 0.0)), physics_client_id)
+    collision_bodies = {obstacle}
+    initial_pose = robot.get_base_pose()
+    target_pose = Pose.from_rpy((2.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+    clearance = 0.15
+    hyperparameters = MotionPlanningHyperparameters(
+        platform_clearance=clearance, birrt_num_iters=200
+    )
+
+    plan = run_base_motion_planning(
+        robot,
+        initial_pose,
+        target_pose,
+        (-5.0, -5.0),
+        (5.0, 5.0),
+        collision_bodies,
+        123,
+        physics_client_id,
+        platform=platform,
+        hyperparameters=hyperparameters,
+    )
+    assert plan is not None
+    world_to_base = robot.get_base_pose()
+    base_to_platform = multiply_poses(
+        world_to_base.invert(), get_pose(platform, physics_client_id)
+    )
+    for pose in plan:
+        robot.set_base(pose)
+        set_pose(platform, multiply_poses(pose, base_to_platform), physics_client_id)
+        closest = p.getClosestPoints(
+            platform, obstacle, 1.0, physicsClientId=physics_client_id
+        )
+        distance = min(point[8] for point in closest)
+        assert distance >= clearance - 1e-3, distance
+
+    # A start pose inside the clearance band is refused outright.
+    set_pose(obstacle, Pose((0.19, 0.0, 0.0)), physics_client_id)
+    assert (
+        run_base_motion_planning(
+            robot,
+            initial_pose,
+            target_pose,
+            (-5.0, -5.0),
+            (5.0, 5.0),
+            collision_bodies,
+            123,
+            physics_client_id,
+            platform=platform,
+            hyperparameters=hyperparameters,
+        )
+        is None
+    )
+    p.disconnect(physics_client_id)
