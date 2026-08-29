@@ -8,6 +8,7 @@ from functools import partial
 from typing import Callable, Collection, Iterable, Iterator, Optional
 
 import numpy as np
+import pybullet as p
 from prpl_utils.motion_planning import RRT, BiRRT
 
 from pybullet_helpers.geometry import (
@@ -17,6 +18,7 @@ from pybullet_helpers.geometry import (
     iter_between_poses,
     multiply_poses,
     set_pose,
+    wrap_angle,
 )
 from pybullet_helpers.inverse_kinematics import (
     InverseKinematicsError,
@@ -49,12 +51,23 @@ from pybullet_helpers.trajectory import (
 
 @dataclass(frozen=True)
 class MotionPlanningHyperparameters:
-    """Hyperparameters for motion planning."""
+    """Hyperparameters for motion planning.
+
+    ``platform_clearance`` is the distance (metres) the mobile base's platform
+    body must keep from every collision body during base motion planning: a
+    platform pose closer than that counts as a collision. Zero (the default)
+    accepts anything short of contact. A body the platform already starts
+    closer to than that is held to the start distance instead, so the plan
+    can move away from it but never nearer. Only
+    :func:`run_base_motion_planning` (and its mobile-manipulator wrapper)
+    use it.
+    """
 
     birrt_extend_num_interp: int = 10
     birrt_num_attempts: int = 10
     birrt_num_iters: int = 100
     birrt_smooth_amt: int = 50
+    platform_clearance: float = 0.0
 
 
 def run_motion_planning(
@@ -167,7 +180,6 @@ def select_shortest_motion_plan(
     joint_distance_fn: Callable[[JointPositions, JointPositions], float],
 ) -> list[JointPositions]:
     """Return the motion plan that has the least cumulative distance."""
-
     shortest_motion_plan: list[JointPositions] | None = None
     shortest_length = np.inf
 
@@ -310,7 +322,6 @@ def smoothly_follow_end_effector_path(
     NOTE: if allow_skipping_intermediates is True, then some intermediate
     waypoints may be skipped if inverse kinematics fails.
     """
-
     joint_position_path: list[JointPositions] = []
     if include_start:
         joint_position_path.append(initial_joints)
@@ -376,7 +387,6 @@ def create_joint_distance_fn(
     weight_base: float = 0.9,
 ) -> Callable[[JointPositions, JointPositions], float]:
     """Helper for creating a joint distance function for a robot."""
-
     weights = geometric_sequence(weight_base, len(robot.arm_joint_names))
     joint_infos = get_joint_infos(
         robot.robot_id, robot.arm_joints, robot.physics_client_id
@@ -404,7 +414,6 @@ def get_joint_positions_distance(
     **kwargs,
 ):
     """Get the distance between two joint positions."""
-
     if metric == "end_effector":
         return _get_end_effector_joint_positions_distance(robot, q1, q2, **kwargs)
 
@@ -446,7 +455,6 @@ def remap_joint_position_plan_to_constant_distance(
 ) -> list[JointPositions]:
     """Re-interpolate a joint position plan so that it has constant distance with a max
     distance specified."""
-
     joint_infos = get_joint_infos(
         robot.robot_id, robot.arm_joints, robot.physics_client_id
     )
@@ -498,15 +506,18 @@ def remap_se2_pose_plan_to_constant_distance(
     if len(plan) < 2:
         return plan
 
+    # Rotations are interpolated the short way round: a step from +3.0 rad to
+    # -3.0 rad is a 0.28 rad turn, not a 6 rad spin (which is what the planner
+    # collision-checked, since it interpolates orientations by slerp).
     def _interpolate_fn(p1: SE2Pose, p2: SE2Pose, t: float) -> SE2Pose:
         return SE2Pose(
             p1.x + t * (p2.x - p1.x),
             p1.y + t * (p2.y - p1.y),
-            p1.rot + t * (p2.rot - p1.rot),
+            wrap_angle(p1.rot + t * wrap_angle(p2.rot - p1.rot)),
         )
 
     def _distance_fn(p1: SE2Pose, p2: SE2Pose) -> float:
-        return max(abs(p2.x - p1.x), abs(p2.y - p1.y), abs(p2.rot - p1.rot))
+        return max(abs(p2.x - p1.x), abs(p2.y - p1.y), abs(wrap_angle(p2.rot - p1.rot)))
 
     distances = [_distance_fn(p1, p2) for p1, p2 in zip(plan[:-1], plan[1:])]
 
@@ -562,6 +573,27 @@ def run_base_motion_planning(
             platform_pose = multiply_poses(pt, base_to_platform)
             set_pose(platform, platform_pose, physics_client_id)
 
+    # Per-body clearance for the platform: the configured clearance, except
+    # for bodies the platform already starts within it of, which are held
+    # to the start distance (never nearer than now).
+    platform_thresholds: dict[int, float] = {}
+    if platform is not None:
+        _set_robot(initial_pose)
+        p.performCollisionDetection(physicsClientId=physics_client_id)
+        for collision_body in collision_bodies:
+            threshold = max(1e-6, hyperparameters.platform_clearance)
+            if threshold > 1e-6:
+                closest = p.getClosestPoints(
+                    platform,
+                    collision_body,
+                    threshold,
+                    physicsClientId=physics_client_id,
+                )
+                if closest:
+                    start_distance = min(point[8] for point in closest)
+                    threshold = max(1e-6, min(threshold, start_distance - 1e-4))
+            platform_thresholds[collision_body] = threshold
+
     def _collision_fn(pt: Pose) -> bool:
         _set_robot(pt)
         if check_collisions_with_held_object(
@@ -579,6 +611,7 @@ def run_base_motion_planning(
                     platform,
                     collision_body,
                     physics_client_id,
+                    distance_threshold=platform_thresholds[collision_body],
                     perform_collision_detection=False,
                 ):
                     return True

@@ -6,7 +6,14 @@ from functools import partial
 import numpy as np
 import pybullet as p
 
-from pybullet_helpers.geometry import Pose, SE2Pose, set_pose
+from pybullet_helpers.geometry import (
+    Pose,
+    SE2Pose,
+    get_pose,
+    multiply_poses,
+    set_pose,
+    wrap_angle,
+)
 from pybullet_helpers.inverse_kinematics import (
     check_collisions_with_held_object,
     inverse_kinematics,
@@ -17,6 +24,7 @@ from pybullet_helpers.math_utils import geometric_sequence
 from pybullet_helpers.motion_planning import (
     MotionPlanningHyperparameters,
     get_joint_positions_distance,
+    remap_se2_pose_plan_to_constant_distance,
     run_base_motion_planning,
     run_motion_planning,
     run_single_arm_mobile_base_motion_planning,
@@ -323,7 +331,6 @@ def test_task_space_motion_planning(physics_client_id):
 
 def test_select_shortest_motion_plan(physics_client_id):
     """Tests for select_shortest_motion_plan()."""
-
     robot = FetchPyBulletRobot(physics_client_id)
     joint_initial = robot.get_joint_positions()
     joint_space = robot.action_space
@@ -510,7 +517,6 @@ def test_smoothly_follow_end_effector_path(physics_client_id):
 
 def test_run_single_arm_mobile_base_motion_planning():
     """Tests for run_single_arm_mobile_base_motion_planning()."""
-
     # Uncomment for debugging.
     # from pybullet_helpers.gui import create_gui_connection
     # physics_client_id = create_gui_connection(camera_yaw=210, camera_distance=1.0)
@@ -574,7 +580,6 @@ def test_run_single_arm_mobile_base_motion_planning():
 
 def test_base_motion_planning_to_goal():
     """Tests for run_base_motion_planning_to_goal()."""
-
     # Uncomment for debugging.
     # from pybullet_helpers.gui import create_gui_connection
     # physics_client_id = create_gui_connection(camera_pitch=-90)
@@ -630,9 +635,9 @@ def test_base_motion_planning_to_goal():
 def test_run_smooth_motion_planning_to_pose_unreachable_target(physics_client_id):
     """An unreachable target fails in bounded time instead of hanging.
 
-    With the default max_time (inf), the per-candidate IK budget and
-    attempt-counting must terminate the search; previously an unreachable
-    target spun the IK sampler indefinitely.
+    With the default max_time (inf), the per-candidate IK budget and attempt-counting
+    must terminate the search; previously an unreachable target spun the IK sampler
+    indefinitely.
     """
     robot = KinovaGen3RobotiqGripperPyBulletRobot(physics_client_id)
     unreachable_pose = Pose((10.0, 0.0, 0.0))
@@ -664,3 +669,111 @@ def test_run_smooth_motion_planning_to_pose_reachable_target(physics_client_id):
         max_candidate_plans=3,
     )
     assert plan is not None
+
+
+def test_base_motion_planning_platform_clearance():
+    """With platform_clearance set, every planned base pose keeps the platform at least
+    that far from the obstacles; a start pose inside the band is refused."""
+    physics_client_id = p.connect(p.DIRECT)
+    robot = KinovaGen3RobotiqGripperPyBulletRobot(physics_client_id, fixed_base=False)
+    platform = create_pybullet_block(
+        (0.3, 1.0, 0.3, 1.0), (0.1, 0.1, 0.1), physics_client_id
+    )
+    # A wall with a gap: the direct route passes the wall's end closely.
+    obstacle = create_pybullet_block(
+        (1.0, 0.0, 0.0, 1.0), (0.05, 0.6, 0.2), physics_client_id
+    )
+    set_pose(obstacle, Pose((1.0, 0.45, 0.0)), physics_client_id)
+    collision_bodies = {obstacle}
+    initial_pose = robot.get_base_pose()
+    target_pose = Pose.from_rpy((2.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+    clearance = 0.15
+    hyperparameters = MotionPlanningHyperparameters(
+        platform_clearance=clearance, birrt_num_iters=200
+    )
+
+    plan = run_base_motion_planning(
+        robot,
+        initial_pose,
+        target_pose,
+        (-5.0, -5.0),
+        (5.0, 5.0),
+        collision_bodies,
+        123,
+        physics_client_id,
+        platform=platform,
+        hyperparameters=hyperparameters,
+    )
+    assert plan is not None
+    world_to_base = robot.get_base_pose()
+    base_to_platform = multiply_poses(
+        world_to_base.invert(), get_pose(platform, physics_client_id)
+    )
+    for pose in plan:
+        robot.set_base(pose)
+        set_pose(platform, multiply_poses(pose, base_to_platform), physics_client_id)
+        closest = p.getClosestPoints(
+            platform, obstacle, 1.0, physicsClientId=physics_client_id
+        )
+        distance = min(point[8] for point in closest)
+        assert distance >= clearance - 1e-3, distance
+
+    # Starting inside the clearance band of a body (3 cm from a block behind
+    # the platform) is allowed: the plan may move away from that body but
+    # never nearer than the start distance, and keeps the full clearance
+    # from everything else.
+    behind = create_pybullet_block(
+        (0.0, 0.0, 1.0, 1.0), (0.05, 0.3, 0.2), physics_client_id
+    )
+    set_pose(behind, Pose((-0.18, 0.0, 0.0)), physics_client_id)
+    robot.set_base(initial_pose)
+    set_pose(
+        platform, multiply_poses(initial_pose, base_to_platform), physics_client_id
+    )
+    start_gap = min(
+        point[8]
+        for point in p.getClosestPoints(
+            platform, behind, 1.0, physicsClientId=physics_client_id
+        )
+    )
+    assert start_gap < clearance
+    plan = run_base_motion_planning(
+        robot,
+        initial_pose,
+        target_pose,
+        (-5.0, -5.0),
+        (5.0, 5.0),
+        {obstacle, behind},
+        123,
+        physics_client_id,
+        platform=platform,
+        hyperparameters=hyperparameters,
+    )
+    assert plan is not None
+    for pose in plan:
+        robot.set_base(pose)
+        set_pose(platform, multiply_poses(pose, base_to_platform), physics_client_id)
+        for body, minimum in ((obstacle, clearance), (behind, start_gap)):
+            closest = p.getClosestPoints(
+                platform, body, 1.0, physicsClientId=physics_client_id
+            )
+            # No points within a metre means well clear.
+            distance = min((point[8] for point in closest), default=1.0)
+            assert distance >= minimum - 1e-3, (distance, minimum)
+    p.disconnect(physics_client_id)
+
+
+def test_remap_se2_pose_plan_turns_the_short_way():
+    """Re-sampling a plan whose heading crosses +-pi interpolates the rotation the
+    short way round (a 0.36 rad turn), not through a full spin."""
+    plan = [SE2Pose(0.0, 0.0, 2.97), SE2Pose(0.0, 0.0, -2.96)]
+    remapped = remap_se2_pose_plan_to_constant_distance(plan, max_distance=0.2)
+    assert 2 <= len(remapped) <= 3
+    assert np.isclose(remapped[0].rot, plan[0].rot)
+    assert np.isclose(remapped[-1].rot, plan[-1].rot)
+    for p1, p2 in zip(remapped[:-1], remapped[1:]):
+        turn = abs(wrap_angle(p2.rot - p1.rot))
+        assert turn <= 0.2 + 1e-9
+    # And each intermediate heading is on the short arc through +-pi.
+    for pose in remapped[1:-1]:
+        assert abs(pose.rot) > 2.96
