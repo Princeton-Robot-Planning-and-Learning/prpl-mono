@@ -8,15 +8,19 @@ import numpy as np
 import pybullet as p
 import pytest
 
-from pybullet_helpers.geometry import Pose
+from pybullet_helpers.geometry import Pose, multiply_poses, set_pose
 from pybullet_helpers.inverse_kinematics import (
     check_collisions_with_held_object,
     inverse_kinematics,
 )
+from pybullet_helpers.link import get_link_pose
+from pybullet_helpers.robots import create_pybullet_robot
 from pybullet_helpers.robots.kinova import (
     KinovaGen3NoGripperPyBulletRobot,
     KinovaGen3RobotiqGripperPyBulletRobot,
+    KinovaGen3VisionModuleRobotiqGripperPyBulletRobot,
 )
+from pybullet_helpers.utils import create_pybullet_block
 
 
 def test_kinova_gen3_no_gripper_pybullet_robot(physics_client_id):
@@ -188,3 +192,105 @@ def test_kinova_gen3_robotiq_gripper_pybullet_robot(physics_client_id):
         base_link_to_held_obj=None,
         joint_state=collision_joint_state,
     )
+
+
+def _wrist_probe_collides(
+    robot: KinovaGen3RobotiqGripperPyBulletRobot, link_name: str, offset: Pose
+) -> bool:
+    """Whether a 4 mm cube at `offset` in `link_name`'s frame touches the robot.
+
+    The robot is at its home configuration, which is free of self-collisions.
+    """
+    robot.set_joints(robot.home_joint_positions)
+    link_pose = get_link_pose(
+        robot.robot_id, robot.link_from_name(link_name), robot.physics_client_id
+    )
+    probe = create_pybullet_block(
+        (1.0, 0.0, 0.0, 1.0), (0.002, 0.002, 0.002), robot.physics_client_id
+    )
+    set_pose(probe, multiply_poses(link_pose, offset), robot.physics_client_id)
+    return check_collisions_with_held_object(
+        robot,
+        collision_bodies={probe},
+        physics_client_id=robot.physics_client_id,
+        held_object=None,
+        base_link_to_held_obj=None,
+        joint_state=robot.home_joint_positions,
+    )
+
+
+# Inside the vision module's housing, 2.75 cm beyond the bare bracelet's -y extent.
+VISION_HOUSING_OFFSET = Pose((0.0, -0.065, -0.04))
+# The centre of the gripper-mounted RealSense bounding box in gen3_7dof.urdf.
+REALSENSE_BOX_OFFSET = Pose((0.05, 0.0, 0.02))
+
+
+def test_kinova_gen3_vision_module_pybullet_robot(physics_client_id):
+    """Tests for KinovaGen3VisionModuleRobotiqGripperPyBulletRobot()."""
+    base_pose = Pose((0.75, 0.7441, 0.0))
+    robot = create_pybullet_robot(
+        "kinova-gen3-vision", physics_client_id, base_pose=base_pose
+    )
+    assert isinstance(robot, KinovaGen3VisionModuleRobotiqGripperPyBulletRobot)
+    assert robot.get_name() == "kinova-gen3-vision"
+
+    # Only the wrist geometry differs: the kinematics are the stock arm's.
+    reference_client_id = p.connect(p.DIRECT)
+    try:
+        reference = KinovaGen3RobotiqGripperPyBulletRobot(
+            reference_client_id, base_pose=base_pose
+        )
+        assert robot.arm_joint_names == reference.arm_joint_names
+        assert np.allclose(robot.joint_lower_limits, reference.joint_lower_limits)
+        assert np.allclose(robot.joint_upper_limits, reference.joint_upper_limits)
+        rng = np.random.default_rng(0)
+        # joint_7 is continuous, so its limits are infinite.
+        low = np.clip(reference.joint_lower_limits, -np.pi, np.pi)
+        high = np.clip(reference.joint_upper_limits, -np.pi, np.pi)
+        for _ in range(5):
+            joints = list(rng.uniform(low, high))
+            assert robot.forward_kinematics(joints).allclose(
+                reference.forward_kinematics(joints), atol=1e-6
+            )
+    finally:
+        p.disconnect(reference_client_id)
+
+    # The home configuration stays free of self-collisions with the larger bracelet.
+    assert not check_collisions_with_held_object(
+        robot,
+        collision_bodies=set(),
+        physics_client_id=robot.physics_client_id,
+        held_object=None,
+        base_link_to_held_obj=None,
+        joint_state=robot.home_joint_positions,
+    )
+
+
+def test_kinova_gen3_vision_module_collides_with_the_camera_housing(
+    physics_client_id,
+):
+    """The vision module is solid; the stock bracelet passes through it."""
+    stock = KinovaGen3RobotiqGripperPyBulletRobot(physics_client_id)
+    assert not _wrist_probe_collides(stock, "bracelet_link", VISION_HOUSING_OFFSET)
+
+    vision_client_id = p.connect(p.DIRECT)
+    try:
+        vision = KinovaGen3VisionModuleRobotiqGripperPyBulletRobot(vision_client_id)
+        assert _wrist_probe_collides(vision, "bracelet_link", VISION_HOUSING_OFFSET)
+    finally:
+        p.disconnect(vision_client_id)
+
+
+def test_kinova_gen3_vision_module_has_no_realsense_box(physics_client_id):
+    """The stock model keeps its RealSense box; the vision-module model has none."""
+    stock = KinovaGen3RobotiqGripperPyBulletRobot(physics_client_id)
+    assert _wrist_probe_collides(stock, "robotiq_arg2f_base_link", REALSENSE_BOX_OFFSET)
+
+    vision_client_id = p.connect(p.DIRECT)
+    try:
+        vision = KinovaGen3VisionModuleRobotiqGripperPyBulletRobot(vision_client_id)
+        assert not _wrist_probe_collides(
+            vision, "robotiq_arg2f_base_link", REALSENSE_BOX_OFFSET
+        )
+    finally:
+        p.disconnect(vision_client_id)

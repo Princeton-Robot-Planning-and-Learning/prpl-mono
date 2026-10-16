@@ -136,3 +136,25 @@ class KinovaGen3RobotiqGripperPyBulletRobot(FingeredSingleArmPyBulletRobot[float
             ee_link="end_effector_link",
             free_joints=["joint_7"],
         )
+
+
+class KinovaGen3VisionModuleRobotiqGripperPyBulletRobot(
+    KinovaGen3RobotiqGripperPyBulletRobot
+):
+    """A Kinova Gen3 with a Robotiq gripper whose camera is the vision module.
+
+    The stock "kinova-gen3" model collides the bracelet without the Kinova vision module
+    and adds a bounding box for a RealSense mounted on the gripper. Robots whose camera
+    is the vision module built into the bracelet (e.g. TidyBot) need the bracelet's
+    camera housing instead, and no RealSense. Kinematics and IKFast are those of the
+    stock model.
+    """
+
+    @classmethod
+    def get_name(cls) -> str:
+        return "kinova-gen3-vision"
+
+    @property
+    def default_urdf_path(self) -> Path:
+        dir_path = get_assets_path() / "urdf"
+        return dir_path / "kortex_description" / "gen3_7dof_vision_module.urdf"
