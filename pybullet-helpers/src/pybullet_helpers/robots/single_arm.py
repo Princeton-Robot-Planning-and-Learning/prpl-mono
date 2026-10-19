@@ -437,8 +437,17 @@ class SingleArmPyBulletRobot(abc.ABC):
         best_effort: bool = False,
         validation_atol: float = 1e-3,
     ) -> JointPositions | None:
-        """Robots can implement custom IK; see inverse_kinematics()."""
-        raise NotImplementedError
+        """Robots can implement custom IK; see inverse_kinematics().
+
+        This is an optional hook, not an abstract method: inverse_kinematics() only
+        calls it when default_inverse_kinematics_method is "custom", so only robots
+        that opt into custom IK need to override it.
+        """
+        del end_effector_pose, validate, best_effort, validation_atol
+        raise NotImplementedError(
+            f"{self.get_name()} uses custom IK but does not override "
+            "custom_inverse_kinematics()"
+        )
 
     @classmethod
     def ikfast_info(cls) -> Optional[IKFastInfo]:

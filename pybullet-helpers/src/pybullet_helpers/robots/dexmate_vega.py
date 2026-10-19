@@ -1,5 +1,6 @@
 """Dexmate Vega humanoid robots."""
 
+import abc
 import warnings
 import xml.etree.ElementTree as ET
 from functools import cached_property
@@ -245,7 +246,7 @@ def prepare_pybullet_urdf(
     return new_path
 
 
-class _DexmateVegaArm(FingeredSingleArmPyBulletRobot[float]):
+class _DexmateVegaArm(FingeredSingleArmPyBulletRobot[float], abc.ABC):
     """One arm (with its parallel-jaw gripper) of the Dexmate Vega 1U humanoid.
 
     Concrete subclasses set `_side` to "L" or "R". arm_joints are the 7 arm joints
