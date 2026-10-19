@@ -52,7 +52,6 @@ class StretchPyBulletRobot(FingeredSingleArmPyBulletRobot[float]):
         # Determine reachability bounds for the arm moving up and down.
         joints = list(self.joint_lower_limits)
         self.set_joints(joints)
-        self._arm_vertical_bounds = [0.0]
         arm_joint_name = "joint_lift"
         joint_idx = self.arm_joints.index(self.joint_from_name(arm_joint_name))
         joints[joint_idx] = self.joint_upper_limits[joint_idx]
@@ -62,9 +61,10 @@ class StretchPyBulletRobot(FingeredSingleArmPyBulletRobot[float]):
         assert np.isclose(min_pose.position[0], joint_max_pose.position[0], atol=1e-3)
         assert np.isclose(min_pose.position[2], joint_max_pose.position[2], atol=1e-3)
         assert np.allclose(min_pose.orientation, joint_max_pose.orientation, atol=1e-3)
-        self._arm_vertical_bounds.append(
-            min_pose.position[1] - joint_max_pose.position[1]
-        )
+        self._arm_vertical_bounds = [
+            0.0,
+            min_pose.position[1] - joint_max_pose.position[1],
+        ]
 
         # Use an approximate Cartesian offset between the end effector and the wrist.
         self.set_joints(self.joint_lower_limits)

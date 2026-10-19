@@ -19,6 +19,7 @@ from pybullet_helpers.robots.human import (
 from pybullet_helpers.robots.kinova import (
     KinovaGen3NoGripperPyBulletRobot,
     KinovaGen3RobotiqGripperPyBulletRobot,
+    KinovaGen3VisionModuleRobotiqGripperPyBulletRobot,
 )
 from pybullet_helpers.robots.mobile import SingleArmPyBulletMobileManipulator
 from pybullet_helpers.robots.panda import PandaPyBulletRobot
@@ -33,6 +34,7 @@ _BUILT_IN_ROBOT_CLASSES: list[Type[SingleArmPyBulletRobot]] = [
     PandaPyBulletRobot,
     KinovaGen3NoGripperPyBulletRobot,
     KinovaGen3RobotiqGripperPyBulletRobot,
+    KinovaGen3VisionModuleRobotiqGripperPyBulletRobot,
     TwoLinkPyBulletRobot,
     StretchPyBulletRobot,
     AssistiveHumanPyBulletRobot,
