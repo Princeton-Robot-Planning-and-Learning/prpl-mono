@@ -3,7 +3,9 @@
 from pathlib import Path
 
 from pybullet_helpers.geometry import Pose, SE2Pose
-from pybullet_helpers.robots.kinova import KinovaGen3RobotiqGripperPyBulletRobot
+from pybullet_helpers.robots.kinova import (
+    KinovaGen3VisionModuleRobotiqGripperPyBulletRobot,
+)
 from pybullet_helpers.robots.mobile import (
     MobilePyBulletBase,
     SingleArmPyBulletMobileManipulator,
@@ -26,7 +28,11 @@ class TidyBotMobileBase(MobilePyBulletBase):
 
 
 class TidyBotKinova(SingleArmPyBulletMobileManipulator):
-    """TidyBot with a Kinova gen-3."""
+    """TidyBot with a Kinova gen-3.
+
+    The TidyBot's camera is the Kinova vision module in the bracelet, so its arm is the
+    vision-module variant (no gripper-mounted RealSense).
+    """
 
     @classmethod
     def create_arm(
@@ -34,7 +40,7 @@ class TidyBotKinova(SingleArmPyBulletMobileManipulator):
         physics_client_id: int,
         base_pose: Pose,
     ) -> SingleArmPyBulletRobot:
-        return KinovaGen3RobotiqGripperPyBulletRobot(
+        return KinovaGen3VisionModuleRobotiqGripperPyBulletRobot(
             physics_client_id,
             base_pose,
             fixed_base=False,
